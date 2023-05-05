@@ -20,3 +20,12 @@ These scripts allow you to sort your todos into various notes depending on their
 6. For notes you want to track, give them a dueDate label of type date.
 7. Use the newly created launcher or wait an hour for the automatic update to update agenda.
 8. Profit
+
+
+## Changelog
+
+### 2.0
+- Added option to use number of days for intervals
+- Migrated due date and time labels to variables
+- Restructured and simplified main for loop
+- Implemented branch prefix naming
