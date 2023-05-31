@@ -1,19 +1,23 @@
-// #run=hourly
-// To configure date formats use https://day.js.org/docs/en/display/format
+/*
+    Instructions: Paste the below into a new JS Backend Script note. Set the note variables to the IDs of the notes you want to use for your categories.
+    Remember to set #run=hourly as a label for this note.
+    To configure date formats use https://day.js.org/docs/en/display/format
+*/
 
 var isBetween = require('dayjs/plugin/isBetween')
 api.dayjs.extend(isBetween)
 
 async function run_script() {
+
     // User Set Variables
-    let dueDateLabel = "dueDate"
-    let dueTimeLabel = "dueTime"
     let overdueNote = "<overdue-note-id>"
     let todayNote = "<today-note-id>"
     let thisWeekNote = "<this-week-note-id>"
     let thisMonthNote = "<this-month-note-id>"
     let thisYearNote = "<this-year-note-id>"
     let futureNote = "<future-note-id>"
+    let dueDateLabel = "dueDate"
+    let dueTimeLabel = "dueTime"
     let useNumberOfDays = true     // If set to true, intervals are determined based on number of days
 
     // Dynamic Variables
