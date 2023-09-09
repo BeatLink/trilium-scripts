@@ -7,14 +7,11 @@ const title = "Due";  //The text displayed as the widget's title
 
 const html = `
 <div style="display: flex; flex-direction: column; padding: 10px; border-top: 1px solid var(--main-border-color); contain: none;">
-
     <label for="datetime-input">${title} Date and Time</label>
     <input type="datetime-local" id="datetime-input" name="datetime" value=""/>
 </div>`;
 
 class TemplatePickerWidget extends api.NoteContextAwareWidget {
-
-
     
     get position() { return 100; } // higher value means position towards the bottom/right
 
@@ -32,21 +29,14 @@ class TemplatePickerWidget extends api.NoteContextAwareWidget {
     }
 
     async saveDatetimeToNote(e){
-        console.log($('#datetime-input').val())
         const currentNoteID = await api.getActiveContextNote().noteId
         var datetimeValue = $('#datetime-input').val()
-        var datetime = datetimeValue ? api.dayjs(datetimeValue).format("YYYY-MM-DD HH:mm") : ""
-        console.log(datetime)
-     
+        var datetime = datetimeValue ? api.dayjs(datetimeValue).format("YYYY-MM-DD HH:mm") : ""     
         api.runOnBackend((currentNoteID, datetime, label) => {
-            if (datetime){
-                api.getNote(currentNoteID).setLabel(label, datetime)
-            } else {
-                api.getNote(currentNoteID).removeLabel(label)
-            }
+            var note = api.getNote(currentNoteID)
+            datetime ? note.setLabel(label, datetime) : note.removeLabel(label)            
         }, [currentNoteID, datetime, label]);
     }
-
 
     async refreshWithNote(note) {
         var currentNote = await api.getActiveContextNote()
