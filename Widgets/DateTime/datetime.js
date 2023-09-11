@@ -13,12 +13,12 @@ const html = `
 
 class TemplatePickerWidget extends api.NoteContextAwareWidget {
     
-    get position() { return 100; } // higher value means position towards the bottom/right
+    get position() { return 1; } // higher value means position towards the bottom/right
 
     get parentWidget() { return 'right-pane'; }
 
     isEnabled() {
-        return (super.isEnabled() && api.startNote.getLabelValue("enabled") == "true")
+        return (super.isEnabled())
     }
 
     async doRender() {
