@@ -27,7 +27,6 @@ let endOfThisYear = useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("
 // User Set Variables -----------------------------------------------------------------
 let dueDatetimeLabel = "due"
 let templateId = "Yps2a0UwNkHK"
-
 let parentNotes = {
     "now": "QpWUSNl5ompI",
     "upcoming": "Qcf6WxdKgvv8"
