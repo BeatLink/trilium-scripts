@@ -25,11 +25,11 @@ let endOfThisMonth = useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("
 let endOfThisYear = useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year")
 
 // User Set Variables -----------------------------------------------------------------
+let searchCriteria = `# ~template.title=" 1. Routine" OR ~template.title=" 3. Doable"`
 let dueDatetimeLabel = "due"
-let templateId = "Yps2a0UwNkHK"
 let parentNotes = {
-    "now": "QpWUSNl5ompI",
-    "upcoming": "Qcf6WxdKgvv8"
+    "now": "dxQV6zhxqYdT",
+    "upcoming": "kh0CnMKK9xVG"
 }
 let intervals = {
     'now': {
@@ -74,16 +74,16 @@ function run_script() {
     }
     
     // Set notes according to criteria
-    for (let note of api.searchForNotes(`# ~template.noteId=${templateId} AND not(note.parents.relations.template.noteId=${templateId})`)){ 
+    for (let note of api.searchForNotes(searchCriteria)){ 
         if (note.getLabelValue(dueDatetimeLabel)){
             let dueDatetime = api.dayjs(note.getLabelValue(dueDatetimeLabel))       
             for (let interval in intervals){
                 var criteria = intervals[interval]['criteria']
-                var parent = intervals[interval]['parentNote']
+                var parent = parentNotes[intervals[interval]['parent']]
                 var formatString = intervals[interval]['formatString']
                 var datetimeFormatted = dueDatetime.format(formatString)
                 if (criteria(dueDatetime)){
-                    api.toggleNoteInParent(criteria, note.noteId, parentNotes[parent], datetimeFormatted)
+                    api.toggleNoteInParent(criteria, note.noteId, parent, datetimeFormatted)
                     continue
                 }        
             }
