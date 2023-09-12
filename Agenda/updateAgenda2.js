@@ -1,5 +1,6 @@
 /*
-    Instructions: Paste the below into a new JS Backend Script note. Set the note variables to the IDs of the notes you want to use for your categories.
+    Instructions: Paste the below into a new JS Backend Script note. 
+    Set the note variables to the IDs of the notes you want to use for your categories.
     Remember to set #run=hourly as a label for this note.
     To configure date formats use https://day.js.org/docs/en/display/format
 */
@@ -76,6 +77,8 @@ function run_script() {
     // Set notes according to criteria
     for (let note of api.searchForNotes(searchCriteria)){ 
         if (note.getLabelValue(dueDatetimeLabel)){
+            let dueDatePresent = note.getLabelValue(dueDateLabel) ? true : false
+
             let dueDatetime = api.dayjs(note.getLabelValue(dueDatetimeLabel))       
             for (let interval in intervals){
                 var criteria = intervals[interval]['criteria']
