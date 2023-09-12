@@ -4,12 +4,18 @@ Agenda Script for Trilium
 
 These scripts allow you to sort your to-dos into various notes depending on their due dates:
 
-- Overdue
-- Today
-- This Week
-- This Month
-- This Year
-- Future
+
+
+
+## Variants
+- One Note Per Category
+   - Overdue
+   - Today
+   - This Week
+   - This Month
+   - This Year
+   - Future
+
 
 ## To Use
 1. Create 6 notes to store tasks for the above categories.
