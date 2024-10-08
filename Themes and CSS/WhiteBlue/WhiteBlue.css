@@ -1,0 +1,87 @@
+@font-face {
+    font-family: 'Noto Sans', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    src: url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
+}
+
+:root {
+    
+    --tree-font-family: inherit;
+    --tree-font-size: normal;
+    
+    --detail-font-family: inherit;
+    --detail-font-size: normal;
+    --detail-text-font-family: 'Noto Sans' !important;
+
+    --main-font-family: 'Noto Sans' !important;
+    --main-font-size: normal;
+    --main-background-color: #FFFFFF;
+    --main-text-color: #000000;
+    --main-border-color: #00ACFF;
+    
+    --left-pane-background-color: #FFFFFF;
+    
+    --launcher-pane-background-color: #FFFFFF;
+    
+    --accented-background-color: #FFFFFF;
+    --more-accented-background-color: #00ACFF;
+    
+    --header-background-color: #00ACFF;
+    --header-text-color: #FFFFFF;
+    
+    --button-background-color: white;
+    --button-disabled-background-color: #DFDFDF;
+    --button-border-color: #FFFFFF;
+    --button-text-color: #00ACFF;
+    --button-border-radius: 2px;
+    
+    --primary-button-background-color: #00ACFF;
+    --primary-button-text-color: #FFFFFF;
+    --primary-button-border-color: #00ACFF;
+
+    --muted-text-color: #a4a4a4;
+        
+    --input-text-color: #00ACFF;
+    --input-background-color: #FFFFFF;
+    
+    --hover-item-text-color: white;
+    --hover-item-background-color: #00ACFF;
+    
+    --active-item-text-color: #000000;
+    --active-item-background-color: #FFFFFF;
+    --active-item-border-color: #00ACFF;
+    
+    --menu-text-color: #000000;
+    --menu-background-color: #FFFFFF;
+    
+    --tooltip-background-color: #FFFFFF;
+    
+    --link-color: #00ACFF;
+    
+    --modal-background-color: white;
+    --modal-backdrop-color: white;
+    
+    --scrollbar-border-color: rgba(175, 184, 198, 0.5);
+}
+
+.note-detail h1, .note-detail h2, .note-detail h3, .note-detail h4, .note-detail h5 {
+    color: #00ACFF;
+}
+
+.note-detail h2 {
+    margin: 0 0 0.5em !important;
+}
+
+body .note-detail-text {
+    font-size: 120%;
+}
+
+
+.note-detail-editable-text .note-detail-editable-text-editor li, .note-detail-editable-text .note-detail-editable-text-editor li:first-child {
+    margin: 0.75em 0 !important;
+}
+
+.fancytree-title {
+    color: #000000;
+}
