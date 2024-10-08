@@ -1,0 +1,3 @@
+[submodule "Widgets/Draw.io"]
+	path = Widgets/Draw.io
+	url = https://github.com/SiriusXT/trilium-drawio.git
