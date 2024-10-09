@@ -5,6 +5,7 @@
 */
 
 async function setupButton() {
+    let scriptNote = await api.currentNote().getLabelValue("UpdateAgendaNote")
     await api.runOnBackend(() => {
         api.createOrUpdateLauncher({
             id: "updateAgendaButton",
@@ -12,7 +13,7 @@ async function setupButton() {
             icon: "bx-calendar",
             type: "script",
             isVisible: true,
-            scriptNoteId: "<backend-script-note-id>",
+            scriptNoteId: scriptNote,
         });
     })
 }

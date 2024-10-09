@@ -1,77 +1,100 @@
 /*
-    Instructions: Paste the below into a new JS Backend Script note. Set the note variables to the IDs of the notes you want to use for your categories.
+    Instructions: Paste the below into a new JS Backend Script note. 
+    Set the note variables to the IDs of the notes you want to use for your categories.
     Remember to set #run=hourly as a label for this note.
     To configure date formats use https://day.js.org/docs/en/display/format
 */
 
+// Imports -----------------------------------------------------------------------------
 var isBetween = require('dayjs/plugin/isBetween')
 api.dayjs.extend(isBetween)
 
-async function run_script() {
+var advancedFormat = require('dayjs/plugin/advancedFormat')
+api.dayjs.extend(advancedFormat)
 
-    // User Set Variables
-    let overdueNote = "<overdue-note-id>"
-    let todayNote = "<today-note-id>"
-    let thisWeekNote = "<this-week-note-id>"
-    let thisMonthNote = "<this-month-note-id>"
-    let thisYearNote = "<this-year-note-id>"
-    let futureNote = "<future-note-id>"
-    let dueDateLabel = "dueDate"
-    let dueTimeLabel = "dueTime"
-    let useNumberOfDays = true     // If set to true, intervals are determined based on number of days
-
-    // Dynamic Variables
-    let now = api.dayjs()
-    let startOfToday = now.startOf("day")
-    let endOfToday = now.endOf("day")
-    let endOfThisWeek = useNumberOfDays ? startOfToday.add(7, "day") : now.endOf("week")
-    let endOfThisMonth = useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("month")
-    let endOfThisYear = useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year")
+var isSameOrBefore = require('dayjs/plugin/isSameOrBefore')
+api.dayjs.extend(isSameOrBefore)
 
 
-    for (let note of api.getNotesWithLabel(dueDateLabel)){
-        // Get due date and time
-        let dueDatePresent = note.getLabelValue(dueDateLabel) ? true : false
-        let dueDate = api.dayjs(note.getLabelValue(dueDateLabel))
-        let dueTime = note.hasLabel(dueTimeLabel) ? note.getLabelValue(dueTimeLabel) : ""
-        let dueDateString = ""
+// Variables --------------------------------------------------------------------
+let now = api.dayjs()
+let startOfToday = now.startOf("day")
+let endOfToday = now.endOf("day")
+let endOfThisWeek = useNumberOfDays ? startOfToday.add(7, "day") : now.endOf("week")
+let endOfThisMonth = useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("month")
+let endOfThisYear = useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year")
 
-        // Set Overdue Notes
-        let isOverdue = (dueDatePresent && dueDate.isBefore(startOfToday))
-        dueDateString = dueDate.format("MMM D, YYYY")
-        api.toggleNoteInParent(false, note.noteId, overdueNote)
-        api.toggleNoteInParent(isOverdue, note.noteId, overdueNote, dueDateString)
+// User Set Variables -----------------------------------------------------------------
+let useNumberOfDays = true // intervals are determined based on number of days
+let dueDatetimeLabel = "due"
+let searchCriteria = `# ~template.title=" 1. Routine" OR ~template.title=" 3. Doable"`
+let parentNotes = {
+    "now": "dxQV6zhxqYdT",
+    "upcoming": "kh0CnMKK9xVG"
+}
+let intervals = {
+    'overdue': {
+        'criteria': (datetime) => {return datetime.isBefore(startOfToday)},
+        'parent': 'now',
+        'formatString': "MMM D, YYYY HH:mm"
+    },
+    'now': {
+        'criteria': (datetime) => {return datetime.isBefore(now)},
+        'parent': 'now',
+        'formatString': "HH:mm"
+    },
+    'restOfDay': {
+        'criteria': (datetime) => {return datetime.isBetween(now, endOfToday, null, '[)')},
+        'parent': 'upcoming',
+        'formatString': "HH:mm"
+    },
+    'thisWeek': {
+        'criteria': (datetime) => {return datetime.isBetween(endOfToday, endOfThisWeek, null, '[)')},
+        'parent': 'upcoming',
+        'formatString': "ddd"
+    },
+    'thisMonth': {
+        'criteria': (datetime) => {return datetime.isBetween(endOfThisWeek, endOfThisMonth, null, '[)')},
+        'parent': 'upcoming',
+        'formatString': "Do"
+    },
+    'thisYear': {
+        'criteria': (datetime) => {return datetime.isBetween(endOfThisMonth, endOfThisYear, null, '[]')},
+        'parent': 'upcoming',
+        'formatString': "MMMM"
+    },
+    'future': {
+        'criteria':  (datetime) => {return datetime.isAfter(endOfThisYear)},
+        'parent': 'upcoming',
+        'formatString': "YYYY"
+    }
+} 
 
-        // Set Today Notes
-        let isToday = (dueDatePresent && dueDate.isBetween(startOfToday, endOfToday, null, '[)'))
-        dueDateString = dueTime
-        api.toggleNoteInParent(false, note.noteId, todayNote)
-        api.toggleNoteInParent(isToday, note.noteId, todayNote, dueDateString)
-
-        // Set This Week Notes
-        let isThisWeek = (dueDatePresent && dueDate.isBetween(endOfToday, endOfThisWeek, null, '[)'))
-        dueDateString = dueDate.format("ddd")
-        api.toggleNoteInParent(false, note.noteId, thisWeekNote)
-        api.toggleNoteInParent(isThisWeek, note.noteId, thisWeekNote, dueDateString)
-
-        // Set This Month Notes
-        let isThisMonth = (dueDatePresent && dueDate.isBetween(endOfThisWeek, endOfThisMonth, null, '[)'))
-        dueDateString = dueDate.format("D")
-        api.toggleNoteInParent(false, note.noteId, thisMonthNote)
-        api.toggleNoteInParent(isThisMonth, note.noteId, thisMonthNote, dueDateString)
-
-        // Set This Year Notes
-        let isThisYear = (dueDatePresent && dueDate.isBetween(endOfThisMonth, endOfThisYear, null, '[]'))
-        dueDateString = dueDate.format("MMM D")
-        api.toggleNoteInParent(false, note.noteId, thisYearNote)
-        api.toggleNoteInParent(isThisYear, note.noteId, thisYearNote, dueDateString)
-
-        // Set Future Notes
-        let isFuture = (dueDatePresent && dueDate.isAfter(endOfThisYear))
-        dueDateString = dueDate.format("YYYY")
-        api.toggleNoteInParent(false, note.noteId, futureNote)
-        api.toggleNoteInParent(isFuture, note.noteId, futureNote, dueDateString)
-
+function run_script() {
+    // Clear existing note branches
+    for (parent in parentNotes){
+        var parentNote = parentNotes[parent]
+        for (let note of api.getNote(parentNote).getChildNotes()){
+            api.toggleNoteInParent(false, note.noteId, parentNote)
+        }    
+    }
+    
+    // Set notes according to criteria
+    for (let note of api.searchForNotes(searchCriteria)){ 
+        if (note.getLabelValue(dueDatetimeLabel)){
+            let dueDatetime = api.dayjs(note.getLabelValue(dueDatetimeLabel))       
+            for (let interval in intervals){
+                var criteria = intervals[interval]['criteria']
+                var parent = parentNotes[intervals[interval]['parent']]
+                var formatString = intervals[interval]['formatString']
+                var datetimeFormatted = dueDatetime.format(formatString)
+                if (criteria(dueDatetime)){
+                    api.toggleNoteInParent(criteria, note.noteId, parent, datetimeFormatted)
+                    continue
+                }        
+            }
+        }
     }
 }
+
 run_script()
