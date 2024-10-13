@@ -14,6 +14,9 @@ This simple CSS adds extra padding to any notes with the #cssClass=margin-top la
 ## Mobile View
 These set of scripts allow you to use the full capabilities of the Trilium desktop interface while on a mobile device.
 
+## Now Next Later
+A script that toggles a task between Now, Next or Later note
+
 ## Priority
 A widget to set the priority color of a note
 
