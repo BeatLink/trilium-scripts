@@ -1,6 +1,7 @@
 /*
-This is a custom widget that allows you to set the priority of a note. 
-Add this to a JS Frontend file and set label of #widget. 
+    This is a custom widget that allows you to set the priority of a note. 
+    Add this to a JS Frontend file and set label of #widget. 
+    Set a #priorityLabel= label for the label to store the priority of each note
 */
 
 const html = `
@@ -21,7 +22,7 @@ class PriorityWidget extends api.NoteContextAwareWidget {
     get parentWidget() { return 'right-pane'; }
 
     isEnabled() {
-        return super.isEnabled() && this.note.hasLabel("label:priority")
+        return super.isEnabled() && this.note.hasLabel(`label:${api.currentNote.getLabelValue("priorityLabel")}`)
     }
 
     async doRender() {
