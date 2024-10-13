@@ -3,7 +3,10 @@
 # trillium-recurrence
 Scripts for repeating/recurring tasks
 
-Script to update repeating to-dos
+Tasks can be repeated every x days, weeks, months and years
+Weekly tasks can also repeat on specific days
+Monthly tasks can also be repeated on specific weekdays (eg first Sunday)
+
 
 ## To Use
 1. Create a Note template for repeating tasks. This note must have a date time label for due dates to be updated. 
