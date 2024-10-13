@@ -1,6 +1,6 @@
 # Recurrence
 
-Script to move the current task's due date ahead by one dasy
+Script to move the current task's due date ahead by one day
 
 ## To Use
 1. Create a JS Frontend script and copy the contents of [reschedule.js](./reschedule.js). 
