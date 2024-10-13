@@ -5,8 +5,8 @@
 */
 
 async function setupButton() {
-    let scriptNote = await api.currentNote().getLabelValue("UpdateAgendaNote")
-    await api.runOnBackend(() => {
+    let scriptNote = await api.currentNote.getRelationValue("UpdateAgendaNote")
+    await api.runOnBackend((scriptNote) => {
         api.createOrUpdateLauncher({
             id: "updateAgendaButton",
             title: "Update Agenda",
@@ -15,7 +15,8 @@ async function setupButton() {
             isVisible: true,
             scriptNoteId: scriptNote,
         });
-    })
+    },
+    [scriptNote])
 }
 
 setupButton()
