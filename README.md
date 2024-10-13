@@ -23,11 +23,14 @@ A script that finds notes that have a specific template and clone them as a subn
 ## Starred
 This is a script that lets you quickly add or remove tasks to or from a specific "Starred" note
 
-### Template Picker
+## Template Picker
 This widget allows you to easily set the template of the current note using a dropdown. 
 
-### WhiteBlue
+## WhiteBlue
 This theme has a heavy emphasis on the use of white backgrounds throughout the interface for light users. Light greys and other non white colors are removed where possible. A light blue color is used as an accent for controls, headings and other areas of interest
 
-### Recurrence
+## Recurrence
 Script to update repeating to-dos. Tasks can be repeated every x days, weeks, months and years. Weekly tasks can also repeat on specific days. Monthly tasks can also be repeated on specific weekdays (eg first Sunday)
+
+## Reschedule
+A script to reschedule a task to tomorrow (one day ahead)
