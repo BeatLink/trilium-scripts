@@ -13,8 +13,6 @@
 await api.runOnBackend(() => {
     let templateMap = api.currentNote.getLabelValues("TemplateMap")
     for (let label of templateMap) {
-        api.log(label)
-
         let parent = label.split('=')[0]
         let template = label.split('=')[1]
 
