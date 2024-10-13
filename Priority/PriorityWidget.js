@@ -15,6 +15,13 @@ const html = `
     </select> 
 </div>`;
 
+var priorityColors = {
+    "3-high": "red",
+    "2-medium": "yellow",
+    "1-low": "blue",
+    "0-none": "#D3D3D3"
+}
+
 class PriorityWidget extends api.NoteContextAwareWidget {
     
     get position() { return 1; } // higher value means position towards the bottom/right
@@ -35,9 +42,11 @@ class PriorityWidget extends api.NoteContextAwareWidget {
     async savePriorityToNote(e){
         const currentNoteID = await api.getActiveContextNote().noteId
         var priorityValue = $('#priority-dropdown').val()
-        api.runOnBackend((currentNoteID, priority) => {
-            api.getNote(currentNoteID).setLabel("priority", priority)           
-        }, [currentNoteID, priorityValue]);
+        let color = priorityColors[priorityValue]
+        api.runOnBackend((currentNoteID, priority, color) => {
+            api.getNote(currentNoteID).setLabel("priority", priority)      
+            api.getNote(currentNoteID).setLabel("color", color)     
+        }, [currentNoteID, priorityValue, color]);
     }
 
     async refreshWithNote(note) {
