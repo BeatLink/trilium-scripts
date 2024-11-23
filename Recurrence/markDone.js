@@ -1,5 +1,5 @@
 /*
-    Instructions: Paste the below into a new JS Backend Script note. 
+    Instructions: Paste the below into a new JS Backend Script note.
     Clone the requirrencelib.js widget to to this script as a subnote
     Create a label "#dueDateLabel=" with the label of notes with due dates to be repeated
 */
@@ -8,7 +8,7 @@
 let recurrencelib = require("recurrencelib")
 
 async function run_script() {
-    const dueLabel = await api.currentNote.getLabelValue("dueDateLabel")    
+    const dueLabel = await api.currentNote.getLabelValue("dueDateLabel")
     var currentNote = await api.getActiveContextNote();
     if (currentNote.hasLabel(dueLabel)) {
         const recurrenceJSON = await api.runOnBackend(
@@ -16,7 +16,7 @@ async function run_script() {
                 const note = api.getNote(currentNoteID)
                 const attachment = note.getAttachmentByTitle("Recurrence.json")
                 return attachment ? attachment.getContent().toString() : ""
-                
+
         }, [currentNote.noteId])
         if (recurrenceJSON){
             var due = new Date(currentNote.getLabelValue(dueLabel))
@@ -30,14 +30,17 @@ async function run_script() {
             const newDueString = `${year}-${month}-${day}T${hour}:${minute}`
             await api.runOnBackend((currentNoteID, dueLabel, newDue) => {
                 const currentNote = api.getNote(currentNoteID)
+                var content = currentNote.getContent()
+                content = content.replaceAll('checked="checked"', "")
+                currentNote.setContent(content, {forceSave: true})
                 currentNote.setLabel(dueLabel, newDue)
-            }, [currentNote.noteId, dueLabel, newDueString]);    
+            }, [currentNote.noteId, dueLabel, newDueString]);
 
         } else {
             await currentNote.setLabel(dueLabel, "")
             await currentNote.setLabel("archived")
         }
-        api.refreshIncludedNote(currentNote) 
+        api.refreshIncludedNote(currentNote)
     }
 }
 run_script()
