@@ -1,0 +1,45 @@
+{
+    "projects": {
+        "searchCriteria": "~template.title='Project' not(note.parents.relations.template.title='Project')",
+    	"parentNoteID": "i8Z24kF2Tkph",
+        "type": "date",
+        "dateLabel": "dueDate",
+        "useNumberOfDays": false,
+        "enableNoDueDate": true,
+        "intervals": {
+        	"overdue": {
+                "dateCriteria": ["isBefore", "startOfToday"],
+                "formatString": "MMM D, YYYY HH:mm"
+            },
+            "now": {
+                "dateCriteria": ["isBetween", "startOfToday", "now", null, "[]"],
+                "formatString": "HH:mm"
+            },
+            "restOfDay": {
+                "dateCriteria": ["isBetween", "now", "endOfToday", null, "[]"],
+                "hideCriteria": ["showRestOfDay", "false"],
+                "formatString": "HH:mm"
+            },
+            "thisWeek": {
+                "dateCriteria": ["isBetween", "endOfToday", "endOfThisWeek", null, "[)"],
+                "hideCriteria": ["showUpcoming", "false"],
+                "formatString": "ddd"
+            },
+            "thisMonth": {
+                "dateCriteria": ["isBetween", "endOfThisWeek", "endOfThisMonth", null, "[)"],
+                "hideCriteria": ["showUpcoming", "false"],
+                "formatString": "Do"
+            },
+            "thisYear": {
+                "dateCriteria": ["isBetween", "endOfThisMonth", "endOfThisYear", null, "[]"],
+                "hideCriteria": ["showUpcoming", "false"],
+                "formatString": "MMMM"
+            },
+            "future": {
+                "dateCriteria": ["isAfter", "endOfThisYear"],
+                "hideCriteria": ["showUpcoming", "false"],
+                "formatString": "YYYY"
+            }
+    	}
+	}
+}
