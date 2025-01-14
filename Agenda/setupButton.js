@@ -1,7 +1,7 @@
 /*
     Instructions: Paste the below into a new JS Frontend Script note. 
     Add the following label: #run=frontendStartup 
-    Update the scriptNoteID with the IDs for the notes containing updateAgenda.js 
+    Add a relation ~UpdateAgendaNote pointing to the updateAgenda.js script
 */
 
 async function setupButton() {

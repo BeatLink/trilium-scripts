@@ -1,0 +1,14 @@
+{
+    "projects": {
+        "searchCriteria": "~template.title='Project' not(note.parents.relations.template.title='Project')",
+    	"parentNoteID": "i8Z24kF2Tkph",
+        "type": "text",
+        "textLabel": "priority",
+        "enableNoValue": true,
+        "prefixMap": {
+    		"3-must": "Must",
+        	"2-should": "Should",
+        	"1-want": "Want"
+    	}
+	}
+}
