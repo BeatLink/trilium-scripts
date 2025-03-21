@@ -3,15 +3,15 @@ This is a custom widget that allows you to easily change the template of the cur
 */
 
 const html = `
-<div style="display: flex; flex-direction: column; padding: 10px; border-top: 1px solid var(--main-border-color); contain: none;">
-    <label for="template-dropdown">Template</label>
+<div style="display: flex; flex-direction: column; padding: 10px; contain: none;">
+    <div class="card-header"><label for="template-dropdown">Template</label></div>
     <select id="template-dropdown" "class="dropdown"></select>
 </div>`;
 
 class TemplatePickerWidget extends api.NoteContextAwareWidget {
     
-    get position() { return 100; } // higher value means position towards the bottom/right
-
+    position = 1;
+    
     get parentWidget() { return 'right-pane'; }
 
     isEnabled() {
@@ -41,9 +41,12 @@ class TemplatePickerWidget extends api.NoteContextAwareWidget {
         for (var note of notes) {
             options += `<option value="${note.noteId}">${note.title}</option>`
         }        
-        this.$dropdown.html(options);        
-        var currentTemplate = await api.getActiveContextNote().getRelationTarget("template")
-        this.$dropdown.val(currentTemplate ? currentTemplate.noteId : "none")
+        this.$dropdown.html(options);
+        var currentNote = await api.getActiveContextNote()
+        if (currentNote) {
+	        var currentTemplate = currentNote.getRelationTarget("template")
+    	    this.$dropdown.val(currentTemplate ? currentTemplate.noteId : "none")
+        }
     }
     
     async entitiesReloadedEvent({loadResults}) {
