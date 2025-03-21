@@ -7,24 +7,19 @@
 var styles = `
 
     #mobileViewWidget {
-        height: 212px !important;
-    }
-
-    #mobileViewInner {
-        box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        width: 100%;
+    }
+
+    body:not(.mobile-view) #mobileViewWidget {
+		height: calc((var(--launcher-pane-size) - (var(--launcher-pane-button-margin) * 2)) + 12px) !important
+    }
+    
+    body.mobile-view #mobileViewWidget {
+		height: calc(((var(--launcher-pane-size) - (var(--launcher-pane-button-margin) * 2)) * 4) + 24px) !important
     }
    
-    #mobileViewToggle, 
-    #mobileViewSetSidebar, 
-    #mobileViewSetNote, 
-    #mobileViewSetRightPane {
-        font-size: 110%;
-        padding: 10px 0;
-    }
     
     /* Hide irrelevant buttons --------------------------------------------*/
     body:not(.mobile-view) #mobileViewSetSidebar, 
@@ -83,15 +78,15 @@ document.head.appendChild(viewport);
 // Creates the widget to control the mobile view -----------------------------------------------------------------------------------------------
 
 const template = `
-<div id="mobileViewWidget" class="launcher-button component">
-    <div id="mobileViewInner">
-        <span id="mobileViewToggle" title="Toggle Mobile View" class="bx bx-mobile-alt" ></span>
-        <span id="mobileViewSetSidebar" title="Set Sidebar View" class="bx bx-chevron-left"></span>
-        <span id="mobileViewSetNote" title="Set Note View" class="bx bx-radio-circle"></span>
-        <span id="mobileViewSetRightPane" title="Set Right Pane View" class="bx bx-chevron-right"></span>
-    </div>
-</div>
-`;
+<div id="mobileViewWidget" class="vertical component">
+<button id="mobileViewToggle" title="Toggle Mobile View" class="button-widget component launcher-button bx bx-mobile-alt" ></button>
+
+<button id="mobileViewSetSidebar" title="Set Sidebar View" class="button-widget component launcher-button bx bx-chevron-left"></button>
+
+<button id="mobileViewSetNote" title="Set Note View" class="button-widget component launcher-button bx bx-radio-circle"></button>
+
+<button id="mobileViewSetRightPane" title="Set Right Pane View" class="button-widget component launcher-button  bx bx-chevron-right"></button>
+</div>`;
 
 class MobileView extends api.BasicWidget {
     get position() {return 1;}
