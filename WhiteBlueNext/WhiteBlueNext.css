@@ -1,0 +1,137 @@
+/*
+
+A revamp of WhiteBlue based on the TriliumNext Theme
+
+Add to a CSS note and set the following attributes: #appThemeBase=next #appTheme=WhiteBlueNext
+
+Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheets/theme-next-light.css
+
+*/
+
+@font-face {
+    font-family: 'Noto Sans', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    src: url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
+}
+
+:root {
+    --white: white;
+    --black: black;
+    --lightgray: #efefef;
+    --gray: #eee;
+    --accent: #00ACFF;
+    
+    --main-font-family: 'Noto Sans' !important;
+    --detail-text-font-family: inherit;
+    --detail-font-family: inherit;
+    --tree-font-family: inherit;
+    
+    --main-background-color: var(--white);
+    --main-text-color: var(--black);
+    --main-border-color: var(--accent) !important;
+    --accented-background-color: var(--white) !important;
+    --more-accented-background-color: var(--lightgray) !important;
+    
+    --gutter-color: transparent !important;
+    --gutter-hover-color: var(--accent) !important;
+
+    --tab-close-button-hover-background: #FF0000 !important;
+    --tab-close-button-hover-color: white;
+
+    --active-tab-background-color: var(--gray) !important;
+    --active-tab-hover-background-color: var(--active-tab-background-color) !important;
+    --active-tab-text-color: var(--black) !important;
+    --active-tab-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1), -1px -1px 3px rgba(0, 0, 0, 0.05);
+    --active-tab-dragging-shadow: var(--active-tab-shadow), 0 0 20px rgba(0, 0, 0, 0.1);
+
+    --inactive-tab-background-color: transparent;
+    --inactive-tab-hover-background-color: var(--lightgray) !important;
+    --inactive-tab-text-color: var(--gray);
+
+    --new-tab-button-background: transparent !important;
+    --new-tab-button-color: var(--accent) !important;
+    --new-tab-button-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    --new-tab-button-hover-background: white;
+    --new-tab-button-hover-color: black;
+
+    --launcher-pane-background-color: #FFFFFF !important;
+    
+    --quick-search-background: var(--white) !important;
+    --quick-search-color: var(--black) !important;
+    --quick-search-hover-background: var(--lightgray) !important;
+    --quick-search-focus-border: var(--accent) !important;
+    --quick-search-focus-background: var(--white) !important;
+    --quick-search-focus-color: var(--black) !important;
+
+    
+    --left-pane-collapsed-border-color: var(--gray) !important;
+    --left-pane-background-color: #FFFFFF !important;
+    --left-pane-item-hover-background: var(--lightgray) !important;
+    --left-pane-item-selected-background: var(--gray) !important;
+    --left-pane-item-selected-color: var(--black) !important;
+    --left-pane-item-selected-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    --left-pane-item-action-button-background: #d7d7d7;
+    --left-pane-item-action-button-color: inherit !important;
+    --left-pane-item-action-button-hover-background: white;
+    --left-pane-item-action-button-hover-shadow: 2px 2px 3px rgba(0, 0, 0, 0.15);
+    --left-pane-item-selected-action-button-hover-shadow: 2px 2px 10px rgba(0, 0, 0, 0.25);
+
+    --header-background-color: var(--accent) !important;
+    --header-text-color: var(--accent) !important;
+
+    --button-hover-border-color: var(--accent) !important;
+    --button-text-color: var(--accent) !important;
+    
+    --primary-button-background-color: var(--accent) !important;
+    --primary-button-text-color: var(--white) !important;
+    --primary-button-border-color: var(--accent) !important;
+
+    --input-text-color: var(--accent) !important;
+    --input-background-color: var(--white) !important;
+        
+    --hover-item-text-color: white !important;
+    --hover-item-background-color: var(--accent) !important;
+    --hover-item-border-color: transparent !important;
+
+    --active-item-border-color: var(--accent) !important;
+    --active-item-background-color: var(--white) !important;
+    --active-item-text-color: var(--black) !important;
+    
+    --menu-text-color: var(--black);
+    --menu-background-color: #FFFFFF99;
+
+    --link-color: var(--accent);
+
+    --modal-background-color: var(--white);
+    --modal-backdrop-color: var(--white);
+}
+
+.note-detail h1, .note-detail h2, .note-detail h3, .note-detail h4, .note-detail h5 {
+    color: var(--accent);
+}
+
+.note-detail h2 {
+    margin: 0 0 0.5em !important;
+}
+
+body .note-detail-text {
+    font-size: 120%;
+}
+
+html .note-detail-editable-text :not(figure, .include-note) li:first-child {
+    margin: 0.75em 0 !important;
+}
+
+
+.note-detail-editable-text .note-detail-editable-text-editor li, .note-detail-editable-text .note-detail-editable-text-editor li:first-child {
+    margin: 0.75em 0 !important;
+}
+
+.fancytree-title {
+    color: var(--black);
+}
+
+#right-pane .component {
+	border-top: 2px solid var(--accent);
+}
