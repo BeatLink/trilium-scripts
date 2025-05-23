@@ -12,7 +12,7 @@ async function setupButton() {
             api.createOrUpdateLauncher({
                 id: "toggleStarredButton",
                 title: "Toggle Starred",
-                icon: "bxs-star-half",
+                icon: "bx bxs-star-half",
                 type: "script",
                 isVisible: true,
                 scriptNoteId: toggleStarredNote
