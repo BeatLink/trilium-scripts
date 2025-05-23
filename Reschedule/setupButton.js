@@ -6,17 +6,28 @@
 
 
 async function setupButton() {
-    let rescheduleScript = await api.currentNote.getRelationValue("rescheduleScript")
-    await api.runOnBackend((rescheduleScript) => {
+    let rescheduleTodayScript = await api.currentNote.getRelationValue("rescheduleTodayScript")
+    await api.runOnBackend((rescheduleTodayScript) => {
         api.createOrUpdateLauncher({
-            id: "rescheduleOneDayButton",
-            title: "Reschedule Task One Day Ahead",
-            icon: "bx-calendar",
+            id: "rescheduleTodayButton",
+            title: "Reschedule Task to Today",
+            icon: "bx-calendar-star",
             type: "script",
             isVisible: true,
-            scriptNoteId: rescheduleScript,
+            scriptNoteId: rescheduleTodayScript,
         });
-    }, [rescheduleScript])
+    }, [rescheduleTodayScript])
+    let rescheduleTomorrowScript = await api.currentNote.getRelationValue("rescheduleTomorrowScript")
+    await api.runOnBackend((rescheduleTomorrowScript) => {
+        api.createOrUpdateLauncher({
+            id: "rescheduleTomorrowButton",
+            title: "Reschedule Task to Tomorrow",
+            icon: "bx-calendar-event",
+            type: "script",
+            isVisible: true,
+            scriptNoteId: rescheduleTomorrowScript,
+        });
+    }, [rescheduleTomorrowScript])
 }
 
 setupButton()
