@@ -2,18 +2,20 @@
     Instructions: Paste the below into a new JS Frontend Script note. 
  */
 
-// Loads the Styles -----------------------------------------------------------------------------------------------------------------------------
+// Loads the Styles -----------------------------------------------------------------------------------
 
 var styles = `
 
     #mobileViewWidget {
         display: flex;
         flex-direction: column;
+    	justify-content: center;
+        align-items: center;
         width: 100%;
     }
 
     body:not(.mobile-view) #mobileViewWidget {
-		height: calc((var(--launcher-pane-size) - (var(--launcher-pane-button-margin) * 2)) + 12px) !important
+		height: calc((var(--launcher-pane-vert-size) - (var(--launcher-pane-vert-button-margin) * 2)) + 12px) !important
     }
     
     body.mobile-view #mobileViewWidget {
@@ -78,8 +80,9 @@ document.head.appendChild(viewport);
 // Creates the widget to control the mobile view -----------------------------------------------------------------------------------------------
 
 const template = `
-<div id="mobileViewWidget" class="vertical component">
-<button id="mobileViewToggle" title="Toggle Mobile View" class="button-widget component launcher-button bx bx-mobile-alt" ></button>
+<div id="mobileViewWidget">
+
+<button id="mobileViewToggle" title="Toggle Mobile View" class="launcher-button bx bx-mobile-alt" ></button>
 
 <button id="mobileViewSetSidebar" title="Set Sidebar View" class="button-widget component launcher-button bx bx-chevron-left"></button>
 

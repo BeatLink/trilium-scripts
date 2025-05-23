@@ -23,19 +23,19 @@ Note, these scripts are intended to be used while Trilium web is in Desktop mode
 
 This is the full view without the mobile view activated.
 
-![Full View](./Full%20View.png)
+![Full View](./images/Full%20View.png)
 
 With mobile view activated and the sidebar view selected, only the left sidebar is shown
 
-![Sidebar View](./Sidebar%20View.png)
+![Sidebar View](./images/Sidebar%20View.png)
 
 With the note view selected only the note contents and attributes are shown
 
-![Note View](./Note%20View.png)
+![Note View](./images/Note%20View.png)
 
 With the right panel view selected only the right panel and widgets are shown
 
-![Right Panel View](./Right%20Pane%20View.png)
+![Right Panel View](./images/Right%20Pane%20View.png)
 
 ## Versions
 
