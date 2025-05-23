@@ -38,7 +38,7 @@ A script that toggles a task between Now, Next or Later note
 
 A widget to set the priority color of a note
 
-# Search Templates
+## Search Templates
 
 A script that finds notes that have a specific template and clone them as a subnote of a parent note. Mostly replaced by Agenda
 
