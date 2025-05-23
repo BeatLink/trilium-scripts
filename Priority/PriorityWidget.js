@@ -5,26 +5,25 @@
 */
 
 const html = `
-<div style="display: flex; flex-direction: column; padding: 10px; border-top: 1px solid var(--main-border-color); contain: none;">
-    <label for="priority-dropdown">Priority</label>
+<div style="display: flex; flex-direction: column; padding: 10px; contain: none;">
+    <label for="priority-dropdown"><div class="card-header">Priority</div></label>
     <select name="priority" id="priority-dropdown">
-        <option value="3-high">High</option>
+    	<option value="3-high">High</option>
         <option value="2-medium">Medium</option>
         <option value="1-low">Low</option>
-        <option value="0-none" selected>None</option>
-    </select> 
+        <option value="" selected>None</option>
+    </select>
 </div>`;
 
 var priorityColors = {
     "3-high": "red",
-    "2-medium": "yellow",
+    "2-medium": "gold",
     "1-low": "blue",
-    "0-none": "#D3D3D3"
 }
 
 class PriorityWidget extends api.NoteContextAwareWidget {
     
-    get position() { return 1; } // higher value means position towards the bottom/right
+    position = 2; // higher value means position towards the bottom/right
 
     get parentWidget() { return 'right-pane'; }
 
@@ -44,14 +43,20 @@ class PriorityWidget extends api.NoteContextAwareWidget {
         var priorityValue = $('#priority-dropdown').val()
         let color = priorityColors[priorityValue]
         api.runOnBackend((currentNoteID, priority, color) => {
-            api.getNote(currentNoteID).setLabel("priority", priority)      
-            api.getNote(currentNoteID).setLabel("color", color)     
+            if (priority)  {
+ 	           api.getNote(currentNoteID).setLabel("priority", priority)   
+	            api.getNote(currentNoteID).setLabel("color", color)     
+            } else {
+ 	           api.getNote(currentNoteID).removeLabel("priority")   
+ 	           api.getNote(currentNoteID).removeLabel("color")   
+            }
+            
         }, [currentNoteID, priorityValue, color]);
     }
 
     async refreshWithNote(note) {
         var currentPriority = note.getLabelValue("priority")
-        $('#priority-dropdown').val(currentPriority ? currentPriority : "0-none")
+        $('#priority-dropdown').val(currentPriority ? currentPriority : "")
     }
     
     async entitiesReloadedEvent({loadResults}) {
