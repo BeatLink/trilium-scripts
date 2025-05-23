@@ -17,45 +17,53 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 
 :root {
     --white: white;
-    --black: black;
-    --lightgray: #efefef;
+    --black: #010101;
+    --lightgray: #f2f2f2;
     --gray: #eee;
     --accent: #00ACFF;
     
     --main-font-family: 'Noto Sans' !important;
+    --main-font-size: normal;
+    --detail-text-font-family: 'Noto Sans' !important;
     --detail-text-font-family: inherit;
     --detail-font-family: inherit;
+    --detail-font-family: inherit;
+    --detail-font-size: normal;
     --tree-font-family: inherit;
-    
+    --tree-font-size: normal;
+     
     --main-background-color: var(--white);
     --main-text-color: var(--black);
     --main-border-color: var(--accent) !important;
     --accented-background-color: var(--white) !important;
     --more-accented-background-color: var(--lightgray) !important;
     
-    --gutter-color: transparent !important;
+    --gutter-color: var(--lightgray) !important;
     --gutter-hover-color: var(--accent) !important;
 
     --tab-close-button-hover-background: #FF0000 !important;
     --tab-close-button-hover-color: white;
 
     --active-tab-background-color: var(--gray) !important;
-    --active-tab-hover-background-color: var(--active-tab-background-color) !important;
+    --active-tab-hover-background-color: var(--lightgray) !important;
     --active-tab-text-color: var(--black) !important;
     --active-tab-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1), -1px -1px 3px rgba(0, 0, 0, 0.05);
     --active-tab-dragging-shadow: var(--active-tab-shadow), 0 0 20px rgba(0, 0, 0, 0.1);
 
     --inactive-tab-background-color: transparent;
-    --inactive-tab-hover-background-color: var(--lightgray) !important;
+    --inactive-tab-hover-background-color: var(--gray) !important;
     --inactive-tab-text-color: var(--gray);
 
     --new-tab-button-background: transparent !important;
     --new-tab-button-color: var(--accent) !important;
     --new-tab-button-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-    --new-tab-button-hover-background: white;
-    --new-tab-button-hover-color: black;
+    --new-tab-button-hover-background: var(--accent) !important;
+    --new-tab-button-hover-color: var(--white) !important;
 
-    --launcher-pane-background-color: #FFFFFF !important;
+    --launcher-pane-border-color: var(--lightgray) !important;
+    --launcher-pane-vert-background-color: var(--white) !important;
+    --launcher-pane-vert-button-hover-background: var(--accent) !important;
+    --launcher-pane-vert-button-hover-color: var(--white) !important;
     
     --quick-search-background: var(--white) !important;
     --quick-search-color: var(--black) !important;
@@ -64,18 +72,17 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --quick-search-focus-background: var(--white) !important;
     --quick-search-focus-color: var(--black) !important;
 
-    
     --left-pane-collapsed-border-color: var(--gray) !important;
     --left-pane-background-color: #FFFFFF !important;
     --left-pane-item-hover-background: var(--lightgray) !important;
     --left-pane-item-selected-background: var(--gray) !important;
-    --left-pane-item-selected-color: var(--black) !important;
+    --left-pane-item-selected-color: revert !important;
     --left-pane-item-selected-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-    --left-pane-item-action-button-background: #d7d7d7;
-    --left-pane-item-action-button-color: inherit !important;
-    --left-pane-item-action-button-hover-background: white;
-    --left-pane-item-action-button-hover-shadow: 2px 2px 3px rgba(0, 0, 0, 0.15);
-    --left-pane-item-selected-action-button-hover-shadow: 2px 2px 10px rgba(0, 0, 0, 0.25);
+    --left-pane-item-action-button-background: transparent !important;
+    --left-pane-item-action-button-color: var(--black) !important;
+    --left-pane-item-action-button-hover-background: var(--accent) !important;
+    --left-pane-item-action-button-hover-shadow: 2px 2px 3px rgba(0, 0, 0, 0.15) !important;
+    --left-pane-item-selected-action-button-hover-shadow: 2px 2px 10px rgba(0, 0, 0, 0.25) !important;
 
     --header-background-color: var(--accent) !important;
     --header-text-color: var(--accent) !important;
@@ -83,13 +90,17 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --button-hover-border-color: var(--accent) !important;
     --button-text-color: var(--accent) !important;
     
+    --ck-color-button-action-hover-background: var(--accent) !important;
+    
     --primary-button-background-color: var(--accent) !important;
     --primary-button-text-color: var(--white) !important;
     --primary-button-border-color: var(--accent) !important;
 
     --input-text-color: var(--accent) !important;
     --input-background-color: var(--white) !important;
-        
+    --input-hover-color: var(--accent) !important;
+    --input-hover-background: var(--lightgray) !important;
+    
     --hover-item-text-color: white !important;
     --hover-item-background-color: var(--accent) !important;
     --hover-item-border-color: transparent !important;
@@ -98,13 +109,14 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --active-item-background-color: var(--white) !important;
     --active-item-text-color: var(--black) !important;
     
-    --menu-text-color: var(--black);
-    --menu-background-color: #FFFFFF99;
+    --menu-text-color: var(--black) !important;
+    --menu-background-color: var(--lightgray) !important;
 
-    --link-color: var(--accent);
+    --link-color: var(--accent) !important;
 
-    --modal-background-color: var(--white);
-    --modal-backdrop-color: var(--white);
+    --modal-background-color: var(--white) !important;
+    --modal-backdrop-color: var(--white) !important;
+    
 }
 
 .note-detail h1, .note-detail h2, .note-detail h3, .note-detail h4, .note-detail h5 {
@@ -116,7 +128,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 }
 
 body .note-detail-text {
-    font-size: 120%;
+    font-size: 120% !important;
 }
 
 html .note-detail-editable-text :not(figure, .include-note) li:first-child {
@@ -128,10 +140,19 @@ html .note-detail-editable-text :not(figure, .include-note) li:first-child {
     margin: 0.75em 0 !important;
 }
 
+
 .fancytree-title {
-    color: var(--black);
+    color: var(--black) !important;
 }
 
-#right-pane .component {
-	border-top: 2px solid var(--accent);
+span.fancytree-node:not(.fancytree-active):hover .fancytree-title, span.fancytree-node:hover {
+	color: var(--black) !important;
+}
+
+#left-pane span.fancytree-node .tree-item-button:hover {
+    color: var(--white) !important;
+}
+
+#right-pane .card-header {
+	border-top: 2px solid var(--accent) !important;
 }
