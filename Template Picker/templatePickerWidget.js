@@ -3,10 +3,23 @@ This is a custom widget that allows you to easily change the template of the cur
 */
 
 const html = `
-<div style="display: flex; flex-direction: column; padding: 10px; contain: none;">
-    <div class="card-header"><label for="template-dropdown">Template</label></div>
-    <select id="template-dropdown" "class="dropdown"></select>
-</div>`;
+    <div class="template-picker">
+        <div class="card-header">
+        	<header for="template-dropdown">Template</header>
+        </div>
+        <select id="template-dropdown" "class="dropdown"></select>
+    </div>
+`;
+
+const css = `
+    .template-picker {
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        contain: none;"
+    };
+`;
+
 
 class TemplatePickerWidget extends api.NoteContextAwareWidget {
     
@@ -14,45 +27,50 @@ class TemplatePickerWidget extends api.NoteContextAwareWidget {
     
     get parentWidget() { return 'right-pane'; }
 
-    isEnabled() {
-        return super.isEnabled()
-    }
+    isEnabled() { return super.isEnabled() }
 
     async doRender() {
         this.$widget = $(html);
+        this.cssBlock(css);
         this.$dropdown = this.$widget.find('#template-dropdown');
-        this.$dropdown.on('change', async function (e) {
-            const currentNoteID = await api.getActiveContextNote().noteId
-            const templateNoteID = $(this).val()
-            api.runOnBackend((currentNoteID, templateID) => {
-                if (templateID == "none") {
-                    api.getNote(currentNoteID).removeRelation("template")
-                } else {
-                    api.getNote(currentNoteID).setRelation("template", templateID)                
-                }                
-            }, [currentNoteID, templateNoteID]);
-        })
+        this.$dropdown.on('change', await this.saveNoteTemplate.bind(this))
         return this.$widget;
     }
 
     async refreshWithNote(note) {
-        var options = "<option value='none'>None</option>"
-        var notes = await api.searchForNotes("#template")
-        for (var note of notes) {
-            options += `<option value="${note.noteId}">${note.title}</option>`
-        }        
-        this.$dropdown.html(options);
-        var currentNote = await api.getActiveContextNote()
-        if (currentNote) {
-	        var currentTemplate = currentNote.getRelationTarget("template")
-    	    this.$dropdown.val(currentTemplate ? currentTemplate.noteId : "none")
-        }
+        await this.loadTemplateList()
+        await this.loadTemplateValue()
     }
     
     async entitiesReloadedEvent({loadResults}) {
         if (loadResults.isNoteContentReloaded(this.noteId)) {
             this.refresh();
         }
+    }
+    
+    // Main Functions -----------------------------------------------------------------
+    async loadTemplateList() {
+        var templates = await api.searchForNotes("#template")
+        var options = "<option value=''>None</option>"
+        for (var template of templates) {
+            options += `<option value="${template.noteId}">${template.title}</option>`
+        }        
+        this.$dropdown.html(options);
+    }
+    
+    async loadTemplateValue() {
+        var currentTemplate = await this.note.getRelationTarget("template")
+        this.$dropdown.val(currentTemplate ? currentTemplate.noteId : "")
+    }
+    
+    async saveNoteTemplate(){
+        await api.runOnBackend((noteID, templateID) => {
+            if (templateID) {
+                api.getNote(noteID).setRelation("template", templateID)                
+            } else {
+                api.getNote(noteID).removeRelation("template")
+            }                
+        }, [this.noteId, this.$dropdown.val()]);
     }
 }
 
