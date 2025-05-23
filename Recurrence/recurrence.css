@@ -1,0 +1,42 @@
+#recurrenceWidget {
+	display: flex;
+    flex-direction: column;
+    padding: 10px;
+    contain: none;
+}
+
+#recurrenceWidget header {
+    margin: 0;
+    color: var(--muted-text-color) !important;
+    font-weight: bold;
+}
+
+#recurrenceWidget legend {
+    color: var(--muted-text-color) !important;
+	font-size: 1rem;
+    font-weight: bold;
+}
+
+#recurrenceWidget fieldset {
+    margin: 1rem 0;
+}
+
+#recurrenceWidget fieldset div {
+    display: flex;
+    flex-direction: row;
+}
+
+
+#recurrenceWidget #weekFieldset div {
+   	display: flex;
+    flex-direction: column;
+}
+
+#recurrenceWidget #weekFieldset div >  div {
+   	display: flex;
+    flex-direction: row;
+}
+
+input[type="checkbox"] {
+	margin-right: 0.5rem;
+}

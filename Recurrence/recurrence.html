@@ -1,0 +1,295 @@
+<div id=recurrenceWidget >
+    <div id="header-div">
+    	<header id="header">Recurrence</header>
+    </div>
+    <form id="recurrenceForm" name="recurrenceForm">
+        
+        <!--Repeat Enabled -->
+        <fieldset id="enabledFieldset">
+            <legend>Enabled</legend>
+            <input id="enabledInput" type="checkbox" value="True">
+            <label for="enabledInput">This To-Do Repeats</label>
+        </fieldset>
+ 
+        <!--Repeat Interval -->
+        <fieldset id="intervalFieldset">
+            <legend>Interval</legend>
+            <div>
+                <input id="intervalNumberInput" type="number" min="1" step="1" value="1" class="form-control">
+                <select id="intervalInput" class="form-control">
+                    <option value="MINUTELY" selected>Minute</option>
+                    <option value="HOURLY">Hour</option>
+                    <option value="DAILY">Day</option>
+                    <option value="WEEKLY">Week</option>
+                    <option value="MONTHLY">Month</option>
+                    <option value="YEARLY">Year</option>
+                </select>
+            </div>
+        </fieldset>
+
+        <!--Weekdays -->
+        <fieldset id="weekFieldset">
+            <legend>Weekdays</legend>
+            <div>
+                <div>
+                    <input id="weekInputSU" type="checkbox" value="true">
+                    <label for="weekInputSU">Sunday</label>
+                </div>
+                <div>
+                    <input id="weekInputMO" type="checkbox" value="true">
+                    <label for="weekInputMO">Monday</label>
+                </div>
+                <div>
+                    <input id="weekInputTU" type="checkbox" value="true">
+                    <label for="weekInputTU">Tuesday</label>
+                </div>
+                <div>
+                    <input id="weekInputWE" type="checkbox" value="true">
+                    <label for="weekInputWE">Wednesday</label>
+                </div>
+                <div>
+                    <input id="weekInputTH" type="checkbox" value="true">
+                    <label for="weekInputTH">Thursday</label>
+                </div>
+                <div>
+                    <input id="weekInputFR" type="checkbox" value="true">
+                    <label for="weekInputFR">Friday</label>
+                </div>
+                <div>
+                    <input id="weekInputSA" type="checkbox" value="true">
+                    <label for="weekdayInputSA">Saturday</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <!--Month Days -->	
+        <fieldset id="monthFieldset">
+            <legend>Weekday of Month</legend>
+            <div>
+                <select id="monthOrdinalInput" class="form-control">
+                    <option value="1" selected>First</option>
+                    <option value="2">Second</option>
+                    <option value="3">Third</option>
+                    <option value="4">Fourth</option>
+                    <option value="5">Fifth</option>
+                    <option value="-1">Last</option>
+                </select>
+                <select id="monthWeekdayInput" class="form-control">
+                    <option value="none" selected>None</option>
+                    <option value="SU">Sunday</option>
+                    <option value="MO">Monday</option>
+                    <option value="TU">Tuesday</option>
+                    <option value="WE">Wednesday</option>
+                    <option value="TH">Thursday</option>
+                    <option value="FR">Friday</option>
+                    <option value="SA">Saturday</option>
+                </select>
+            </div>
+        </fieldset>
+
+		<!--Repeat Stops -->
+        <fieldset id="stopFieldset">
+            <legend>Repeating Stops</legend>
+            <div>
+                <select id="stopTypeInput" class="form-control">
+                    <option value="never">Never</option>
+                    <option value="number">After # of Repeats</option>
+                    <option value="date">After a date</option>
+                </select>
+                <input id="stopNumberInput" type="number" min="1" step="1" value="1" class="form-control">
+                <input id="stopDateInput" type="date" class="form-control">
+            </div>
+        </fieldset>
+
+    </form>
+
+    <!--Repeat Data -->
+    <input id="recurrenceDataInput" type="hidden" name="recurrenceData" value="RECURRENCE_DATA">
+        
+    <style>
+        /* Hides fieldsets unless enabled */
+        #recurrenceWidget #intervalFieldset, 
+        #recurrenceWidget #weekFieldset, 
+        #recurrenceWidget #monthFieldset,
+        #recurrenceWidget #monthOrdinalInput, 
+        #recurrenceWidget #monthFieldset, 
+        #recurrenceWidget #stopFieldset, 
+        #recurrenceWidget #stopNumberInput,
+        #recurrenceWidget #stopDateInput {
+            display: none;
+        }
+
+        /* Show interval fieldset if enabled */
+        #recurrenceWidget:has(#enabledInput:checked) #intervalFieldset,
+        #recurrenceWidget:has(#enabledInput:checked) #stopFieldset {
+            display: block;
+        }
+
+        /* Show week fieldset if enabled and interval is weekly */
+        #recurrenceWidget:has(#enabledInput:checked):has(#intervalInput option:checked[value="WEEKLY"]) #weekFieldset {
+            display: block;
+        }
+
+        /* Show month fieldset if enabled and interval is monthly */
+        #recurrenceWidget:has(#enabledInput:checked):has(#intervalInput option:checked[value="MONTHLY"]) #monthFieldset {
+            display: block;
+        }
+
+        /* Show month ordinal input (first, second, etc) if month weekday is set */
+        #recurrenceWidget:has(#monthWeekdayInput option:checked:not([value="none"])) #monthOrdinalInput {
+            display: inline-block;
+        }
+
+        /* Show stop number input if stop type is number */
+        #recurrenceWidget:has(#stopTypeInput option:checked[value="number"]) #stopNumberInput {
+            display: inline-block;
+        }
+
+        /* Show stop date input if stop type is date */
+        #recurrenceWidget:has(#stopTypeInput option:checked[value="date"]) #stopDateInput {
+            display: inline-block;
+        }
+
+    </style>
+
+    <script>
+        var weekDays = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
+
+        var recurrenceWidget = document.getElementById("recurrenceWidget")
+        var enabledInput = document.getElementById("enabledInput")
+        var recurrenceDataInput = document.getElementById("recurrenceDataInput")
+        var intervalNumberInput = document.getElementById("intervalNumberInput")
+        var intervalInput = document.getElementById("intervalInput")
+        var weekdaysInputs = weekDays.map(weekday => document.getElementById(`weekInput${weekday}`));
+        var monthOrdinalInput = document.getElementById("monthOrdinalInput")
+        var monthWeekdayInput = document.getElementById("monthWeekdayInput")
+        var stopTypeInput = document.getElementById("stopTypeInput")
+        var stopNumberInput = document.getElementById("stopNumberInput")
+        var stopDateInput = document.getElementById("stopDateInput")
+        var recurrenceDataInput = document.getElementById("recurrenceDataInput")
+
+        enabledInput.addEventListener("change", setRecurrenceData)
+        intervalNumberInput.addEventListener("change", setRecurrenceData)
+        intervalInput.addEventListener("change", setRecurrenceData)
+        for (let weekdayInput of weekdaysInputs){
+            weekdayInput.addEventListener("change", setRecurrenceData)
+        }
+        monthWeekdayInput.addEventListener("change", setRecurrenceData)
+        monthOrdinalInput.addEventListener("change", setRecurrenceData)
+        stopTypeInput.addEventListener("change", setRecurrenceData)
+        stopNumberInput.addEventListener("change", setRecurrenceData)
+        stopDateInput.addEventListener("change", setRecurrenceData)
+        recurrenceDataInput.addEventListener("change", loadRecurrenceData)
+
+        function setRecurrenceData() {
+            let string = ""
+            if (enabledInput.checked) {
+                string += `FREQ=${intervalInput.value};`
+                string += `INTERVAL=${intervalNumberInput.value};`
+                if (intervalInput.value == "WEEKLY"){
+                    let enabledWeekdays = []
+                    for (const [index, weekdayInput] of weekdaysInputs.entries()){
+                        if (weekdayInput.checked){
+                            enabledWeekdays.push(weekDays[index])
+                        }
+                    }
+                    if (enabledWeekdays.length > 0){
+			            string += `BYDAY=${enabledWeekdays.join(',')};`
+		            }
+                }
+                if (intervalInput.value == "MONTHLY"){
+                    if (monthWeekdayInput.value != "none"){
+                        string += `BYDAY=${monthOrdinalInput.value}${monthWeekdayInput.value};`
+                    }
+                }
+                if (stopTypeInput.value == "number"){
+                    string += `COUNT=${stopNumberInput.value};`
+                }
+                if (stopTypeInput.value == "date"){
+                    if (stopDateInput.value) {
+                        const date = new Date(stopDateInput.value)
+		                string += `UNTIL=${date.toISOString().replaceAll('-', '').replaceAll(":", "").replace('.000', '')};`
+                    }
+                }
+            }
+            recurrenceDataInput.value = string.replace(/;$/, ''); // Remove semicolon from end of string
+        }
+
+        function loadRecurrenceData(){
+
+            resetRecurrenceInputs()
+
+            let string = recurrenceDataInput.value            
+            const optionsMap = {
+                'FREQ': '',
+                'INTERVAL': '',
+                'BYDAY': '',
+                'UNTIL': '',
+                'COUNT': '',
+            }
+
+            if (string){
+                const options = string.split(';')
+                for (const option of options){
+                    const [key, value] = option.split('=')
+                    if (key in optionsMap){
+                        optionsMap[key] = value
+                    }
+                }
+
+                enabledInput.checked = true
+                intervalInput.value = optionsMap['FREQ']
+                intervalNumberInput.value = optionsMap['INTERVAL'] ? optionsMap['INTERVAL'] : 1
+                if (optionsMap['FREQ'] == 'WEEKLY'){
+                    if (optionsMap['BYDAY']){
+                        for (const day of optionsMap['BYDAY'].split(',')){
+                            if (day){
+                                weekdaysInputs[weekDays.indexOf(day)].checked = true
+                            }
+                        }
+                    }
+                } else if (optionsMap['FREQ'] == 'MONTHLY'){
+                    if (optionsMap['BYDAY']) {
+                        const monthDay = optionsMap['BYDAY'].split(',')[0] // Current implementation only allows parsing 1 month day. Here the first found is used
+                        const ordinal = monthDay.substring(0, monthDay.length - 2) //Month days might have negative numbers so we parse from the end
+                        const day = monthDay.substring(monthDay.length - 2, monthDay.length)
+                        monthOrdinalInput.value = ordinal
+                        monthWeekdayInput.value = day
+                    }
+                }
+                if (optionsMap['UNTIL']){
+                    stopTypeInput.value = 'date'
+                    let date = optionsMap['UNTIL'].split('T')[0]
+                    date = insertString(date, '-', 4)
+                    date = insertString(date, '-', 7)
+                    stopDateInput.value = date
+                } else if (optionsMap['COUNT']){
+                    stopTypeInput.value = 'number'
+                    stopNumberInput.value = optionsMap['COUNT']
+                } else {
+                    stopTypeInput.value = 'never'
+                }
+            } 
+        }
+
+        function resetRecurrenceInputs(){
+            enabledInput.checked = false
+            intervalInput.value = "DAILY"
+            intervalNumberInput.value = 1
+            for (let weekdayInput of weekdaysInputs){
+                weekdayInput.checked = false
+            }
+            monthWeekdayInput.value = "none"
+            monthOrdinalInput.value = "1"
+            stopTypeInput.value = "never"
+            stopNumberInput.value = 1
+            stopDateInput.value = ""
+        }
+
+        function insertString(originalStr, insertStr, position){
+            return originalStr.slice(0, position) + insertStr + originalStr.slice(position)
+        }
+
+
+    </script> 
+</div>
