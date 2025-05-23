@@ -8,7 +8,11 @@ async function run_script() {
     await api.runOnBackend((currentNoteID, dueDateLabel) => {
         const currentNote = api.getNote(currentNoteID)
         let dueDate = api.dayjs(currentNote.getLabelValue(dueDateLabel))
-        let newDate = dueDate.add(1, "d")
+        let newDate = api.dayjs().add(1, 'day')
+        newDate = newDate.hour(dueDate.hour())
+        newDate = newDate.minute(dueDate.minute())
+        newDate = newDate.second(0)
+        newDate = newDate.millisecond(0)
         let newDateString = newDate.format("YYYY-MM-DDTHH:mm")
         currentNote.setLabel(dueDateLabel, newDateString)
     }, [currentNote.noteId, dueDateLabel]);
