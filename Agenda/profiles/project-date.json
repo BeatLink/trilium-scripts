@@ -1,11 +1,11 @@
 {
-    "projects": {
-        "searchCriteria": "~template.title='Project' not(note.parents.relations.template.title='Project')",
-    	"parentNoteID": "i8Z24kF2Tkph",
+    "routines": {
         "type": "date",
         "dateLabel": "dueDate",
+    	"parentNoteID": "HiJclCFBXADZ",
+        "searchCriteria": "~template.title='2. Project' AND #dueDate",
         "useNumberOfDays": false,
-        "enableNoDueDate": true,
+        "enableNoDueDate": false,
         "intervals": {
         	"overdue": {
                 "dateCriteria": ["isBefore", "startOfToday"],
@@ -20,24 +20,29 @@
                 "hideCriteria": ["showRestOfDay", "false"],
                 "formatString": "HH:mm"
             },
+            "tomorrow": {
+                "dateCriteria": ["isBetween", "endOfToday", "endOfTomorrow", null, "[]"],
+                "hideCriteria": ["showTomorrow", "false"],
+                "formatString": "[Tmrw] HH:mm"
+            },
             "thisWeek": {
                 "dateCriteria": ["isBetween", "endOfToday", "endOfThisWeek", null, "[)"],
-                "hideCriteria": ["showUpcoming", "false"],
+                "hideCriteria": ["showThisWeek", "false"],
                 "formatString": "ddd"
             },
             "thisMonth": {
                 "dateCriteria": ["isBetween", "endOfThisWeek", "endOfThisMonth", null, "[)"],
-                "hideCriteria": ["showUpcoming", "false"],
+                "hideCriteria": ["showThisMonth", "false"],
                 "formatString": "Do"
             },
             "thisYear": {
                 "dateCriteria": ["isBetween", "endOfThisMonth", "endOfThisYear", null, "[]"],
-                "hideCriteria": ["showUpcoming", "false"],
+                "hideCriteria": ["showThisYear", "false"],
                 "formatString": "MMMM"
             },
             "future": {
                 "dateCriteria": ["isAfter", "endOfThisYear"],
-                "hideCriteria": ["showUpcoming", "false"],
+                "hideCriteria": ["showFuture", "false"],
                 "formatString": "YYYY"
             }
     	}

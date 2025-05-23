@@ -1,6 +1,6 @@
 /*
     Instructions: Paste the below into a new JS Backend Script note. 
-    Set ~agendaProfile relationships pointing to the JSON profile notes of the profiles you wish to load.
+    Set ~agendaProfile relationships pointing to the JSON files of the profiles you wish to load.
     Remember to set #run=hourly as a label for this note.
 */
 
@@ -52,6 +52,7 @@ async function run_script() {
                 "now": now,
                 "startOfToday": startOfToday,
                 "endOfToday": now.endOf("day"),
+                "endOfTomorrow": now.endOf("day").add(1, "day"),
                 "endOfThisWeek": useNumberOfDays ? startOfToday.add(7, "day") : now.endOf("week"),
                 "endOfThisMonth": useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("month"),
                 "endOfThisYear": useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year"),
@@ -87,7 +88,7 @@ async function run_script() {
                     } else {
                         // Add note to parent with "No Due Date" if enableNoDueDate
                         if (profile["enableNoDueDate"]){
-                           api.toggleNoteInParent(true, note.noteId, parentNote.noteId, "") 
+                           api.toggleNoteInParent(true, note.noteId, parentNote.noteId, "No Due Date") 
                         }
                     }
                 }
