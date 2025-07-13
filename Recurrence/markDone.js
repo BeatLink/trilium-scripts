@@ -1,6 +1,6 @@
 /*
     Instructions: Paste the below into a new JS Backend Script note. 
-    Create the rrule.min.js note as a subnote
+    Clone the requirrencelib.js widget to to this script as a subnote
     Create a label "#dueDateLabel=" with the label of notes with due dates to be repeated
 */
 
