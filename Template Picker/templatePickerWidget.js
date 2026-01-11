@@ -1,76 +1,81 @@
-/*
-This is a custom widget that allows you to easily change the template of the current note via dropdown. Add this to a JS Frontend file and set a label of #widget
-*/
-
 const html = `
-    <div class="template-picker">
-        <div class="card-header">
-        	<header for="template-dropdown">Template</header>
-        </div>
-        <select id="template-dropdown" "class="dropdown"></select>
+    <div class="main-div">
+        <select id="template-select" class="form-control">
+        </select>
     </div>
-`;
+`
 
 const css = `
-    .template-picker {
+<style>
+    .main-div {
+        margin: 0 0.25rem 1rem;
         display: flex;
+        flex-wrap: wrap;
         flex-direction: column;
-        padding: 10px;
-        contain: none;"
-    };
-`;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 0.5rem;        
+    }
 
+    .mainDiv > * {
+        width: 100%
+    }
+</style>
+`
 
-class TemplatePickerWidget extends api.NoteContextAwareWidget {
+class TemplatePickerWidget extends api.RightPanelWidget {
+
+    // Core Widget functions -----------------------------------------------------------------------
     
-    position = 1;
-    
+    position = 1; // higher value means position towards the bottom/right
+
     get parentWidget() { return 'right-pane'; }
 
-    isEnabled() { return super.isEnabled() }
+    get widgetTitle() { return "Template"; }
 
-    async doRender() {
-        this.$widget = $(html);
-        this.cssBlock(css);
-        this.$dropdown = this.$widget.find('#template-dropdown');
-        this.$dropdown.on('change', await this.saveNoteTemplate.bind(this))
-        return this.$widget;
+    async doRenderBody() {
+        // Create Widget
+        this.$body.empty()
+
+        if (this.note){
+            this.$body.append($(html)).append($(css))
+    
+            // Get Template Select and Setup Event Handler
+            this.$templateSelect = this.$body.find(`#template-select`)
+            this.$templateSelect.on("change", this.saveTemplate.bind(this))
+    
+            //Load Templates
+            let options = "<option value=''>None</option>"
+            for (let note of await api.searchForNotes("#template orderBy note.title")) {
+                options += `<option value="${note.noteId}">${note.title}</option>`
+            }
+            this.$templateSelect.empty().append(options)
+    
+            // Load Current Template       
+            let template = this.note.getRelationValue("template")
+            this.$templateSelect.val(template ? template : "")               
+        }
     }
 
     async refreshWithNote(note) {
-        await this.loadTemplateList()
-        await this.loadTemplateValue()
+        await this.doRenderBody()
     }
-    
+
     async entitiesReloadedEvent({loadResults}) {
         if (loadResults.isNoteContentReloaded(this.noteId)) {
             this.refresh();
         }
     }
-    
-    // Main Functions -----------------------------------------------------------------
-    async loadTemplateList() {
-        var templates = await api.searchForNotes("#template")
-        var options = "<option value=''>None</option>"
-        for (var template of templates) {
-            options += `<option value="${template.noteId}">${template.title}</option>`
-        }        
-        this.$dropdown.html(options);
-    }
-    
-    async loadTemplateValue() {
-        var currentTemplate = await this.note.getRelationTarget("template")
-        this.$dropdown.val(currentTemplate ? currentTemplate.noteId : "")
-    }
-    
-    async saveNoteTemplate(){
-        await api.runOnBackend((noteID, templateID) => {
-            if (templateID) {
-                api.getNote(noteID).setRelation("template", templateID)                
-            } else {
-                api.getNote(noteID).removeRelation("template")
-            }                
-        }, [this.noteId, this.$dropdown.val()]);
+
+    async saveTemplate(e){
+        let template = this.$templateSelect.val()                
+        api.runOnBackend((noteId, template) => {
+            let note = api.getNote(noteId)
+            template ? note.setRelation("template", template) : note.removeRelation("template")            
+        }, [this.noteId, template]);        
     }
 }
 
