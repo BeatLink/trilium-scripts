@@ -1,7 +1,6 @@
 /*
-    Place the following code in a JS Backend Note. Create a inheritable relation "~runOnBranchChange" on the root node pointing to this script 
+    Place the following code in a JS Backend Note. Create a relation "~runOnBranchChange" on the root node pointing to this script 
 */
-
 
 async function expand(){
     var notes = await api.searchForNotes('#alwaysExpanded');
@@ -14,5 +13,4 @@ async function expand(){
         }
     }
 }
-
 expand()
