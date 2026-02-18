@@ -1,37 +1,36 @@
 import json
 import os
 import shutil
+from pathlib import Path
 
 def main():
+    
+    # Get Metadata files
+    metadata_files = list(Path('.').glob('**/metadata.json'))
+
     merged_metadata = {"plugins": {}}
+    for metadata_file in metadata_files:
+        metadata_path = metadata_file.resolve()
 
-    # Scan all folders recursively
-    for root, dirs, files in os.walk("."):
-        if "metadata.json" in files:
-            metadata_path = os.path.join(root, "metadata.json")
-            with open(metadata_path, "r") as f:
-                metadata = json.load(f)
-
+        # Load and merge metadata files
+        plugin_id = ""
+        with metadata_path.open() as f:
+            metadata = json.load(f)
             plugin_id = metadata.get("id")
             merged_metadata["plugins"][plugin_id] = metadata
 
-            # Get the first subfolder inside the folder containing metadata.json
-            subfolders = [d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
-            if not subfolders:
-                print(f"No subfolder found in {root}, skipping zip")
-                continue
-
-            source_folder = os.path.join(root, subfolders[0])
-            zip_filename = f"{plugin_id}"
-            # Zip the subfolder, preserving its folder name
-            shutil.make_archive(
-                base_name=zip_filename,
-                format='zip',
-                root_dir=os.path.dirname(source_folder),
-                base_dir=os.path.basename(source_folder)
-            )
-
-            print(f"Created zip: {zip_filename}.zip")
+        # Zip the plugin folder
+        plugin_path = [x for x in metadata_path.parent.iterdir() if x.is_dir()][0]
+        if not plugin_path:
+            print(f"No plugin folder found for {metadata_path}, skipping zip")
+            continue            
+        shutil.make_archive(
+            base_name=plugin_id,
+            format='zip',
+            root_dir=plugin_path,
+            base_dir=(".")
+        )
+        print(f"Created zip: {plugin_id}.zip")
 
     # Write merged metadata
     with open("metadata.json", "w") as f:
