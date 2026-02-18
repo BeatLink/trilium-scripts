@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main # Trigger artifacts for any commit on main
+    tags:
+      - "v*.*.*" # Trigger releases on version tags
   workflow_dispatch:
 
 jobs:
