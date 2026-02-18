@@ -14,7 +14,7 @@ def main():
             with open(metadata_path, "r") as f:
                 metadata = json.load(f)
             plugin_id = f'{metadata.get("id")}@{metadata.get("author")}'
-            merged_metadata["plugins"]['plugin_id'] = metadata
+            merged_metadata["plugins"][plugin_id] = metadata
 
             # Create zip of plugin folder
             zip_filename = f"{plugin_id}.zip"
