@@ -6,6 +6,5 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Template%20Picker",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
-    "minAppVersion": "101.3",
     "type": "widget"
 }
