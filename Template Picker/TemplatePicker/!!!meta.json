@@ -1,0 +1,87 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "r4ewMnKHpJLM",
+			"notePath": [
+				"r4ewMnKHpJLM"
+			],
+			"title": "TemplatePicker",
+			"notePosition": 1000002749,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "TemplatePicker",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "xM0Jv4N9nVUt",
+					"notePath": [
+						"r4ewMnKHpJLM",
+						"xM0Jv4N9nVUt"
+					],
+					"title": "templatePickerPreact",
+					"notePosition": 32,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "widget",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "templatePickerPreact.jsx",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "3No9YvqiGuqx",
+					"notePath": [
+						"r4ewMnKHpJLM",
+						"3No9YvqiGuqx"
+					],
+					"title": "templatePickerPreact.css",
+					"notePosition": 42,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/css",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "appCss",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "templatePickerPreact.css",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
