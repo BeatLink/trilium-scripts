@@ -12,7 +12,7 @@ jobs:
 
     steps:
       # Step 1: Checkout repository
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Step 2: Setup Python
       - uses: actions/setup-python@v4
@@ -26,7 +26,7 @@ jobs:
       - run: python .github/workflows/publish.py
 
       # Step 5: Upload zips and merged metadata
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: plugin-artifacts
           path: |
