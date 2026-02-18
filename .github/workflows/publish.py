@@ -7,7 +7,7 @@ def main():
         "plugins": {}
     }
 
-    # Scan only top-level folders (or adjust if needed)
+    # Scan top-level folders (adjust if needed)
     for root, dirs, files in os.walk("."):
         if "metadata.json" in files:
             metadata_path = os.path.join(root, "metadata.json")
@@ -29,8 +29,8 @@ def main():
                 for foldername, subdirs, filenames in os.walk(source_folder):
                     for filename in filenames:
                         filepath = os.path.join(foldername, filename)
-                        # relative path inside zip starts from the subfolder name
-                        arcname = os.path.relpath(filepath, start=root)
+                        # relative path inside zip starts from the source folder
+                        arcname = os.path.relpath(filepath, start=source_folder)
                         zipf.write(filepath, arcname=arcname)
 
             print(f"Created zip: {zip_filename}")
