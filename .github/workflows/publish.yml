@@ -1,4 +1,4 @@
-name: Publish Plugins and Metadata
+name: Publish Addons and Metadata
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Upload artifacts for commits
         uses: actions/upload-artifact@v4
         with:
-          name: plugin-artifacts
+          name: addon-artifacts
           path: |
             *.zip
             metadata.json
@@ -75,8 +75,8 @@ jobs:
           asset_name: metadata.json
           asset_content_type: application/json
 
-      # Step 7: Upload plugin zip files as release assets
-      - name: Upload plugin zips
+      # Step 7: Upload addon zip files as release assets
+      - name: Upload addon zips
         run: |
           for zipfile in *.zip; do
             gh release upload ${{ github.ref_name }} "$zipfile" --clobber
