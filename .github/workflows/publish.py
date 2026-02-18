@@ -24,7 +24,7 @@ def main():
             source_folder = os.path.join(root, subfolders[0])
             zip_filename = f"{plugin_id}"
             # Zip the subfolder, preserving its folder name
-            shutil.makearchive(
+            shutil.make_archive(
                 base_name=zip_filename,
                 format='zip',
                 root_dir=os.path.dirname(source_folder),
