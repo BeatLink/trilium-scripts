@@ -9,10 +9,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-artifacts:
+  publish-addons:
     if: github.ref_type == 'branch' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
