@@ -1,0 +1,34 @@
+name: Publish Plugins and Metadata
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - uses: actions/checkout@v3
+
+      # Step 2: Setup Python
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      # Step 3: Install dependencies (optional)
+      - run: pip install --upgrade pip
+
+      # Step 4: Run the merge + zip script
+      - run: python .github/workflows/publish.py
+
+      # Step 5: Upload zips and merged metadata
+      - uses: actions/upload-artifact@v3
+        with:
+          name: plugin-artifacts
+          path: |
+            *.zip
+            metadata.json
