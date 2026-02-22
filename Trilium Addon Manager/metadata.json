@@ -1,5 +1,5 @@
 {
-    "id": "trilium-addon-manager@beatlink",
+    "id": "Trilium Addon Manager",
     "name": "Trilium Addon Manager",
     "description": "This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories.",
     "author": "BeatLink",
