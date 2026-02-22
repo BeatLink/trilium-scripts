@@ -1,0 +1,64 @@
+{
+    "values": {
+        "01-career": {
+            "title": "Career",
+            "color": "red"           
+        },
+        "02-finances": {
+            "title": "Finances",
+            "color": "red"
+        },
+        "03-home": {
+            "title": "Home",
+            "color": "darkorange"
+        },
+       "04-car": {
+            "title": "Car",
+            "color": "darkorange"
+        },
+       "05-fitness": {
+            "title": "Fitness",
+            "color": "gold"
+        },
+       "06-grooming": {
+            "title": "Grooming",
+            "color": "gold"
+        },
+       "07-sexual": {
+            "title": "Sexual",
+            "color": "gold"
+        },
+       "08-social": {
+            "title": "Social",
+            "color": "lime"
+        },
+       "09-health": {
+            "title": "Health",
+            "color": "lime"
+        },
+       "10-mental": {
+            "title": "Mental",
+            "color": "lime"
+        },
+       "11-identity": {
+            "title": "Identity",
+            "color": "lime"
+        },
+       "12-productivity": {
+            "title": "Productivity",
+            "color": "lime"
+        },
+       "13-tech": {
+            "title": "Tech",
+            "color": "cyan"
+        },
+       "14-fun": {
+            "title": "Fun",
+            "color": "magenta"
+        },
+        "none": {
+            "title": "None",
+            "color": ""
+        }
+    }
+}

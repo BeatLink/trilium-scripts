@@ -1,0 +1,10 @@
+{
+    "id": "area-picker@beatlink",
+    "name": "Area Picker",
+    "description": "A right pane dropdown widget that allows you set a note to a specific area of life",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Area%20Picker",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget"
+}
