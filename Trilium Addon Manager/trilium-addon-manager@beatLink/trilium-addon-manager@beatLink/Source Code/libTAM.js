@@ -192,8 +192,21 @@ async function deleteRepository(repoId) {
 async function installAddon(repoId, addonId){
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
+    if (!database.password){
+        const response = await api.showPromptDialog({
+            title: "Enter Client Password",
+            message: "To install addons, please enter your Trilium Client Password (the password used to access the web interface)",
+        })
+        if (response) {
+            console.log(response)
+            database.password = response
+        } else {
+            api.showMessage("To install addons, set your Trilium Password in the Database section", 5000, "bx bx-error")
+            return
+        }
+    }
     const addonData = await fetchAddonData(repoId, addonId)
-    const addonRootNote = await api.currentNote.getRelationValue("addonsRoot")
+    const addonRootNote = await getDatabaseNoteId()
     const addonNoteId = await importAddonZip(database.password, addonRootNote, addonId, addonData)
     if (!database.installedAddons[repoId]) {
         database.installedAddons[repoId] = {}    
@@ -203,7 +216,6 @@ async function installAddon(repoId, addonId){
         "noteId": addonNoteId
     }
     await saveDatabase(database)
-    
 }
 
 

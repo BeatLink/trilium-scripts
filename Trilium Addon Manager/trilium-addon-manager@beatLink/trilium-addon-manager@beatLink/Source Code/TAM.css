@@ -7,7 +7,7 @@
 }
 
 .TAM-repository-main-controls {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: var(--card-background-color);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: row;
@@ -29,7 +29,7 @@
 }
 
 .TAM-repository-div {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: var(--card-background-color);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -46,7 +46,7 @@
 }
 
 .TAM-addon-div {
-    background-color: white;
+    background-color: var(--main-background-color);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: row;
@@ -57,7 +57,7 @@
 }
 
 .TAM-addon-info-div {
-    background-color: white;
+    background-color: var(--main-background-color);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -66,7 +66,7 @@
 }
 
 .TAM-addon-button-div {
-    background-color: white;
+    background-color: var(--main-background-color);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
