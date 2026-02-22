@@ -7,17 +7,16 @@ This addon allows for the easy installation, removal and updating of Trilium add
 ## Features
 
 * Manage Multiple Addon Repositories
-
   * Add Repository
   * Remove Repository
 * Manage Addons
-* * Show addon information
+  * Show addon information
   * Install addons
   * Update addons
   * Uninstall addons
 * Allow installation of multiple addons from one repository (monorepo architecture)
-* Dependency Management for addons
-* Persistence of addon data across updates and reinstalls
+* [PLANNED] Dependency Management for addons
+* [PLANNED] Persistence of addon data across updates and reinstalls
 
 ## Setting Up an Addon Repository
 
