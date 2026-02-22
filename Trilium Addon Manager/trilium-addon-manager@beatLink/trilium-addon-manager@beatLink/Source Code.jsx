@@ -8,23 +8,28 @@ import {
     useEffect
 } from "trilium:preact"
 
+import {
+    activateNote,
+    getTargetRelationSourceNotes
+} from "trilium:api"
+
 
 function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
-    console.log(addonId)
     return (
-        <div key={addonId}>
-            <div className="TAM-addon-div">
-                <label>Name: {addonData.name}</label>
-                <label>Description: {addonData.description}</label>
-                <label>Author: {addonData.author}</label>
-                <label>Homepage: {addonData.homepage}</label>
+        <div  className="TAM-addon-div" key={addonId}>
+            <div className="TAM-addon-info-div">
+                <label>{addonData.name} by {addonData.author} ({addonData.installedVersion ?? addonData.latestVersion})</label>
+                <label>{addonData.description}</label>
                 <label>License: {addonData.license}</label>
-                <label>Latest Version: {addonData.latestVersion}</label>
-                <label>Installed Version: {addonData.installedVersion ?? ""}</label>
-                <label>Type {addonData.type}</label>
-                <label>ID: {addonId}</label>
             </div>
-            <div>
+            <div className="TAM-addon-button-div">
+                <Button
+                    icon="bx bx-globe"
+                    text="Home Page"
+                    onClick={e => {
+                         window.open(addonData.homepage, "_blank"); 
+                    }}
+                />
                 {!addonData.installedVersion && <Button
                     icon="bx bx-download"
                     text="Install Addon"
@@ -48,7 +53,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
                 />}
                 {addonData.updateAvailable == true && <Button
                     icon="bx bx-sync"
-                    text="Update Addon"
+                    text={`Update Addon (${addonData.latestVersion})`}
                     onClick={e => {
                         onUpdate(addonId)
                     }}
@@ -63,7 +68,7 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
     return (
         <div key={repoId} className="TAM-repository-div">
             <div className="TAM-repository-controls">
-                <h6>{repoId}</h6>
+                <h5>{repoId}</h5>
                 <Button
                     icon="bx bx-trash"
                     text="Delete Repository"
@@ -134,36 +139,43 @@ export default function RepoManager() {
                 case "add-repository": {
                     await libTAMjs.addRepository(command["repository"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "update-repositories": {
                     await libTAMjs.updateRepositories()
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "delete-repository": {
                     await libTAMjs.deleteRepository(command["repository"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "install-addon": {
                     await libTAMjs.installAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "delete-addon": {
                     await libTAMjs.deleteAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "update-addon": {
                     await libTAMjs.updateAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
                 case "enable-addon": {
                     await libTAMjs.enableAddon(command["repository"], command["addon"], command["enabled"])
                     setCommand({command: "load-repository"})
+                    window.location.reload();
                     break
                 }
             }
@@ -185,7 +197,7 @@ export default function RepoManager() {
         <div className="TAM-body">
             <h2>Trilium Addon Manager</h2>
             <div>
-                <h5>Repository Management</h5>
+                <h4>Repository Management</h4>
                 <div className="TAM-repository-main-controls">
                     <Button
                         icon="bx bx-sync"
@@ -202,7 +214,7 @@ export default function RepoManager() {
                 </div>
             </div>
             <div>
-                <h5>Repositories</h5>
+                <h4>Repositories</h4>
                 {Object.entries(repositories).map(([repoId, repoData]) => (
                     <Repository
                         repoId={repoId}

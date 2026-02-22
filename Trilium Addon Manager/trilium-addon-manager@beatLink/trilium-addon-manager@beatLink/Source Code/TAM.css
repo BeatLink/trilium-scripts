@@ -49,9 +49,27 @@
     background-color: white;
     border-radius: 0.5rem;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     padding: 1rem;
     justify-content: space-between;
     margin: 1rem 0;
+    
+}
+
+.TAM-addon-info-div {
+    background-color: white;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    
+}
+
+.TAM-addon-button-div {
+    background-color: white;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     
 }

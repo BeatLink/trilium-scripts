@@ -133,6 +133,7 @@ async function addRepository(repoId) {
     if (database.repositories[repoId]) return
     database.repositories[repoId] = {}
     await saveDatabase(database)
+    await updateRepositories()
 }
 
 // Get list of repos
@@ -176,8 +177,11 @@ async function updateRepositories() {
 async function deleteRepository(repoId) {
     if (!repoId.trim()) return
     let database = await loadDatabase()
-    delete database.repositories[repoId]
-    await saveDatabase(database)
+    if (!database.installedAddons[repoId] || Object.keys(database.installedAddons[repoId]).length === 0){
+        delete database.installedAddons[repoId]
+        delete database.repositories[repoId]
+        await saveDatabase(database)
+    }
 }
 
 
@@ -198,7 +202,7 @@ async function installAddon(repoId, addonId){
         "noteId": addonNoteId
     }
     await saveDatabase(database)
-    window.location.reload();
+    
 }
 
 
@@ -211,8 +215,11 @@ async function deleteAddon(repoId, addonId){
         api.getNote(noteId).deleteNote()  
     }, [noteId])
     delete database.installedAddons[repoId][addonId]
+    if (Object.keys(database.installedAddons[repoId]).length === 0){
+        delete database.installedAddons[repoId]
+    }
     await saveDatabase(database)
-    window.location.reload();
+    
 }
 
 
@@ -225,7 +232,6 @@ async function updateAddon(repoId, addonId){
 
 // Enable or Disable the Addon
 async function enableAddon(repoId, addonId, enabled){
-    console.log(enabled)
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
     const noteId = database.installedAddons[repoId][addonId].noteId
@@ -259,7 +265,7 @@ async function enableAddon(repoId, addonId, enabled){
             }            
         }
     }, [noteId, enabled, dangerousLabels])
-    window.location.reload();
+    
 }
 
 
