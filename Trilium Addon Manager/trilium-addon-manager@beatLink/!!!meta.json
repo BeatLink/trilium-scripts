@@ -40,10 +40,10 @@
 						"yf4gq1MbHmcQ",
 						"iKKXeWu12INI"
 					],
-					"title": "Settings",
+					"title": "Database",
 					"notePosition": 70,
 					"prefix": null,
-					"isExpanded": false,
+					"isExpanded": true,
 					"type": "code",
 					"mime": "application/json",
 					"attributes": [
@@ -55,33 +55,7 @@
 							"position": 20
 						}
 					],
-					"dataFileName": "Settings.json",
-					"attachments": []
-				},
-				{
-					"isClone": false,
-					"noteId": "Ve0iJWX6ZdgO",
-					"notePath": [
-						"yf4gq1MbHmcQ",
-						"Ve0iJWX6ZdgO"
-					],
-					"title": "Addons",
-					"notePosition": 80,
-					"prefix": null,
-					"isExpanded": true,
-					"type": "text",
-					"mime": "text/html",
-					"attributes": [
-						{
-							"type": "label",
-							"name": "iconClass",
-							"value": "bx bx-customize",
-							"isInheritable": false,
-							"position": 20
-						}
-					],
-					"format": "html",
-					"dataFileName": "Addons.html",
+					"dataFileName": "Database.json",
 					"attachments": []
 				},
 				{
@@ -94,7 +68,7 @@
 					"title": "Source Code",
 					"notePosition": 90,
 					"prefix": null,
-					"isExpanded": false,
+					"isExpanded": true,
 					"type": "code",
 					"mime": "text/jsx",
 					"attributes": [
@@ -102,6 +76,13 @@
 							"type": "label",
 							"name": "iconClass",
 							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "relation",
+							"name": "displayNote",
+							"value": "yf4gq1MbHmcQ",
 							"isInheritable": false,
 							"position": 20
 						}
@@ -138,13 +119,6 @@
 									"value": "bx bx-customize",
 									"isInheritable": false,
 									"position": 30
-								},
-								{
-									"type": "relation",
-									"name": "addonsRoot",
-									"value": "Ve0iJWX6ZdgO",
-									"isInheritable": false,
-									"position": 20
 								}
 							],
 							"dataFileName": "libTAM.js",

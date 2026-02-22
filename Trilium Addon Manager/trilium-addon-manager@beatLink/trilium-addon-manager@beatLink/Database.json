@@ -1,6 +1,6 @@
 {
     "repositories": {
-        "BeatLink/trilium-scripts": {}
+        "BeatLink/trilium-scripts": { }
     },
     "installedAddons": {},
     "password": ""

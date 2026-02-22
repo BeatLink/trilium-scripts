@@ -10,7 +10,7 @@ import {
 
 import {
     activateNote,
-    getTargetRelationSourceNotes
+    currentNote
 } from "trilium:api"
 
 
@@ -130,6 +130,7 @@ export default function RepoManager() {
     useEffect(() => {
         if (!command) return;
         async function commandHandler(){
+            const displayNote = await currentNote.getRelationValue("displayNote")
             switch (command["command"]) {
                 case "load-repository": {
                     setRepositories((await libTAMjs.getAllRepositories()))
@@ -139,42 +140,46 @@ export default function RepoManager() {
                 case "add-repository": {
                     await libTAMjs.addRepository(command["repository"])
                     setCommand({command: "load-repository"})
-                    window.location.reload();
+                    await activateNote(displayNote)
                     break
                 }
                 case "update-repositories": {
                     await libTAMjs.updateRepositories()
                     setCommand({command: "load-repository"})
-                    window.location.reload();
+                    await activateNote(displayNote)
                     break
                 }
                 case "delete-repository": {
                     await libTAMjs.deleteRepository(command["repository"])
                     setCommand({command: "load-repository"})
-                    window.location.reload();
+                    await activateNote(displayNote)
                     break
                 }
                 case "install-addon": {
                     await libTAMjs.installAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
                 case "delete-addon": {
                     await libTAMjs.deleteAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
                 case "update-addon": {
                     await libTAMjs.updateAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
                 case "enable-addon": {
                     await libTAMjs.enableAddon(command["repository"], command["addon"], command["enabled"])
                     setCommand({command: "load-repository"})
+                    await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
