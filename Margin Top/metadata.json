@@ -1,0 +1,10 @@
+{
+    "id": "margin-top@beatlink",
+    "name": "Margin Top",
+    "description": "A simple AppCSS. Add #cssClass=margin-top to any root note to separate it from others in the note tree.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Margin%20Top",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "css"
+}

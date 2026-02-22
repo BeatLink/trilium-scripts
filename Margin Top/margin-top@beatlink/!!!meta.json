@@ -1,0 +1,49 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "OmBMzOsr7Ri4",
+			"notePath": [
+				"OmBMzOsr7Ri4"
+			],
+			"title": "margin-top@beatlink",
+			"notePosition": 30,
+			"prefix": null,
+			"isExpanded": false,
+			"type": "code",
+			"mime": "text/css",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "appCss",
+					"value": "",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"dataFileName": "margin-top@beatlink.css",
+			"attachments": []
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
