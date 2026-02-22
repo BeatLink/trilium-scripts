@@ -1,5 +1,7 @@
 # Trilium Addon Manager (TAM)
 
+![Screenshot](./image.png)
+
 ## Overview
 
 This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories.
