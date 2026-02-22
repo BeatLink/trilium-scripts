@@ -4,12 +4,12 @@
 	"files": [
 		{
 			"isClone": false,
-			"noteId": "ufdTXX4cSPPg",
+			"noteId": "zb4HvKwecOmE",
 			"notePath": [
-				"ufdTXX4cSPPg"
+				"zb4HvKwecOmE"
 			],
 			"title": "area-picker@beatlink",
-			"notePosition": 20,
+			"notePosition": 80,
 			"prefix": null,
 			"isExpanded": true,
 			"type": "text",
@@ -29,10 +29,10 @@
 			"children": [
 				{
 					"isClone": false,
-					"noteId": "wuMtKwJj0mR3",
+					"noteId": "pcLpx00YRPMA",
 					"notePath": [
-						"ufdTXX4cSPPg",
-						"wuMtKwJj0mR3"
+						"zb4HvKwecOmE",
+						"pcLpx00YRPMA"
 					],
 					"title": "areaPickerPreact",
 					"notePosition": 20,
@@ -42,18 +42,18 @@
 					"mime": "text/jsx",
 					"attributes": [
 						{
+							"type": "relation",
+							"name": "AddonData:profile",
+							"value": "4hq82I6tIS4i",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
 							"type": "label",
 							"name": "widget",
 							"value": "",
 							"isInheritable": false,
 							"position": 10
-						},
-						{
-							"type": "relation",
-							"name": "profile",
-							"value": "c1DwAg8BYraH",
-							"isInheritable": false,
-							"position": 20
 						}
 					],
 					"dataFileName": "areaPickerPreact.jsx",
@@ -61,10 +61,10 @@
 				},
 				{
 					"isClone": false,
-					"noteId": "3bRYxGuv9Da0",
+					"noteId": "swr7mM97ac0C",
 					"notePath": [
-						"ufdTXX4cSPPg",
-						"3bRYxGuv9Da0"
+						"zb4HvKwecOmE",
+						"swr7mM97ac0C"
 					],
 					"title": "areaPickerPreact.css",
 					"notePosition": 30,
@@ -75,17 +75,17 @@
 					"attributes": [
 						{
 							"type": "label",
-							"name": "appCss",
-							"value": "",
-							"isInheritable": false,
-							"position": 10
-						},
-						{
-							"type": "label",
 							"name": "iconClass",
 							"value": "bx bx-code",
 							"isInheritable": false,
 							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "appCss",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
 						}
 					],
 					"dataFileName": "areaPickerPreact.css",
@@ -93,10 +93,10 @@
 				},
 				{
 					"isClone": false,
-					"noteId": "c1DwAg8BYraH",
+					"noteId": "4hq82I6tIS4i",
 					"notePath": [
-						"ufdTXX4cSPPg",
-						"c1DwAg8BYraH"
+						"zb4HvKwecOmE",
+						"4hq82I6tIS4i"
 					],
 					"title": "area.json",
 					"notePosition": 61,
