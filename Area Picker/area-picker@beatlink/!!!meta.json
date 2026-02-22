@@ -1,0 +1,134 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "ufdTXX4cSPPg",
+			"notePath": [
+				"ufdTXX4cSPPg"
+			],
+			"title": "area-picker@beatlink",
+			"notePosition": 20,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "area-picker@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "wuMtKwJj0mR3",
+					"notePath": [
+						"ufdTXX4cSPPg",
+						"wuMtKwJj0mR3"
+					],
+					"title": "areaPickerPreact",
+					"notePosition": 20,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "widget",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "relation",
+							"name": "profile",
+							"value": "c1DwAg8BYraH",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "areaPickerPreact.jsx",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "3bRYxGuv9Da0",
+					"notePath": [
+						"ufdTXX4cSPPg",
+						"3bRYxGuv9Da0"
+					],
+					"title": "areaPickerPreact.css",
+					"notePosition": 30,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/css",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "appCss",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "areaPickerPreact.css",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "c1DwAg8BYraH",
+					"notePath": [
+						"ufdTXX4cSPPg",
+						"c1DwAg8BYraH"
+					],
+					"title": "area.json",
+					"notePosition": 61,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/json",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "area.json",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
