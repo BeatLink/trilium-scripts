@@ -1,0 +1,196 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "sK4zcbmLWmOS",
+			"notePath": [
+				"sK4zcbmLWmOS"
+			],
+			"title": "trilium-addon-manager@beatLink",
+			"notePosition": 50,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "render",
+			"mime": "",
+			"attributes": [
+				{
+					"type": "relation",
+					"name": "renderNote",
+					"value": "6oQdKpkgdMvq",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-customize",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"attachments": [],
+			"dirFileName": "trilium-addon-manager@beatLink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "xoQzKRjlMcca",
+					"notePath": [
+						"sK4zcbmLWmOS",
+						"xoQzKRjlMcca"
+					],
+					"title": "Settings",
+					"notePosition": 70,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/json",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "Settings.json",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "FMtluud8jLX1",
+					"notePath": [
+						"sK4zcbmLWmOS",
+						"FMtluud8jLX1"
+					],
+					"title": "Addons",
+					"notePosition": 80,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"format": "html",
+					"dataFileName": "Addons.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "6oQdKpkgdMvq",
+					"notePath": [
+						"sK4zcbmLWmOS",
+						"6oQdKpkgdMvq"
+					],
+					"title": "Source Code",
+					"notePosition": 90,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "Source Code.jsx",
+					"attachments": [],
+					"dirFileName": "Source Code",
+					"children": [
+						{
+							"isClone": false,
+							"noteId": "Lt6pk11mg4hU",
+							"notePath": [
+								"sK4zcbmLWmOS",
+								"6oQdKpkgdMvq",
+								"Lt6pk11mg4hU"
+							],
+							"title": "libTAM.js",
+							"notePosition": 10,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "code",
+							"mime": "application/javascript;env=frontend",
+							"attributes": [
+								{
+									"type": "relation",
+									"name": "database",
+									"value": "xoQzKRjlMcca",
+									"isInheritable": false,
+									"position": 10
+								},
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"dataFileName": "libTAM.js",
+							"attachments": []
+						},
+						{
+							"isClone": false,
+							"noteId": "1lSD3W1ClfiU",
+							"notePath": [
+								"sK4zcbmLWmOS",
+								"6oQdKpkgdMvq",
+								"1lSD3W1ClfiU"
+							],
+							"title": "TAM.css",
+							"notePosition": 20,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "code",
+							"mime": "text/css",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "appCss",
+									"value": "",
+									"isInheritable": false,
+									"position": 10
+								},
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"dataFileName": "TAM.css",
+							"attachments": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
