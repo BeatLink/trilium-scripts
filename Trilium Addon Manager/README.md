@@ -21,4 +21,4 @@ This addon allows for the easy installation, removal and updating of Trilium add
 
 ## Setting Up an Addon Repository
 
-For setting up an addon repository to publish your own addons, see [./Setting Up an Addon Repository.md](./Setting Up an Addon Repository.md)
+For setting up an addon repository to publish your own addons, see [./Setting Up an Addon Repository.md](./Setting%20Up%20an%20Addon%20Repository.md)
