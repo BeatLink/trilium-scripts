@@ -1,0 +1,10 @@
+{
+    "id": "trilium-addon-manager@beatlink",
+    "name": "Trilium Addon Manager",
+    "description": "This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Trilium%20Addon%20Manager",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "widget"
+}

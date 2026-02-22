@@ -1,0 +1,57 @@
+.TAM-body {
+    padding: 1rem;
+}
+
+.TAM-body > div {
+    padding: 1rem 0;
+}
+
+.TAM-repository-main-controls {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: row;
+    padding: 1rem;
+    justify-content: space-between;
+}
+
+.TAM-new-repository-div {
+    display: flex;
+    flex-direction: row;
+    gap: 0.25rem;
+}
+
+.TAM-new-repository-text {
+}
+
+.TAM-new-repository-div button.btn.btn-secondary {
+    min-width: fit-content;
+}
+
+.TAM-repository-div {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    justify-content: space-between;
+    margin: 1rem 0;
+}
+
+.TAM-repository-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.TAM-addon-div {
+    background-color: white;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    justify-content: space-between;
+    margin: 1rem 0;
+    
+}
