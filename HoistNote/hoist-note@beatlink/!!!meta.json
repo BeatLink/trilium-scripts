@@ -1,0 +1,109 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "IlrS70D1KEdk",
+			"notePath": [
+				"IlrS70D1KEdk"
+			],
+			"title": "hoist-note@beatlink",
+			"notePosition": 80,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 10
+				}
+			],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "hoist-note@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "Jh2dHWmur0R8",
+					"notePath": [
+						"IlrS70D1KEdk",
+						"Jh2dHWmur0R8"
+					],
+					"title": "setupButtons.js",
+					"notePosition": 12,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "relation",
+							"name": "hoistNoteScript",
+							"value": "ltKqPFUUbMqN",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "run",
+							"value": "frontendStartup",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 30
+						}
+					],
+					"dataFileName": "setupButtons.js",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "ltKqPFUUbMqN",
+					"notePath": [
+						"IlrS70D1KEdk",
+						"ltKqPFUUbMqN"
+					],
+					"title": "hoistNote.js",
+					"notePosition": 22,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "hoistNote.js",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}

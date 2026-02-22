@@ -1,0 +1,10 @@
+{
+    "id": "hoist-note@beatlink",
+    "name": "Hoist Note",
+    "description": "This addon creates a launchbar shortcut to hoise the current note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/HoistNote",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget"
+}
