@@ -193,7 +193,8 @@ async function installAddon(repoId, addonId){
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
     const addonData = await fetchAddonData(repoId, addonId)
-    const addonNoteId = await importAddonZip(database.password, database.addonParentNote, addonId, addonData)
+    const addonRootNote = await api.currentNote.getRelationValue("addonsRoot")
+    const addonNoteId = await importAddonZip(database.password, addonRootNote, addonId, addonData)
     if (!database.installedAddons[repoId]) {
         database.installedAddons[repoId] = {}    
     }
@@ -235,6 +236,7 @@ async function enableAddon(repoId, addonId, enabled){
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
     const noteId = database.installedAddons[repoId][addonId].noteId
+    console.log(noteId)
     const result = await api.runOnBackend((noteId, enabled, dangerousLabels) => {
         const ids = api.getNote(noteId).getSubtreeNoteIds()
         for (const id of ids) {

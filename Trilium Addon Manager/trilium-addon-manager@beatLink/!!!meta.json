@@ -4,12 +4,12 @@
 	"files": [
 		{
 			"isClone": false,
-			"noteId": "sK4zcbmLWmOS",
+			"noteId": "yf4gq1MbHmcQ",
 			"notePath": [
-				"sK4zcbmLWmOS"
+				"yf4gq1MbHmcQ"
 			],
 			"title": "trilium-addon-manager@beatLink",
-			"notePosition": 50,
+			"notePosition": 70,
 			"prefix": null,
 			"isExpanded": true,
 			"type": "render",
@@ -18,7 +18,7 @@
 				{
 					"type": "relation",
 					"name": "renderNote",
-					"value": "6oQdKpkgdMvq",
+					"value": "XsQGn5aJ6ifF",
 					"isInheritable": false,
 					"position": 10
 				},
@@ -35,10 +35,10 @@
 			"children": [
 				{
 					"isClone": false,
-					"noteId": "xoQzKRjlMcca",
+					"noteId": "iKKXeWu12INI",
 					"notePath": [
-						"sK4zcbmLWmOS",
-						"xoQzKRjlMcca"
+						"yf4gq1MbHmcQ",
+						"iKKXeWu12INI"
 					],
 					"title": "Settings",
 					"notePosition": 70,
@@ -60,10 +60,10 @@
 				},
 				{
 					"isClone": false,
-					"noteId": "FMtluud8jLX1",
+					"noteId": "Ve0iJWX6ZdgO",
 					"notePath": [
-						"sK4zcbmLWmOS",
-						"FMtluud8jLX1"
+						"yf4gq1MbHmcQ",
+						"Ve0iJWX6ZdgO"
 					],
 					"title": "Addons",
 					"notePosition": 80,
@@ -86,15 +86,15 @@
 				},
 				{
 					"isClone": false,
-					"noteId": "6oQdKpkgdMvq",
+					"noteId": "XsQGn5aJ6ifF",
 					"notePath": [
-						"sK4zcbmLWmOS",
-						"6oQdKpkgdMvq"
+						"yf4gq1MbHmcQ",
+						"XsQGn5aJ6ifF"
 					],
 					"title": "Source Code",
 					"notePosition": 90,
 					"prefix": null,
-					"isExpanded": true,
+					"isExpanded": false,
 					"type": "code",
 					"mime": "text/jsx",
 					"attributes": [
@@ -112,11 +112,11 @@
 					"children": [
 						{
 							"isClone": false,
-							"noteId": "Lt6pk11mg4hU",
+							"noteId": "2T1rgKGoDzLT",
 							"notePath": [
-								"sK4zcbmLWmOS",
-								"6oQdKpkgdMvq",
-								"Lt6pk11mg4hU"
+								"yf4gq1MbHmcQ",
+								"XsQGn5aJ6ifF",
+								"2T1rgKGoDzLT"
 							],
 							"title": "libTAM.js",
 							"notePosition": 10,
@@ -128,7 +128,7 @@
 								{
 									"type": "relation",
 									"name": "database",
-									"value": "xoQzKRjlMcca",
+									"value": "iKKXeWu12INI",
 									"isInheritable": false,
 									"position": 10
 								},
@@ -136,6 +136,13 @@
 									"type": "label",
 									"name": "iconClass",
 									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 30
+								},
+								{
+									"type": "relation",
+									"name": "addonsRoot",
+									"value": "Ve0iJWX6ZdgO",
 									"isInheritable": false,
 									"position": 20
 								}
@@ -145,11 +152,11 @@
 						},
 						{
 							"isClone": false,
-							"noteId": "1lSD3W1ClfiU",
+							"noteId": "Kw2lFmb8Bdi5",
 							"notePath": [
-								"sK4zcbmLWmOS",
-								"6oQdKpkgdMvq",
-								"1lSD3W1ClfiU"
+								"yf4gq1MbHmcQ",
+								"XsQGn5aJ6ifF",
+								"Kw2lFmb8Bdi5"
 							],
 							"title": "TAM.css",
 							"notePosition": 20,
