@@ -1,0 +1,109 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "yHO8TUBJJPJG",
+			"notePath": [
+				"yHO8TUBJJPJG"
+			],
+			"title": "mobile-view@beatlink",
+			"notePosition": 10,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 10
+				}
+			],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "mobile-view@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "AG1LTjAJTCU7",
+					"notePath": [
+						"yHO8TUBJJPJG",
+						"AG1LTjAJTCU7"
+					],
+					"title": "Mobile View.js",
+					"notePosition": 10,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "Mobile View.js",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "yQenf3O3DJe7",
+					"notePath": [
+						"yHO8TUBJJPJG",
+						"yQenf3O3DJe7"
+					],
+					"title": "setupButtons.js",
+					"notePosition": 20,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "relation",
+							"name": "MobileViewWidget",
+							"value": "AG1LTjAJTCU7",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "run",
+							"value": "frontendStartup",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 30
+						}
+					],
+					"dataFileName": "setupButtons.js",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}

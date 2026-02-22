@@ -1,0 +1,10 @@
+{
+    "id": "mobile-view@beatlink",
+    "name": "Mobile View",
+    "description": "These set of scripts allow you to use the full capabilities of the Trilium server user interface while on a mobile device.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Mobile%20View",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "widget"
+}
