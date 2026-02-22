@@ -14,7 +14,15 @@
 			"isExpanded": true,
 			"type": "text",
 			"mime": "text/html",
-			"attributes": [],
+			"attributes": [
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
 			"format": "html",
 			"attachments": [],
 			"dirFileName": "template-picker@beatlink",
@@ -64,6 +72,13 @@
 							"value": "",
 							"isInheritable": false,
 							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-code",
+							"isInheritable": false,
+							"position": 30
 						}
 					],
 					"dataFileName": "templatePickerPreact.css",
