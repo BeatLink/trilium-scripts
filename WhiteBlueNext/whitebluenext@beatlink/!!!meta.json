@@ -1,0 +1,56 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "C4b66EHNg1j1",
+			"notePath": [
+				"C4b66EHNg1j1"
+			],
+			"title": "whitebluenext@beatlink",
+			"notePosition": 20,
+			"prefix": null,
+			"isExpanded": false,
+			"type": "code",
+			"mime": "text/css",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "appThemeBase",
+					"value": "next",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "label",
+					"name": "appTheme",
+					"value": "WhiteBlueNext",
+					"isInheritable": false,
+					"position": 20
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 30
+				}
+			],
+			"dataFileName": "whitebluenext@beatlink.css",
+			"attachments": []
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}

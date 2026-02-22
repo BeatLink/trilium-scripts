@@ -1,0 +1,10 @@
+{
+    "id": "whitebluenext@beatlink",
+    "name": "WhiteBlueNext",
+    "description": "This is a Trilium theme consisting of mostly white, a few grays and a light blue accent.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/WhiteBlueNext",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "theme"
+}
