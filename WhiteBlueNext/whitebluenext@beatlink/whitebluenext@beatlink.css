@@ -16,11 +16,15 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 }
 
 :root {
+    --theme-style: light;
+
     --white: white;
     --black: #010101;
     --lightgray: #f2f2f2;
     --gray: #eee;
     --accent: #00ACFF;
+    --tree-item-light-theme-max-color-lightness: 100 !important;
+     --tree-item-dark-theme-min-color-lightness: 100 !important;
     
     --main-font-family: 'Noto Sans' !important;
     --main-font-size: normal;
@@ -73,7 +77,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --quick-search-focus-color: var(--black) !important;
 
     --left-pane-collapsed-border-color: var(--gray) !important;
-    --left-pane-background-color: #FFFFFF !important;
+    --left-pane-background-color: var(--white) !important;
     --left-pane-item-hover-background: var(--lightgray) !important;
     --left-pane-item-selected-background: var(--gray) !important;
     --left-pane-item-selected-color: revert !important;
@@ -89,13 +93,20 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 
     --button-hover-border-color: var(--accent) !important;
     --button-text-color: var(--accent) !important;
+
+    --radio-checkbox-indicator-color: var(--accent) !important;
+    --radio-checkbox-background: var(--white) !important;
     
     --ck-color-button-action-hover-background: var(--accent) !important;
     
-    --primary-button-background-color: var(--accent) !important;
-    --primary-button-text-color: var(--white) !important;
-    --primary-button-border-color: var(--accent) !important;
-
+    --primary-button-background-color: var(--white) !important;
+    --primary-button-text-color: var(--accent) !important;
+    --primary-button-border-color: var(--white) !important;
+        
+    --cmd-button-text-color: var(--accent) !important;
+    --cmd-button-background-color: var(--white) !important;
+    --cmd-button-shadow-color: transparent !important;
+    
     --input-text-color: var(--accent) !important;
     --input-background-color: var(--white) !important;
     --input-hover-color: var(--accent) !important;
@@ -117,6 +128,31 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --modal-background-color: var(--white) !important;
     --modal-backdrop-color: var(--white) !important;
     
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --theme-style: dark;
+
+        --white: #010101;
+        --black: white;
+        --lightgray: #232323;
+        --gray: #2f2f2f;
+        --accent: #00ACFF;
+    }
+}
+
+.btn-check:checked+.btn {
+    background-color: var(--cmd-button-hover-background-color);
+    color: var(--cmd-button-hover-text-color);
+    border-color: #00000000;
+    
+}
+
+.btn-check+.btn:hover, .btn-check:checked+.btn:hover {
+    background-color: var(--accent) !important;
+    color: var(--white) !important;
+    border-color: var(--white) !important;
 }
 
 .note-detail h1, .note-detail h2, .note-detail h3, .note-detail h4, .note-detail h5 {
@@ -141,7 +177,7 @@ html .note-detail-editable-text :not(figure, .include-note) li:first-child {
 }
 
 
-.fancytree-title {
+span.fancytree-title {
     color: var(--black) !important;
 }
 
