@@ -37,7 +37,7 @@ export default defineWidget({
         }, [noteId])
         const saveArea = (area) => {
             api.runOnBackend((noteId, area) => {
-                let profileNote = api.currentNote.getRelationTarget("profile")
+                let profileNote = api.currentNote.getRelationTarget("AddonData:profile")
                 let profile = JSON.parse(profileNote.getContent())['values']
                 if (area != "none") {
                     api.getNote(noteId).setLabel("area", area)
