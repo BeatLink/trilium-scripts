@@ -51,7 +51,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
                         onEnable(addonId, !addonData.enabled)
                     }}
                 />}
-                {addonData.updateAvailable == true && <Button
+                {addonData.updateAvailable && <Button
                     icon="bx bx-sync"
                     text={`Update Addon (${addonData.latestVersion})`}
                     onClick={e => {

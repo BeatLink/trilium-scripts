@@ -8,7 +8,7 @@
 			"notePath": [
 				"yf4gq1MbHmcQ"
 			],
-			"title": "trilium-addon-manager@beatLink",
+			"title": "Trilium Addon Manager",
 			"notePosition": 70,
 			"prefix": null,
 			"isExpanded": true,
@@ -31,7 +31,7 @@
 				}
 			],
 			"attachments": [],
-			"dirFileName": "trilium-addon-manager@beatLink",
+			"dirFileName": "Trilium Addon Manager",
 			"children": [
 				{
 					"isClone": false,
@@ -56,7 +56,63 @@
 						}
 					],
 					"dataFileName": "Database.json",
-					"attachments": []
+					"attachments": [],
+					"dirFileName": "Database",
+					"children": [
+						{
+							"isClone": false,
+							"noteId": "QUhdOnM9O9oh",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"iKKXeWu12INI",
+								"QUhdOnM9O9oh"
+							],
+							"title": "Addons",
+							"notePosition": 40,
+							"prefix": null,
+							"isExpanded": true,
+							"type": "text",
+							"mime": "text/html",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"format": "html",
+							"dataFileName": "Addons.html",
+							"attachments": []
+						},
+						{
+							"isClone": false,
+							"noteId": "WEksn0sZjvhz",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"iKKXeWu12INI",
+								"WEksn0sZjvhz"
+							],
+							"title": "Addon Data",
+							"notePosition": 50,
+							"prefix": null,
+							"isExpanded": true,
+							"type": "code",
+							"mime": "application/json",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"dataFileName": "Addon Data.json",
+							"attachments": []
+						}
+					]
 				},
 				{
 					"isClone": false,
@@ -117,6 +173,20 @@
 									"type": "label",
 									"name": "iconClass",
 									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 40
+								},
+								{
+									"type": "relation",
+									"name": "addonRoot",
+									"value": "QUhdOnM9O9oh",
+									"isInheritable": false,
+									"position": 20
+								},
+								{
+									"type": "relation",
+									"name": "addonPersistence",
+									"value": "WEksn0sZjvhz",
 									"isInheritable": false,
 									"position": 30
 								}
