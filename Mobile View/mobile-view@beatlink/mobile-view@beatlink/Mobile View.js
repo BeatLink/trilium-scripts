@@ -20,6 +20,7 @@ var styles = `
     
     body.mobile-view #mobileViewWidget {
 		height: calc(((var(--launcher-pane-size) - (var(--launcher-pane-button-margin) * 2)) * 4) + 24px) !important
+
     }
    
     
