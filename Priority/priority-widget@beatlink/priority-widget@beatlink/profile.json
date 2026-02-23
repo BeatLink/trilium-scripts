@@ -1,0 +1,33 @@
+{
+    "selected": "moscow",
+    "profiles": {
+        "standard": {
+            "label": "priority",
+            "options": {
+                "4-critical": "Critical",
+                "3-high": "High",
+                "2-medium": "Medium",
+                "1-low": "Low"
+            }
+        },
+        "moscow": {
+            "label": "priority",
+            "options": {
+                "4-critical": "Must Do",
+                "3-high": "Should Do",
+                "2-medium": "Could Do",
+                "1-low": "Want To Do"
+            }
+        },
+        "color": {
+            "label": "color",
+            "options": {
+                "red": "Critical",
+                "darkorange": "High",
+                "gold": "Medium",
+                "cyan": "Low"
+            }
+        }
+        
+    }
+}
