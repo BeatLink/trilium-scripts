@@ -1,0 +1,10 @@
+{
+    "id": "priority-widget@beatlink",
+    "name": "Priority Widget",
+    "description": "This right pane widget provides a dropdown to set the priority of a note. Various priority profiles can be selected.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Priority",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget"
+}

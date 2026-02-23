@@ -1,0 +1,94 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "AOHy3FKb7x8L",
+			"notePath": [
+				"AOHy3FKb7x8L"
+			],
+			"title": "priority-widget@beatlink",
+			"notePosition": 140,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "code",
+			"mime": "text/jsx",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "widget",
+					"value": "",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "relation",
+					"name": "AddonData:profile",
+					"value": "YPdh1JtQDm9N",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"dataFileName": "priority-widget@beatlink.jsx",
+			"attachments": [],
+			"dirFileName": "priority-widget@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "XaqCQsKqeST7",
+					"notePath": [
+						"AOHy3FKb7x8L",
+						"XaqCQsKqeST7"
+					],
+					"title": "style.css",
+					"notePosition": 10,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/css",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "appCss",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "style.css",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "YPdh1JtQDm9N",
+					"notePath": [
+						"AOHy3FKb7x8L",
+						"YPdh1JtQDm9N"
+					],
+					"title": "profile.json",
+					"notePosition": 20,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/json",
+					"attributes": [],
+					"dataFileName": "profile.json",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
