@@ -32,18 +32,6 @@
 			],
 			"dataFileName": "margin-top@beatlink.css",
 			"attachments": []
-		},
-		{
-			"noImport": true,
-			"dataFileName": "navigation.html"
-		},
-		{
-			"noImport": true,
-			"dataFileName": "index.html"
-		},
-		{
-			"noImport": true,
-			"dataFileName": "style.css"
 		}
 	]
 }

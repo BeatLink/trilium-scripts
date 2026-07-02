@@ -25,18 +25,6 @@
 			],
 			"dataFileName": "Expanded.js",
 			"attachments": []
-		},
-		{
-			"noImport": true,
-			"dataFileName": "navigation.html"
-		},
-		{
-			"noImport": true,
-			"dataFileName": "index.html"
-		},
-		{
-			"noImport": true,
-			"dataFileName": "style.css"
 		}
 	]
 }
