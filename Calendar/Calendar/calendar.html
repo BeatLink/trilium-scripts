@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <script src="https://unpkg.com/ical.js/dist/ical.es5.min.cjs"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.js'></script>
+  <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.20/index.global.min.js'></script>
+    <script>
+var calendarEl = document.getElementById('calendar')
+var calendar = new FullCalendar.Calendar(calendarEl, {
+      headerToolbar: { center: 'listDay,timeGridDay,timeGridWeek,dayGridMonth' }, // buttons for switching between views
+      //plugins: [iCalendarPlugin],
+      views: {
+        dayGrid: {
+          // options apply to dayGridMonth, dayGridWeek, and dayGridDay views
+        },
+        timeGrid: {
+          // options apply to timeGridWeek and timeGridDay views
+        },
+        week: {
+          // options apply to dayGridWeek and timeGridWeek views
+        },
+        day: {
+          // options apply to dayGridDay and timeGridDay views
+        }
+    },
+    slotDuration: '00:10:00',
+    slotLabelInterval: "01:00:00",
+    initialView: 'timeGridWeek',
+    events: {
+        url: 'http://127.0.0.1:37840/custom/icalTasks',
+        format: 'ics' // important!
+    }
+});
+calendar.render();    
+    </script>
+              <style>
+           #calendar {
+               min-height: 100%;
+               min-width: 100%;
+               display: block;
+           }
+       </style>
+  </head>
+  <body>
+    <div id='calendar'></div>
+  </body>
+</html>
