@@ -1,0 +1,87 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "6h5l1PkfwwuB",
+			"notePath": [
+				"6h5l1PkfwwuB"
+			],
+			"title": "Focus",
+			"notePosition": 80,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-code",
+					"isInheritable": false,
+					"position": 10
+				}
+			],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "Focus",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "leceX0Ul8f5q",
+					"notePath": [
+						"6h5l1PkfwwuB",
+						"leceX0Ul8f5q"
+					],
+					"title": "SetupButton.js",
+					"notePosition": 11,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "relation",
+							"name": "toggleStarredScript",
+							"value": "tBjFKcIUqCDq",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "SetupButton.js",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "tBjFKcIUqCDq",
+					"notePath": [
+						"6h5l1PkfwwuB",
+						"tBjFKcIUqCDq"
+					],
+					"title": "ToggleFocus.js",
+					"notePosition": 21,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [],
+					"dataFileName": "ToggleFocus.js",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
