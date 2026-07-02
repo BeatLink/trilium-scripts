@@ -1,0 +1,418 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "nfAT2lZo5YKH",
+			"notePath": [
+				"nfAT2lZo5YKH"
+			],
+			"title": "templates@beatlink",
+			"notePosition": 110,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"attributes": [
+				{
+					"type": "relation",
+					"name": "template",
+					"value": "ifKNIUsxkUMa",
+					"isInheritable": false,
+					"position": 20
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-copy-alt",
+					"isInheritable": false,
+					"position": 10
+				}
+			],
+			"format": "html",
+			"attachments": [],
+			"dirFileName": "templates@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "srQd7Uc3evqr",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"srQd7Uc3evqr"
+					],
+					"title": "1. High Priority",
+					"notePosition": 150,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-error",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "agendaTaskWidget",
+							"value": "",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "1. High Priority.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "AtJILitf7cdB",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"AtJILitf7cdB"
+					],
+					"title": "2. Routine",
+					"notePosition": 160,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-sync",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "agendaTaskWidget",
+							"value": "",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "2. Routine.html",
+					"attachments": [
+						{
+							"attachmentId": "LX3DpFBMr5UA",
+							"title": "Recurrence.json",
+							"role": "recurrenceInfo",
+							"mime": " application/json",
+							"position": 10,
+							"dataFileName": "2. Routine_Recurrence.json"
+						}
+					]
+				},
+				{
+					"isClone": false,
+					"noteId": "zY6RDIEqVycQ",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"zY6RDIEqVycQ"
+					],
+					"title": "3. Task",
+					"notePosition": 170,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-check",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "agendaTaskWidget",
+							"value": "",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "3. Task.html",
+					"attachments": [
+						{
+							"attachmentId": "MAHZ7zWUIFXb",
+							"title": "Recurrence.json",
+							"role": "recurrenceInfo",
+							"mime": " application/json",
+							"position": 10,
+							"dataFileName": "3. Task_Recurrence.json"
+						}
+					]
+				},
+				{
+					"isClone": false,
+					"noteId": "fmQEyV0zED3u",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"fmQEyV0zED3u"
+					],
+					"title": "4. Future",
+					"notePosition": 180,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bxs-hourglass",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "agendaTaskWidget",
+							"value": "",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "4. Future.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "tl3uCS5bijXs",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"tl3uCS5bijXs"
+					],
+					"title": "5. Project",
+					"notePosition": 190,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-check-double",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "agendaTaskWidget",
+							"value": "",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "5. Project.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "riGJXprkfo9q",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"riGJXprkfo9q"
+					],
+					"title": "6. Note",
+					"notePosition": 210,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-notepad",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 30
+						}
+					],
+					"format": "html",
+					"dataFileName": "6. Note.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "3LHrMVxhBYYD",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"3LHrMVxhBYYD"
+					],
+					"title": "7. Area",
+					"notePosition": 240,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bxs-circle",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "viewType",
+							"value": "list",
+							"isInheritable": false,
+							"position": 30
+						},
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "label:area",
+							"value": "single",
+							"isInheritable": false,
+							"position": 40
+						}
+					],
+					"format": "html",
+					"dataFileName": "7. Area.html",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "ifKNIUsxkUMa",
+					"notePath": [
+						"nfAT2lZo5YKH",
+						"ifKNIUsxkUMa"
+					],
+					"title": "8. Special",
+					"notePosition": 270,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "text",
+					"mime": "text/html",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "template",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"format": "html",
+					"dataFileName": "8. Special.html",
+					"attachments": []
+				}
+			]
+		},
+		{
+			"noImport": true,
+			"dataFileName": "navigation.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "index.html"
+		},
+		{
+			"noImport": true,
+			"dataFileName": "style.css"
+		}
+	]
+}
