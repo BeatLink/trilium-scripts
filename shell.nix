@@ -13,8 +13,9 @@ pkgs.mkShell {
     import_addon()    { python3 scripts/import_addon.py "$@"; }
     generate_pages()  { python3 scripts/generate_pages.py "$@"; }
     convert_zip()     { python3 scripts/convert_zip.py "$@"; }
+    export_zip()      { python3 scripts/export_zip.py "$@"; }
 
-    export -f validate strip publish ci import_addon generate_pages convert_zip
+    export -f validate strip publish ci import_addon generate_pages convert_zip export_zip
 
     echo ""
     echo "  Trilium Scripts Dev Shell"
@@ -24,6 +25,7 @@ pkgs.mkShell {
     echo "  ci                        Run validate then publish"
     echo "  import_addon <zip>        Import a Trilium export ZIP into addons/"
     echo "  convert_zip <zip>         Convert Trilium export ZIP to _tam_manifest_.json"
+    echo "  export_zip <manifest>     Convert _tam_manifest_.json to a Trilium ZIP import"
     echo "  generate_pages            Build GitHub Pages site (docs/) and README.md"
     echo ""
   '';
