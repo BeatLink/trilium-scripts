@@ -1,4 +1,8 @@
-﻿# trilium-drawio
+﻿# Draw.io for Trilium
+
+> Pulled from https://github.com/SiriusXT/trilium-drawio and kept here for reference. All credits go to @SiriusXT.
+
+# trilium-drawio
 ## version: 0.4 for trilium > 0.62.4
 ## update
 1. Fixed the bug where large files can only be displayed after refreshing when they are closed

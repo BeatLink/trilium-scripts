@@ -3,7 +3,7 @@
     "name": "Hoist Note",
     "description": "This script adds a launchbar button to quickly toggle the hoisting of the current note.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/HoistNote",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/HoistNote",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
     "type": "widget",

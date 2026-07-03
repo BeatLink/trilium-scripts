@@ -1,9 +1,9 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right pane dropdown widget that allows you to quickly set the template of the current note.",
+    "description": "This widget allows you to easily set the template of the current note using a dropdown.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Template%20Picker",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.1",
     "type": "widget",
