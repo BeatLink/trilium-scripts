@@ -339,26 +339,35 @@ async function connectAddonPersistence(repoId, addonId) {
     }
 
     const addonNoteId = database.installedAddons[repoId][addonId].rootNoteId
-    const addonNotes = await (await api.getNote(addonNoteId)).getSubtreeNotes()
+    const persistRoot  = database.persistence[repoId][addonId].rootNote
+    const existingNotes = database.persistence[repoId][addonId].persistenceNotes
 
-    for (const note of addonNotes) {
-        for (const relation of note.getRelations()) {
-            if (relation.name.includes("AddonData:")) {
-                const relationName = relation.name.split("AddonData:")[1]
-                if (!(relationName in database.persistence[repoId][addonId].persistenceNotes)) {
-                    const noteId = await api.runOnBackend((addonNote, persistRoot) => {
-                        const result = api.duplicateSubtree(addonNote, persistRoot)
-                        result.note.title = result.note.title.replace(" (dup)", "")
-                        result.note.save()
-                        return result.note.noteId
-                    }, [relation.value, database.persistence[repoId][addonId].rootNote])
-                    database.persistence[repoId][addonId].persistenceNotes[relationName] = noteId
+    // Run entirely on the backend: froca (frontend cache) lags behind api.runOnBackend
+    // writes, so note.getRelations() on the frontend would miss freshly-set AddonData:
+    // relations. The backend becca cache is always current.
+    const newPersistenceNotes = await api.runOnBackend((addonNoteId, persistRoot, existingNotes) => {
+        const result = {}
+        for (const note of api.getNote(addonNoteId).getSubtreeNotes()) {
+            for (const relation of note.getRelations()) {
+                if (!relation.name.includes("AddonData:")) continue
+                const key = relation.name.split("AddonData:")[1]
+                let persistNoteId = existingNotes[key]
+                if (!persistNoteId) {
+                    const dup = api.duplicateSubtree(relation.value, persistRoot)
+                    dup.note.title = dup.note.title.replace(" (dup)", "")
+                    dup.note.save()
+                    persistNoteId = dup.note.noteId
                 }
-                await api.runOnBackend((noteId, relation, target) => {
-                    api.getNote(noteId).setRelation(relation, target)
-                }, [note.noteId, relation.name, database.persistence[repoId][addonId].persistenceNotes[relationName]])
+                note.setRelation(relation.name, persistNoteId)
+                result[key] = persistNoteId
             }
         }
+        return result
+    }, [addonNoteId, persistRoot, existingNotes])
+
+    database.persistence[repoId][addonId].persistenceNotes = {
+        ...existingNotes,
+        ...newPersistenceNotes
     }
     await saveDatabase(database)
 }
