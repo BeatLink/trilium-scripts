@@ -13,10 +13,10 @@
         "dependencies": [],
         "exports": {},
         "notes": [
-            {"id": "root",        "title": "trilium-addon-manager@beatlink", "type": "render", "mime": "",                                    "sourceUrl": null},
-            {"id": "database",    "title": "Database",                        "type": "code",   "mime": "application/json",                    "sourceUrl": "database.json"},
-            {"id": "addons",      "title": "Addons",                          "type": "text",   "mime": "text/html",                           "sourceUrl": null},
-            {"id": "addon-data",  "title": "Addon Data",                      "type": "code",   "mime": "application/json",                    "sourceUrl": null},
+            {"id": "root",        "title": "trilium-addon-manager@beatlink", "type": "render", "mime": "",                                    "sourceUrl": null,            "skipOnUpdate": true},
+            {"id": "database",    "title": "Database",                        "type": "code",   "mime": "application/json",                    "sourceUrl": "database.json", "skipOnUpdate": true},
+            {"id": "addons",      "title": "Addons",                          "type": "text",   "mime": "text/html",                           "sourceUrl": null,            "skipOnUpdate": true},
+            {"id": "addon-data",  "title": "Addon Data",                      "type": "code",   "mime": "application/json",                    "sourceUrl": null,            "skipOnUpdate": true},
             {"id": "source-code", "title": "Source Code",                     "type": "code",   "mime": "text/jsx",                            "sourceUrl": "source-code.jsx"},
             {"id": "lib-tam",     "title": "libTAM.js",                       "type": "code",   "mime": "application/javascript;env=frontend", "sourceUrl": "lib-tam.js"},
             {"id": "tam-css",     "title": "TAM.css",                         "type": "code",   "mime": "text/css",                            "sourceUrl": "tam.css"}

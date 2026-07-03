@@ -14,7 +14,7 @@ import {
 } from "trilium:api"
 
 
-function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
+function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate, onEnable, isSelf}){
     return (
         <div  className="TAM-addon-div" key={addonId}>
             <div className="TAM-addon-info-div">
@@ -27,7 +27,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
                     icon="bx bx-globe"
                     text="Home Page"
                     onClick={e => {
-                         window.open(addonData.homepage, "_blank"); 
+                         window.open(addonData.homepage, "_blank");
                     }}
                 />
                 {!addonData.installedVersion && <Button
@@ -51,11 +51,18 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
                         onEnable(addonId, !addonData.enabled)
                     }}
                 />}
-                {addonData.updateAvailable && <Button
+                {addonData.updateAvailable && !isSelf && <Button
                     icon="bx bx-sync"
                     text={`Update Addon (${addonData.latestVersion})`}
                     onClick={e => {
                         onUpdate(addonId)
+                    }}
+                />}
+                {addonData.updateAvailable && isSelf && <Button
+                    icon="bx bx-sync"
+                    text={`Self-Update (${addonData.latestVersion})`}
+                    onClick={e => {
+                        onSelfUpdate(addonId)
                     }}
                 />}
             </div>
@@ -64,7 +71,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onEnable}){
 }
 
 
-function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAddon, onUpdateAddon, onEnableAddon}) {
+function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAddon, onUpdateAddon, onSelfUpdateAddon, onEnableAddon}) {
     return (
         <div key={repoId} className="TAM-repository-div">
             <div className="TAM-repository-controls">
@@ -83,11 +90,13 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
                         key={addonId}
                         addonId={addonId}
                         addonData={addonData}
+                        isSelf={addonId === "trilium-addon-manager@beatlink"}
                         onInstall={addonId => {onInstallAddon(repoId, addonId)}}
                         onDelete={addonId => {onDeleteAddon(repoId, addonId)}}
                         onUpdate={addonId => {onUpdateAddon(repoId, addonId)}}
+                        onSelfUpdate={addonId => {onSelfUpdateAddon(repoId, addonId)}}
                         onEnable={(addonId, enabled) => {onEnableAddon(repoId, addonId, enabled)}}
-                    />                    
+                    />
                 ))}
                 {/* Optional placeholder if no addons */}
                 {(!repoData.addons || Object.keys(repoData.addons).length === 0) && (
@@ -176,6 +185,13 @@ export default function RepoManager() {
                     window.location.reload();
                     break
                 }
+                case "self-update-addon": {
+                    await libTAMjs.selfUpdateAddon(command["repository"], command["addon"])
+                    setCommand({command: "load-repository"})
+                    await activateNote(displayNote)
+                    window.location.reload();
+                    break
+                }
                 case "enable-addon": {
                     await libTAMjs.enableAddon(command["repository"], command["addon"], command["enabled"])
                     setCommand({command: "load-repository"})
@@ -247,6 +263,13 @@ export default function RepoManager() {
                         onUpdateAddon={(repoId, addonId) => {
                             setCommand({
                                 command: "update-addon",
+                                repository: repoId,
+                                addon: addonId
+                            })
+                        }}
+                        onSelfUpdateAddon={(repoId, addonId) => {
+                            setCommand({
+                                command: "self-update-addon",
                                 repository: repoId,
                                 addon: addonId
                             })

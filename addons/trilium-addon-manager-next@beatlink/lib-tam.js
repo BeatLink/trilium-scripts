@@ -347,16 +347,18 @@ async function connectAddonPersistence(repoId, addonId) {
     // relations. The backend becca cache is always current.
     const newPersistenceNotes = await api.runOnBackend((addonNoteId, persistRoot, existingNotes) => {
         const result = {}
-        for (const note of api.getNote(addonNoteId).getSubtreeNotes()) {
+        for (const noteId of api.getNote(addonNoteId).getSubtreeNoteIds()) {
+            const note = api.getNote(noteId)
             for (const relation of note.getRelations()) {
                 if (!relation.name.includes("AddonData:")) continue
                 const key = relation.name.split("AddonData:")[1]
                 let persistNoteId = existingNotes[key]
                 if (!persistNoteId) {
-                    const dup = api.duplicateSubtree(relation.value, persistRoot)
-                    dup.note.title = dup.note.title.replace(" (dup)", "")
-                    dup.note.save()
-                    persistNoteId = dup.note.noteId
+                    // Branch the data note into the persistence tree — no copy needed.
+                    // The same note gains a second parent (persistRoot), so it survives
+                    // addon deletion (which only removes the addon-tree branch).
+                    api.getNote(relation.value).ensureBranch(persistRoot)
+                    persistNoteId = relation.value
                 }
                 note.setRelation(relation.name, persistNoteId)
                 result[key] = persistNoteId
@@ -389,6 +391,37 @@ async function deleteAddon(repoId, addonId) {
 async function updateAddon(repoId, addonId) {
     await deleteAddon(repoId, addonId)
     await installAddon(repoId, addonId)
+}
+
+async function selfUpdateAddon(repoId, addonId) {
+    if (!repoId.trim() || !addonId.trim()) return
+
+    let database = await loadDatabase()
+    const installed = (database.installedAddons[repoId] || {})[addonId]
+    if (!installed) throw new Error(`TAM: ${addonId} is not installed`)
+
+    const manifest = await fetchManifest(repoId, addonId)
+    const m = manifest.manifest ?? {
+        notes: manifest.notes ?? [],
+        children: [], relations: manifest.relations ?? [],
+        labels: manifest.labels ?? [], root: null, dependencies: [], exports: {}
+    }
+
+    const { noteMap } = installed
+
+    for (const noteDef of m.notes) {
+        if (noteDef.skipOnUpdate) continue
+        const realNoteId = noteMap[noteDef.id]
+        if (!realNoteId) continue
+        const content = noteDef.content ?? ""
+        await api.runOnBackend((noteId, content) => {
+            api.getNote(noteId).setContent(content)
+        }, [realNoteId, content])
+    }
+
+    database.installedAddons[repoId][addonId].installedVersion = manifest.latestVersion
+    database.installedAddons[repoId][addonId].updateAvailable  = false
+    await saveDatabase(database)
 }
 
 async function enableAddon(repoId, addonId, enabled) {
@@ -431,11 +464,12 @@ async function enableAddon(repoId, addonId, enabled) {
 
 
 // Exports ---------------------------------------------------------------------
-module.exports.addRepository    = addRepository
+module.exports.addRepository     = addRepository
 module.exports.getAllRepositories = getAllRepositories
 module.exports.updateRepositories = updateRepositories
-module.exports.deleteRepository = deleteRepository
-module.exports.installAddon     = installAddon
-module.exports.deleteAddon      = deleteAddon
-module.exports.updateAddon      = updateAddon
-module.exports.enableAddon      = enableAddon
+module.exports.deleteRepository  = deleteRepository
+module.exports.installAddon      = installAddon
+module.exports.deleteAddon       = deleteAddon
+module.exports.updateAddon       = updateAddon
+module.exports.selfUpdateAddon   = selfUpdateAddon
+module.exports.enableAddon       = enableAddon
