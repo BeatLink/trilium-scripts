@@ -1,49 +1,34 @@
-name: Publish Addons and Metadata
+name: Publish Addons
 
 on:
   push:
-    branches:
-      - main       # Upload artifacts on every commit to main
-    tags:
-      - "v*.*.*"   # Publish a release on version tags
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  publish-addons:
+  publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # Required to create/update releases
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      # publish.py uses only stdlib — no packages to install
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Validate addon structure
+      - name: Validate
         run: python scripts/validate.py
 
-      - name: Strip noImport files
-        run: python scripts/strip_no_import.py
-
-      - name: Run merge + zip script
+      - name: Build distribution files
         run: python scripts/publish.py
 
-      # Always upload artifacts so commits can be tested without a tag
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: addon-artifacts
-          path: |
-            *.zip
-            metadata.json
-
-      # Only publish a GitHub Release when a version tag is pushed
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2.5.0
-        if: github.ref_type == 'tag'
-        with:
-          files: |
-            *.zip
-            metadata.json
+      - name: Publish to latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest \
+            --title "Latest" \
+            --notes "Auto-published from \`${{ github.sha }}\`" \
+            --latest 2>/dev/null || true
+          gh release upload latest *.json --clobber
