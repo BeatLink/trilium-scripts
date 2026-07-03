@@ -22,3 +22,4 @@ Import `expanded@beatlink.zip` via **Trilium Addon Manager** or manually via the
 1. Navigate to any note you want to keep expanded
 2. Open the right pane and check **Always Expanded**
 3. The note's branch will stay expanded after restarts and navigation
+

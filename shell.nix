@@ -23,7 +23,7 @@ pkgs.mkShell {
     echo "  publish                   Merge and zip addons"
     echo "  ci                        Run all three in sequence"
     echo "  import_addon <zip>        Import a Trilium export ZIP into addons/"
-    echo "  generate_pages            Build GitHub Pages site into docs/"
+    echo "  generate_pages            Build GitHub Pages site (docs/) and README.md"
     echo ""
   '';
 }

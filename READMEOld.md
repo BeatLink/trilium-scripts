@@ -2,25 +2,9 @@
 
 This repository contains some useful scripts, themes and widgets for Trilium
 
-## Agenda
-
-This is a script that is able to search and sort notes based on its due date.
-
-## Cinnamon Applet Scripts
-
-These are scripts designed to work with the Trilium API cinnamon applet
-
 ## Draw.io
 
 This widget is pulled from https://github.com/SiriusXT/trilium-drawio and is only kept here for reference. All credits go to @SiriusXT
-
-## Expanded
-
-This script will automatically the children of notes with an #alwaysExpanded label
-
-## Hoist Note
-
-This script adds a launchbar button to quickly toggle the hoisting of a note
 
 ## Margin Top
 
