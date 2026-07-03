@@ -1,0 +1,235 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "yf4gq1MbHmcQ",
+			"notePath": [
+				"yf4gq1MbHmcQ"
+			],
+			"title": "trilium-addon-manager@beatlink",
+			"notePosition": 70,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "render",
+			"mime": "",
+			"attributes": [
+				{
+					"type": "relation",
+					"name": "renderNote",
+					"value": "XsQGn5aJ6ifF",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-customize",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"attachments": [],
+			"dirFileName": "trilium-addon-manager@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "iKKXeWu12INI",
+					"notePath": [
+						"yf4gq1MbHmcQ",
+						"iKKXeWu12INI"
+					],
+					"title": "Database",
+					"notePosition": 70,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "code",
+					"mime": "application/json",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "Database.json",
+					"attachments": [],
+					"dirFileName": "Database",
+					"children": [
+						{
+							"isClone": false,
+							"noteId": "QUhdOnM9O9oh",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"iKKXeWu12INI",
+								"QUhdOnM9O9oh"
+							],
+							"title": "Addons",
+							"notePosition": 40,
+							"prefix": null,
+							"isExpanded": true,
+							"type": "text",
+							"mime": "text/html",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"format": "html",
+							"dataFileName": "Addons.html",
+							"attachments": []
+						},
+						{
+							"isClone": false,
+							"noteId": "WEksn0sZjvhz",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"iKKXeWu12INI",
+								"WEksn0sZjvhz"
+							],
+							"title": "Addon Data",
+							"notePosition": 50,
+							"prefix": null,
+							"isExpanded": true,
+							"type": "code",
+							"mime": "application/json",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"dataFileName": "Addon Data.json",
+							"attachments": []
+						}
+					]
+				},
+				{
+					"isClone": false,
+					"noteId": "XsQGn5aJ6ifF",
+					"notePath": [
+						"yf4gq1MbHmcQ",
+						"XsQGn5aJ6ifF"
+					],
+					"title": "Source Code",
+					"notePosition": 90,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-customize",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "relation",
+							"name": "displayNote",
+							"value": "yf4gq1MbHmcQ",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "Source Code.jsx",
+					"attachments": [],
+					"dirFileName": "Source Code",
+					"children": [
+						{
+							"isClone": false,
+							"noteId": "2T1rgKGoDzLT",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"XsQGn5aJ6ifF",
+								"2T1rgKGoDzLT"
+							],
+							"title": "libTAM.js",
+							"notePosition": 10,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "code",
+							"mime": "application/javascript;env=frontend",
+							"attributes": [
+								{
+									"type": "relation",
+									"name": "database",
+									"value": "iKKXeWu12INI",
+									"isInheritable": false,
+									"position": 10
+								},
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 40
+								},
+								{
+									"type": "relation",
+									"name": "addonRoot",
+									"value": "QUhdOnM9O9oh",
+									"isInheritable": false,
+									"position": 20
+								},
+								{
+									"type": "relation",
+									"name": "addonPersistence",
+									"value": "WEksn0sZjvhz",
+									"isInheritable": false,
+									"position": 30
+								}
+							],
+							"dataFileName": "libTAM.js",
+							"attachments": []
+						},
+						{
+							"isClone": false,
+							"noteId": "Kw2lFmb8Bdi5",
+							"notePath": [
+								"yf4gq1MbHmcQ",
+								"XsQGn5aJ6ifF",
+								"Kw2lFmb8Bdi5"
+							],
+							"title": "TAM.css",
+							"notePosition": 20,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "code",
+							"mime": "text/css",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "appCss",
+									"value": "",
+									"isInheritable": false,
+									"position": 10
+								},
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-customize",
+									"isInheritable": false,
+									"position": 20
+								}
+							],
+							"dataFileName": "TAM.css",
+							"attachments": []
+						}
+					]
+				}
+			]
+		}
+	]
+}
