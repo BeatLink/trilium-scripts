@@ -114,7 +114,7 @@ def render_addon(meta, readme_html):
     lic     = meta.get("license", "—")
     t       = meta.get("type", "")
     hp      = meta.get("homepage", "")
-    zip_url = f"{RELEASES}/download/{aid}.zip"
+    zip_url = f"{RELEASES}/download/{aid}.json"
 
     rows = "".join(
         f"<tr><th>{k}</th><td>{v}</td></tr>"
@@ -127,7 +127,7 @@ def render_addon(meta, readme_html):
         ]
     )
 
-    actions = f'<a class="btn" href="{zip_url}">Download ZIP</a>'
+    actions = f'<a class="btn" href="{zip_url}">Download Manifest</a>'
     if hp:
         actions += f'\n      <a class="btn btn-ghost" href="{hp}" target="_blank">Source</a>'
 
@@ -383,7 +383,7 @@ def main():
     docs_dir.mkdir(exist_ok=True)
 
     addons = []
-    for meta_file in sorted(addons_dir.glob("*/metadata.json")):
+    for meta_file in sorted(addons_dir.glob("*/_tam_manifest_.json")):
         try:
             meta = json.loads(meta_file.read_text())
         except json.JSONDecodeError as e:
