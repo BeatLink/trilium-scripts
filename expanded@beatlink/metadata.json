@@ -1,0 +1,10 @@
+{
+    "id": "expanded@beatlink",
+    "name": "Expanded",
+    "description": "Keep selected notes always expanded in the note tree. Toggle 'Always Expanded' from the right pane on any note to pin it open permanently, even after restarting Trilium.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/expanded@beatlink2",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget"
+}
