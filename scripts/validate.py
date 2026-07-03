@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"]
+REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type", "scripts"]
 
 root = Path(".")
 errors = []
@@ -36,7 +36,7 @@ for metadata_file in sorted(metadata_files):
         error(metadata_file, f"invalid JSON — {e}")
         continue
 
-    # --- Format check: must be flat addon record, not merged registry ---------
+    # --- Format check: must be flat addon record, not merged registry --------
     if "addons" in metadata and "id" not in metadata:
         error(metadata_file, "uses registry format (has 'addons' key, missing 'id') — should be a flat addon record")
         continue
@@ -51,34 +51,41 @@ for metadata_file in sorted(metadata_files):
         if field not in metadata:
             warn(metadata_file, f"missing field '{field}'")
 
-    # --- id must not contain spaces (publish.py uses it as a folder name) ----
+    # --- id must not contain spaces ------------------------------------------
     if " " in addon_id:
-        actual_subdirs = [d.name for d in addon_dir.iterdir() if d.is_dir()]
-        error(
-            metadata_file,
-            f"'id' contains spaces: \"{addon_id}\" — publish.py looks for a subfolder with this exact name, "
-            f"which will never match (found subfolders: {actual_subdirs or 'none'})"
-        )
+        error(metadata_file, f"'id' contains spaces: \"{addon_id}\"")
         continue
 
-    # --- Matching subfolder must exist ---------------------------------------
-    expected_subfolder = addon_dir / addon_id
-    if not expected_subfolder.is_dir():
+    # --- scripts folder must exist -------------------------------------------
+    scripts_rel = metadata.get("scripts")
+    if not scripts_rel:
+        error(metadata_file, "missing 'scripts' field pointing to the Trilium export folder")
+        continue
+
+    scripts_folder = addon_dir / scripts_rel
+    if not scripts_folder.is_dir():
         actual_subdirs = [d.name for d in addon_dir.iterdir() if d.is_dir()]
         error(
             metadata_file,
-            f"id is \"{addon_id}\" but no subfolder \"{addon_id}\" found "
+            f"'scripts' is \"{scripts_rel}\" but no such folder found "
             f"(found: {actual_subdirs or 'none'})"
         )
         continue
 
-    # --- Trilium export metadata must be present inside the subfolder --------
-    trilium_meta = expected_subfolder / "!!!meta.json"
+    # --- Trilium export metadata must be present inside the scripts folder ---
+    trilium_meta = scripts_folder / "!!!meta.json"
     if not trilium_meta.exists():
-        error(expected_subfolder, "missing !!!meta.json (Trilium export metadata)")
+        error(scripts_folder, "missing !!!meta.json (Trilium export metadata)")
         continue
 
-    # --- Check for noImport flags (strip_no_import.py not wired into CI) -----
+    # --- readme file must exist if declared ----------------------------------
+    readme_rel = metadata.get("readme")
+    if readme_rel:
+        readme_path = addon_dir / readme_rel
+        if not readme_path.exists():
+            error(metadata_file, f"'readme' points to \"{readme_rel}\" but file not found")
+
+    # --- Check for noImport flags --------------------------------------------
     try:
         with trilium_meta.open() as f:
             trilium_meta_data = json.load(f)
@@ -89,8 +96,7 @@ for metadata_file in sorted(metadata_files):
         if no_import_files:
             warn(
                 trilium_meta,
-                f"has noImport entries {no_import_files} but strip_no_import.py is not called in publish.yml — "
-                "these files will be included in the release zip"
+                f"has noImport entries {no_import_files} — strip_no_import.py should be run before publish.py"
             )
     except (json.JSONDecodeError, KeyError):
         warn(trilium_meta, "could not parse to check for noImport flags")

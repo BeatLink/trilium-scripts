@@ -6,5 +6,7 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/WhiteBlueNext",
     "license": "GPL-3.0-or-later",
     "latestVersion": "0.0.1",
-    "type": "theme"
+    "type": "theme",
+    "readme": "README.md",
+    "scripts": "whitebluenext@beatlink"
 }

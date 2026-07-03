@@ -6,5 +6,7 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Mobile%20View",
     "license": "GPL-3.0-or-later",
     "latestVersion": "0.0.1",
-    "type": "widget"
+    "type": "widget",
+    "readme": "README.md",
+    "scripts": "mobile-view@beatlink"
 }

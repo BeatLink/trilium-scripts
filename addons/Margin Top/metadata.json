@@ -6,5 +6,6 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Margin%20Top",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
-    "type": "css"
+    "type": "css",
+    "scripts": "margin-top@beatlink"
 }

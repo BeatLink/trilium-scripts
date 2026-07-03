@@ -6,5 +6,6 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/HoistNote",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
-    "type": "widget"
+    "type": "widget",
+    "scripts": "hoist-note@beatlink"
 }
