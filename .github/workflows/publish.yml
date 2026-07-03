@@ -21,6 +21,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate addon structure
+        run: python .github/workflows/validate.py
+
+      - name: Strip noImport files
+        run: python .github/workflows/strip_no_import.py
+
       - name: Run merge + zip script
         run: python .github/workflows/publish.py
 
