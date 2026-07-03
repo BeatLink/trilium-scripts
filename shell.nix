@@ -4,9 +4,9 @@ pkgs.mkShell {
   packages = [ pkgs.python3 ];
 
   shellHook = ''
-    validate() { python3 .github/workflows/validate.py "$@"; }
-    strip()    { python3 .github/workflows/strip_no_import.py "$@"; }
-    publish()  { python3 .github/workflows/publish.py "$@"; }
+    validate() { python3 scripts/validate.py "$@"; }
+    strip()    { python3 scripts/strip_no_import.py "$@"; }
+    publish()  { python3 scripts/publish.py "$@"; }
     ci()       { validate && strip && publish; }
 
     export -f validate strip publish ci

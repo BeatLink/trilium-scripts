@@ -22,13 +22,13 @@ jobs:
           python-version: "3.11"
 
       - name: Validate addon structure
-        run: python .github/workflows/validate.py
+        run: python scripts/validate.py
 
       - name: Strip noImport files
-        run: python .github/workflows/strip_no_import.py
+        run: python scripts/strip_no_import.py
 
       - name: Run merge + zip script
-        run: python .github/workflows/publish.py
+        run: python scripts/publish.py
 
       # Always upload artifacts so commits can be tested without a tag
       - name: Upload artifacts
