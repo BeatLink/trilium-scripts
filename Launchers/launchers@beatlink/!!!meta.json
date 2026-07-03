@@ -1,0 +1,311 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.101.3",
+	"files": [
+		{
+			"isClone": false,
+			"noteId": "Lnch3rRt0001",
+			"notePath": [
+				"Lnch3rRt0001"
+			],
+			"title": "launchers@beatlink",
+			"notePosition": 80,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "render",
+			"mime": "",
+			"attributes": [
+				{
+					"type": "relation",
+					"name": "renderNote",
+					"value": "Lnch3rSt0001",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "label",
+					"name": "iconClass",
+					"value": "bx bx-rocket",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"attachments": [],
+			"dirFileName": "launchers@beatlink",
+			"children": [
+				{
+					"isClone": false,
+					"noteId": "Lnch3rSt0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rSt0001"
+					],
+					"title": "Settings",
+					"notePosition": 10,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "relation",
+							"name": "AddonData:config",
+							"value": "Lnch3rCf0001",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-cog",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "Settings.jsx",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "Lnch3rCf0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rCf0001"
+					],
+					"title": "config",
+					"notePosition": 20,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/json",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-data",
+							"isInheritable": false,
+							"position": 10
+						}
+					],
+					"dataFileName": "config.json",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "Lnch3rWg0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rWg0001"
+					],
+					"title": "Launcher",
+					"notePosition": 30,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "widget",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "relation",
+							"name": "AddonData:config",
+							"value": "Lnch3rCf0001",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-rocket",
+							"isInheritable": false,
+							"position": 30
+						}
+					],
+					"dirFileName": "Launcher",
+					"dataFileName": "Launcher.jsx",
+					"attachments": [],
+					"children": [
+						{
+							"isClone": false,
+							"noteId": "Lnch3rBt0001",
+							"notePath": [
+								"Lnch3rRt0001",
+								"Lnch3rWg0001",
+								"Lnch3rBt0001"
+							],
+							"title": "LauncherButtons.jsx",
+							"notePosition": 10,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "code",
+							"mime": "text/jsx",
+							"attributes": [
+								{
+									"type": "label",
+									"name": "iconClass",
+									"value": "bx bx-code-block",
+									"isInheritable": false,
+									"position": 10
+								}
+							],
+							"dirFileName": "LauncherButtons",
+							"dataFileName": "LauncherButtons.jsx",
+							"attachments": [],
+							"children": [
+								{
+									"isClone": false,
+									"noteId": "Lnch3rLi0001",
+									"notePath": [
+										"Lnch3rRt0001",
+										"Lnch3rWg0001",
+										"Lnch3rBt0001",
+										"Lnch3rLi0001"
+									],
+									"title": "lib.js",
+									"notePosition": 10,
+									"prefix": null,
+									"isExpanded": false,
+									"type": "code",
+									"mime": "application/javascript;env=frontend",
+									"attributes": [
+										{
+											"type": "label",
+											"name": "iconClass",
+											"value": "bx bx-code",
+											"isInheritable": false,
+											"position": 10
+										}
+									],
+									"dataFileName": "lib.js",
+									"attachments": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"isClone": false,
+					"noteId": "Lnch3rLb0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rLb0001"
+					],
+					"title": "Launcher Launchbar",
+					"notePosition": 40,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/jsx",
+					"attributes": [
+						{
+							"type": "relation",
+							"name": "AddonData:config",
+							"value": "Lnch3rCf0001",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-rocket",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dirFileName": "Launcher Launchbar",
+					"dataFileName": "Launcher Launchbar.jsx",
+					"attachments": [],
+					"children": [
+						{
+							"isClone": true,
+							"noteId": "Lnch3rBt0001",
+							"notePath": [
+								"Lnch3rRt0001",
+								"Lnch3rLb0001",
+								"Lnch3rBt0001"
+							],
+							"notePosition": 10,
+							"prefix": null
+						}
+					]
+				},
+				{
+					"isClone": false,
+					"noteId": "Lnch3rSp0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rSp0001"
+					],
+					"title": "Startup",
+					"notePosition": 50,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "application/javascript;env=frontend",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "run",
+							"value": "frontendStartup",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "relation",
+							"name": "launcherLaunchbarNote",
+							"value": "Lnch3rLb0001",
+							"isInheritable": false,
+							"position": 20
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-play",
+							"isInheritable": false,
+							"position": 30
+						}
+					],
+					"dataFileName": "Startup.js",
+					"attachments": []
+				},
+				{
+					"isClone": false,
+					"noteId": "Lnch3rCs0001",
+					"notePath": [
+						"Lnch3rRt0001",
+						"Lnch3rCs0001"
+					],
+					"title": "style.css",
+					"notePosition": 60,
+					"prefix": null,
+					"isExpanded": false,
+					"type": "code",
+					"mime": "text/css",
+					"attributes": [
+						{
+							"type": "label",
+							"name": "appCss",
+							"value": "",
+							"isInheritable": false,
+							"position": 10
+						},
+						{
+							"type": "label",
+							"name": "iconClass",
+							"value": "bx bx-paint",
+							"isInheritable": false,
+							"position": 20
+						}
+					],
+					"dataFileName": "style.css",
+					"attachments": []
+				}
+			]
+		}
+	]
+}

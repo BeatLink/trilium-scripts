@@ -1,0 +1,304 @@
+/* Launcher Widget --------------------------------------------------------- */
+
+.lnch-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.lnch-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--main-text-color);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.lnch-btn:hover {
+    background: var(--hover-item-background-color);
+}
+
+.lnch-btn-active {
+    background: var(--active-item-background-color);
+    color: var(--active-item-text-color);
+    border-color: var(--main-active-color, var(--main-border-color));
+}
+
+.lnch-btn-active:hover {
+    background: var(--active-item-background-color);
+    opacity: 0.85;
+}
+
+.lnch-btn i {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+/* Launchbar active state -------------------------------------------------- */
+
+.lnch-lb-active {
+    color: var(--active-item-text-color) !important;
+    background: var(--active-item-background-color) !important;
+}
+
+/* Settings UI ------------------------------------------------------------- */
+
+.lnch-settings {
+    padding: 16px 20px;
+    max-width: 640px;
+}
+
+.lnch-settings h3 {
+    margin: 0 0 16px;
+    font-size: 18px;
+}
+
+.lnch-settings h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.lnch-section {
+    margin-bottom: 24px;
+}
+
+.lnch-loading {
+    color: var(--muted-text-color);
+}
+
+/* Toggle row */
+.lnch-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+.lnch-toggle-row input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.lnch-toggle-row div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.lnch-toggle-row span {
+    font-size: 13px;
+}
+
+.lnch-toggle-row small {
+    font-size: 11px;
+    color: var(--muted-text-color);
+}
+
+/* Select row */
+.lnch-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.lnch-select-row select {
+    padding: 4px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color);
+    color: var(--main-text-color);
+}
+
+/* Notice box */
+.lnch-notice {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: var(--accented-background-color);
+    border-radius: 4px;
+    border: 1px solid var(--main-border-color);
+    font-size: 12px;
+    color: var(--muted-text-color);
+}
+
+.lnch-notice i {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.lnch-notice p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.lnch-notice code {
+    background: var(--code-background-color);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+/* Launcher list */
+.lnch-empty {
+    font-size: 13px;
+    color: var(--muted-text-color);
+    margin: 0 0 12px;
+}
+
+.lnch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.lnch-item {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--accented-background-color);
+}
+
+.lnch-item-fields {
+    display: flex;
+    flex: 1;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lnch-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12px;
+}
+
+.lnch-field span {
+    color: var(--muted-text-color);
+    font-weight: 500;
+}
+
+.lnch-field input[type="text"] {
+    padding: 4px 7px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 3px;
+    background: var(--input-background-color);
+    color: var(--main-text-color);
+    font-size: 12px;
+    width: 130px;
+}
+
+.lnch-icon-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lnch-icon-input i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Item controls */
+.lnch-item-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.lnch-ctrl-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--main-border-color);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--main-text-color);
+    cursor: pointer;
+}
+
+.lnch-ctrl-btn:hover {
+    background: var(--hover-item-background-color);
+}
+
+.lnch-ctrl-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.lnch-remove-btn {
+    color: var(--danger-color, #c0392b);
+}
+
+/* Action buttons */
+.lnch-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px dashed var(--main-border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--main-text-color);
+    cursor: pointer;
+    font-size: 13px;
+    width: 100%;
+    justify-content: center;
+}
+
+.lnch-add-btn:hover {
+    background: var(--hover-item-background-color);
+}
+
+.lnch-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid var(--main-border-color);
+}
+
+.lnch-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--button-background-color);
+    color: var(--button-text-color);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.lnch-save-btn:hover {
+    opacity: 0.85;
+}
+
+.lnch-saved {
+    background: var(--success-color, #27ae60);
+    color: #fff;
+    border-color: transparent;
+}

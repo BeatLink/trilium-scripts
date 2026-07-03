@@ -1,0 +1,10 @@
+{
+    "id": "launchers@beatlink",
+    "name": "Launchers",
+    "description": "Configurable launcher buttons to quickly add the current note as a child of one or more parent notes, with optional exclusive mode.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/Launchers",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget"
+}
