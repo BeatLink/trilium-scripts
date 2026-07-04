@@ -23,6 +23,9 @@ jobs:
       - name: Build distribution files
         run: python scripts/publish.py
 
+      - name: Build TAM ZIP import
+        run: python scripts/export_zip.py addons/trilium-addon-manager@beatlink/ --out trilium-addon-manager@beatlink.zip
+
       - name: Publish to latest release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,4 +34,4 @@ jobs:
             --title "Latest" \
             --notes "Auto-published from \`${{ github.sha }}\`" \
             --latest 2>/dev/null || true
-          gh release upload latest *.json --clobber
+          gh release upload latest *.json *.zip --clobber
