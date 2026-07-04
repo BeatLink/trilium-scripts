@@ -37,7 +37,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate,
                         onInstall(addonId)
                     }}
                 />}
-                {addonData.installedVersion && <Button
+                {addonData.installedVersion && !isSelf && <Button
                     icon="bx bx-trash"
                     text="Delete Addon"
                     onClick={e => {
@@ -80,6 +80,11 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
                     icon="bx bx-trash"
                     text="Delete Repository"
                     onClick={e => {
+                        const hasInstalled = Object.values(repoData.addons ?? {}).some(a => a.installedVersion)
+                        if (hasInstalled) {
+                            api.showMessage("Cannot delete repository: some addons are still installed. Uninstall them first.")
+                            return
+                        }
                         onDeleteRepo(repoId)
                     }}
                 />
