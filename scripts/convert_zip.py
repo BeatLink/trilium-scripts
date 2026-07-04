@@ -59,6 +59,12 @@ def assign_ids(files_array, id_map, seen_ids):
     """First pass: assign a stable local id to every noteId in the tree."""
     for entry in files_array:
         note_id = entry.get("noteId")
+        if note_id is None:
+            continue  # noImport scaffold entry
+        if note_id in id_map:
+            # Clone — already mapped; recurse in case it has children listed
+            assign_ids(entry.get("children", []), id_map, seen_ids)
+            continue
         title = entry.get("title", "note")
         base = slugify(title)
         local_id = dedup_id(base, seen_ids)
@@ -71,6 +77,8 @@ def walk_entries(files_array, parent_local_id, id_map):
     """Second pass: yield (entry, local_id, parent_local_id, is_clone) in tree order."""
     for entry in files_array:
         note_id = entry.get("noteId")
+        if note_id is None:
+            continue  # noImport scaffold entry
         local_id = id_map[note_id]
         is_clone = entry.get("isClone", False)
         yield entry, local_id, parent_local_id, is_clone
@@ -110,7 +118,7 @@ def main():
         with meta_file.open() as f:
             meta = json.load(f)
 
-        files_array = meta.get("files", [])
+        files_array = [f for f in meta.get("files", []) if not f.get("noImport")]
         if not files_array:
             print("ERROR: !!!meta.json has no 'files' array", file=sys.stderr)
             sys.exit(1)
@@ -130,12 +138,18 @@ def main():
         used_filenames = set()
 
         for entry, local_id, parent_local_id, is_clone in walk_entries(files_array, None, id_map):
+            if is_clone:
+                # Just wire up the child reference — note entry already exists
+                if parent_local_id:
+                    children.append({"parent": parent_local_id, "child": local_id})
+                continue
+
             note_type = entry.get("type", "text")
             data_file = entry.get("dataFileName")
 
             # Copy source file flat into output dir
             source_url = None
-            if data_file:
+            if data_file and not data_file.endswith(".clone.html"):
                 data_path = meta_root / data_file
                 if not data_path.exists():
                     matches = list(tmppath.rglob(data_file))
@@ -157,15 +171,7 @@ def main():
             })
 
             if parent_local_id:
-                if is_clone:
-                    children.append({
-                        "parent":    parent_local_id,
-                        "addon":     "FILL_IN",
-                        "child":     "FILL_IN",
-                        "_comment":  f"clone of noteId={entry.get('noteId')} title={entry.get('title')}"
-                    })
-                else:
-                    children.append({"parent": parent_local_id, "child": local_id})
+                children.append({"parent": parent_local_id, "child": local_id})
 
             for attr in entry.get("attributes", []):
                 attr_type  = attr.get("type")
@@ -205,9 +211,6 @@ def main():
 
     print(f"Written: {output_file}")
     print(f"  {len(notes)} notes, {len(children)} children, {len(relations)} relations, {len(labels)} labels")
-    clone_count = sum(1 for c in children if c.get("addon") == "FILL_IN")
-    if clone_count:
-        print(f"  {clone_count} clone stub(s) — search for 'FILL_IN' and fill in addon/child values")
     print("  Search for '\"FILL_IN\"' in _tam_manifest_.json and replace with real values")
 
 

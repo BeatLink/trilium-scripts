@@ -28,7 +28,7 @@
         "sourceUrl": "settings.jsx"
       },
       {
-        "id": "config-js-2",
+        "id": "config-js",
         "title": "config.js",
         "type": "code",
         "mime": "application/javascript;env=frontend",
@@ -49,7 +49,7 @@
         "sourceUrl": "leftpane.jsx"
       },
       {
-        "id": "launcherbuttons-jsx-2",
+        "id": "launcherbuttons-jsx",
         "title": "LauncherButtons.jsx",
         "type": "code",
         "mime": "text/jsx",
@@ -63,25 +63,11 @@
         "sourceUrl": "lib.js"
       },
       {
-        "id": "config-js-2",
-        "title": "config.js",
-        "type": "text",
-        "mime": "text/html",
-        "sourceUrl": "config.js.clone.html"
-      },
-      {
         "id": "rightpane-jsx",
         "title": "rightpane.jsx",
         "type": "code",
         "mime": "text/jsx",
         "sourceUrl": "rightpane.jsx"
-      },
-      {
-        "id": "launcherbuttons-jsx-2",
-        "title": "LauncherButtons.jsx",
-        "type": "text",
-        "mime": "text/html",
-        "sourceUrl": "LauncherButtons.jsx.clone.html"
       },
       {
         "id": "startup-js",
@@ -96,27 +82,6 @@
         "type": "code",
         "mime": "text/css",
         "sourceUrl": "style.css"
-      },
-      {
-        "id": "note-3",
-        "title": "note-3",
-        "type": "text",
-        "mime": "text/html",
-        "sourceUrl": "navigation.html"
-      },
-      {
-        "id": "note-3",
-        "title": "note-3",
-        "type": "text",
-        "mime": "text/html",
-        "sourceUrl": "index.html"
-      },
-      {
-        "id": "note-3",
-        "title": "note-3",
-        "type": "text",
-        "mime": "text/css",
-        "sourceUrl": "style-2.css"
       }
     ],
     "children": [
@@ -126,10 +91,10 @@
       },
       {
         "parent": "settings-jsx",
-        "child": "config-js-2"
+        "child": "config-js"
       },
       {
-        "parent": "config-js-2",
+        "parent": "config-js",
         "child": "settings-json"
       },
       {
@@ -138,17 +103,15 @@
       },
       {
         "parent": "leftpane-jsx",
-        "child": "launcherbuttons-jsx-2"
+        "child": "launcherbuttons-jsx"
       },
       {
-        "parent": "launcherbuttons-jsx-2",
+        "parent": "launcherbuttons-jsx",
         "child": "lib-js"
       },
       {
         "parent": "lib-js",
-        "addon": "FILL_IN",
-        "child": "FILL_IN",
-        "_comment": "clone of noteId=wq9lI7xdtI9V title=config.js"
+        "child": "config-js"
       },
       {
         "parent": "togglenote",
@@ -156,9 +119,7 @@
       },
       {
         "parent": "rightpane-jsx",
-        "addon": "FILL_IN",
-        "child": "FILL_IN",
-        "_comment": "clone of noteId=wwy3nmC86lvA title=LauncherButtons.jsx"
+        "child": "launcherbuttons-jsx"
       },
       {
         "parent": "togglenote",
@@ -176,7 +137,7 @@
         "to": "settings-jsx"
       },
       {
-        "from": "config-js-2",
+        "from": "config-js",
         "type": "AddonData:config",
         "to": "settings-json"
       },
