@@ -5,12 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.3.1",
+    "latestVersion": "1.3.2",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
-        "settingsNote": "settings",
+        "settingsNote": "root",
         "notes": [
             {"id": "root",     "title": "cinnamon-applet-inbox@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
             {"id": "script",   "title": "cinnamon-applet-inbox.js",       "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "cinnamon-applet-inbox.js"},

@@ -71,13 +71,15 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   the key by convention matches the note's local manifest id.
 - **`latestVersion`** must be bumped whenever a manifest's structure or note content changes —
   that's the only thing that makes TAM show existing installs an update prompt.
-- **`settingsNote`** (optional, sibling of `root`) — local id of the note that is this addon's
-  settings screen. If present, TAM resolves it to a real note id at install time
+- **`settingsNote`** (optional, sibling of `root`) — local id of the note TAM's UI should navigate to
+  for this addon's settings screen. If present, TAM resolves it to a real note id at install time
   (`installedAddons[repoId][addonId].settingsNoteId`, set in `installAddon` in `lib-tam.js`) and
-  shows a "Settings" button on the addon's row in TAM's UI that activates that note (see
-  `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink` for examples, both of which pair
-  it with a `renderNote` relation from `root` so the same note also opens when you click the addon's
-  root note directly).
+  shows a "Settings" button on the addon's row that activates that note. **Point this at the
+  `render`-type note (typically `root`), not at the raw JSX note itself** — activating a JSX code
+  note directly opens its source instead of the rendered UI. See
+  `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink`, where `settingsNote` is `root`
+  and `root` in turn has a `renderNote` relation to the actual settings JSX — so the same note opens
+  whether you click the addon's root note directly or the Settings button in TAM.
 
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full
@@ -95,6 +97,15 @@ install/update/persistence/self-update state machine — it's long and not worth
 
 Always run `validate` before considering the change done. Use `export_zip addons/{id}/` if you need
 to hand someone (or yourself, for manual Trilium import testing) a ZIP without waiting for CI.
+
+## Destructive actions require confirmation
+
+Always confirm with the user before deleting a file, including cleanup after `convert_zip`/
+`import_addon` (e.g. the original exported ZIP once its contents are copied into `addons/`) —
+even when the deletion seems like obvious tidying. The only exceptions: the file was generated
+this session and can be trivially regenerated (a scratch `--out` ZIP from `export_zip`, a temp
+directory), or the user has explicitly authorized the deletion. This matters most for untracked
+files, since git can't recover them.
 
 ## Maintaining this file
 

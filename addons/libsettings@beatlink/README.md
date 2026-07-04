@@ -28,14 +28,43 @@ library's — schema lives with the addon that defines it):
 
 | Field         | Required | Description                                              |
 |---------------|----------|------------------------------------------------------------|
-| `type`        | yes      | `string`, `number`, `boolean`, `select`, or `note`          |
+| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, or `list`  |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
-| `default`     | yes      | Value used when the key is missing from `config.json`       |
+| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`) |
 | `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
+| `itemSchema`  | `list` only | A nested schema object (same shape as above) describing the fields of each list entry |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
 first read, so there's nothing to duplicate between the two files.
+
+### `list` fields — repeatable groups of settings
+
+Use `type: "list"` when an addon needs a variable number of entries that each carry several fields
+(e.g. one profile per table to total, one entry per webhook). Each stored value is an array of
+objects; each object is validated/defaulted against `itemSchema`, recursively — this works the same
+way at any depth `mergeDefaults`/`filterBySchema` are applied in both
+[`libsettings-backend.js`](libsettings-backend.js) and [`libsettings-ui.jsx`](libsettings-ui.jsx).
+
+```json
+{
+    "profiles": {
+        "type": "list",
+        "label": "Profiles",
+        "description": "One entry per thing you want to configure",
+        "default": [],
+        "itemSchema": {
+            "targetNoteId": {"type": "note", "label": "Target Note", "default": ""},
+            "attribute": {"type": "string", "label": "Attribute", "default": "value"}
+        }
+    }
+}
+```
+
+In the generated form, `SettingsForm` renders this as a list of rows (one per entry), each row
+showing the `itemSchema` fields plus move-up/move-down/remove controls, with an "Add" button that
+seeds a new row from `itemSchema`'s defaults — see
+[`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
 
 ## Backend usage
 
@@ -99,8 +128,14 @@ export default function MySettings() {
 
 Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
 entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
-picker), and owns its own Save button and save-status flash. Place it anywhere in your own widget —
-it doesn't dictate page layout, only the fields.
+picker, `list` → repeatable group of the above), and owns its own Save button and save-status flash.
+Place it anywhere in your own widget — it doesn't dictate page layout, only the fields.
+
+### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
+
+The same merge-with-defaults read as the backend function, but `async` and usable from any frontend
+context — not just a widget rendering `SettingsForm`. Useful for e.g. a note-context-aware widget
+that needs to check current settings without rendering the full form.
 
 ## See it in use
 

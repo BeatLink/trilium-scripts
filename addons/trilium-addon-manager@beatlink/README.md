@@ -85,12 +85,15 @@ The local ID of the note that becomes the addon's root note, placed as a child o
 
 #### `settingsNote` *(optional)*
 
-The local ID of the note that is this addon's settings screen. If present, `installAddon` resolves
-it to a real note ID at install time and stores it as `settingsNoteId` on the addon's entry in
-`installedAddons`. TAM's UI then shows a **Settings** button on that addon's row which activates
-(navigates to) that note — see `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink` for
-an addon that pairs this with a `renderNote` relation from `root`, so the same note opens whether you
-click the addon's root note directly or the Settings button in TAM.
+The local ID of the note TAM's UI should navigate to for this addon's settings screen. If present,
+`installAddon` resolves it to a real note ID at install time and stores it as `settingsNoteId` on the
+addon's entry in `installedAddons`. TAM's UI then shows a **Settings** button on that addon's row
+which activates (navigates to) that note. **Point this at the `render`-type note (typically `root`),
+not at the raw JSX note itself** — activating a JSX code note directly opens its source instead of
+the rendered UI. See `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink`, where
+`settingsNote` is `root` and `root` in turn has a `renderNote` relation to the actual settings JSX —
+so the same note opens whether you click the addon's root note directly or the Settings button in
+TAM.
 
 #### `notes`
 
