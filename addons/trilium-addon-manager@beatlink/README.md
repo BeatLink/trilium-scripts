@@ -186,13 +186,13 @@ When a dependent addon references `"addon": "this-addon@author", "child": "lib"`
 ## How Installation Works
 
 1. TAM fetches `{repoId}.json` from the GitHub release (the addon's full manifest with inlined content).
-2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated in place first if already installed at an older version than the dependency's own `latestVersion`.
+2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated (delete + reinstall, same as a manual update) first if already installed at an older version than the dependency's own `latestVersion`. Either way, this addon is then recorded as a **dependent** of each dependency — see [Dependency Tracking](#dependency-tracking).
 3. Notes are created in topological order (parents before children) under the Addons root note, using `api.createTextNote`.
 4. Cross-addon children are wired using `api.toggleNoteInParent` to create a clone branch from the dependency note into the new parent.
 5. Labels are applied with `note.setLabel`.
 6. Relations are applied with `note.setRelation`. Cross-addon relations resolve the target note ID through the dependency's stored `exportedNotes` map.
 7. The local ID → real Trilium note ID mapping (`noteMap`) and exported note IDs (`exportedNotes`) are saved to the Database note.
-8. The addon is registered in `database.installedAddons` with `installedVersion`, `rootNoteId`, `noteMap`, and `exportedNotes`.
+8. The addon is registered in `database.installedAddons` with `installedVersion`, `rootNoteId`, `noteMap`, `exportedNotes`, `dependencies`, `dependents`, and `manuallyInstalled`.
 9. Persistence is initialized — see [Persistence](#persistence).
 10. The addon is left disabled. The user enables it manually (or it can be auto-enabled by the installing user).
 
@@ -204,15 +204,33 @@ Updating an addon does **not** do an in-place content patch. Instead:
 
 1. TAM fetches the latest manifest.
 2. Before deleting anything, `collectPendingPrompts` scans for notes with `promptOnUpdate: true`, compares their current persisted content against the new content in the manifest, and stores any differences in the Database.
-3. The old addon note tree is deleted entirely.
+3. The old addon note tree is deleted entirely — every note gets a fresh Trilium note ID on reinstall, none of the old ones survive.
 4. The addon is reinstalled from scratch (following the install steps above).
-5. Persistence is reconnected — existing persisted notes are reattached rather than duplicated (see [Persistence](#persistence)).
-6. If the addon was enabled before the update, it is re-enabled afterward.
-7. If there were pending prompts, the UI shows the Update Review screen.
+5. Its `dependents` list (who clones this addon's exports) is restored across the delete/reinstall — `installAddon` always starts a fresh record with an empty list, since from its own perspective it doesn't know who depends on it yet.
+6. Persistence is reconnected — existing persisted notes are reattached rather than duplicated (see [Persistence](#persistence)).
+7. If the addon was enabled before the update, it is re-enabled afterward.
+8. If there were pending prompts, the UI shows the Update Review screen.
+9. **Every recorded dependent is then updated too** (same delete + reinstall, recursively cascading to *their* dependents), because step 3 just deleted the exact notes their `children`/`relations` clones point at — without this cascade, every addon that depends on the one just updated would be left with dangling clones pointing at now-deleted notes (this is why step 3 is not an in-place patch: a manifest can add/remove/rename notes between versions, and diffing that safely against a live note tree is far more failure-prone than "delete everything, rebuild from the manifest, keep it idempotent").
 
-This approach ensures the note structure is always clean and matches the manifest, while user data in persisted notes survives.
+This approach ensures the note structure is always clean and matches the manifest, while user data in persisted notes survives. A re-entrancy guard (a `Set` of `repoId::addonId` keys threaded through the whole cascade) stops an addon from being updated twice in the same cascade — this comes up with diamond dependencies, and with an addon's own stale-dependency check (during its own install/update) triggering a dependency update that cascades right back to itself.
 
 **Update All Addons:** the "Update All Addons" button (shown whenever at least one installed addon has an update available) runs this same update flow for every out-of-date addon in sequence, including a self-update of TAM itself if applicable. If any of the updated addons have pending `promptOnUpdate` prompts, the Update Review screen is shown once per addon, one after another, until the queue is empty.
+
+---
+
+## Dependency Tracking
+
+Every installed addon's Database entry carries three extra fields:
+
+- **`dependencies`** — the addon IDs it directly depends on (copied from `manifest.dependencies` at install time, so uninstalling later doesn't need to refetch a manifest that may have changed or disappeared).
+- **`dependents`** — the addon IDs that directly depend on *it* (the reverse edge, built up as other addons install/update and declare it as a dependency).
+- **`manuallyInstalled`** — `true` if the user explicitly installed this addon; `false` if it was only ever pulled in as someone else's dependency.
+
+Installing an addon that's already installed only ever *promotes* `manuallyInstalled` from `false` to `true` (the user directly installing something that was already present as a dependency) — it never demotes the other way, and a dependency-resolution call installing something for the first time always passes `manual: false`.
+
+**Uninstalling** (`uninstallAddon`, what the UI's delete button calls — distinct from the lower-level `deleteAddon`, which just removes one addon's own notes) removes the addon, then for each of *its own* dependencies removes it from that dependency's `dependents` list, and recursively uninstalls that dependency too if it's now unused (`dependents` is empty) and wasn't manually installed. This is why installing one addon that pulls in five shared libraries, then uninstalling it later, cleans up all five automatically — but only the ones nothing else still needs, and never one you separately chose to install yourself.
+
+Addons installed before this tracking existed won't have these fields; they're treated conservatively (`manuallyInstalled` defaults to `true`, `dependencies`/`dependents` default to empty) until they're next installed, updated, or otherwise touched, at which point the fields get populated normally.
 
 ---
 

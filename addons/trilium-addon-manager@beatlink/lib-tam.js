@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.3.0"
+const TAM_VERSION = "2.4.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -270,11 +270,22 @@ function storeExports(exports, noteMap) {
     return exportedNotes
 }
 
-async function installAddon(repoId, addonId) {
+async function installAddon(repoId, addonId, options = {}) {
+    const { manual = true, updating = new Set() } = options
     if (!repoId.trim() || !addonId.trim()) return
 
     let database = await loadDatabase()
-    if ((database.installedAddons[repoId] || {})[addonId]) return
+    const existing = (database.installedAddons[repoId] || {})[addonId]
+    if (existing) {
+        // Promote a dependency-only install to a real, user-owned install —
+        // but never demote the other way (a dependency-resolution call here
+        // must not downgrade something the user already installed directly).
+        if (manual && !existing.manuallyInstalled) {
+            existing.manuallyInstalled = true
+            await saveDatabase(database)
+        }
+        return
+    }
 
     const manifest = await fetchManifest(repoId, addonId)
 
@@ -298,14 +309,26 @@ async function installAddon(repoId, addonId) {
     for (const depAddonId of (m.dependencies || [])) {
         const installedDep = (database.installedAddons[repoId] || {})[depAddonId]
         if (!installedDep) {
-            await installAddon(repoId, depAddonId)
+            await installAddon(repoId, depAddonId, { manual: false, updating })
             database = await loadDatabase()
         } else {
             const depManifest = await fetchManifest(repoId, depAddonId)
             if (depManifest.latestVersion && installedDep.installedVersion &&
                 versionCompare(depManifest.latestVersion, installedDep.installedVersion) > 0) {
-                await updateAddon(repoId, depAddonId)
+                await updateAddon(repoId, depAddonId, updating)
                 database = await loadDatabase()
+            }
+        }
+
+        // Record that addonId depends on depAddonId, regardless of which
+        // branch above ran — this is what lets a later update/uninstall of
+        // depAddonId find and cascade to addonId.
+        const dep = (database.installedAddons[repoId] || {})[depAddonId]
+        if (dep) {
+            dep.dependents = dep.dependents || []
+            if (!dep.dependents.includes(addonId)) {
+                dep.dependents.push(addonId)
+                await saveDatabase(database)
             }
         }
     }
@@ -330,6 +353,9 @@ async function installAddon(repoId, addonId) {
         noteMap,
         exportedNotes,
         settingsNoteId,
+        dependencies: m.dependencies || [],
+        dependents: [],
+        manuallyInstalled: manual,
         enabled: false
     }
     if (!database.persistence[repoId])          database.persistence[repoId]          = {}
@@ -422,6 +448,36 @@ async function deleteAddon(repoId, addonId) {
     await saveDatabase(database)
 }
 
+// The user-facing "uninstall" action. Unlike deleteAddon (the low-level
+// primitive — just remove this one addon's own notes), this also removes
+// addonId from each of its dependencies' `dependents` list, and recursively
+// uninstalls any dependency that's now unused (nothing left depends on it)
+// and wasn't itself installed directly by the user.
+async function uninstallAddon(repoId, addonId) {
+    if (!repoId.trim() || !addonId.trim()) return
+    let database = await loadDatabase()
+    const installed = (database.installedAddons[repoId] || {})[addonId]
+    if (!installed) return
+
+    const dependencies = installed.dependencies || []
+
+    await deleteAddon(repoId, addonId)
+
+    for (const depAddonId of dependencies) {
+        database = await loadDatabase()
+        const dep = (database.installedAddons[repoId] || {})[depAddonId]
+        if (!dep) continue
+
+        dep.dependents = (dep.dependents || []).filter(id => id !== addonId)
+        await saveDatabase(database)
+
+        const depIsManual = dep.manuallyInstalled ?? true
+        if (!depIsManual && dep.dependents.length === 0) {
+            await uninstallAddon(repoId, depAddonId)
+        }
+    }
+}
+
 async function collectPendingPrompts(repoId, addonId, m) {
     let database = await loadDatabase()
     const persistenceNotes = database.persistence?.[repoId]?.[addonId]?.persistenceNotes || {}
@@ -460,8 +516,16 @@ async function collectPendingPrompts(repoId, addonId, m) {
     return prompts
 }
 
-async function updateAddon(repoId, addonId) {
+async function updateAddon(repoId, addonId, updating = new Set()) {
     if (!repoId.trim() || !addonId.trim()) return
+
+    // Re-entrancy guard: updating a dependency cascades to its dependents,
+    // which can legitimately re-encounter the same addon more than once in
+    // one cascade (diamond dependencies, or a dependent being the very addon
+    // whose own install triggered the dependency update in the first place).
+    const key = `${repoId}::${addonId}`
+    if (updating.has(key)) return
+    updating.add(key)
 
     const manifest = await fetchManifest(repoId, addonId)
     const m = manifest.manifest ?? {
@@ -480,13 +544,38 @@ async function updateAddon(repoId, addonId) {
     }
 
     const database = await loadDatabase()
-    const wasEnabled = database.installedAddons[repoId]?.[addonId]?.enabled ?? false
+    const existing      = database.installedAddons[repoId]?.[addonId]
+    const wasEnabled     = existing?.enabled ?? false
+    const wasManual      = existing?.manuallyInstalled ?? true
+    const oldDependents  = existing?.dependents ?? []
 
     await deleteAddon(repoId, addonId)
-    await installAddon(repoId, addonId)
+    await installAddon(repoId, addonId, { manual: wasManual, updating })
+
+    // installAddon always starts a freshly-(re)installed addon with an empty
+    // dependents list (from its own perspective it has none yet) — restore
+    // the ones it actually had. Those dependents' clones still point at
+    // notes this reinstall just deleted and recreated with new ids, which is
+    // exactly why they get cascaded to below.
+    if (oldDependents.length > 0) {
+        const afterInstall = await loadDatabase()
+        if (afterInstall.installedAddons[repoId]?.[addonId]) {
+            afterInstall.installedAddons[repoId][addonId].dependents = oldDependents
+            await saveDatabase(afterInstall)
+        }
+    }
 
     if (wasEnabled) {
         await enableAddon(repoId, addonId, true)
+    }
+
+    // Cascade: every dependent's clones of this addon's exports now point at
+    // deleted notes, so they need reinstalling too.
+    for (const dependentId of oldDependents) {
+        const stillInstalled = await loadDatabase()
+        if (stillInstalled.installedAddons[repoId]?.[dependentId]) {
+            await updateAddon(repoId, dependentId, updating)
+        }
     }
 }
 
@@ -563,6 +652,9 @@ async function selfUpdateAddon(repoId, addonId) {
             rootNoteId: noteMap[m.root],
             noteMap,
             exportedNotes: {},
+            dependencies: [],
+            dependents: [],
+            manuallyInstalled: true,
             enabled: true
         }
     } else {
@@ -618,6 +710,7 @@ module.exports.updateRepositories  = updateRepositories
 module.exports.deleteRepository   = deleteRepository
 module.exports.installAddon       = installAddon
 module.exports.deleteAddon        = deleteAddon
+module.exports.uninstallAddon     = uninstallAddon
 module.exports.updateAddon        = updateAddon
 module.exports.selfUpdateAddon    = selfUpdateAddon
 module.exports.enableAddon        = enableAddon

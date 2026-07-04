@@ -224,7 +224,7 @@ export default function RepoManager() {
                     break
                 }
                 case "delete-addon": {
-                    await libTAMjs.deleteAddon(command["repository"], command["addon"])
+                    await libTAMjs.uninstallAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
                     await activateNote(displayNote)
                     window.location.reload();
