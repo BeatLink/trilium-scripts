@@ -1,7 +1,7 @@
 let configNoteId = api.currentNote.getRelationValue("AddonData:config")
 let config = JSON.parse(api.getNote(configNoteId).getContent())
 let apiKey = config.apiKey
-let inboxNoteId = api.currentNote.getRelationValue("inboxNote")
+let inboxNoteId = config.inboxNoteId
 
 if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
     if (api.req.body.action == "get_inbox") {
