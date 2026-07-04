@@ -1,0 +1,94 @@
+{
+    "id": "area-picker@beatlink",
+    "name": "Area Picker",
+    "description": "A right pane dropdown widget that allows you set a note to a specific area of life",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.2",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "area-picker@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "script",
+                "title": "areaPickerPreact",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "areaPickerPreact.jsx"
+            },
+            {
+                "id": "style",
+                "title": "areaPickerPreact.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "areaPickerPreact.css"
+            },
+            {
+                "id": "profile",
+                "title": "area.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "area.json"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "root",
+                "child": "style"
+            },
+            {
+                "parent": "root",
+                "child": "profile"
+            }
+        ],
+        "relations": [
+            {
+                "from": "script",
+                "type": "AddonData:profile",
+                "to": "profile"
+            }
+        ],
+        "labels": [
+            {
+                "note": "root",
+                "name": "iconClass",
+                "value": "bx bx-code"
+            },
+            {
+                "note": "script",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "style",
+                "name": "iconClass",
+                "value": "bx bx-code"
+            },
+            {
+                "note": "profile",
+                "name": "iconClass",
+                "value": "bx bx-code"
+            }
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
