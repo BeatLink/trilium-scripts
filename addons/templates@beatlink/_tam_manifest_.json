@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.0.3",
     "type": "template",
     "readme": "README.md",
     "manifest": {
@@ -185,7 +185,7 @@
             {
                 "note": "future",
                 "name": "iconClass",
-                "value": "bxs-hourglass"
+                "value": "bx bxs-hourglass"
             },
             {
                 "note": "future",
@@ -240,7 +240,7 @@
             {
                 "note": "area",
                 "name": "iconClass",
-                "value": "bxs-circle"
+                "value": "bx bxs-circle"
             },
             {
                 "note": "area",

@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.9"
+const TAM_VERSION = "2.0.10"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -233,7 +233,7 @@ async function applyLabels(labels, noteMap) {
         if (!realNoteId) continue
         await api.runOnBackend((noteId, name, value) => {
             api.getNote(noteId).setLabel(name, value)
-        }, [realNoteId, label.name, label.value ?? ""])
+        }, [realNoteId, label.name, String(label.value ?? "")])
     }
 }
 
