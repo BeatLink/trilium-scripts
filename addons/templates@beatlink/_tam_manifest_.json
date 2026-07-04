@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "1.0.4",
     "type": "template",
     "readme": "README.md",
     "manifest": {
@@ -21,7 +21,7 @@
                 "sourceUrl": null,
                 "skipOnUpdate": true
             },
-            {"id": "high-priority", "title": "1. High Priority", "type": "text", "mime": "text/html", "sourceUrl": "high-priority.html", "promptOnUpdate": true},
+            {"id": "goal",          "title": "1. Goal",          "type": "text", "mime": "text/html", "sourceUrl": "goal.html",           "promptOnUpdate": true},
             {"id": "routine",       "title": "2. Routine",       "type": "text", "mime": "text/html", "sourceUrl": "routine.html",       "promptOnUpdate": true},
             {"id": "task",          "title": "3. Task",          "type": "text", "mime": "text/html", "sourceUrl": "task.html",           "promptOnUpdate": true},
             {"id": "future",        "title": "4. Future",        "type": "text", "mime": "text/html", "sourceUrl": "future.html",         "promptOnUpdate": true},
@@ -33,7 +33,7 @@
         "children": [
             {
                 "parent": "root",
-                "child": "high-priority"
+                "child": "goal"
             },
             {
                 "parent": "root",
@@ -72,8 +72,8 @@
             },
             {
                 "from": "root",
-                "type": "AddonData:high_priority",
-                "to": "high-priority"
+                "type": "AddonData:goal",
+                "to": "goal"
             },
             {
                 "from": "root",
@@ -118,22 +118,17 @@
                 "value": "bx bx-copy-alt"
             },
             {
-                "note": "high-priority",
+                "note": "goal",
                 "name": "template",
                 "value": ""
             },
             {
-                "note": "high-priority",
+                "note": "goal",
                 "name": "iconClass",
-                "value": "bx bx-error"
+                "value": "bx bxs-star-half"
             },
             {
-                "note": "high-priority",
-                "name": "agendaTaskWidget",
-                "value": ""
-            },
-            {
-                "note": "high-priority",
+                "note": "goal",
                 "name": "label:area",
                 "value": "single"
             },

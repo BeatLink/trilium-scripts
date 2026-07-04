@@ -6,7 +6,7 @@ A collection of note templates for tasks, projects, notes, and areas, designed t
 
 | Template | Icon | Purpose |
 |----------|------|---------|
-| 1. High Priority | `bx-error` | Urgent tasks that need immediate attention |
+| 1. Goal | `bxs-star-half` | High-level goals and aspirations |
 | 2. Routine | `bx-sync` | Recurring tasks and habits |
 | 3. Task | `bx-check` | Standard single tasks |
 | 4. Future | `bxs-hourglass` | Someday/maybe items and deferred tasks |
@@ -15,7 +15,7 @@ A collection of note templates for tasks, projects, notes, and areas, designed t
 | 7. Area | `bxs-circle` | Areas of responsibility (list view) |
 | 8. Special | *(none)* | Root container template — used by the templates root note itself |
 
-All templates carry the `#template` label so they are automatically discoverable by the [Template Picker](../template-picker@beatlink/) widget. Task-type templates (High Priority, Routine, Task, Future, Project) also carry `#agendaTaskWidget` for integration with the Agenda Next task display.
+All templates carry the `#template` label so they are automatically discoverable by the [Template Picker](../template-picker@beatlink/) widget. Task-type templates (Routine, Task, Future, Project) also carry `#agendaTaskWidget` for integration with the Agenda Next task display.
 
 ## Customization
 
