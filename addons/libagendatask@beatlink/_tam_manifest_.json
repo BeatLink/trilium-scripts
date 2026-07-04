@@ -1,0 +1,28 @@
+{
+    "id": "libagendatask@beatlink",
+    "name": "Agenda Task",
+    "description": "Per-task note operations for an agenda/task-management system: recurrence completion, rescheduling, and keeping derived date/time labels in sync. Label names are injected by the caller as a plain constants object rather than imported from a shared library.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendatask@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "libAgendaTask.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaTask.js"}
+        ],
+        "children": [
+            {"parent": "lib", "addon": "librecurrence@beatlink", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-task"}
+        ],
+        "dependencies": ["librecurrence@beatlink"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}
