@@ -34,7 +34,9 @@ removed from the displayed text, and a countdown timer starts:
 - **Empty inbox** — the reminder is disabled and any saved timer state is cleared.
 
 Clicking the panel item calls back into the endpoint with `open_inbox`, which activates the inbox
-note in Trilium.
+note in Trilium. The desktop notification itself is sent via
+[libnotification@beatlink](../libnotification@beatlink/)'s backend export, which handles the
+frontend hop (the `Notification` API only exists there) internally.
 
 ### Known limitations
 

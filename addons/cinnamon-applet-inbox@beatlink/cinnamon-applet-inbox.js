@@ -1,4 +1,5 @@
 const { loadSettings } = libsettings
+const { sendNotification } = libnotificationBackend
 
 let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 let settingsNoteId = api.currentNote.getRelationValue("settingsNote")
@@ -83,18 +84,7 @@ if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
                 start_time = new Date().toISOString()
                 api.currentNote.setLabel("start_time", start_time)
                 api.currentNote.setLabel("text", text)
-                // Notification must run on the frontend (Notification API isn't
-                // available on the backend) — self-contained closure, same
-                // convention as every other runOnBackend/runOnFrontend call in
-                // this repo, so it isn't relying on a cloned library global
-                // being available in a different execution context.
-                api.runOnFrontend((title, body, noteId) => {
-                    let notification = new window.Notification(title, { body, tag: "cinnamon-applet-inbox" })
-                    notification.onclick = (event) => {
-                        event.preventDefault()
-                        api.activateNote(noteId)
-                    }
-                }, [formattedText, "", inboxNoteId])
+                sendNotification(formattedText, "", inboxNoteId)
             }
 
             let elapsed_time = (new Date()) - (new Date(start_time))

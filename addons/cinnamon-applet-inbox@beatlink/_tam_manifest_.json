@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.0",
+    "latestVersion": "1.4.1",
     "type": "script",
     "readme": "README.md",
     "manifest": {
@@ -23,8 +23,9 @@
             {"parent": "root",     "child": "schema"},
             {"parent": "root",     "child": "config"},
             {"parent": "root",     "child": "settings"},
-            {"parent": "script",   "addon": "libsettings@beatlink", "child": "backend"},
-            {"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}
+            {"parent": "script",   "addon": "libsettings@beatlink",     "child": "backend"},
+            {"parent": "settings", "addon": "libsettings@beatlink",     "child": "ui"},
+            {"parent": "script",   "addon": "libnotification@beatlink", "child": "backend"}
         ],
         "relations": [
             {"from": "settings", "type": "AddonData:config", "to": "config"},
@@ -38,7 +39,7 @@
             {"note": "script", "name": "iconClass",             "value": "bx bx-inbox"},
             {"note": "script", "name": "customRequestHandler",  "value": "inboxPanel"}
         ],
-        "dependencies": ["libsettings@beatlink"],
+        "dependencies": ["libsettings@beatlink", "libnotification@beatlink"],
         "exports": {}
     }
 }
