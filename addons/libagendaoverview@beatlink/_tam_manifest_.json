@@ -1,0 +1,31 @@
+{
+    "id": "libagendaoverview@beatlink",
+    "name": "Agenda Overview",
+    "description": "Search/filter/sort/prefix/color engine for an agenda/task-management system: resolves one or more JSON 'profile' notes into a filtered, sorted, re-filed list of task notes, and exports due tasks as an iCal feed. Profile note ids, label-name constants, and the iCal note id are all injected by the caller rather than resolved from relations on the library's own note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendaoverview@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "libAgendaOverview.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaOverview.js"}
+        ],
+        "children": [
+            {"parent": "lib", "addon": "libagendatask@beatlink",  "child": "lib"},
+            {"parent": "lib", "addon": "libnotification@beatlink", "child": "lib"},
+            {"parent": "lib", "addon": "libical@kewisch",          "child": "lib"},
+            {"parent": "lib", "addon": "libmultisort@beatlink",    "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar-check"}
+        ],
+        "dependencies": ["libagendatask@beatlink", "libnotification@beatlink", "libical@kewisch", "libmultisort@beatlink"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}
