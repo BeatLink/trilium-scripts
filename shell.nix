@@ -3,6 +3,7 @@
 pkgs.mkShell {
   packages = [
     (pkgs.python3.withPackages (ps: [ ps.markdown ]))
+    pkgs.gh
   ];
 
   shellHook = ''

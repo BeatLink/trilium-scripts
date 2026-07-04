@@ -1,0 +1,31 @@
+{
+    "id": "drawio@siriusxt",
+    "name": "Draw.io",
+    "description": "Integrates Draw.io diagram editing into TriliumNext — click any SVG note to edit it inline using the embedded Draw.io editor",
+    "author": "SiriusXT",
+    "homepage": "https://github.com/SiriusXT/trilium-drawio",
+    "license": "MIT",
+    "latestVersion": "0.7.1",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",     "title": "drawio@siriusxt",  "type": "text",  "mime": "text/html",                           "sourceUrl": null},
+            {"id": "widget",   "title": "trilium-drawio",   "type": "code",  "mime": "application/javascript;env=frontend", "sourceUrl": "trilium-drawio.js"},
+            {"id": "template", "title": "drawio",           "type": "image", "mime": "image/svg+xml",                       "sourceUrl": "drawio.svg"}
+        ],
+        "children": [
+            {"parent": "root", "child": "widget"},
+            {"parent": "root", "child": "template"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",     "name": "iconClass", "value": "bx bx-shape-square"},
+            {"note": "widget",   "name": "widget",    "value": ""},
+            {"note": "template", "name": "template",  "value": ""}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}

@@ -63,13 +63,13 @@ for manifest_file in manifest_files:
         else:
             error(manifest_file, f"folder name '{folder_name}' does not match id '{addon_id}' (run --fix to rename)")
 
-    # --- homepage URL must end with addons/{id} ------------------------------
+    # --- homepage URL must end with addons/{id} (only when URL contains /addons/) ---
     homepage = manifest.get("homepage", "")
     if homepage:
         parsed_url = urlparse(homepage)
         decoded_path = unquote(parsed_url.path).rstrip("/")
         expected_suffix = f"addons/{addon_id}"
-        if not decoded_path.endswith(expected_suffix):
+        if "/addons/" in decoded_path and not decoded_path.endswith(expected_suffix):
             if fix_mode:
                 parts = decoded_path.split("/")
                 # Replace everything after the last 'addons' segment with the id
