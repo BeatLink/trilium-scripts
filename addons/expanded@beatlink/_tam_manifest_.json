@@ -1,0 +1,36 @@
+{
+    "id": "expanded@beatlink",
+    "name": "Expanded",
+    "description": "Keep selected notes always expanded in the note tree. Toggle 'Always Expanded' from the right pane on any note to pin it open permanently, even after restarting Trilium.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",          "title": "expanded@beatlink", "type": "text", "mime": "text/html",                            "sourceUrl": null},
+            {"id": "widget",        "title": "expandedWidget",    "type": "code", "mime": "text/jsx",                             "sourceUrl": "expandedWidget.jsx"},
+            {"id": "updateExpanded","title": "updateExpanded.js", "type": "code", "mime": "application/javascript;env=backend",   "sourceUrl": "updateExpanded.js"},
+            {"id": "setup",         "title": "setup.js",          "type": "code", "mime": "application/javascript;env=frontend",  "sourceUrl": "setup.js"}
+        ],
+        "children": [
+            {"parent": "root", "child": "widget"},
+            {"parent": "root", "child": "updateExpanded"},
+            {"parent": "root", "child": "setup"}
+        ],
+        "relations": [
+            {"from": "widget", "type": "scriptNote", "to": "updateExpanded"},
+            {"from": "setup",  "type": "scriptNote", "to": "updateExpanded"}
+        ],
+        "labels": [
+            {"note": "root",   "name": "iconClass", "value": "bx bx-code"},
+            {"note": "widget", "name": "widget",    "value": ""},
+            {"note": "setup",  "name": "run",       "value": "frontendStartup"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
