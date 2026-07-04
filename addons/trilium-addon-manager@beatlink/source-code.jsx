@@ -178,6 +178,7 @@ export default function RepoManager() {
     const [repositories, setRepositories] = useState(null)
     const [pendingPrompts, setPendingPrompts] = useState([])
     const [promptContext, setPromptContext] = useState(null)
+    const [promptQueue, setPromptQueue] = useState([])
 
     // Main Command Handler
     useEffect(() => {
@@ -242,11 +243,56 @@ export default function RepoManager() {
                         await libTAMjs.resolvePrompt(repoId, addonId, noteLocalId, useNew)
                     }
                     await libTAMjs.clearPendingPrompts(repoId, addonId)
-                    setPendingPrompts([])
-                    setPromptContext(null)
-                    setCommand({command: "load-repository"})
-                    await activateNote(displayNote)
-                    window.location.reload()
+
+                    if (promptQueue.length > 0) {
+                        const [next, ...rest] = promptQueue
+                        const prompts = await libTAMjs.getPendingPrompts(next.repoId, next.addonId)
+                        setPendingPrompts(prompts)
+                        setPromptContext(next)
+                        setPromptQueue(rest)
+                        setCommand(null)
+                    } else {
+                        setPendingPrompts([])
+                        setPromptContext(null)
+                        setCommand({command: "load-repository"})
+                        await activateNote(displayNote)
+                        window.location.reload()
+                    }
+                    break
+                }
+                case "update-all": {
+                    const targets = []
+                    for (const [repoId, repoData] of Object.entries(repositories)) {
+                        for (const [addonId, addonData] of Object.entries(repoData.addons ?? {})) {
+                            if (addonData.installedVersion && addonData.updateAvailable) {
+                                targets.push({ repoId, addonId })
+                            }
+                        }
+                    }
+
+                    const queue = []
+                    for (const { repoId, addonId } of targets) {
+                        if (addonId === "trilium-addon-manager@beatlink") {
+                            await libTAMjs.selfUpdateAddon(repoId, addonId)
+                        } else {
+                            await libTAMjs.updateAddon(repoId, addonId)
+                            const prompts = await libTAMjs.getPendingPrompts(repoId, addonId)
+                            if (prompts.length > 0) queue.push({ repoId, addonId })
+                        }
+                    }
+
+                    if (queue.length > 0) {
+                        const [next, ...rest] = queue
+                        const prompts = await libTAMjs.getPendingPrompts(next.repoId, next.addonId)
+                        setPendingPrompts(prompts)
+                        setPromptContext(next)
+                        setPromptQueue(rest)
+                        setCommand(null)
+                    } else {
+                        setCommand({command: "load-repository"})
+                        await activateNote(displayNote)
+                        window.location.reload()
+                    }
                     break
                 }
                 case "self-update-addon": {
@@ -285,6 +331,9 @@ export default function RepoManager() {
                     <h2>Trilium Addon Manager</h2>
                     <a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a>
                 </div>
+                {promptQueue.length > 0 && (
+                    <p>{promptContext.addonId} — {promptQueue.length} more addon(s) to review after this</p>
+                )}
                 <PromptReview
                     prompts={pendingPrompts}
                     onResolve={(decisions) => setCommand({
@@ -297,6 +346,10 @@ export default function RepoManager() {
             </div>
         )
     }
+
+    const anyUpdateAvailable = Object.values(repositories).some(repoData =>
+        Object.values(repoData.addons ?? {}).some(a => a.installedVersion && a.updateAvailable)
+    )
 
     return (
         <div className="TAM-body">
@@ -314,6 +367,13 @@ export default function RepoManager() {
                             setCommand({ command: "update-repositories" })
                         }}
                     />
+                    {anyUpdateAvailable && <Button
+                        icon="bx bx-sync"
+                        text="Update All Addons"
+                        onClick={e => {
+                            setCommand({ command: "update-all" })
+                        }}
+                    />}
                     <NewRepo
                         onSave={value => {
                             setCommand({ command: "add-repository", repository: value })

@@ -195,9 +195,12 @@ Updating an addon does **not** do an in-place content patch. Instead:
 3. The old addon note tree is deleted entirely.
 4. The addon is reinstalled from scratch (following the install steps above).
 5. Persistence is reconnected — existing persisted notes are reattached rather than duplicated (see [Persistence](#persistence)).
-6. If there were pending prompts, the UI shows the Update Review screen.
+6. If the addon was enabled before the update, it is re-enabled afterward.
+7. If there were pending prompts, the UI shows the Update Review screen.
 
 This approach ensures the note structure is always clean and matches the manifest, while user data in persisted notes survives.
+
+**Update All Addons:** the "Update All Addons" button (shown whenever at least one installed addon has an update available) runs this same update flow for every out-of-date addon in sequence, including a self-update of TAM itself if applicable. If any of the updated addons have pending `promptOnUpdate` prompts, the Update Review screen is shown once per addon, one after another, until the queue is empty.
 
 ---
 

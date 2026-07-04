@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.11"
+const TAM_VERSION = "2.1.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -463,8 +463,15 @@ async function updateAddon(repoId, addonId) {
         await saveDatabase(database)
     }
 
+    const database = await loadDatabase()
+    const wasEnabled = database.installedAddons[repoId]?.[addonId]?.enabled ?? false
+
     await deleteAddon(repoId, addonId)
     await installAddon(repoId, addonId)
+
+    if (wasEnabled) {
+        await enableAddon(repoId, addonId, true)
+    }
 }
 
 async function getPendingPrompts(repoId, addonId) {
