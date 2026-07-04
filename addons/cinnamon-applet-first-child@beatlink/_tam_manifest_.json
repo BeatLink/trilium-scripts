@@ -1,0 +1,44 @@
+{
+    "id": "cinnamon-applet-first-child@beatlink",
+    "name": "Cinnamon Applet First Child",
+    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first child (in Trilium sort order) of a configured parent note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-first-child@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "settingsNote": "root",
+        "notes": [
+            {"id": "root",     "title": "cinnamon-applet-first-child@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "script",   "title": "cinnamon-applet-first-child.js",       "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "cinnamon-applet-first-child.js"},
+            {"id": "schema",   "title": "schema.json",                         "type": "code",   "mime": "application/json",                    "sourceUrl": "schema.json"},
+            {"id": "config",   "title": "config.json",                         "type": "code",   "mime": "application/json",                    "sourceUrl": "config.json"},
+            {"id": "settings", "title": "settings.jsx",                        "type": "code",   "mime": "text/jsx",                            "sourceUrl": "settings.jsx"}
+        ],
+        "children": [
+            {"parent": "root",     "child": "script"},
+            {"parent": "root",     "child": "schema"},
+            {"parent": "root",     "child": "config"},
+            {"parent": "root",     "child": "settings"},
+            {"parent": "script",   "addon": "libsettings@beatlink", "child": "backend"},
+            {"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}
+        ],
+        "relations": [
+            {"from": "settings", "type": "AddonData:config", "to": "config"},
+            {"from": "settings", "type": "schemaNote",        "to": "schema"},
+            {"from": "script",   "type": "schemaNote",        "to": "schema"},
+            {"from": "script",   "type": "settingsNote",      "to": "settings"},
+            {"from": "root",     "type": "renderNote",        "to": "settings"}
+        ],
+        "labels": [
+            {"note": "root",   "name": "iconClass",            "value": "bx bx-chevron-right-square"},
+            {"note": "script", "name": "iconClass",             "value": "bx bx-chevron-right-square"},
+            {"note": "script", "name": "customRequestHandler",  "value": "first_child_panel"}
+        ],
+        "dependencies": ["libsettings@beatlink"],
+        "exports": {}
+    }
+}

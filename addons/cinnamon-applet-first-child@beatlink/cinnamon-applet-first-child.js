@@ -6,15 +6,19 @@ let configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:confi
 
 let settings = loadSettings(schemaNoteId, configNoteId)
 let apiKey = settings.apiKey
-let inboxNoteId = settings.inboxNoteId
+let parentNoteId = settings.parentNoteId
 
 if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
-    if (api.req.body.action == "get_inbox") {
-        let inboxNote = api.getNote(inboxNoteId)
-        let content = inboxNote.getContent()
-        let first_line = content.slice(0, content.indexOf("</p>")).replace("<p>", "").replace("&nbsp;", "").replace(/<[^>]+>/g, '');
-        api.res.status(200).json({text: first_line, onclick_data: inboxNoteId});
-    } else if (api.req.body.action == "open_inbox") {
+
+    if (api.req.body.action == "get_task") {
+        let parentNote = api.getNote(parentNoteId)
+        let notes = parentNote.getChildNotes()
+        if (notes.length > 0) {
+            api.res.status(201).json({text: notes[0].title, onclick_data: notes[0].noteId});
+        } else {
+            api.res.status(201).json({text: "", onclick_data: ""});
+        }
+    } else if (api.req.body.action == "open_task") {
         api.runOnFrontend((noteID) => {
             api.activateNote(noteID)
         }, [api.req.body.onclick_data]);
