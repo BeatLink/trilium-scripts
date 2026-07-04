@@ -1,0 +1,30 @@
+{
+    "id": "notifications@beatlink",
+    "name": "Notifications",
+    "description": "Polls for notes matching a date label and sends desktop notifications for past-due items.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/notifications@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",   "title": "notifications@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
+            {"id": "script", "title": "notifications.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "notifications.js"}
+        ],
+        "children": [
+            {"parent": "root",   "child": "script"},
+            {"parent": "script", "addon": "libnotification@beatlink", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",   "name": "iconClass", "value": "bx bx-bell"},
+            {"note": "script", "name": "run",       "value": "frontendStartup"},
+            {"note": "script", "name": "iconClass", "value": "bx bx-bell"}
+        ],
+        "dependencies": ["libnotification@beatlink"],
+        "exports": {}
+    }
+}
