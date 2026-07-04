@@ -34,8 +34,8 @@
             {"parent": "root", "child": "special"}
         ],
         "relations": [
-            {"from": "root", "type": "template",                  "to": "special"},
-            {"from": "root", "type": "AddonData:high-priority",   "to": "high-priority"},
+            {"from": "root", "type": "template",                   "to": "special"},
+            {"from": "root", "type": "AddonData:high_priority",   "to": "high-priority"},
             {"from": "root", "type": "AddonData:routine",         "to": "routine"},
             {"from": "root", "type": "AddonData:task",            "to": "task"},
             {"from": "root", "type": "AddonData:future",          "to": "future"},
