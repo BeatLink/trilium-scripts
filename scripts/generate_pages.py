@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate GitHub Pages from addon metadata and README files."""
 
+import html
 import json
 import shutil
 import sys
@@ -38,7 +39,7 @@ TYPE_COLORS = {
 
 def badge(t):
     color = TYPE_COLORS.get(t, "#6b7280")
-    return f'<span class="badge" style="background:{color}">{t}</span>'
+    return f'<span class="badge" style="background:{color}">{html.escape(t)}</span>'
 
 
 def page(title, body, css="style.css"):
@@ -47,7 +48,7 @@ def page(title, body, css="style.css"):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
+  <title>{html.escape(title)}</title>
   <link rel="stylesheet" href="{css}">
 </head>
 <body>
@@ -62,24 +63,26 @@ def page(title, body, css="style.css"):
 # ---------------------------------------------------------------------------
 
 def render_index(addons):
-    import html as _html
-
     types_present = sorted(set(a["meta"].get("type", "") for a in addons if a["meta"].get("type")))
 
     cards = []
     for a in addons:
-        m   = a["meta"]
-        aid = m["id"]
-        t   = m.get("type", "")
-        cards.append(f"""  <a class="card" href="{aid}/" data-type="{t}" data-name="{_html.escape(m.get("name", aid).lower(), quote=True)}" data-desc="{_html.escape(m.get("description", "").lower(), quote=True)}">
+        m       = a["meta"]
+        aid     = m["id"]
+        t       = m.get("type", "")
+        name    = m.get("name", aid)
+        desc    = m.get("description", "")
+        author  = m.get("author", "")
+        version = m.get("latestVersion", "")
+        cards.append(f"""  <a class="card" href="{html.escape(aid, quote=True)}/" data-type="{html.escape(t, quote=True)}" data-name="{html.escape(name.lower(), quote=True)}" data-desc="{html.escape(desc.lower(), quote=True)}">
     <div class="card-top">
-      <span class="card-name">{m.get("name", aid)}</span>
+      <span class="card-name">{html.escape(name)}</span>
       {badge(t)}
     </div>
-    <p class="card-desc">{m.get("description", "")}</p>
+    <p class="card-desc">{html.escape(desc)}</p>
     <div class="card-foot">
-      <span>v{m.get("latestVersion", "")}</span>
-      <span class="card-author" data-author="{m.get("author", "")}">{m.get("author", "")}</span>
+      <span>v{html.escape(version)}</span>
+      <span class="card-author" data-author="{html.escape(author, quote=True)}">{html.escape(author)}</span>
     </div>
   </a>""")
 
@@ -171,25 +174,25 @@ def render_addon(meta, readme_html):
     manifest_url = f"{RELEASES}/download/{aid}.json"
 
     author_display = (
-        f'<a href="https://github.com/{author}" target="_blank">{author}</a>'
-        if author and author != "—" else author
+        f'<a href="https://github.com/{html.escape(author, quote=True)}" target="_blank">{html.escape(author)}</a>'
+        if author and author != "—" else html.escape(author)
     )
 
     rows = "".join(
         f"<tr><th>{k}</th><td>{v}</td></tr>"
         for k, v in [
-            ("ID",      f"<code>{aid}</code>"),
-            ("Version", version),
+            ("ID",      f"<code>{html.escape(aid)}</code>"),
+            ("Version", html.escape(version)),
             ("Author",  author_display),
-            ("License", lic),
-            ("Type",    t),
+            ("License", html.escape(lic)),
+            ("Type",    html.escape(t)),
         ]
     )
 
-    actions = f'<a class="btn" href="{zip_url}">Download ZIP</a>'
-    actions += f'\n      <a class="btn btn-ghost" href="{manifest_url}" target="_blank">Download Manifest</a>'
+    actions = f'<a class="btn" href="{html.escape(zip_url, quote=True)}">Download ZIP</a>'
+    actions += f'\n      <a class="btn btn-ghost" href="{html.escape(manifest_url, quote=True)}" target="_blank">Download Manifest</a>'
     if hp:
-        actions += f'\n      <a class="btn btn-ghost" href="{hp}" target="_blank">Source</a>'
+        actions += f'\n      <a class="btn btn-ghost" href="{html.escape(hp, quote=True)}" target="_blank">Source</a>'
 
     content = (
         f'<div class="readme">{readme_html}</div>'
@@ -201,7 +204,7 @@ def render_addon(meta, readme_html):
   <div class="hdr">
     <a class="back" href="../">← All Addons</a>
     <div class="hdr-name">
-      <h1>{name}</h1>
+      <h1>{html.escape(name)}</h1>
       {badge(t)}
     </div>
   </div>
@@ -450,7 +453,10 @@ def generate_readme(addons):
         aid  = m["id"]
         name = m.get("name", aid)
         t    = m.get("type", "")
-        desc = m.get("description", "").split("\n")[0]
+        # Escape raw HTML (GitHub's markdown renderer embeds it, so an
+        # unclosed tag like a literal "<details>" in a description would
+        # swallow the rest of the table) and markdown table pipes.
+        desc = html.escape(m.get("description", "").split("\n")[0]).replace("|", "\\|")
         ver  = m.get("latestVersion", "")
         link = f"[{name}](addons/{a['outer_dir'].name}/)"
         rows.append(f"| {link} | {t} | {desc} | {ver} |")
