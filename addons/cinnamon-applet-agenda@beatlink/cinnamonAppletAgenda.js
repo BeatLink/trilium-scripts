@@ -1,8 +1,13 @@
-let configNoteId = api.currentNote.getRelationValue("AddonData:config")
-let config = JSON.parse(api.getNote(configNoteId).getContent())
-let apiKey = config.apiKey
-let dateLabel = config.dateLabel
-let taskOrder = config.taskOrder
+const { loadSettings } = libsettings
+
+let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
+let settingsNoteId = api.currentNote.getRelationValue("settingsNote")
+let configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+
+let settings = loadSettings(schemaNoteId, configNoteId)
+let apiKey = settings.apiKey
+let dateLabel = settings.dateLabel
+let taskOrder = settings.taskOrder
 
 if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
 

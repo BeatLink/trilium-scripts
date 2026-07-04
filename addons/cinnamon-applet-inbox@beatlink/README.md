@@ -4,16 +4,15 @@ Backend API endpoint for the [Trilium API Cinnamon panel applet](https://cinnamo
 
 ## Setup
 
-After installing, open **Trilium Addon Manager → Addon Data → cinnamon-applet-inbox@beatlink → config.json** and edit the fields:
+After installing, open the addon's root note (`cinnamon-applet-inbox@beatlink`) in Trilium — it
+renders a Settings screen with the following fields:
 
 | Field         | Value                       | Description                                                     |
 |---------------|------------------------------|-------------------------------------------------------------------|
 | `apiKey`      | a random string you choose   | Shared secret checked against the applet's configured API key     |
-| `inboxNoteId` | a note ID (blank by default) | ID of the note whose first line should be surfaced                |
+| `inboxNoteId` | pick a note                  | The note whose first line should be surfaced (uses a note picker) |
 
-`config.json` is a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates.
-
-**To find a note's ID for `inboxNoteId`:** open the note you want to use as your inbox, then right-click its title (or open the note's context menu) and choose **Copy note ID to clipboard**. Paste that value into `inboxNoteId`.
+Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `inboxPanel` (must match the `customRequestHandler` label on `cinnamon-applet-inbox.js`)

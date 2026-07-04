@@ -1,0 +1,24 @@
+{
+    "apiKey": {
+        "type": "string",
+        "label": "API Key",
+        "description": "Shared secret checked against the applet's configured API key",
+        "default": "CHANGE_ME"
+    },
+    "dateLabel": {
+        "type": "string",
+        "label": "Date Label",
+        "description": "Name of the label used to store due dates on tasks",
+        "default": "dueDate"
+    },
+    "taskOrder": {
+        "type": "select",
+        "label": "Task Order",
+        "description": "Whether to surface the earliest or latest matching past-due task",
+        "options": [
+            {"value": "earliest", "label": "Earliest"},
+            {"value": "latest", "label": "Latest"}
+        ],
+        "default": "earliest"
+    }
+}

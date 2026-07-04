@@ -1,0 +1,38 @@
+{
+    "id": "libsettings@beatlink",
+    "name": "Settings Library",
+    "description": "Stateless, schema-driven settings engine for TriliumNext addons — merges a persisted config note with schema defaults, and can render a dynamic settings form from that same schema.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libsettings@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",    "title": "libsettings@beatlink",  "type": "text", "mime": "text/html",                            "sourceUrl": null},
+            {"id": "backend", "title": "libsettings",           "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libsettings-backend.js"},
+            {"id": "ui",      "title": "libsettings-ui.jsx",     "type": "code", "mime": "text/jsx",                            "sourceUrl": "libsettings-ui.jsx"},
+            {"id": "style",   "title": "libsettings-ui.css",    "type": "code", "mime": "text/css",                            "sourceUrl": "libsettings-ui.css"}
+        ],
+        "children": [
+            {"parent": "root", "child": "backend"},
+            {"parent": "root", "child": "ui"},
+            {"parent": "ui",   "child": "style"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",    "name": "iconClass", "value": "bx bx-slider"},
+            {"note": "backend", "name": "iconClass", "value": "bx bx-slider"},
+            {"note": "ui",      "name": "iconClass", "value": "bx bx-slider"},
+            {"note": "style",   "name": "appCss",    "value": ""},
+            {"note": "style",   "name": "iconClass", "value": "bx bx-slider"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "backend": "backend",
+            "ui": "ui"
+        }
+    }
+}

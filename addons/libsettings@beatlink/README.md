@@ -1,0 +1,110 @@
+# Settings Library
+
+Stateless, schema-driven settings engine for TriliumNext addons — inspired by Cinnamon's
+`settings-schema.json` model. An addon defines its own `schema.json` (what fields exist, their type,
+label, description, and default) and keeps its own persisted `config.json` (an
+[`AddonData:` persisted note](../trilium-addon-manager@beatlink/README.md#persistence)); this
+library reads/merges/saves those two notes for you, and can render a settings form from that same
+schema.
+
+This library never resolves note references itself — it's handed noteIds by the consuming addon
+(dependency injection). It doesn't know or care about relation names, note titles, or your addon's
+tree shape; that's entirely up to you. This matters because the library note itself is cloned
+byreference into every consumer — it's the same note everywhere, so it has no way to discover "which
+addon is calling me" on its own.
+
+## Schema format
+
+A JSON object keyed by setting name, saved as your addon's own `schema.json` note (not this
+library's — schema lives with the addon that defines it):
+
+```json
+{
+    "apiKey": {"type": "string", "label": "API Key", "description": "Shared secret for the panel applet", "default": "CHANGE_ME"},
+    "taskOrder": {"type": "select", "label": "Task Order", "options": [{"value": "earliest", "label": "Earliest"}, {"value": "latest", "label": "Latest"}], "default": "earliest"},
+    "inboxNoteId": {"type": "note", "label": "Inbox Note", "description": "Note whose first line should be surfaced", "default": ""}
+}
+```
+
+| Field         | Required | Description                                              |
+|---------------|----------|------------------------------------------------------------|
+| `type`        | yes      | `string`, `number`, `boolean`, `select`, or `note`          |
+| `label`       | yes      | Field heading shown in the generated form                  |
+| `description` | no       | Help text shown under the heading                           |
+| `default`     | yes      | Value used when the key is missing from `config.json`       |
+| `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
+
+Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
+first read, so there's nothing to duplicate between the two files.
+
+## Backend usage
+
+Install this addon as a dependency and declare it as a child of your `customRequestHandler` script
+note (`{"parent": "script", "addon": "libsettings@beatlink", "child": "backend"}`) — TAM clones the
+`libsettings` note in as a bundle global, same convention as
+[libnotification](../libnotification@beatlink/README.md):
+
+```js
+const { loadSettings, saveSettings } = libsettings
+
+// however your addon resolves its own noteIds — this library doesn't do it for you
+const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
+const configNoteId = api.getNote(api.currentNote.getRelationValue("settingsNote"))
+    .getRelationValue("AddonData:config")
+
+const values = loadSettings(schemaNoteId, configNoteId)
+```
+
+### `loadSettings(schemaNoteId, configNoteId)`
+
+Reads both notes, merges stored values over schema defaults for any missing key, and returns the
+merged values object.
+
+### `saveSettings(schemaNoteId, configNoteId, values)`
+
+Writes `values` to the config note, keeping only keys present in the schema.
+
+## Frontend / widget usage
+
+Declare this addon as a dependency and pull in its `ui` export as a child of your settings widget
+note (`{"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}`):
+
+```jsx
+import { SettingsForm } from "libsettings-ui.jsx"
+
+export default function MySettings() {
+    const [schemaNoteId, setSchemaNoteId] = useState(null)
+    const [configNoteId, setConfigNoteId] = useState(null)
+
+    useEffect(() => {
+        (async () => {
+            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
+            const target = await api.currentNote.getRelationTarget("AddonData:config")
+            setConfigNoteId(target.noteId)
+        })()
+    }, [])
+
+    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+
+    return (
+        <div>
+            <h3>My Addon Settings</h3>
+            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+        </div>
+    )
+}
+```
+
+### `<SettingsForm schemaNoteId configNoteId />`
+
+Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
+entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
+picker), and owns its own Save button and save-status flash. Place it anywhere in your own widget —
+it doesn't dictate page layout, only the fields.
+
+## See it in use
+
+[`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and
+[`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/) both consume this library —
+their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `AddonData:config`) a
+consumer needs to declare.

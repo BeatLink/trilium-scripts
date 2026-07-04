@@ -1,0 +1,32 @@
+.lst-panel {
+    padding: 1rem;
+}
+
+.lst-field {
+    margin: 1rem 0;
+}
+
+.lst-field h4 {
+    margin: 0 0 0.25rem 0;
+}
+
+.lst-field-description {
+    display: block;
+    color: var(--muted-text-color);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.lst-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 0;
+}
+
+.lst-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--muted-text-color);
+}

@@ -1,0 +1,24 @@
+import { useState, useEffect } from "trilium:preact"
+import { SettingsForm } from "libsettings-ui.jsx"
+
+export default function AgendaSettings() {
+    const [schemaNoteId, setSchemaNoteId] = useState(null)
+    const [configNoteId, setConfigNoteId] = useState(null)
+
+    useEffect(() => {
+        (async () => {
+            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
+            const target = await api.currentNote.getRelationTarget("AddonData:config")
+            setConfigNoteId(target.noteId)
+        })()
+    }, [])
+
+    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+
+    return (
+        <div>
+            <h3>Cinnamon Applet Agenda Settings</h3>
+            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+        </div>
+    )
+}

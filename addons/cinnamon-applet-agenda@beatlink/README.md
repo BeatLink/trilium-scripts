@@ -4,7 +4,8 @@ Backend API endpoint for the [Trilium API Cinnamon panel applet](https://cinnamo
 
 ## Setup
 
-After installing, open **Trilium Addon Manager → Addon Data → cinnamon-applet-agenda@beatlink → config.json** and edit the fields:
+After installing, open the addon's root note (`cinnamon-applet-agenda@beatlink`) in Trilium — it
+renders a Settings screen with the following fields:
 
 | Field       | Value                     | Description                                                       |
 |-------------|---------------------------|--------------------------------------------------------------------|
@@ -12,7 +13,7 @@ After installing, open **Trilium Addon Manager → Addon Data → cinnamon-apple
 | `dateLabel` | e.g. `dueDate`             | Name of the label used to store due dates on tasks                 |
 | `taskOrder` | `earliest` or `latest`     | Whether to surface the earliest or latest matching past-due task   |
 
-`config.json` is a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates.
+Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `agenda_panel` (must match the `customRequestHandler` label on `cinnamonAppletAgenda.js`)

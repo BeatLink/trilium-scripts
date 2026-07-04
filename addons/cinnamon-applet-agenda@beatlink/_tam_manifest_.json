@@ -5,29 +5,39 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root",   "title": "cinnamon-applet-agenda@beatlink", "type": "text", "mime": "text/html",                          "sourceUrl": null},
-            {"id": "script", "title": "cinnamonAppletAgenda.js",         "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"},
-            {"id": "config", "title": "config.json",                    "type": "code", "mime": "application/json",                    "sourceUrl": "config.json"}
+            {"id": "root",     "title": "cinnamon-applet-agenda@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "script",   "title": "cinnamonAppletAgenda.js",         "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"},
+            {"id": "schema",   "title": "schema.json",                    "type": "code",   "mime": "application/json",                    "sourceUrl": "schema.json"},
+            {"id": "config",   "title": "config.json",                    "type": "code",   "mime": "application/json",                    "sourceUrl": "config.json"},
+            {"id": "settings", "title": "settings.jsx",                   "type": "code",   "mime": "text/jsx",                            "sourceUrl": "settings.jsx"}
         ],
         "children": [
-            {"parent": "root",   "child": "script"},
-            {"parent": "script", "child": "config"}
+            {"parent": "root",     "child": "script"},
+            {"parent": "root",     "child": "schema"},
+            {"parent": "root",     "child": "config"},
+            {"parent": "root",     "child": "settings"},
+            {"parent": "script",   "addon": "libsettings@beatlink", "child": "backend"},
+            {"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}
         ],
         "relations": [
-            {"from": "script", "type": "AddonData:config", "to": "config"}
+            {"from": "settings", "type": "AddonData:config", "to": "config"},
+            {"from": "settings", "type": "schemaNote",        "to": "schema"},
+            {"from": "script",   "type": "schemaNote",        "to": "schema"},
+            {"from": "script",   "type": "settingsNote",      "to": "settings"},
+            {"from": "root",     "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
             {"note": "root",   "name": "iconClass",            "value": "bx bx-calendar-check"},
             {"note": "script", "name": "iconClass",             "value": "bx bx-calendar-check"},
             {"note": "script", "name": "customRequestHandler",  "value": "agenda_panel"}
         ],
-        "dependencies": [],
+        "dependencies": ["libsettings@beatlink"],
         "exports": {}
     }
 }
