@@ -18,6 +18,7 @@ except ImportError:
 REPO      = "https://github.com/BeatLink/trilium-scripts"
 RELEASES  = f"{REPO}/releases/latest"
 META_URL  = f"{RELEASES}/download/metadata.json"
+TAM_REPO  = "BeatLink/trilium-scripts"
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 
@@ -59,14 +60,19 @@ def page(title, body, css="style.css"):
 # ---------------------------------------------------------------------------
 
 def render_index(addons):
+    import html as _html
+
+    types_present = sorted(set(a["meta"].get("type", "") for a in addons if a["meta"].get("type")))
+
     cards = []
     for a in addons:
-        m = a["meta"]
+        m   = a["meta"]
         aid = m["id"]
-        cards.append(f"""  <a class="card" href="{aid}/">
+        t   = m.get("type", "")
+        cards.append(f"""  <a class="card" href="{aid}/" data-type="{t}" data-name="{_html.escape(m.get("name", aid).lower(), quote=True)}" data-desc="{_html.escape(m.get("description", "").lower(), quote=True)}">
     <div class="card-top">
       <span class="card-name">{m.get("name", aid)}</span>
-      {badge(m.get("type", ""))}
+      {badge(t)}
     </div>
     <p class="card-desc">{m.get("description", "")}</p>
     <div class="card-foot">
@@ -74,6 +80,10 @@ def render_index(addons):
       <span>{m.get("author", "")}</span>
     </div>
   </a>""")
+
+    filter_btns = ['<button class="filter active" data-type="all">All</button>']
+    for t in types_present:
+        filter_btns.append(f'<button class="filter" data-type="{t}">{t.title()}</button>')
 
     body = f"""<header>
   <div class="hdr">
@@ -83,8 +93,8 @@ def render_index(addons):
     </div>
     <div class="hdr-right">
       <div class="tam-box">
-        <span class="tam-label">Install via Trilium Addon Manager</span>
-        <code class="tam-url">{META_URL}</code>
+        <span class="tam-label">Add to Trilium Addon Manager</span>
+        <code class="tam-url">{TAM_REPO}</code>
       </div>
       <div class="hdr-links">
         <a href="{REPO}" target="_blank">GitHub</a>
@@ -94,10 +104,41 @@ def render_index(addons):
   </div>
 </header>
 <main>
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Search addons…" autocomplete="off" spellcheck="false">
+    <div class="filters">
+      {" ".join(filter_btns)}
+    </div>
+  </div>
   <div class="grid">
 {chr(10).join(cards)}
   </div>
-</main>"""
+</main>
+<script>
+(function() {{
+  var s = document.getElementById('search');
+  var btns = document.querySelectorAll('.filter');
+  var cards = document.querySelectorAll('.card');
+  var activeType = 'all';
+  function run() {{
+    var q = s.value.trim().toLowerCase();
+    cards.forEach(function(c) {{
+      var ok = (activeType === 'all' || c.dataset.type === activeType) &&
+               (!q || c.dataset.name.includes(q) || c.dataset.desc.includes(q));
+      c.style.display = ok ? '' : 'none';
+    }});
+  }}
+  s.addEventListener('input', run);
+  btns.forEach(function(b) {{
+    b.addEventListener('click', function() {{
+      btns.forEach(function(x) {{ x.classList.remove('active'); }});
+      b.classList.add('active');
+      activeType = b.dataset.type;
+      run();
+    }});
+  }});
+}})();
+</script>"""
 
     return page("Trilium Addons — BeatLink", body)
 
@@ -310,6 +351,37 @@ main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 /* Footer */
 footer { text-align: center; padding: 24px; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 40px; }
 footer a { color: #64748b; }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+#search {
+  flex: 1;
+  min-width: 180px;
+  padding: 7px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter:hover { border-color: #93c5fd; color: #2563eb; }
+.filter.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
 /* Responsive */
 @media (max-width: 768px) {

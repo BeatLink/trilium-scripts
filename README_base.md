@@ -2,6 +2,8 @@
 
 A collection of widgets, themes, and scripts for [TriliumNext Notes](https://github.com/TriliumNext/Notes).
 
+Browse the addon catalog: **https://beatlink.github.io/trilium-scripts/**
+
 ## Installation
 
 Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this repository's metadata URL to TAM:

@@ -6,6 +6,17 @@
     padding: 1rem 0;
 }
 
+.TAM-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+}
+
+.TAM-catalog-link {
+    font-size: 0.8rem;
+    color: var(--link-color);
+}
+
 .TAM-repository-main-controls {
     background-color: var(--card-background-color);
     border-radius: 0.5rem;

@@ -6,6 +6,8 @@
 
 This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories.
 
+Browse available addons at **https://beatlink.github.io/trilium-scripts/**
+
 ## Features
 
 * Manage Multiple Addon Repositories

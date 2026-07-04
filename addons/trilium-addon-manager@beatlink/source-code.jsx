@@ -216,7 +216,10 @@ export default function RepoManager() {
 
     return (
         <div className="TAM-body">
-            <h2>Trilium Addon Manager</h2>
+            <div className="TAM-header">
+                <h2>Trilium Addon Manager</h2>
+                <a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a>
+            </div>
             <div>
                 <h4>Repository Management</h4>
                 <div className="TAM-repository-main-controls">
