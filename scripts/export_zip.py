@@ -270,22 +270,30 @@ def main():
     # Resolve addons dir for dep auto-discovery
     addons_dir = Path(args.addons_dir) if args.addons_dir else addon_dir.parent
 
-    # Collect direct dep addon IDs from main manifest
-    dep_ids = set()
-    for c in m.get("children", []):
-        if c.get("addon"):
-            dep_ids.add(c["addon"])
-    for r in m.get("relations", []):
-        if r.get("addon"):
-            dep_ids.add(r["addon"])
+    def direct_deps(mf):
+        ids = set()
+        for c in mf.get("children", []):
+            if c.get("addon"):
+                ids.add(c["addon"])
+        for r in mf.get("relations", []):
+            if r.get("addon"):
+                ids.add(r["addon"])
+        return ids
 
-    # Load and process each dep to build deps_map
-    deps_map         = {}
-    dep_root_entries = []
-    dep_zip_files    = []
-    all_warnings     = []
+    all_warnings = []
 
-    for dep_id in sorted(dep_ids):
+    # Discover the full transitive dependency set (deps of deps of ...), not
+    # just the main manifest's direct deps — a dep's own cross-addon children
+    # need resolving too (e.g. libagendatask -> librecurrence -> librrule).
+    dep_manifests = {}
+    to_visit = list(direct_deps(m))
+    visited = set()
+    while to_visit:
+        dep_id = to_visit.pop()
+        if dep_id in visited:
+            continue
+        visited.add(dep_id)
+
         dep_dir   = addons_dir / dep_id
         dep_mpath = dep_dir / "_tam_manifest_.json"
         if not dep_mpath.exists():
@@ -297,18 +305,41 @@ def main():
             all_warnings.append(f"dep '{dep_id}': no manifest.root — skipped")
             continue
 
-        dep_root, dep_zf, dep_w, dep_uuids = process_manifest(dep_full, dep_dir, {})
-        dep_root_entries.append(dep_root)
-        dep_zip_files.extend(dep_zf)
-        all_warnings.extend([f"[dep:{dep_id}] {w}" for w in dep_w])
+        dep_manifests[dep_id] = (dep_dir, dep_full, dep_m)
+        to_visit.extend(direct_deps(dep_m) - visited)
 
-        # Map export-name → UUID via exports: {export_name: local_note_id}
-        dep_exports = dep_m.get("exports", {})
-        deps_map[dep_id] = {
-            exp_name: dep_uuids[local_id]
-            for exp_name, local_id in dep_exports.items()
-            if local_id in dep_uuids
-        }
+    # Process deps in dependency order (a dep's own deps must already be in
+    # deps_map before we process it, so its cross-addon children resolve).
+    deps_map         = {}
+    dep_root_entries = []
+    dep_zip_files    = []
+    remaining        = dict(dep_manifests)
+
+    while remaining:
+        progressed = False
+        for dep_id, (dep_dir, dep_full, dep_m) in list(remaining.items()):
+            if not direct_deps(dep_m).issubset(deps_map.keys()):
+                continue
+
+            dep_root, dep_zf, dep_w, dep_uuids = process_manifest(dep_full, dep_dir, deps_map)
+            dep_root_entries.append(dep_root)
+            dep_zip_files.extend(dep_zf)
+            all_warnings.extend([f"[dep:{dep_id}] {w}" for w in dep_w])
+
+            # Map export-name → UUID via exports: {export_name: local_note_id}
+            dep_exports = dep_m.get("exports", {})
+            deps_map[dep_id] = {
+                exp_name: dep_uuids[local_id]
+                for exp_name, local_id in dep_exports.items()
+                if local_id in dep_uuids
+            }
+            del remaining[dep_id]
+            progressed = True
+
+        if not progressed:
+            for dep_id in remaining:
+                all_warnings.append(f"dep '{dep_id}': could not resolve its own dependencies (cycle or missing) — skipped")
+            break
 
     # Process main manifest
     root_entry, zip_files, warnings, _ = process_manifest(full_manifest, addon_dir, deps_map)
