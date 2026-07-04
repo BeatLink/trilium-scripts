@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.7"
+const TAM_VERSION = "2.0.8"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -383,15 +383,10 @@ async function connectAddonPersistence(repoId, addonId) {
     }
     await saveDatabase(database)
 
-    // Pass 2: rewire each AddonData: relation in its own transaction (same pattern as applyRelations).
-    // Batching setRelation with duplicateSubtree in one transaction causes the writes to not land.
-    for (const { noteId, name, targetNoteId } of relationsToSet) {
-        await api.runOnBackend((noteId, name, targetNoteId) => {
-            api.getNote(noteId).setRelation(name, targetNoteId)
-        }, [noteId, name, targetNoteId])
-    }
-
-    // Pass 3: delete originals now that relations are committed.
+    // Pass 2: delete originals BEFORE setting relations.
+    // deleteNote cascades through becca's stale targetRelations index and marks any relation
+    // targeting the deleted note as deleted — even if setRelation already updated the value.
+    // Deleting first clears the stale attributes; Pass 3 then creates fresh ones.
     if (toDelete.length > 0) {
         await api.runOnBackend((toDelete) => {
             for (const noteId of toDelete) {
@@ -399,6 +394,13 @@ async function connectAddonPersistence(repoId, addonId) {
                 if (note) note.deleteNote()
             }
         }, [toDelete])
+    }
+
+    // Pass 3: set each AddonData: relation in its own transaction after originals are gone.
+    for (const { noteId, name, targetNoteId } of relationsToSet) {
+        await api.runOnBackend((noteId, name, targetNoteId) => {
+            api.getNote(noteId).setRelation(name, targetNoteId)
+        }, [noteId, name, targetNoteId])
     }
 }
 
