@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.0"
+const TAM_VERSION = "2.0.1"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -222,7 +222,7 @@ async function applyDepChildren(m, noteMap, database, repoId) {
         }
 
         await api.runOnBackend((sourceId, parentId) => {
-            api.cloneNote(sourceId, parentId)
+            api.toggleNoteInParent(true, sourceId, parentId)
         }, [depExportId, parentRealId])
     }
 }
