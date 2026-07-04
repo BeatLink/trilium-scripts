@@ -1,17 +1,24 @@
 # Cinnamon Applet Agenda
 
-Backend API endpoint for the [Trilium API Cinnamon panel applet](https://cinnamon-spices.linuxmint.com/applets). Surfaces the earliest (or latest) past-due task, matched by a configurable date label, so it can be shown in the Cinnamon panel and clicked to jump straight to that note.
+Backend API endpoint for the [Trilium API Cinnamon panel applet](https://cinnamon-spices.linuxmint.com/applets). Surfaces the earliest (or latest) past-due task matching a configurable search query, so it can be shown in the Cinnamon panel and clicked to jump straight to that note.
 
 ## Setup
 
 After installing, open the addon's root note (`cinnamon-applet-agenda@beatlink`) in Trilium — it
 renders a Settings screen with the following fields:
 
-| Field       | Value                     | Description                                                       |
-|-------------|---------------------------|--------------------------------------------------------------------|
-| `apiKey`    | a random string you choose | Shared secret checked against the applet's configured API key      |
-| `dateLabel` | e.g. `dueDate`             | Name of the label used to store due dates on tasks                 |
-| `taskOrder` | `earliest` or `latest`     | Whether to surface the earliest or latest matching past-due task   |
+| Field         | Value                       | Description                                                       |
+|---------------|------------------------------|--------------------------------------------------------------------|
+| `apiKey`      | a random string you choose   | Shared secret checked against the applet's configured API key      |
+| `searchQuery` | e.g. `#dueDate != "" AND #dueDate < TODAY+1 orderBy #dueDate` | Full Trilium search expression used to find candidate notes |
+| `dateLabel`   | e.g. `dueDate`                | Name of the label your search query uses for due dates — read after the search to filter results down to the current minute |
+| `taskOrder`   | `earliest` or `latest`       | Whether to surface the earliest or latest matching past-due task   |
+
+`searchQuery` is a raw Trilium search string, so you can scope it however you like — for example,
+add `~template.title="1. Routine" AND` to only surface notes using the Routine template from
+[templates@beatlink](../templates@beatlink/). Whatever you write here must reference the same label
+named in `dateLabel`, since that label's value is what gets checked against "now" after the search
+runs.
 
 Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
@@ -23,4 +30,7 @@ Then, in the Cinnamon panel applet's settings:
 
 ## How it works
 
-On each poll, the endpoint searches for notes where `#{dateLabel}` is set to a past (or current-minute) date/time, picks the earliest or latest match per `taskOrder`, and returns its title and note ID. Clicking the panel item calls back into the endpoint with `open_task`, which activates that note in Trilium.
+On each poll, the endpoint runs `searchQuery` as-is, filters the results down to notes whose
+`dateLabel` value is at or before the current minute, picks the earliest or latest match per
+`taskOrder`, and returns its title and note ID. Clicking the panel item calls back into the endpoint
+with `open_task`, which activates that note in Trilium.

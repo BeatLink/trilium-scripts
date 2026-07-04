@@ -5,10 +5,16 @@
         "description": "Shared secret checked against the applet's configured API key",
         "default": "CHANGE_ME"
     },
+    "searchQuery": {
+        "type": "string",
+        "label": "Search Query",
+        "description": "Full Trilium search expression used to find candidate notes. Must reference the same label named in Date Label below (e.g. add \"~template.title='1. Routine' AND\" to only surface Routine-templated notes).",
+        "default": "#dueDate != \"\" AND #dueDate < TODAY+1 orderBy #dueDate"
+    },
     "dateLabel": {
         "type": "string",
         "label": "Date Label",
-        "description": "Name of the label used to store due dates on tasks",
+        "description": "Name of the label used to store due dates on tasks — used to filter results down to the current minute after the search query runs",
         "default": "dueDate"
     },
     "taskOrder": {

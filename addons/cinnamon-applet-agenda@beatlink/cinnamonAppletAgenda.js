@@ -6,6 +6,7 @@ let configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:confi
 
 let settings = loadSettings(schemaNoteId, configNoteId)
 let apiKey = settings.apiKey
+let searchQuery = settings.searchQuery
 let dateLabel = settings.dateLabel
 let taskOrder = settings.taskOrder
 
@@ -14,7 +15,7 @@ if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
     if (api.req.body.action == "get_task") {
         let earliest = taskOrder == "earliest" ? true : false
         // Get Notes in the past
-        let notes = api.searchForNotes(`#${dateLabel} != "" AND #${dateLabel} < TODAY+1 orderBy #${dateLabel}`)
+        let notes = api.searchForNotes(searchQuery)
 
         // Filter out future notes
         let now = api.dayjs()
