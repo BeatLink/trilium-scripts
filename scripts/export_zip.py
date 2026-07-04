@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Convert _tam_manifest_.json to a Trilium-compatible ZIP export.
 
-Cross-addon dependency wiring (children/relations with an "addon" field)
-requires knowing the real Trilium noteIds of the installed dependency notes.
-Supply those via --deps; otherwise those entries are skipped with a warning.
+Dependencies (children/relations with an "addon" field) are resolved
+automatically by reading sibling manifests from the addons/ directory.
+The addons/ dir is auto-discovered as the parent of the addon being built;
+override with --addons-dir if needed.
 
 Usage:
   export_zip.py path/to/_tam_manifest_.json [--out my-addon.zip]
-  export_zip.py path/to/addon-dir/ --deps '{"lib@x": {"mainNote": "NOTEID12"}}'
+  export_zip.py path/to/addon-dir/
+  export_zip.py path/to/addon-dir/ --addons-dir /path/to/addons/
 """
 
 import argparse
@@ -49,65 +51,27 @@ def gen_note_id():
     return "".join(random.choices(ID_CHARS, k=12))
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Convert _tam_manifest_.json to a Trilium ZIP import"
-    )
-    parser.add_argument("manifest", help="_tam_manifest_.json path or its containing directory")
-    parser.add_argument("--out", help="Output ZIP path (default: {id}.zip next to the manifest)")
-    parser.add_argument(
-        "--deps",
-        metavar="JSON",
-        help=(
-            'Real noteIds for cross-addon exports. '
-            'Format: \'{"addon-id@x": {"exportName": "NOTEID12"}}\''
-        ),
-    )
-    args = parser.parse_args()
+def process_manifest(full_manifest, addon_dir, deps_map):
+    """
+    Build ZIP entries for one manifest.
+    Returns (root_entry, zip_files, warnings, uuid_map).
+    uuid_map maps local note IDs → generated Trilium note UUIDs.
+    """
+    m = full_manifest.get("manifest") or {}
 
-    manifest_path = Path(args.manifest)
-    if manifest_path.is_dir():
-        manifest_path = manifest_path / "_tam_manifest_.json"
-    if not manifest_path.exists():
-        print(f"ERROR: {manifest_path} not found", file=sys.stderr)
-        sys.exit(1)
-
-    addon_dir     = manifest_path.parent
-    full_manifest = json.loads(manifest_path.read_text())
-
-    m = full_manifest.get("manifest")
-    if not m:
-        print("ERROR: no 'manifest' key — metadata-only addons cannot be exported as a Trilium ZIP", file=sys.stderr)
-        sys.exit(1)
-    if not m.get("root"):
-        print("ERROR: manifest.root is required", file=sys.stderr)
-        sys.exit(1)
-
-    deps_map = {}
-    if args.deps:
-        try:
-            deps_map = json.loads(args.deps)
-        except json.JSONDecodeError as e:
-            print(f"ERROR: --deps is not valid JSON: {e}", file=sys.stderr)
-            sys.exit(1)
-
-    # Index notes and assign fresh Trilium-style IDs
-    notes_by_id = {n["id"]: n for n in m["notes"]}
+    notes_by_id = {n["id"]: n for n in m.get("notes", [])}
     uuid_map    = {lid: gen_note_id() for lid in notes_by_id}
 
-    # Build parent → [local child id] map (no addon entries)
     children_map = {}
     for c in m.get("children", []):
         if not c.get("addon"):
             children_map.setdefault(c["parent"], []).append(c["child"])
 
-    # Build parent → [dep-child spec] map
     dep_children_map = {}
     for c in m.get("children", []):
         if c.get("addon"):
             dep_children_map.setdefault(c["parent"], []).append(c)
 
-    # Per-note labels and relations
     note_labels    = {}
     note_relations = {}
     for lbl in m.get("labels", []):
@@ -115,11 +79,9 @@ def main():
     for rel in m.get("relations", []):
         note_relations.setdefault(rel["from"], []).append(rel)
 
-    zip_files = []   # [(zip_path_str, bytes)]
-    warnings  = []
-
-    # Track deduplicated base names per parent directory
-    used_bases = {}  # dir_prefix → set of base names already used
+    zip_files  = []
+    warnings   = []
+    used_bases = {}
 
     def unique_base(dir_prefix, base):
         bucket = used_bases.setdefault(dir_prefix, set())
@@ -134,11 +96,6 @@ def main():
         return result
 
     def build_entry(local_id, note_position, dir_prefix, note_path):
-        """
-        dir_prefix — ZIP path prefix where THIS note's content file lives.
-                     Children's content lives at dir_prefix + dirName + '/'.
-        note_path  — list of ancestor noteUUIDs NOT including this note (for building notePath).
-        """
         note_def   = notes_by_id[local_id]
         note_uuid  = uuid_map[local_id]
         note_type  = note_def.get("type", "text")
@@ -149,20 +106,15 @@ def main():
         dep_children   = dep_children_map.get(local_id, [])
         has_children   = bool(local_children or dep_children)
 
-        # Full ancestry notePath: parent chain + this note
         current_path = note_path + [note_uuid]
 
-        # Determine file extension; render notes use .html with empty content
         if note_type == "render":
             ext = ".html"
         else:
             ext = ext_for_mime(note_mime)
 
-        # Deduplicate base name within this parent directory
         base = unique_base(dir_prefix, safe_name(title))
 
-        # Avoid double extension when the title already carries the correct extension
-        # e.g. "libTAM.js" + ".js" would give "libTAM.js.js"
         if base.lower().endswith(ext.lower()):
             data_name = base
         else:
@@ -170,8 +122,6 @@ def main():
 
         dir_name = base if has_children else None
 
-        # Read content — ALL note types get a content file so TriliumNext creates
-        # each note before processing its children (render notes get empty content)
         if note_type == "render":
             content = b""
         else:
@@ -191,10 +141,8 @@ def main():
 
         zip_files.append((dir_prefix + data_name, content))
 
-        # Prefix for children: inside this note's directory
         child_prefix = dir_prefix + dir_name + "/" if dir_name else dir_prefix
 
-        # Build attributes
         attrs = []
         pos   = 10
         for lbl in note_labels.get(local_id, []):
@@ -215,11 +163,11 @@ def main():
                 if not target:
                     warnings.append(
                         f"relation '{local_id}' type '{rel['type']}': "
-                        f"dep '{dep_id}' export '{exp_name}' not in --deps — skipped"
+                        f"dep '{dep_id}' export '{exp_name}' not resolved — skipped"
                     )
                     continue
             else:
-                target = uuid_map.get(rel["to"], rel["to"])  # fallback: literal noteId
+                target = uuid_map.get(rel["to"], rel["to"])
 
             attrs.append({
                 "type": "relation",
@@ -230,14 +178,12 @@ def main():
             })
             pos += 10
 
-        # Recurse into local children
         child_entries = []
         for i, child_lid in enumerate(local_children, start=1):
             child_entries.append(
                 build_entry(child_lid, i * 10, child_prefix, current_path)
             )
 
-        # Dep clone children
         for j, dep_c in enumerate(dep_children, start=len(local_children) + 1):
             dep_id      = dep_c["addon"]
             exp_name    = dep_c["child"]
@@ -245,7 +191,7 @@ def main():
             if not dep_note_id:
                 warnings.append(
                     f"child clone: parent '{local_id}' addon '{dep_id}' "
-                    f"child '{exp_name}' not in --deps — skipped"
+                    f"export '{exp_name}' not resolved — skipped"
                 )
                 continue
             child_entries.append({
@@ -283,32 +229,115 @@ def main():
     root_lid   = m["root"]
     root_entry = build_entry(root_lid, 10, "", [])
 
-    # Root note always gets a dirFileName (it is the top-level export directory)
     if "dirFileName" not in root_entry:
         root_entry["dirFileName"] = safe_name(notes_by_id[root_lid]["title"])
 
-    trilium_meta = {
-        "formatVersion": 2,
-        "appVersion":    TRILIUM_APP_VERSION,
-        "files":         [root_entry],
-    }
+    return root_entry, zip_files, warnings, uuid_map
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert _tam_manifest_.json to a Trilium ZIP import"
+    )
+    parser.add_argument("manifest", help="_tam_manifest_.json path or its containing directory")
+    parser.add_argument("--out", help="Output ZIP path (default: {id}.zip next to the manifest)")
+    parser.add_argument(
+        "--addons-dir",
+        metavar="DIR",
+        help="Path to addons/ directory for auto-resolving dependencies (default: parent of addon dir)",
+    )
+    args = parser.parse_args()
+
+    manifest_path = Path(args.manifest)
+    if manifest_path.is_dir():
+        manifest_path = manifest_path / "_tam_manifest_.json"
+    if not manifest_path.exists():
+        print(f"ERROR: {manifest_path} not found", file=sys.stderr)
+        sys.exit(1)
+
+    addon_dir     = manifest_path.parent
+    full_manifest = json.loads(manifest_path.read_text())
+
+    m = full_manifest.get("manifest")
+    if not m:
+        print("ERROR: no 'manifest' key — metadata-only addons cannot be exported as a Trilium ZIP", file=sys.stderr)
+        sys.exit(1)
+    if not m.get("root"):
+        print("ERROR: manifest.root is required", file=sys.stderr)
+        sys.exit(1)
+
+    # Resolve addons dir for dep auto-discovery
+    addons_dir = Path(args.addons_dir) if args.addons_dir else addon_dir.parent
+
+    # Collect direct dep addon IDs from main manifest
+    dep_ids = set()
+    for c in m.get("children", []):
+        if c.get("addon"):
+            dep_ids.add(c["addon"])
+    for r in m.get("relations", []):
+        if r.get("addon"):
+            dep_ids.add(r["addon"])
+
+    # Load and process each dep to build deps_map
+    deps_map         = {}
+    dep_root_entries = []
+    dep_zip_files    = []
+    all_warnings     = []
+
+    for dep_id in sorted(dep_ids):
+        dep_dir   = addons_dir / dep_id
+        dep_mpath = dep_dir / "_tam_manifest_.json"
+        if not dep_mpath.exists():
+            all_warnings.append(f"dep '{dep_id}': manifest not found at {dep_mpath} — skipped")
+            continue
+        dep_full = json.loads(dep_mpath.read_text())
+        dep_m    = dep_full.get("manifest") or {}
+        if not dep_m.get("root"):
+            all_warnings.append(f"dep '{dep_id}': no manifest.root — skipped")
+            continue
+
+        dep_root, dep_zf, dep_w, dep_uuids = process_manifest(dep_full, dep_dir, {})
+        dep_root_entries.append(dep_root)
+        dep_zip_files.extend(dep_zf)
+        all_warnings.extend([f"[dep:{dep_id}] {w}" for w in dep_w])
+
+        # Map export-name → UUID via exports: {export_name: local_note_id}
+        dep_exports = dep_m.get("exports", {})
+        deps_map[dep_id] = {
+            exp_name: dep_uuids[local_id]
+            for exp_name, local_id in dep_exports.items()
+            if local_id in dep_uuids
+        }
+
+    # Process main manifest
+    root_entry, zip_files, warnings, _ = process_manifest(full_manifest, addon_dir, deps_map)
+    all_warnings.extend(warnings)
 
     addon_id = full_manifest.get("id", "export")
     out_path = Path(args.out) if args.out else addon_dir / f"{addon_id}.zip"
 
+    trilium_meta = {
+        "formatVersion": 2,
+        "appVersion":    TRILIUM_APP_VERSION,
+        "files":         [root_entry] + dep_root_entries,
+    }
+
+    all_zip_files = zip_files + dep_zip_files
+
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("!!!meta.json", json.dumps(trilium_meta, indent=2))
-        for zip_path, content in zip_files:
+        for zip_path, content in all_zip_files:
             zf.writestr(zip_path, content)
 
-    if warnings:
+    if all_warnings:
         print("Warnings:")
-        for w in warnings:
+        for w in all_warnings:
             print(f"  {w}")
 
-    skipped = sum(1 for w in warnings if "skipped" in w)
-    print(f"Written: {out_path}  ({len(notes_by_id)} notes, {len(zip_files)} content files"
-          + (f", {skipped} skipped due to missing --deps" if skipped else "") + ")")
+    skipped = sum(1 for w in all_warnings if "skipped" in w)
+    bundled = f", {len(dep_root_entries)} dep(s) bundled" if dep_root_entries else ""
+    skipped_str = f", {skipped} skipped" if skipped else ""
+    print(f"Written: {out_path}  ({len(all_zip_files)} content files{bundled}{skipped_str})")
 
 
 if __name__ == "__main__":

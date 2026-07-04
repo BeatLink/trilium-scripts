@@ -77,7 +77,7 @@ def render_index(addons):
     <p class="card-desc">{m.get("description", "")}</p>
     <div class="card-foot">
       <span>v{m.get("latestVersion", "")}</span>
-      <span>{m.get("author", "")}</span>
+      <span class="card-author" data-author="{m.get("author", "")}">{m.get("author", "")}</span>
     </div>
   </a>""")
 
@@ -140,6 +140,13 @@ def render_index(addons):
       run();
     }});
   }});
+  document.querySelectorAll('.card-author').forEach(function(el) {{
+    el.addEventListener('click', function(e) {{
+      e.preventDefault();
+      e.stopPropagation();
+      window.open('https://github.com/' + el.dataset.author, '_blank');
+    }});
+  }});
 }})();
 </script>"""
 
@@ -151,27 +158,34 @@ def render_index(addons):
 # ---------------------------------------------------------------------------
 
 def render_addon(meta, readme_html):
-    aid     = meta["id"]
-    name    = meta.get("name", aid)
-    version = meta.get("latestVersion", "—")
-    author  = meta.get("author", "—")
-    lic     = meta.get("license", "—")
-    t       = meta.get("type", "")
-    hp      = meta.get("homepage", "")
-    zip_url = f"{RELEASES}/download/{aid}.json"
+    aid          = meta["id"]
+    name         = meta.get("name", aid)
+    version      = meta.get("latestVersion", "—")
+    author       = meta.get("author", "—")
+    lic          = meta.get("license", "—")
+    t            = meta.get("type", "")
+    hp           = meta.get("homepage", "")
+    zip_url      = f"{RELEASES}/download/{aid}.zip"
+    manifest_url = f"{RELEASES}/download/{aid}.json"
+
+    author_display = (
+        f'<a href="https://github.com/{author}" target="_blank">{author}</a>'
+        if author and author != "—" else author
+    )
 
     rows = "".join(
         f"<tr><th>{k}</th><td>{v}</td></tr>"
         for k, v in [
             ("ID",      f"<code>{aid}</code>"),
             ("Version", version),
-            ("Author",  author),
+            ("Author",  author_display),
             ("License", lic),
             ("Type",    t),
         ]
     )
 
-    actions = f'<a class="btn" href="{zip_url}">Download Manifest</a>'
+    actions = f'<a class="btn" href="{zip_url}">Download ZIP</a>'
+    actions += f'\n      <a class="btn btn-ghost" href="{manifest_url}" target="_blank">Download Manifest</a>'
     if hp:
         actions += f'\n      <a class="btn btn-ghost" href="{hp}" target="_blank">Source</a>'
 
@@ -306,6 +320,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 .card-name { font-size: 15px; font-weight: 600; color: #0f172a; }
 .card-desc { font-size: 13px; color: #64748b; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .card-foot { display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; margin-top: auto; }
+.card-author { cursor: pointer; }
+.card-author:hover { color: #2563eb; text-decoration: underline; }
 
 /* Addon detail */
 .back { color: #93c5fd; font-size: 13px; display: block; margin-bottom: 10px; }
