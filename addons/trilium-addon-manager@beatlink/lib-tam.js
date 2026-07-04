@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.6"
+const TAM_VERSION = "2.0.7"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -348,13 +348,11 @@ async function connectAddonPersistence(repoId, addonId) {
     const persistRoot  = database.persistence[repoId][addonId].rootNote
     const existingNotes = database.persistence[repoId][addonId].persistenceNotes
 
-    // Pass 1: rewire all AddonData relations to persisted copies and collect originals to delete.
-    // Run entirely on the backend: froca (frontend cache) lags behind api.runOnBackend
-    // writes, so note.getRelations() on the frontend would miss freshly-set AddonData:
-    // relations. The backend becca cache is always current.
-    const { newPersistenceNotes, toDelete } = await api.runOnBackend((addonNoteId, persistRoot, existingNotes) => {
+    // Pass 1: create persisted copies for any new AddonData: targets; collect relations to rewire and originals to delete.
+    const { newPersistenceNotes, toDelete, relationsToSet } = await api.runOnBackend((addonNoteId, persistRoot, existingNotes) => {
         const result = {}
         const toDelete = []
+        const relationsToSet = []
         for (const noteId of api.getNote(addonNoteId).getSubtreeNoteIds()) {
             const note = api.getNote(noteId)
             for (const relation of note.getRelations()) {
@@ -369,14 +367,14 @@ async function connectAddonPersistence(repoId, addonId) {
                     dup.note.save()
                     persistNoteId = dup.note.noteId
                 }
-                note.setRelation(relation.name, persistNoteId)
+                relationsToSet.push({ noteId, name: relation.name, targetNoteId: persistNoteId })
                 result[key] = persistNoteId
                 if (origNoteId !== persistNoteId) {
                     toDelete.push(origNoteId)
                 }
             }
         }
-        return { newPersistenceNotes: result, toDelete }
+        return { newPersistenceNotes: result, toDelete, relationsToSet }
     }, [addonNoteId, persistRoot, existingNotes])
 
     database.persistence[repoId][addonId].persistenceNotes = {
@@ -385,9 +383,15 @@ async function connectAddonPersistence(repoId, addonId) {
     }
     await saveDatabase(database)
 
-    // Pass 2: delete originals in a separate transaction now that all rewired relations
-    // are committed. Deleting inside the same transaction as setRelation causes Trilium's
-    // cascade to re-validate the old (pre-rewire) relation value against the now-deleted note.
+    // Pass 2: rewire each AddonData: relation in its own transaction (same pattern as applyRelations).
+    // Batching setRelation with duplicateSubtree in one transaction causes the writes to not land.
+    for (const { noteId, name, targetNoteId } of relationsToSet) {
+        await api.runOnBackend((noteId, name, targetNoteId) => {
+            api.getNote(noteId).setRelation(name, targetNoteId)
+        }, [noteId, name, targetNoteId])
+    }
+
+    // Pass 3: delete originals now that relations are committed.
     if (toDelete.length > 0) {
         await api.runOnBackend((toDelete) => {
             for (const noteId of toDelete) {
