@@ -1,0 +1,34 @@
+{
+    "id": "hoist-note@beatlink",
+    "name": "Hoist Note",
+    "description": "This script adds a launchbar button to quickly toggle the hoisting of the current note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": null,
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",         "title": "hoist-note@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
+            {"id": "setupButtons", "title": "setupButtons.js",      "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "setupButtons.js"},
+            {"id": "hoistNote",    "title": "hoistNote.js",         "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "hoistNote.js"}
+        ],
+        "children": [
+            {"parent": "root", "child": "setupButtons"},
+            {"parent": "root", "child": "hoistNote"}
+        ],
+        "relations": [
+            {"from": "setupButtons", "type": "hoistNoteScript", "to": "hoistNote"}
+        ],
+        "labels": [
+            {"note": "root",         "name": "iconClass", "value": "bx bx-code"},
+            {"note": "setupButtons", "name": "run",       "value": "frontendStartup"},
+            {"note": "setupButtons", "name": "iconClass", "value": "bx bx-code"},
+            {"note": "hoistNote",    "name": "iconClass", "value": "bx bx-code"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
