@@ -1,0 +1,34 @@
+{
+    "id": "mobile-view@beatlink",
+    "name": "Mobile View",
+    "description": "These set of scripts allow you to use the full capabilities of the Trilium desktop interface while on a mobile device.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",         "title": "mobile-view@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
+            {"id": "mobileView",   "title": "Mobile View.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "Mobile View.js"},
+            {"id": "setupButtons", "title": "setupButtons.js",      "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "setupButtons.js"}
+        ],
+        "children": [
+            {"parent": "root", "child": "mobileView"},
+            {"parent": "root", "child": "setupButtons"}
+        ],
+        "relations": [
+            {"from": "setupButtons", "type": "MobileViewWidget", "to": "mobileView"}
+        ],
+        "labels": [
+            {"note": "root",         "name": "iconClass", "value": "bx bx-code"},
+            {"note": "mobileView",   "name": "iconClass", "value": "bx bx-code"},
+            {"note": "setupButtons", "name": "run",       "value": "frontendStartup"},
+            {"note": "setupButtons", "name": "iconClass", "value": "bx bx-code"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
