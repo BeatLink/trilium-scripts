@@ -3,7 +3,7 @@
     "name": "Priority Widget",
     "description": "A widget to set the priority of a note",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/Priority",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
     "type": "widget",
