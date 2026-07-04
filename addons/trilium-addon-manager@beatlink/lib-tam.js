@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.2"
+const TAM_VERSION = "2.0.4"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -190,7 +190,7 @@ async function createNotes(m, addonRootNoteId) {
             (parentRealId, title, noteType, mime, content) => {
                 const result = api.createTextNote(parentRealId, title, "")
                 const note = result.note
-                if (noteType !== "text") {
+                if (noteType !== "text" || mime !== "text/html") {
                     note.type = noteType
                     note.mime = mime
                     note.save()
@@ -358,16 +358,21 @@ async function connectAddonPersistence(repoId, addonId) {
             for (const relation of note.getRelations()) {
                 if (!relation.name.includes("AddonData:")) continue
                 const key = relation.name.split("AddonData:")[1]
+                const origNoteId = relation.value
                 let persistNoteId = existingNotes[key]
                 if (!persistNoteId) {
-                    const origTitle = api.getNote(relation.value).title
-                    const dup = api.duplicateSubtree(relation.value, persistRoot)
+                    const origTitle = api.getNote(origNoteId).title
+                    const dup = api.duplicateSubtree(origNoteId, persistRoot)
                     dup.note.title = origTitle
                     dup.note.save()
                     persistNoteId = dup.note.noteId
                 }
                 note.setRelation(relation.name, persistNoteId)
                 result[key] = persistNoteId
+                // Original served its purpose (seeding content); persisted copy is permanent
+                if (origNoteId !== persistNoteId) {
+                    api.getNote(origNoteId).deleteNote()
+                }
             }
         }
         return result
