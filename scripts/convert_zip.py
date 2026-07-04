@@ -162,13 +162,16 @@ def main():
 
             mime = entry.get("mime") or guess_mime(data_file, note_type)
 
-            notes.append({
+            note = {
                 "id":        local_id,
                 "title":     entry.get("title", local_id),
                 "type":      note_type,
                 "mime":      mime,
                 "sourceUrl": source_url,
-            })
+            }
+            if note_type == "file":
+                note["binary"] = True
+            notes.append(note)
 
             if parent_local_id:
                 children.append({"parent": parent_local_id, "child": local_id})

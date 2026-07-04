@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 
@@ -35,7 +36,10 @@ def main():
                 if source_url and not source_url.startswith(("http://", "https://")):
                     source_path = addon_dir / source_url
                     if source_path.exists():
-                        note_copy["content"]   = source_path.read_text()
+                        if note.get("binary"):
+                            note_copy["content"] = base64.b64encode(source_path.read_bytes()).decode("ascii")
+                        else:
+                            note_copy["content"] = source_path.read_text()
                         note_copy["sourceUrl"] = None
                     else:
                         print(f"WARNING: {manifest_file}: sourceUrl '{source_url}' not found on disk")

@@ -33,6 +33,7 @@ MIME_TO_EXT = {
     "application/javascript;env=frontend": ".js",
     "application/javascript;env=backend":  ".js",
     "application/javascript;env=hybrid":   ".js",
+    "audio/wav":                           ".wav",
 }
 
 TRILIUM_APP_VERSION = "0.103.0"

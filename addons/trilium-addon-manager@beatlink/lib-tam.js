@@ -185,9 +185,10 @@ async function createNotes(m, addonRootNoteId) {
         const content   = noteDef.content  ?? ""
         const noteType  = noteDef.type     ?? "text"
         const mime      = noteDef.mime     ?? "text/html"
+        const isBinary  = noteDef.binary   ?? false
 
         const realNoteId = await api.runOnBackend(
-            (parentRealId, title, noteType, mime, content) => {
+            (parentRealId, title, noteType, mime, content, isBinary) => {
                 const result = api.createTextNote(parentRealId, title, "")
                 const note = result.note
                 if (noteType !== "text" || mime !== "text/html") {
@@ -195,10 +196,10 @@ async function createNotes(m, addonRootNoteId) {
                     note.mime = mime
                     note.save()
                 }
-                note.setContent(content)
+                note.setContent(isBinary ? Buffer.from(content, "base64") : content)
                 return note.noteId
             },
-            [parentRealId, noteDef.title, noteType, mime, content]
+            [parentRealId, noteDef.title, noteType, mime, content, isBinary]
         )
         noteMap[localId] = realNoteId
     }
