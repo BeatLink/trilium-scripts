@@ -71,6 +71,13 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   the key by convention matches the note's local manifest id.
 - **`latestVersion`** must be bumped whenever a manifest's structure or note content changes —
   that's the only thing that makes TAM show existing installs an update prompt.
+- **`settingsNote`** (optional, sibling of `root`) — local id of the note that is this addon's
+  settings screen. If present, TAM resolves it to a real note id at install time
+  (`installedAddons[repoId][addonId].settingsNoteId`, set in `installAddon` in `lib-tam.js`) and
+  shows a "Settings" button on the addon's row in TAM's UI that activates that note (see
+  `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink` for examples, both of which pair
+  it with a `renderNote` relation from `root` so the same note also opens when you click the addon's
+  root note directly).
 
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full

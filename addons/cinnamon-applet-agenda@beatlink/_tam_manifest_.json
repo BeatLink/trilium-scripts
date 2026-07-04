@@ -5,11 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.2.1",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
+        "settingsNote": "settings",
         "notes": [
             {"id": "root",     "title": "cinnamon-applet-agenda@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
             {"id": "script",   "title": "cinnamonAppletAgenda.js",         "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"},

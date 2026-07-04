@@ -51,6 +51,13 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate,
                         onEnable(addonId, !addonData.enabled)
                     }}
                 />}
+                {addonData.installedVersion && addonData.settingsNoteId && <Button
+                    icon="bx bx-cog"
+                    text="Settings"
+                    onClick={e => {
+                        activateNote(addonData.settingsNoteId)
+                    }}
+                />}
                 {addonData.updateAvailable && !isSelf && <Button
                     icon="bx bx-sync"
                     text={`Update Addon (${addonData.latestVersion})`}

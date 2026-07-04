@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.1.0"
+const TAM_VERSION = "2.2.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -307,6 +307,7 @@ async function installAddon(repoId, addonId) {
     await applyRelations(m.relations || [], noteMap, database, repoId)
 
     const exportedNotes = storeExports(m.exports, noteMap)
+    const settingsNoteId = m.settingsNote ? (noteMap[m.settingsNote] || null) : null
 
     if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
     database.installedAddons[repoId][addonId] = {
@@ -314,6 +315,7 @@ async function installAddon(repoId, addonId) {
         rootNoteId,
         noteMap,
         exportedNotes,
+        settingsNoteId,
         enabled: false
     }
     if (!database.persistence[repoId])          database.persistence[repoId]          = {}

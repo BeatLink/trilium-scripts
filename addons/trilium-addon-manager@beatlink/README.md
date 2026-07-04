@@ -83,6 +83,15 @@ Every addon in a TAM-compatible repository must have a `_tam_manifest_.json` fil
 
 The local ID of the note that becomes the addon's root note, placed as a child of the Addons parent note.
 
+#### `settingsNote` *(optional)*
+
+The local ID of the note that is this addon's settings screen. If present, `installAddon` resolves
+it to a real note ID at install time and stores it as `settingsNoteId` on the addon's entry in
+`installedAddons`. TAM's UI then shows a **Settings** button on that addon's row which activates
+(navigates to) that note — see `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink` for
+an addon that pairs this with a `renderNote` relation from `root`, so the same note opens whether you
+click the addon's root note directly or the Settings button in TAM.
+
 #### `notes`
 
 An array of note definitions. Each entry describes one note to create:
