@@ -11,8 +11,8 @@ import {
 
 import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
+import { getAgendaSettings } from "agendaSettings.jsx"
 
-const constants = require("agendaConstants.js")
 const { saveProfile, updateTaskLists, getMatchingProfile, rescheduleAllTasks } = require("libAgendaOverview.js")
 
 // Preact Components ------------------------------------------------------
@@ -109,13 +109,13 @@ function AgendaOverviewWidgetJSX() {
     const [unclaimed, setUnclaimed] = useState(false)
     const [ids, setIds] = useState(null)
 
-    // Resolve this widget's own relations once — separate from `noteId`
-    // above, which is whichever note the user is currently browsing
+    // Resolve this widget's own relations + settings once — separate from
+    // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
-            const profileNoteId = await api.currentNote.getRelationValue("profile")
+            const { constants, profileNoteIds } = await getAgendaSettings()
             const icalNoteId = await api.currentNote.getRelationValue("icalNote")
-            setIds({ profileNoteIds: [profileNoteId], icalNoteId })
+            setIds({ constants, profileNoteIds, icalNoteId })
         })()
     }, [])
 
@@ -125,7 +125,7 @@ function AgendaOverviewWidgetJSX() {
         fn(newProfile)
         setProfile(newProfile)
         saveProfile(newProfile)
-        updateTaskLists(ids.profileNoteIds, constants, ids.icalNoteId)
+        updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
     }
 
     // Load Profile
@@ -136,7 +136,7 @@ function AgendaOverviewWidgetJSX() {
             if (profileData) {
                 setProfile(profileData)
                 setUnclaimed(false)
-                await updateTaskLists(ids.profileNoteIds, constants, ids.icalNoteId)
+                await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
             } else {
                 setProfile(null)
                 setUnclaimed(true)
@@ -156,7 +156,7 @@ function AgendaOverviewWidgetJSX() {
         await saveProfile(rawProfile)
         setProfile(rawProfile)
         setUnclaimed(false)
-        await updateTaskLists(ids.profileNoteIds, constants, ids.icalNoteId)
+        await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
     }
 
     if (unclaimed) {
@@ -225,7 +225,7 @@ function AgendaOverviewWidgetJSX() {
                         <Button
                             icon="bx bx-rocket"
                             text="Start All Tasks Today"
-                            onClick={e => { rescheduleAllTasks(ids.profileNoteIds, constants, ids.icalNoteId) }}
+                            onClick={e => { rescheduleAllTasks(ids.profileNoteIds, ids.constants, ids.icalNoteId) }}
                         />
                     </div>
                 </div>

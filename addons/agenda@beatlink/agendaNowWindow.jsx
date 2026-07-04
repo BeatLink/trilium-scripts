@@ -16,8 +16,8 @@ import {
 } from "trilium:api"
 
 import { Timer } from "Timer.jsx"
+import { getAgendaSettings } from "agendaSettings.jsx"
 
-const constants = require("agendaConstants.js")
 const { sendNotificationForDueTasks } = require("libAgendaOverview.js")
 const { durationStringToHMS, complete } = require("libAgendaTask.js")
 const { setupLauncherWidget, launchAgendaNow, addDueTasksToAgendaNow } = require("libAgendaNow.js")
@@ -41,20 +41,20 @@ function AgendaNow() {
         }
     }, [agendaNowNote])
 
-    // This widget's own relations — profile/nowNote/widget/config note ids
+    // This widget's own relations + settings — profile/nowNote/widget/config note ids
     const [ids, setIds] = useState(null)
     useEffect(() => {
         (async () => {
-            const profileNoteId = await api.currentNote.getRelationValue("profile")
+            const { constants, profileNoteIds } = await getAgendaSettings()
             const nowNoteId = await api.currentNote.getRelationValue("nowNote")
             const widgetNoteId = await api.currentNote.getRelationValue("LauncherWidget")
             const configNoteId = await api.currentNote.getRelationValue("agendaNowConfig")
-            setIds({ profileNoteIds: [profileNoteId], nowNoteId, widgetNoteId, configNoteId })
+            setIds({ constants, profileNoteIds, nowNoteId, widgetNoteId, configNoteId })
         })()
     }, [])
 
     // Time Info
-    const [durationString] = useNoteLabel(note, constants.DURATION_LABEL)
+    const [durationString] = useNoteLabel(note, ids?.constants?.DURATION_LABEL)
     const duration = useMemo(
         () => durationStringToHMS(durationString ?? ""),
         [durationString]
@@ -76,7 +76,7 @@ function AgendaNow() {
         if (!ids) return
         if (database?.addTasksWhenDue) {
             const interval = setInterval(
-                async () => { await addDueTasksToAgendaNow(ids.profileNoteIds, constants, ids.nowNoteId) },
+                async () => { await addDueTasksToAgendaNow(ids.profileNoteIds, ids.constants, ids.nowNoteId) },
                 30000
             )
             return () => clearInterval(interval);
@@ -100,7 +100,7 @@ function AgendaNow() {
         if (!ids) return
         if (database?.sendDueNotifications) {
             const interval = setInterval(
-                () => { sendNotificationForDueTasks(ids.profileNoteIds, constants) },
+                () => { sendNotificationForDueTasks(ids.profileNoteIds, ids.constants) },
                 15000
             )
             return () => clearInterval(interval);
@@ -130,7 +130,7 @@ function AgendaNow() {
                 <ActionButton
                     icon="bx bx-check"
                     text="Mark Done"
-                    onClick={e => {complete(noteId, constants)} }
+                    onClick={e => {complete(noteId, ids.constants)} }
                     titlePosition="top"
                 />
             }

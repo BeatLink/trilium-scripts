@@ -5,24 +5,32 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcalendar@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifest": {
-        "root": "lib",
+        "root": "root",
         "notes": [
-            {"id": "lib", "title": "libCalendar.js", "type": "code", "mime": "application/javascript;env=hybrid", "sourceUrl": "libCalendar.js"}
+            {"id": "root",    "title": "libcalendar@beatlink", "type": "text", "mime": "text/html",                            "sourceUrl": null},
+            {"id": "lib",     "title": "libCalendar.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libCalendar.js"},
+            {"id": "backend", "title": "libCalendar.js",       "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libCalendar.js"}
         ],
         "children": [
-            {"parent": "lib", "addon": "libical@kewisch", "child": "lib"}
+            {"parent": "root", "child": "lib"},
+            {"parent": "root", "child": "backend"},
+            {"parent": "lib",     "addon": "libical@kewisch", "child": "lib"},
+            {"parent": "backend", "addon": "libical@kewisch", "child": "backend"}
         ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar-event"}
+            {"note": "root",    "name": "iconClass", "value": "bx bx-calendar-event"},
+            {"note": "lib",     "name": "iconClass", "value": "bx bx-calendar-event"},
+            {"note": "backend", "name": "iconClass", "value": "bx bx-calendar-event"}
         ],
         "dependencies": ["libical@kewisch"],
         "exports": {
-            "lib": "lib"
+            "lib": "lib",
+            "backend": "backend"
         }
     }
 }

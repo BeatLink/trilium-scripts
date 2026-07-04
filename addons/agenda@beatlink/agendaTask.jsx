@@ -12,8 +12,7 @@ import { DatesDurationPicker } from "DatesDurationPicker.jsx"
 import { RecurrencePicker } from "RecurrencePicker.jsx"
 import { ActionPicker } from "ActionPicker.jsx"
 import { RankPicker } from "RankPicker.jsx"
-
-const constants = require("agendaConstants.js")
+import { getAgendaSettings } from "agendaSettings.jsx"
 
 // Main Widget ---------------------------------------------------------------------------
 function MainWidget(){
@@ -22,13 +21,13 @@ function MainWidget(){
     const [agendaTaskWidget] = useNoteLabel(note, "agendaTaskWidget")
     const [ids, setIds] = useState(null)
 
-    // Resolve this widget's own relations once — separate from `noteId`
-    // above, which is whichever note the user is currently browsing
+    // Resolve this widget's own relations + settings once — separate from
+    // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
-            const profileNoteId = await api.currentNote.getRelationValue("profile")
+            const { constants, profileNoteIds } = await getAgendaSettings()
             const icalNoteId = await api.currentNote.getRelationValue("icalNote")
-            setIds({ profileNoteIds: [profileNoteId], icalNoteId })
+            setIds({ constants, profileNoteIds, icalNoteId })
         })()
     }, [])
 
@@ -40,19 +39,19 @@ function MainWidget(){
             <div className="agenda-widget">
                 <div>
                     <label>Dates and Duration</label>
-                    <DatesDurationPicker constants={constants} ids={ids}/>
+                    <DatesDurationPicker constants={ids.constants} ids={ids}/>
                 </div>
                 <div>
                     <label>Recurrence</label>
-                    <RecurrencePicker constants={constants} ids={ids}/>
+                    <RecurrencePicker constants={ids.constants} ids={ids}/>
                 </div>
                 <div>
                     <label>Actions</label>
-                    <ActionPicker constants={constants} ids={ids}/>
+                    <ActionPicker constants={ids.constants} ids={ids}/>
                 </div>
                 <div>
                     <label>Rank</label>
-                    <RankPicker constants={constants} ids={ids}/>
+                    <RankPicker constants={ids.constants} ids={ids}/>
                 </div>
             </div>
         </RightPanelWidget>

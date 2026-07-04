@@ -65,14 +65,26 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   decodes it back into a `Buffer` before `setContent()`. `convert_zip.py` sets this flag
   automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
   real example (bundled `.wav` sound effects).
-- **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend`,
-  `;env=backend`, or `;env=hybrid`. A frontend script can't `require()` a backend-only note or vice
-  versa — they're separate bundles. `env=hybrid` is for code with no environment-specific globals
-  (pure computation, e.g. a vendored library like `libical@kewisch`'s `ical.min.js`) that genuinely
-  needs to be `require()`-able from both frontend and backend consumers without shipping two copies.
-  Don't reach for hybrid by default — most real code (anything touching `window`, `Notification`,
-  DOM, or Node-only APIs) is genuinely one or the other; `libnotification@beatlink` ships separate
-  frontend/backend exports precisely because the underlying `Notification` API is frontend-only.
+- **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend` or
+  `;env=backend`. **There is no `env=hybrid`** — Trilium's bundler only lets a note `require()`
+  another note of the *same* environment (`packages/trilium-core/.../script_context.ts` and
+  `apps/client/.../script_context.ts` both resolve `require(moduleName)` by exact `note.title`
+  match against the calling note's own available children — there's no cross-environment case at
+  all). If a library is genuinely needed from both environments (pure computation, no
+  `window`/`Notification`/DOM/Node-only APIs — e.g. a vendored calendar library), ship the *same*
+  `sourceUrl` file as **two separate notes** in the manifest, one `env=frontend` one `env=backend`,
+  under export names `lib`/`backend` (matching `libnotification@beatlink`'s existing convention).
+  This duplicates the note in Trilium but not the source file. **Every addon still needs exactly one
+  `root`** — make the two environment variants children of a plain empty `root` text note (same
+  shape as `libnotification@beatlink`/`libsettings@beatlink`), never two independent top-level
+  notes. `deleteAddon` only ever deletes `installedAddons[...].rootNoteId`'s subtree — a note with no
+  local parent that isn't `root` would never get cleaned up on uninstall/update, leaking forever.
+  See `libical@kewisch` and
+  `libcalendar@beatlink` for real examples. `require()` itself never strips or sanitizes its
+  argument — it matches the literal note title. A *different*, unrelated mechanism
+  (`sanitizeVariableName` in `script.ts`, stripping to `[a-z0-9_]`) exposes every child note as an
+  additional bare pseudo-global parameter (`highlight.min.js` → `highlightminjs`) alongside
+  `require()`, not instead of it.
 - **`children[]`** — parent/child tree structure, either local (`{parent, child}`) or cross-addon
   (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map).
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same

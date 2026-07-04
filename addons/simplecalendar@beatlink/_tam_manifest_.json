@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
@@ -31,7 +31,7 @@
             {"parent": "view",     "addon": "libsettings@beatlink",      "child": "ui"},
             {"parent": "settings", "addon": "libsettings@beatlink",      "child": "ui"},
             {"parent": "feed",     "addon": "libsettings@beatlink",      "child": "backend"},
-            {"parent": "feed",     "addon": "libcalendar@beatlink",      "child": "lib"}
+            {"parent": "feed",     "addon": "libcalendar@beatlink",      "child": "backend"}
         ],
         "relations": [
             {"from": "settings",      "type": "AddonData:config", "to": "config"},

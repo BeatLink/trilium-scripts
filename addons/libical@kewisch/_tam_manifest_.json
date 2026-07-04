@@ -5,23 +5,31 @@
     "author": "kewisch",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libical@kewisch",
     "license": "MPL-2.0",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifest": {
-        "root": "lib",
+        "root": "root",
         "notes": [
-            {"id": "lib", "title": "ical.min.js", "type": "code", "mime": "application/javascript;env=hybrid", "sourceUrl": "ical.min.js"}
+            {"id": "root",    "title": "libical@kewisch", "type": "text", "mime": "text/html",                            "sourceUrl": null},
+            {"id": "lib",     "title": "ical.min.js",     "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "ical.min.js"},
+            {"id": "backend", "title": "ical.min.js",     "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "ical.min.js"}
         ],
-        "children": [],
+        "children": [
+            {"parent": "root", "child": "lib"},
+            {"parent": "root", "child": "backend"}
+        ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar"},
-            {"note": "lib", "name": "customResourceProvider", "value": "libIcal.js"}
+            {"note": "root",    "name": "iconClass", "value": "bx bx-calendar"},
+            {"note": "lib",     "name": "iconClass", "value": "bx bx-calendar"},
+            {"note": "lib",     "name": "customResourceProvider", "value": "libIcal.js"},
+            {"note": "backend", "name": "iconClass", "value": "bx bx-calendar"}
         ],
         "dependencies": [],
         "exports": {
-            "lib": "lib"
+            "lib": "lib",
+            "backend": "backend"
         }
     }
 }

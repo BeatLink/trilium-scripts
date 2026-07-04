@@ -8,17 +8,24 @@ or know what a "profile" is — it just turns an already-resolved note list into
 knows how to send that string back as a proper HTTP response. Depends on
 [libical@kewisch](../libical@kewisch/).
 
-Shipped as `env=hybrid`: `generateCalendar` is pure (no environment-specific API calls), so it's
-`require()`-able from either a frontend script (e.g. `libagendaoverview@beatlink`, which uses it
-directly instead of duplicating its own ical-building loop) or a backend `customRequestHandler`
-(e.g. `simplecalendar@beatlink`). `respondWithCalendar` only makes sense called from a backend
-context (it uses `api.res`), but simply not being called from a frontend consumer is enough — the
-module loads fine either way.
+`generateCalendar` is pure (no environment-specific API calls) and genuinely needed from both a
+frontend script (`libagendaoverview@beatlink`, which uses it directly instead of duplicating its own
+ical-building loop) and a backend `customRequestHandler` (`simplecalendar@beatlink`). Trilium's
+bundler only lets a note `require()` another note of the *same* environment though — there's no
+environment-agnostic note type — so this library ships two exports built from the identical
+`libCalendar.js` source file (no source duplication, just note duplication, which is unavoidable):
+
+| Export    | `env`      | Depends on `libical@kewisch`'s |
+|-----------|------------|----------------------------------|
+| `lib`     | `frontend` | `lib` (frontend) export          |
+| `backend` | `backend`  | `backend` export                 |
+
+`respondWithCalendar` only makes sense called from the `backend` export (it uses `api.res`), but it
+being defined-and-unused in the `lib` (frontend) export is harmless — nothing there calls it.
 
 ## Usage
 
-Install as a dependency and clone the `libCalendar.js` note as a child of the backend script that
-needs it:
+Install as a dependency and clone whichever export matches your own note's environment as a child:
 
 ```js
 const { generateCalendar, respondWithCalendar } = require("libCalendar.js")

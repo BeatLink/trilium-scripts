@@ -11,28 +11,31 @@ consumers (e.g. an agenda/calendar-export feature) use the upstream API directly
 Note this addon is MPL-2.0 licensed (not this repo's usual GPL-3.0-or-later), matching the license
 of the vendored code itself.
 
-## Two ways to consume it
+## Two exports, same source file
 
-The vendored file is a UMD bundle — it works both as a CommonJS module (`require`) and as a plain
-browser global (`ICAL`), so this one note serves two different use cases without duplicating the
-~90KB blob:
+Trilium's script bundler only lets a note `require()` another note when both are the same
+environment (`env=frontend` or `env=backend`) — there's no such thing as an environment-agnostic
+note. So this library ships the *same* `ical.min.js` content twice, as two separate notes pointing
+at the one file on disk (no source duplication, just note duplication, which is unavoidable):
 
-### As a `require()`'d module (`env=hybrid`)
+| Export    | Note title    | `env`      | For                                              |
+|-----------|---------------|------------|---------------------------------------------------|
+| `lib`     | `ical.min.js` | `frontend` | frontend scripts (e.g. `libcalendar@beatlink`'s frontend variant) |
+| `backend` | `ical.min.js` | `backend`  | backend scripts (e.g. `libcalendar@beatlink`'s backend variant)  |
 
-Install as a dependency and clone the `ical.min.js` note as a child of the script that needs it —
-this works from *either* a frontend or backend script note, since ical.js itself has no
-environment-specific globals. The note title is kept literal (matching the upstream filename) so
-`require()` calls already written against it elsewhere keep working unchanged:
+Clone whichever export matches your own note's environment as a child, then `require()` it by its
+literal title (kept identical to the upstream filename on both variants):
 
 ```js
 const ical = require("ical.min.js")
 const calendar = new ical.Component(["vcalendar", [], []])
 ```
 
-### As a browser-global script tag
+## As a browser-global script tag
 
-The same note also carries a `customResourceProvider: libIcal.js` label, so it's fetchable as a
-plain script at `custom/libIcal.js` — useful for third-party browser libraries (e.g. a calendar
-widget's iCalendar plugin) that expect a global `ICAL` to already exist before they load, rather
-than an importable module. See [libcalendarwidget@beatlink](../libcalendarwidget@beatlink/) for a
-real consumer of this second form.
+The `lib` (frontend) note also carries a `customResourceProvider: libIcal.js` label, so it's
+fetchable as a plain script at `custom/libIcal.js` — useful for third-party browser libraries (e.g.
+a calendar widget's iCalendar plugin) that expect a global `ICAL` to already exist before they load,
+rather than an importable module. See [libcalendarwidget@beatlink](../libcalendarwidget@beatlink/)
+for a real consumer of this form. The `backend` note doesn't carry this label — backend scripts
+`require()` it directly, they never fetch a URL for it.
