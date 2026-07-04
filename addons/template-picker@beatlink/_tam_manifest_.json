@@ -1,0 +1,31 @@
+{
+    "id": "template-picker@beatlink",
+    "name": "Template Picker",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",   "title": "template-picker@beatlink", "type": "text", "mime": "text/html",         "sourceUrl": null},
+            {"id": "widget", "title": "templatePickerPreact",     "type": "code", "mime": "text/jsx",          "sourceUrl": "templatePickerPreact.jsx"},
+            {"id": "style",  "title": "templatePickerPreact.css", "type": "code", "mime": "text/css",          "sourceUrl": "templatePickerPreact.css"}
+        ],
+        "children": [
+            {"parent": "root", "child": "widget"},
+            {"parent": "root", "child": "style"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",   "name": "iconClass", "value": "bx bx-layout"},
+            {"note": "widget", "name": "widget",    "value": ""},
+            {"note": "style",  "name": "appCss",    "value": ""}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
