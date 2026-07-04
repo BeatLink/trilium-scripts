@@ -1,0 +1,53 @@
+{
+    "profileId": {
+        "type": "note",
+        "label": "Profile Note",
+        "description": "Which profile JSON note to use. Leave blank to use this addon's shipped default profile.",
+        "default": ""
+    },
+    "startDatetimeLabel": {
+        "type": "string",
+        "label": "Start Datetime Label",
+        "default": "startDateTime"
+    },
+    "startDateLabel": {
+        "type": "string",
+        "label": "Start Date Label",
+        "default": "startDate"
+    },
+    "startTimeLabel": {
+        "type": "string",
+        "label": "Start Time Label",
+        "default": "startTime"
+    },
+    "dueDatetimeLabel": {
+        "type": "string",
+        "label": "Due Datetime Label",
+        "default": "dueDateTime"
+    },
+    "dueDateLabel": {
+        "type": "string",
+        "label": "Due Date Label",
+        "default": "endDate"
+    },
+    "dueTimeLabel": {
+        "type": "string",
+        "label": "Due Time Label",
+        "default": "endTime"
+    },
+    "durationLabel": {
+        "type": "string",
+        "label": "Duration Label",
+        "default": "duration"
+    },
+    "recurrenceLabel": {
+        "type": "string",
+        "label": "Recurrence Label",
+        "default": "recurrence"
+    },
+    "rankLabel": {
+        "type": "string",
+        "label": "Rank Label",
+        "default": "rank"
+    }
+}
