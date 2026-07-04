@@ -168,7 +168,7 @@ An array of addon IDs that must be installed before this addon:
 "dependencies": ["libmultisort@beatlink"]
 ```
 
-TAM recursively installs all declared dependencies from the same repository before installing the addon itself.
+TAM recursively installs all declared dependencies from the same repository before installing the addon itself. If a dependency is already installed but its `latestVersion` is newer than what's currently installed, TAM updates it in place (delete + reinstall, same as a manual update) before proceeding — otherwise a dependency bump (e.g. a shared library's note getting renamed) would never reach an addon that already had the old version of that dependency installed, even via "Update All Addons" on the addon that actually changed.
 
 #### `exports`
 
@@ -186,7 +186,7 @@ When a dependent addon references `"addon": "this-addon@author", "child": "lib"`
 ## How Installation Works
 
 1. TAM fetches `{repoId}.json` from the GitHub release (the addon's full manifest with inlined content).
-2. Dependencies listed in `manifest.dependencies` are installed first (recursively).
+2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated in place first if already installed at an older version than the dependency's own `latestVersion`.
 3. Notes are created in topological order (parents before children) under the Addons root note, using `api.createTextNote`.
 4. Cross-addon children are wired using `api.toggleNoteInParent` to create a clone branch from the dependency note into the new parent.
 5. Labels are applied with `note.setLabel`.

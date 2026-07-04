@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.2.0"
+const TAM_VERSION = "2.3.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -29,6 +29,11 @@ const addonLabels = [
     "runOnAttributeChange",
     "appTheme"
 ]
+
+
+function versionCompare(remote, local) {
+    return remote.localeCompare(local, undefined, { numeric: true, sensitivity: 'base' })
+}
 
 
 // Database Management ---------------------------------------------------------
@@ -104,9 +109,6 @@ async function updateRepositories() {
 }
 
 async function checkForAddonUpdates() {
-    function versionCompare(remote, local) {
-        return remote.localeCompare(local, undefined, { numeric: true, sensitivity: 'base' })
-    }
     let database = await loadDatabase()
     for (const [remoteRepoId, remoteRepo] of Object.entries(database.repositories || {})) {
         const installedRepo = database.installedAddons[remoteRepoId]
@@ -289,11 +291,22 @@ async function installAddon(repoId, addonId) {
 
     if (!m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
 
-    // Install dependencies first
+    // Install dependencies first — and update any that are already installed
+    // but stale, otherwise a dependency bump (e.g. a note title rename) never
+    // reaches addons that already had it installed before the bump, even via
+    // "Update All Addons" on the addon that actually changed.
     for (const depAddonId of (m.dependencies || [])) {
-        if (!((database.installedAddons[repoId] || {})[depAddonId])) {
+        const installedDep = (database.installedAddons[repoId] || {})[depAddonId]
+        if (!installedDep) {
             await installAddon(repoId, depAddonId)
             database = await loadDatabase()
+        } else {
+            const depManifest = await fetchManifest(repoId, depAddonId)
+            if (depManifest.latestVersion && installedDep.installedVersion &&
+                versionCompare(depManifest.latestVersion, installedDep.installedVersion) > 0) {
+                await updateAddon(repoId, depAddonId)
+                database = await loadDatabase()
+            }
         }
     }
 
