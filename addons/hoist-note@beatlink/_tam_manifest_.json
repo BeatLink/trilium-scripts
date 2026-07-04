@@ -7,7 +7,7 @@
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
     "type": "widget",
-    "readme": null,
+    "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [

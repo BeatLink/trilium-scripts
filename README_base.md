@@ -6,10 +6,10 @@ Browse the addon catalog: **https://beatlink.github.io/trilium-scripts/**
 
 ## Installation
 
-Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this repository's metadata URL to TAM:
+Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this repository to TAM:
 
 ```
-https://github.com/BeatLink/trilium-scripts/releases/latest/download/metadata.json
+BeatLink/trilium-scripts
 ```
 
 Or download individual `.zip` files from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest) and import manually via **Trilium → Import**.
