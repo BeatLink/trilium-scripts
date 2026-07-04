@@ -1,10 +1,4 @@
-async function loadConfig(configNote) {
-    const content = await api.runOnBackend(
-        (id) => api.getNote(id).getContent(),
-        [configNote.noteId]
-    )
-    return JSON.parse(content)
-}
+const { loadConfig } = require("config.js")
 
 async function getActiveParents(noteId, parentIds) {
     return await api.runOnBackend(
@@ -16,8 +10,22 @@ async function getActiveParents(noteId, parentIds) {
     )
 }
 
+async function getLauncherInfo(parentIds) {
+    return await api.runOnBackend(
+        (parentIds) => parentIds.map(id => {
+            const note = api.getNote(id)
+            return {
+                parentNoteId: id,
+                label: note.title,
+                icon: note.getLabelValue("iconClass") || "bx bx-star"
+            }
+        }),
+        [parentIds]
+    )
+}
+
 async function toggleLauncher(noteId, launcher, allLaunchers, exclusive, isActive) {
-    await api.runAsyncOnBackendWithManualTransactionHandling(
+    await api.runOnBackend(
         (noteId, launcher, allLaunchers, exclusive, isActive) => {
             if (isActive) {
                 api.toggleNoteInParent(false, noteId, launcher.parentNoteId)
@@ -36,4 +44,4 @@ async function toggleLauncher(noteId, launcher, allLaunchers, exclusive, isActiv
     )
 }
 
-module.exports = { loadConfig, getActiveParents, toggleLauncher }
+module.exports = { loadConfig, getActiveParents, getLauncherInfo, toggleLauncher }

@@ -1,0 +1,222 @@
+{
+  "id": "FILL_IN",
+  "name": "FILL_IN",
+  "description": "FILL_IN",
+  "author": "FILL_IN",
+  "homepage": "FILL_IN",
+  "license": "GPL-3.0-or-later",
+  "latestVersion": "1.0.0",
+  "type": "widget",
+  "readme": "README.md",
+  "manifest": {
+    "root": "togglenote",
+    "dependencies": [],
+    "exports": {},
+    "notes": [
+      {
+        "id": "togglenote",
+        "title": "ToggleNote",
+        "type": "render",
+        "mime": "text/html",
+        "sourceUrl": null
+      },
+      {
+        "id": "settings-jsx",
+        "title": "settings.jsx",
+        "type": "code",
+        "mime": "text/jsx",
+        "sourceUrl": "settings.jsx"
+      },
+      {
+        "id": "config-js-2",
+        "title": "config.js",
+        "type": "code",
+        "mime": "application/javascript;env=frontend",
+        "sourceUrl": "config.js"
+      },
+      {
+        "id": "settings-json",
+        "title": "Settings.json",
+        "type": "code",
+        "mime": "application/json",
+        "sourceUrl": "Settings.json"
+      },
+      {
+        "id": "leftpane-jsx",
+        "title": "leftpane.jsx",
+        "type": "code",
+        "mime": "text/jsx",
+        "sourceUrl": "leftpane.jsx"
+      },
+      {
+        "id": "launcherbuttons-jsx-2",
+        "title": "LauncherButtons.jsx",
+        "type": "code",
+        "mime": "text/jsx",
+        "sourceUrl": "LauncherButtons.jsx"
+      },
+      {
+        "id": "lib-js",
+        "title": "lib.js",
+        "type": "code",
+        "mime": "application/javascript;env=frontend",
+        "sourceUrl": "lib.js"
+      },
+      {
+        "id": "config-js-2",
+        "title": "config.js",
+        "type": "text",
+        "mime": "text/html",
+        "sourceUrl": "config.js.clone.html"
+      },
+      {
+        "id": "rightpane-jsx",
+        "title": "rightpane.jsx",
+        "type": "code",
+        "mime": "text/jsx",
+        "sourceUrl": "rightpane.jsx"
+      },
+      {
+        "id": "launcherbuttons-jsx-2",
+        "title": "LauncherButtons.jsx",
+        "type": "text",
+        "mime": "text/html",
+        "sourceUrl": "LauncherButtons.jsx.clone.html"
+      },
+      {
+        "id": "startup-js",
+        "title": "startup.js",
+        "type": "code",
+        "mime": "application/javascript;env=frontend",
+        "sourceUrl": "startup.js"
+      },
+      {
+        "id": "style-css",
+        "title": "style.css",
+        "type": "code",
+        "mime": "text/css",
+        "sourceUrl": "style.css"
+      },
+      {
+        "id": "note-3",
+        "title": "note-3",
+        "type": "text",
+        "mime": "text/html",
+        "sourceUrl": "navigation.html"
+      },
+      {
+        "id": "note-3",
+        "title": "note-3",
+        "type": "text",
+        "mime": "text/html",
+        "sourceUrl": "index.html"
+      },
+      {
+        "id": "note-3",
+        "title": "note-3",
+        "type": "text",
+        "mime": "text/css",
+        "sourceUrl": "style-2.css"
+      }
+    ],
+    "children": [
+      {
+        "parent": "togglenote",
+        "child": "settings-jsx"
+      },
+      {
+        "parent": "settings-jsx",
+        "child": "config-js-2"
+      },
+      {
+        "parent": "config-js-2",
+        "child": "settings-json"
+      },
+      {
+        "parent": "togglenote",
+        "child": "leftpane-jsx"
+      },
+      {
+        "parent": "leftpane-jsx",
+        "child": "launcherbuttons-jsx-2"
+      },
+      {
+        "parent": "launcherbuttons-jsx-2",
+        "child": "lib-js"
+      },
+      {
+        "parent": "lib-js",
+        "addon": "FILL_IN",
+        "child": "FILL_IN",
+        "_comment": "clone of noteId=wq9lI7xdtI9V title=config.js"
+      },
+      {
+        "parent": "togglenote",
+        "child": "rightpane-jsx"
+      },
+      {
+        "parent": "rightpane-jsx",
+        "addon": "FILL_IN",
+        "child": "FILL_IN",
+        "_comment": "clone of noteId=wwy3nmC86lvA title=LauncherButtons.jsx"
+      },
+      {
+        "parent": "togglenote",
+        "child": "startup-js"
+      },
+      {
+        "parent": "togglenote",
+        "child": "style-css"
+      }
+    ],
+    "relations": [
+      {
+        "from": "togglenote",
+        "type": "renderNote",
+        "to": "settings-jsx"
+      },
+      {
+        "from": "config-js-2",
+        "type": "AddonData:config",
+        "to": "settings-json"
+      },
+      {
+        "from": "startup-js",
+        "type": "launcherLaunchbarNote",
+        "to": "leftpane-jsx"
+      }
+    ],
+    "labels": [
+      {
+        "note": "togglenote",
+        "name": "iconClass",
+        "value": "bx bx-code"
+      },
+      {
+        "note": "rightpane-jsx",
+        "name": "widget",
+        "value": ""
+      },
+      {
+        "note": "startup-js",
+        "name": "iconClass",
+        "value": "bx bx-code"
+      },
+      {
+        "note": "startup-js",
+        "name": "run",
+        "value": "frontendStartup"
+      },
+      {
+        "note": "style-css",
+        "name": "appCss",
+        "value": ""
+      },
+      {
+        "note": "style-css",
+        "name": "iconClass",
+        "value": "bx bx-code"
+      }
+    ]
+  }
+}
