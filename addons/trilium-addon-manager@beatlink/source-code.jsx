@@ -129,11 +129,50 @@ function NewRepo({onSave}){
     )
 }
 
+// Prompt Review ---------------------------------------------------------------
+function PromptReview({ prompts, onResolve }) {
+    const [decisions, setDecisions] = useState(
+        Object.fromEntries(prompts.map(p => [p.noteLocalId, false]))
+    )
+
+    return (
+        <div className="TAM-prompt-review">
+            <h3>Update Review</h3>
+            <p>The following files were updated. Choose which version to keep for each:</p>
+            {prompts.map(prompt => (
+                <div key={prompt.noteLocalId} className="TAM-prompt-item">
+                    <h4>{prompt.title}</h4>
+                    <div className="TAM-prompt-options">
+                        <div
+                            className={`TAM-prompt-option${!decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
+                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: false })}
+                        >
+                            <label>Keep Mine</label>
+                            <pre className="TAM-prompt-content">{prompt.currentContent}</pre>
+                        </div>
+                        <div
+                            className={`TAM-prompt-option${decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
+                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: true })}
+                        >
+                            <label>Use New Default</label>
+                            <pre className="TAM-prompt-content">{prompt.newContent}</pre>
+                        </div>
+                    </div>
+                </div>
+            ))}
+            <Button icon="bx bx-check" text="Apply" onClick={() => onResolve(decisions)} />
+        </div>
+    )
+}
+
+
 // Widget ---------------------------------------------------------------------
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
     const [command, setCommand] = useState(null)
     const [repositories, setRepositories] = useState(null)
+    const [pendingPrompts, setPendingPrompts] = useState([])
+    const [promptContext, setPromptContext] = useState(null)
 
     // Main Command Handler
     useEffect(() => {
@@ -180,9 +219,29 @@ export default function RepoManager() {
                 }
                 case "update-addon": {
                     await libTAMjs.updateAddon(command["repository"], command["addon"])
+                    const prompts = await libTAMjs.getPendingPrompts(command["repository"], command["addon"])
+                    if (prompts.length > 0) {
+                        setPendingPrompts(prompts)
+                        setPromptContext({ repoId: command["repository"], addonId: command["addon"] })
+                        setCommand(null)
+                    } else {
+                        setCommand({command: "load-repository"})
+                        await activateNote(displayNote)
+                        window.location.reload()
+                    }
+                    break
+                }
+                case "resolve-prompts": {
+                    const { repoId, addonId, decisions } = command
+                    for (const [noteLocalId, useNew] of Object.entries(decisions)) {
+                        await libTAMjs.resolvePrompt(repoId, addonId, noteLocalId, useNew)
+                    }
+                    await libTAMjs.clearPendingPrompts(repoId, addonId)
+                    setPendingPrompts([])
+                    setPromptContext(null)
                     setCommand({command: "load-repository"})
                     await activateNote(displayNote)
-                    window.location.reload();
+                    window.location.reload()
                     break
                 }
                 case "self-update-addon": {
@@ -212,6 +271,26 @@ export default function RepoManager() {
 
     if (!repositories) {
         return <div>Loading repositories...</div>;
+    }
+
+    if (pendingPrompts.length > 0 && promptContext) {
+        return (
+            <div className="TAM-body">
+                <div className="TAM-header">
+                    <h2>Trilium Addon Manager</h2>
+                    <a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a>
+                </div>
+                <PromptReview
+                    prompts={pendingPrompts}
+                    onResolve={(decisions) => setCommand({
+                        command: "resolve-prompts",
+                        repoId: promptContext.repoId,
+                        addonId: promptContext.addonId,
+                        decisions
+                    })}
+                />
+            </div>
+        )
     }
 
     return (

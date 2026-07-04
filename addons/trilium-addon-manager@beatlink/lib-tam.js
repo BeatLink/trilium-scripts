@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.0.1"
+const TAM_VERSION = "2.0.2"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -394,9 +394,89 @@ async function deleteAddon(repoId, addonId) {
     await saveDatabase(database)
 }
 
+async function collectPendingPrompts(repoId, addonId, m) {
+    let database = await loadDatabase()
+    const persistenceNotes = database.persistence?.[repoId]?.[addonId]?.persistenceNotes || {}
+
+    const prompts = []
+    for (const noteDef of (m.notes || [])) {
+        if (!noteDef.promptOnUpdate) continue
+
+        // Find the AddonData relation that targets this note
+        const rel = (m.relations || []).find(r =>
+            r.to === noteDef.id && r.type.startsWith("AddonData:")
+        )
+        if (!rel) continue
+
+        const key = rel.type.split("AddonData:")[1]
+        const persistedNoteId = persistenceNotes[key]
+        if (!persistedNoteId) continue
+
+        const newContent = noteDef.content ?? ""
+        const currentContent = await api.runOnBackend((id) => {
+            const note = api.getNote(id)
+            return note ? note.getContent() : null
+        }, [persistedNoteId])
+
+        if (currentContent === null) continue
+        if (currentContent === newContent) continue
+
+        prompts.push({
+            noteLocalId: noteDef.id,
+            title:       noteDef.title,
+            persistedNoteId,
+            newContent,
+            currentContent
+        })
+    }
+    return prompts
+}
+
 async function updateAddon(repoId, addonId) {
+    if (!repoId.trim() || !addonId.trim()) return
+
+    const manifest = await fetchManifest(repoId, addonId)
+    const m = manifest.manifest ?? {
+        notes: manifest.notes ?? [], children: [], relations: manifest.relations ?? [],
+        labels: manifest.labels ?? [], root: null, dependencies: [], exports: {}
+    }
+
+    const pendingPrompts = await collectPendingPrompts(repoId, addonId, m)
+
+    if (pendingPrompts.length > 0) {
+        let database = await loadDatabase()
+        if (!database.persistence[repoId])          database.persistence[repoId]          = {}
+        if (!database.persistence[repoId][addonId]) database.persistence[repoId][addonId] = {}
+        database.persistence[repoId][addonId].pendingPrompts = pendingPrompts
+        await saveDatabase(database)
+    }
+
     await deleteAddon(repoId, addonId)
     await installAddon(repoId, addonId)
+}
+
+async function getPendingPrompts(repoId, addonId) {
+    const database = await loadDatabase()
+    return database.persistence?.[repoId]?.[addonId]?.pendingPrompts || []
+}
+
+async function resolvePrompt(repoId, addonId, noteLocalId, useNew) {
+    if (!useNew) return
+    const database = await loadDatabase()
+    const prompts = database.persistence?.[repoId]?.[addonId]?.pendingPrompts || []
+    const prompt = prompts.find(p => p.noteLocalId === noteLocalId)
+    if (!prompt) return
+    await api.runOnBackend((noteId, content) => {
+        api.getNote(noteId).setContent(content)
+    }, [prompt.persistedNoteId, prompt.newContent])
+}
+
+async function clearPendingPrompts(repoId, addonId) {
+    let database = await loadDatabase()
+    if (database.persistence?.[repoId]?.[addonId]) {
+        delete database.persistence[repoId][addonId].pendingPrompts
+    }
+    await saveDatabase(database)
 }
 
 async function selfUpdateAddon(repoId, addonId) {
@@ -497,12 +577,15 @@ async function enableAddon(repoId, addonId, enabled) {
 
 
 // Exports ---------------------------------------------------------------------
-module.exports.addRepository     = addRepository
-module.exports.getAllRepositories = getAllRepositories
-module.exports.updateRepositories = updateRepositories
-module.exports.deleteRepository  = deleteRepository
-module.exports.installAddon      = installAddon
-module.exports.deleteAddon       = deleteAddon
-module.exports.updateAddon       = updateAddon
-module.exports.selfUpdateAddon   = selfUpdateAddon
-module.exports.enableAddon       = enableAddon
+module.exports.addRepository      = addRepository
+module.exports.getAllRepositories  = getAllRepositories
+module.exports.updateRepositories  = updateRepositories
+module.exports.deleteRepository   = deleteRepository
+module.exports.installAddon       = installAddon
+module.exports.deleteAddon        = deleteAddon
+module.exports.updateAddon        = updateAddon
+module.exports.selfUpdateAddon    = selfUpdateAddon
+module.exports.enableAddon        = enableAddon
+module.exports.getPendingPrompts  = getPendingPrompts
+module.exports.resolvePrompt      = resolvePrompt
+module.exports.clearPendingPrompts = clearPendingPrompts

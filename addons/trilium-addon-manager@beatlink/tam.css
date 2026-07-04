@@ -82,5 +82,68 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    
+}
+
+/* Prompt Review */
+.TAM-prompt-review {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.TAM-prompt-item {
+    background-color: var(--card-background-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.TAM-prompt-item h4 {
+    margin: 0;
+}
+
+.TAM-prompt-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.TAM-prompt-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 2px solid var(--main-border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.TAM-prompt-option:hover {
+    border-color: var(--main-text-color);
+}
+
+.TAM-prompt-selected {
+    border-color: var(--main-link-color);
+}
+
+.TAM-prompt-option label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.TAM-prompt-content {
+    font-family: monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0;
+    color: var(--muted-text-color);
 }
