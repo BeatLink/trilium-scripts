@@ -1,0 +1,129 @@
+{
+    "id": "agenda@beatlink",
+    "name": "Agenda",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/librecurrence/libcalendar/libtimer/libform*/libcollapsible libraries with one centralized constants module and single-profile configuration.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",        "title": "agenda@beatlink",       "type": "text", "mime": "text/html",        "sourceUrl": null},
+
+            {"id": "constants",   "title": "agendaConstants.js",    "type": "code", "mime": "application/javascript;env=hybrid", "sourceUrl": "agendaConstants.js"},
+            {"id": "profile",     "title": "profile.json",          "type": "code", "mime": "application/json", "sourceUrl": "profile.json"},
+            {"id": "ical",        "title": "calendarEvents.ical",   "type": "code", "mime": "text/plain",       "sourceUrl": "calendarEvents.ical"},
+            {"id": "now-note",    "title": "Agenda Now",            "type": "text", "mime": "text/html",        "sourceUrl": null},
+            {"id": "now-config",  "title": "agendaNowConfig.json",  "type": "code", "mime": "application/json", "sourceUrl": "agendaNowConfig.json"},
+
+            {"id": "common-css",  "title": "agendaCommon.css",      "type": "code", "mime": "text/css", "sourceUrl": "agendaCommon.css"},
+            {"id": "task-css",    "title": "agendaTask.css",        "type": "code", "mime": "text/css", "sourceUrl": "agendaTask.css"},
+            {"id": "now-css",     "title": "agendaNow.css",         "type": "code", "mime": "text/css", "sourceUrl": "agendaNow.css"},
+
+            {"id": "overview",    "title": "agendaOverview.jsx",    "type": "code", "mime": "text/jsx", "sourceUrl": "agendaOverview.jsx"},
+
+            {"id": "task",                  "title": "agendaTask.jsx",         "type": "code", "mime": "text/jsx", "sourceUrl": "agendaTask.jsx"},
+            {"id": "dates-duration-picker",  "title": "DatesDurationPicker.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "DatesDurationPicker.jsx"},
+            {"id": "recurrence-picker",      "title": "RecurrencePicker.jsx",   "type": "code", "mime": "text/jsx", "sourceUrl": "RecurrencePicker.jsx"},
+            {"id": "action-picker",          "title": "ActionPicker.jsx",       "type": "code", "mime": "text/jsx", "sourceUrl": "ActionPicker.jsx"},
+            {"id": "rank-picker",            "title": "RankPicker.jsx",         "type": "code", "mime": "text/jsx", "sourceUrl": "RankPicker.jsx"},
+
+            {"id": "now-launcher", "title": "agendaNowLauncher.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "agendaNowLauncher.jsx"},
+            {"id": "now-window",   "title": "agendaNowWindow.jsx",   "type": "code", "mime": "text/jsx", "sourceUrl": "agendaNowWindow.jsx"}
+        ],
+        "children": [
+            {"parent": "root", "child": "constants"},
+            {"parent": "root", "child": "profile"},
+            {"parent": "root", "child": "ical"},
+            {"parent": "root", "child": "now-note"},
+            {"parent": "root", "child": "now-config"},
+            {"parent": "root", "child": "common-css"},
+            {"parent": "root", "child": "task-css"},
+            {"parent": "root", "child": "now-css"},
+            {"parent": "root", "child": "overview"},
+            {"parent": "root", "child": "task"},
+            {"parent": "root", "child": "now-launcher"},
+            {"parent": "root", "child": "now-window"},
+
+            {"parent": "task", "child": "dates-duration-picker"},
+            {"parent": "task", "child": "recurrence-picker"},
+            {"parent": "task", "child": "action-picker"},
+            {"parent": "task", "child": "rank-picker"},
+
+            {"parent": "overview", "addon": "libagendaoverview@beatlink",   "child": "lib"},
+            {"parent": "overview", "addon": "libcollapsible@beatlink",      "child": "lib"},
+            {"parent": "overview", "addon": "libformcheckboxgroup@beatlink", "child": "lib"},
+
+            {"parent": "task", "child": "constants"},
+
+            {"parent": "dates-duration-picker", "addon": "libformdatetime@beatlink",  "child": "lib"},
+            {"parent": "dates-duration-picker", "addon": "libagendatask@beatlink",    "child": "lib"},
+            {"parent": "dates-duration-picker", "addon": "libagendaoverview@beatlink", "child": "lib"},
+
+            {"parent": "recurrence-picker", "addon": "libformtogglebutton@beatlink", "child": "lib"},
+            {"parent": "recurrence-picker", "addon": "libformnumber@beatlink",       "child": "lib"},
+            {"parent": "recurrence-picker", "addon": "libformdatetime@beatlink",     "child": "lib"},
+            {"parent": "recurrence-picker", "addon": "librecurrence@beatlink",       "child": "lib"},
+            {"parent": "recurrence-picker", "addon": "libagendaoverview@beatlink",   "child": "lib"},
+
+            {"parent": "action-picker", "addon": "libagendatask@beatlink",     "child": "lib"},
+            {"parent": "action-picker", "addon": "libagendaoverview@beatlink", "child": "lib"},
+
+            {"parent": "rank-picker", "addon": "libformnumber@beatlink",      "child": "lib"},
+            {"parent": "rank-picker", "addon": "libagendaoverview@beatlink",  "child": "lib"},
+
+            {"parent": "now-launcher", "addon": "libagendanow@beatlink", "child": "lib"},
+
+            {"parent": "now-window", "child": "constants"},
+            {"parent": "now-window", "addon": "libtimer@beatlink",         "child": "lib"},
+            {"parent": "now-window", "addon": "libagendaoverview@beatlink", "child": "lib"},
+            {"parent": "now-window", "addon": "libagendatask@beatlink",    "child": "lib"},
+            {"parent": "now-window", "addon": "libagendanow@beatlink",     "child": "lib"}
+        ],
+        "relations": [
+            {"from": "overview",   "type": "profile",         "to": "profile"},
+            {"from": "overview",   "type": "icalNote",        "to": "ical"},
+
+            {"from": "task",       "type": "profile",         "to": "profile"},
+            {"from": "task",       "type": "icalNote",        "to": "ical"},
+
+            {"from": "now-launcher", "type": "nowNote",          "to": "now-note"},
+            {"from": "now-launcher", "type": "agendaNowConfig",  "to": "now-config"},
+
+            {"from": "now-window", "type": "profile",         "to": "profile"},
+            {"from": "now-window", "type": "nowNote",         "to": "now-note"},
+            {"from": "now-window", "type": "agendaNowConfig", "to": "now-config"},
+            {"from": "now-window", "type": "LauncherWidget",  "to": "now-launcher"}
+        ],
+        "labels": [
+            {"note": "root",       "name": "iconClass", "value": "bx bx-calendar-check"},
+            {"note": "ical",       "name": "iconClass", "value": "bx bx-calendar"},
+            {"note": "ical",       "name": "customResourceProvider", "value": "agendaCalendar.ical"},
+            {"note": "common-css", "name": "appCss", "value": ""},
+            {"note": "task-css",   "name": "appCss", "value": ""},
+            {"note": "now-css",    "name": "appCss", "value": ""},
+            {"note": "overview",   "name": "iconClass", "value": "bx bx-calendar-check"},
+            {"note": "overview",   "name": "widget", "value": ""},
+            {"note": "task",       "name": "iconClass", "value": "bx bx-task"},
+            {"note": "task",       "name": "widget", "value": ""},
+            {"note": "now-window", "name": "iconClass", "value": "bx bx-window-open"},
+            {"note": "now-window", "name": "widget", "value": ""}
+        ],
+        "dependencies": [
+            "libagendaoverview@beatlink",
+            "libagendatask@beatlink",
+            "libagendanow@beatlink",
+            "librecurrence@beatlink",
+            "libtimer@beatlink",
+            "libcollapsible@beatlink",
+            "libformcheckboxgroup@beatlink",
+            "libformtogglebutton@beatlink",
+            "libformnumber@beatlink",
+            "libformdatetime@beatlink"
+        ],
+        "exports": {}
+    }
+}

@@ -1,0 +1,80 @@
+/* Widget Body -------------------------------------------------------------------------------*/
+
+#right-pane .body-wrapper:has(.agenda-widget),
+#right-pane .card-body:has(.agenda-widget) {
+    contain: none !important;
+    overflow: visible !important;
+
+    .agenda-widget {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        align-content: center;
+        align-items: stretch;
+        justify-content: space-evenly;
+        width: 100%;
+        gap: 1rem;
+
+        /* Main Section ---------------------------------------------------------------------------*/
+
+        > details, > div {
+            > summary, > label {
+                color: var(--muted-text-color) !important;
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+            }
+            > div {
+                display: flex;
+                flex-direction: column;
+                flex-wrap: wrap;
+                align-content: center;
+                align-items: stretch;
+                justify-content: space-evenly;
+                width: 100%;
+                gap: 0.5rem;
+                background-color: rgba(0, 0, 0, 0.05);
+                border-radius: 0.25rem;
+                padding: 0.5rem;
+            }
+        }
+
+        /* Subsections -------------------------------------------------------------------------------*/
+        details, div {
+            width: 100% !important;
+            > * {
+                width: 100% !important;
+            }
+            summary, label {
+                text-align: start;
+                min-width: 5rem;
+                font-size: 1rem;
+            }
+            > div > * {
+                width: 100%;
+            }
+        }
+
+        /* Dropdowns ---------------------------------------------------------------------------------*/
+        .dropdown {
+            button {
+                text-align: left;
+                anchor-name: --x-template-picker-anchor;
+            }
+            ul {
+                position: fixed !important;
+                position-anchor: --x-template-picker-anchor;
+                width: fit-content !important;
+                min-width: anchor-size(width) !important;
+                max-width: calc(anchor-size(width) * 2) !important;
+            }
+        }
+
+        /* Buttons ----------------------------------------------------------------------------------*/
+        button, .togglebutton {
+            width: 100% !important;
+            * {
+                text-align: center;
+            }
+        }
+    }
+}

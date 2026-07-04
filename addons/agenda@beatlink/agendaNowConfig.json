@@ -1,0 +1,15 @@
+{
+    "enableSounds": true,
+    "enableLauncher": true,
+    "addTasksWhenDue": false,
+    "sendDueNotifications": true,
+    "launchOnStart": false,
+    "newWindowConfig": {
+        "width": 300,
+        "height": 150,
+        "windowGap": 12,
+        "alwaysOnTop": true,
+        "hideTitlebar": true,
+        "hideMenubar": true
+    }
+}

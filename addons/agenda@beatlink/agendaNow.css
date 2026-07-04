@@ -1,0 +1,141 @@
+/* Common --------------------------------------------------------------------*/
+body.AgendaNowEnabled {
+    zoom: 85%;
+    width: 100%;
+    height: 100%;
+}
+
+/* Disable Elements --------------------------------------------------------------------*/
+body.AgendaNowEnabled div.close-zen-container,
+body.AgendaNowEnabled div.title-actions {
+    display: none;
+}
+
+/* Parent Div --------------------------------------------------------------------*/
+body.AgendaNowEnabled div:has(div.classic-toolbar-widget) {
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center;
+    align-items: stretch;
+    overflow: visible !important;
+}
+
+/* Title Div --------------------------------------------------------------------*/
+body.AgendaNowEnabled.zen .title-row {
+    position: static !important;
+    margin: 0 !important;
+    background: unset !important;
+    border-bottom: 2px solid var(--accent) !important;
+    z-index: auto !important;
+}
+
+/* Note Content --------------------------------------------------------------------*/
+body.AgendaNowEnabled #root-widget {
+    width: 100%;
+    height: 100% !important;
+}
+
+body.AgendaNowEnabled div.scrolling-container:has(div.note-detail){
+    position: static;
+    padding: 0 !important;
+    border-bottom: 2px solid var(--accent) !important;
+}
+
+body.AgendaNowEnabled div.note-detail {
+    margin: 0 !important;
+}
+
+
+/* Agenda Now Controls ---------------------------------------------------------------------*/
+
+body .agendaNowControls {
+    display: none;
+    flex-direction: row;
+}
+
+body.AgendaNowEnabled .agendaNowControls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center !important;
+    padding: 0.5rem;
+    border-bottom: 2px solid var(--accent) !important;
+    overflow: visible !important;
+}
+
+body.AgendaNowEnabled .agendaNowControls button.icon-action:before {
+    font-size: 1.5rem !important;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center !important;
+    overflow: visible !important;
+    width: fit-content;
+    margin: 0 auto;
+    gap: 0.5rem;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer > span {
+    background-color: var(--card-background-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer > span.running {
+    color: white;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer > * {
+    width: fit-content !important;
+    max-width: fit-content !important;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul {
+    overflow: scroll;
+    max-height: 80vh;
+    min-width: fit-content !important;
+    width: fit-content !important;
+    padding: 0 !important
+    font-size: large !important;
+}
+
+body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul li {
+    width: fit-content !important;
+    min-width: fit-content !important;
+    padding: 0.125 rem !important;
+}
+body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul li span {
+    width: 0;
+    min-width: 0;
+    margin: 0 auto;
+}
+
+.flash-accent {
+  animation: blinker-accent 2s ease-in-out infinite;
+}
+
+@keyframes blinker-accent {
+  25% {
+    background-color: var(--accent);
+  }  50% {
+    background-color: var(--accent);
+  }
+    75% {
+    background-color: var(--accent);
+  }
+}
+
+.flash-red {
+  animation: blinker-red 0.75s ease-in-out infinite;
+}
+
+@keyframes blinker-red {
+  50% {
+    background-color: red;
+  }
+}
