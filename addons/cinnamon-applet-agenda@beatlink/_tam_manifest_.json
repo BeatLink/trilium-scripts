@@ -1,0 +1,32 @@
+{
+    "id": "cinnamon-applet-agenda@beatlink",
+    "name": "Cinnamon Applet Agenda",
+    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the earliest (or latest) past-due task matched by a configurable date label.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",   "title": "cinnamon-applet-agenda@beatlink", "type": "text", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "script", "title": "cinnamonAppletAgenda.js",         "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"}
+        ],
+        "children": [
+            {"parent": "root", "child": "script"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",   "name": "iconClass",            "value": "bx bx-calendar-check"},
+            {"note": "script", "name": "iconClass",             "value": "bx bx-calendar-check"},
+            {"note": "script", "name": "customRequestHandler",  "value": "agenda_panel"},
+            {"note": "script", "name": "apiKey",                 "value": "CHANGE_ME"},
+            {"note": "script", "name": "dateLabel",              "value": "dueDate"},
+            {"note": "script", "name": "taskOrder",              "value": "earliest"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}

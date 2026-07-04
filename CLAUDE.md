@@ -12,7 +12,7 @@ to `main`.
 
 Not every directory under `addons/` is TAM-managed — only directories named `name@author` with a
 `_tam_manifest_.json` participate in validate/publish/export. Directories without an `@author` suffix
-(`Agenda`, `Agenda Next`, `Calendar`, `Cinnamon Applet Scripts`, `Recurrence`, `Reschedule`,
+(`Agenda`, `Agenda Next`, `Calendar`, `Recurrence`, `Reschedule`,
 `Archived/`) are legacy/pre-TAM addons kept for reference and are skipped by the scripts.
 
 ## Development commands

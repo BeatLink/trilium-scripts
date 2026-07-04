@@ -1,0 +1,30 @@
+{
+    "id": "cinnamon-applet-inbox@beatlink",
+    "name": "Cinnamon Applet Inbox",
+    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first line of a designated inbox note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",   "title": "cinnamon-applet-inbox@beatlink", "type": "text", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "script", "title": "cinnamon-applet-inbox.js",       "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamon-applet-inbox.js"}
+        ],
+        "children": [
+            {"parent": "root", "child": "script"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",   "name": "iconClass",            "value": "bx bx-inbox"},
+            {"note": "script", "name": "iconClass",             "value": "bx bx-inbox"},
+            {"note": "script", "name": "customRequestHandler",  "value": "inboxPanel"},
+            {"note": "script", "name": "apiKey",                 "value": "CHANGE_ME"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
