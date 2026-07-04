@@ -4,10 +4,13 @@ Shared library for sorting TriliumNext notes by multiple attributes. Used as a d
 
 ## Usage
 
-Install this addon as a dependency. TAM clones the `libmultisort` note as a child of any script that declares it, making it available as a bundle global.
+Install this addon as a dependency. TAM clones the `libMultisort.js` note as a child of any script
+that declares it; `require()` it by that title (the note title is what Trilium's bundler resolves
+`require()` calls against, so keeping it a distinctive, fully-qualified name avoids collisions with
+other libraries):
 
 ```js
-const { sortChildNotes } = libmultisort;
+const { sortChildNotes } = require("libMultisort.js");
 const sorted = sortChildNotes(sortString, childNotes);
 ```
 

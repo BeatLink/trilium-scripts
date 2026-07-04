@@ -5,16 +5,16 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libsettings@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
             {"id": "root",    "title": "libsettings@beatlink",  "type": "text", "mime": "text/html",                            "sourceUrl": null},
-            {"id": "backend", "title": "libsettings",           "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libsettings-backend.js"},
-            {"id": "ui",      "title": "libsettings-ui.jsx",     "type": "code", "mime": "text/jsx",                            "sourceUrl": "libsettings-ui.jsx"},
-            {"id": "style",   "title": "libsettings-ui.css",    "type": "code", "mime": "text/css",                            "sourceUrl": "libsettings-ui.css"}
+            {"id": "backend", "title": "libSettings.js",        "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libsettings-backend.js"},
+            {"id": "ui",      "title": "libSettingsUI.jsx",     "type": "code", "mime": "text/jsx",                            "sourceUrl": "libsettings-ui.jsx"},
+            {"id": "style",   "title": "libSettingsUI.css",    "type": "code", "mime": "text/css",                            "sourceUrl": "libsettings-ui.css"}
         ],
         "children": [
             {"parent": "root", "child": "backend"},

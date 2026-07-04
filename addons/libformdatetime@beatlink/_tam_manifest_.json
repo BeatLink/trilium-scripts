@@ -1,0 +1,26 @@
+{
+    "id": "libformdatetime@beatlink",
+    "name": "Form Datetime",
+    "description": "Reusable Preact datetime-local input component for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformdatetime@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "FormDatetime.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "FormDatetime.jsx"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

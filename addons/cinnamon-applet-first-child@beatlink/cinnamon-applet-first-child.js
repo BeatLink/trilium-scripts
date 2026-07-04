@@ -1,4 +1,4 @@
-const { loadSettings } = libsettings
+const { loadSettings } = require("libSettings.js")
 
 let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 let settingsNoteId = api.currentNote.getRelationValue("settingsNote")

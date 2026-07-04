@@ -1,0 +1,28 @@
+{
+    "id": "libformcheckboxgroup@beatlink",
+    "name": "Form Checkbox Group",
+    "description": "Reusable Preact component rendering a labeled, collapsible group of checkboxes for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformcheckboxgroup@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "FormCheckboxGroup.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "FormCheckboxGroup.jsx"}
+        ],
+        "children": [
+            {"parent": "lib", "addon": "libcollapsible@beatlink", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-list-check"}
+        ],
+        "dependencies": ["libcollapsible@beatlink"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

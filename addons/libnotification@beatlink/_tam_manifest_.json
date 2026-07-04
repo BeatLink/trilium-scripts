@@ -5,14 +5,14 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libnotification@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib",     "title": "libnotification",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libnotification.js"},
-            {"id": "backend", "title": "libnotificationBackend", "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libnotification-backend.js"}
+            {"id": "lib",     "title": "libNotification.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libnotification.js"},
+            {"id": "backend", "title": "libNotificationBackend.js", "type": "code", "mime": "application/javascript;env=backend",  "sourceUrl": "libnotification-backend.js"}
         ],
         "children": [
             {"parent": "lib", "child": "backend"}

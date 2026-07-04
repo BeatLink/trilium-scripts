@@ -8,7 +8,7 @@ import {
     useEffect
 } from "trilium:preact"
 import { currentNote } from "trilium:api"
-import { loadSettings } from "libsettings-ui.jsx"
+import { loadSettings } from "libSettingsUI.jsx"
 
 // Self-contained: runOnBackend closures can't reference outer imports, only `api`
 // and their own passed args, so the compute walk is duplicated here (and again in

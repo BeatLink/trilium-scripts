@@ -1,0 +1,26 @@
+{
+    "id": "libcollapsible@beatlink",
+    "name": "Collapsible",
+    "description": "Reusable Preact collapsible section component (a styled native <details>/<summary>) for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcollapsible@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "Collapsible.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "Collapsible.jsx"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-chevron-down-square"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

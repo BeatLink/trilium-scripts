@@ -1,5 +1,5 @@
 import { useState, useEffect } from "trilium:preact"
-import { SettingsForm } from "libsettings-ui.jsx"
+import { SettingsForm } from "libSettingsUI.jsx"
 
 export default function FirstChildSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)

@@ -1,5 +1,5 @@
-const { loadSettings } = libsettings
-const { sendNotification } = libnotificationBackend
+const { loadSettings } = require("libSettings.js")
+const { sendNotification } = require("libNotificationBackend.js")
 
 let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 let settingsNoteId = api.currentNote.getRelationValue("settingsNote")

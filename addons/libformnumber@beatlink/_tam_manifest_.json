@@ -1,0 +1,26 @@
+{
+    "id": "libformnumber@beatlink",
+    "name": "Form Number",
+    "description": "Reusable Preact number-input component for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformnumber@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "FormNumber.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "FormNumber.jsx"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-hash"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

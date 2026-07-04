@@ -1,0 +1,26 @@
+{
+    "id": "libformtogglebutton@beatlink",
+    "name": "Form Toggle Button",
+    "description": "Reusable Preact toggle-button component (a checkbox styled as a pill button) for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformtogglebutton@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "FormToggleButton.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "FormToggleButton.jsx"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-toggle-left"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

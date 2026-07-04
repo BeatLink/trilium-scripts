@@ -69,12 +69,13 @@ seeds a new row from `itemSchema`'s defaults — see
 ## Backend usage
 
 Install this addon as a dependency and declare it as a child of your `customRequestHandler` script
-note (`{"parent": "script", "addon": "libsettings@beatlink", "child": "backend"}`) — TAM clones the
-`libsettings` note in as a bundle global, same convention as
-[libnotification](../libnotification@beatlink/README.md):
+note (`{"parent": "script", "addon": "libsettings@beatlink", "child": "backend"}`) — `require()` it
+by its note title, `libSettings.js` (Trilium's bundler resolves `require()` by exact note title, so
+this library uses a fully-qualified title to avoid colliding with any other library's globals, same
+convention as [libnotification](../libnotification@beatlink/README.md)):
 
 ```js
-const { loadSettings, saveSettings } = libsettings
+const { loadSettings, saveSettings } = require("libSettings.js")
 
 // however your addon resolves its own noteIds — this library doesn't do it for you
 const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
@@ -99,7 +100,7 @@ Declare this addon as a dependency and pull in its `ui` export as a child of you
 note (`{"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}`):
 
 ```jsx
-import { SettingsForm } from "libsettings-ui.jsx"
+import { SettingsForm } from "libSettingsUI.jsx"
 
 export default function MySettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)

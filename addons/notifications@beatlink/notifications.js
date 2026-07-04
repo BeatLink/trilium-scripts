@@ -1,5 +1,5 @@
-// libnotification is bundled as a child of this note — available as a global
-const { sendNotification } = libnotification;
+// libNotification.js is bundled as a child of this note
+const { sendNotification } = require("libNotification.js");
 
 async function send_notification() {
 

@@ -35,7 +35,7 @@ How It works:
 
 */
 
-
+const libMultisort = require("libMultisort.js")
 
 // For each child in the sorted dict array, save its array index as an attribute
 async function saveChildrenSortOrder(note, sortedChildNotes){

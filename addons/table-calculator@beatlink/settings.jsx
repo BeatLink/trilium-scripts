@@ -1,5 +1,5 @@
 import { useState, useEffect, Button } from "trilium:preact"
-import { SettingsForm, loadSettings } from "libsettings-ui.jsx"
+import { SettingsForm, loadSettings } from "libSettingsUI.jsx"
 
 // Self-contained: runOnBackend closures can't reference outer imports, only `api`
 // and their own passed args, so the compute walk is duplicated here (and again in

@@ -4,19 +4,19 @@ Shared library for sending desktop notifications from TriliumNext scripts. Click
 
 ## Frontend usage (`lib` export)
 
-For scripts that already run in a frontend context (e.g. `"run": "frontendStartup"`, like [`notifications@beatlink`](../notifications@beatlink/)). Declare this addon as a dependency and clone the `lib` export as a child — TAM makes it available as a bundle global named after its note title, `libnotification`:
+For scripts that already run in a frontend context (e.g. `"run": "frontendStartup"`, like [`notifications@beatlink`](../notifications@beatlink/)). Declare this addon as a dependency and clone the `lib` export as a child — `require()` it by its note title, `libNotification.js` (Trilium's bundler resolves `require()` by exact note title, so this library uses a fully-qualified title to avoid colliding with any other library's globals):
 
 ```js
-const { sendNotification } = libnotification;
+const { sendNotification } = require("libNotification.js");
 await sendNotification("Note Title", "Optional body text", noteId);
 ```
 
 ## Backend usage (`backend` export)
 
-For `customRequestHandler`/other backend scripts that need to fire a notification in response to something happening server-side (e.g. [`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/)'s countdown timer). Clone the `backend` export as a child instead — it's available as the global `libnotificationBackend`, and internally does the `runOnFrontend` hop for you:
+For `customRequestHandler`/other backend scripts that need to fire a notification in response to something happening server-side (e.g. [`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/)'s countdown timer). Clone the `backend` export as a child instead — `require()` it by its title, `libNotificationBackend.js`; it internally does the `runOnFrontend` hop for you:
 
 ```js
-const { sendNotification } = libnotificationBackend
+const { sendNotification } = require("libNotificationBackend.js")
 sendNotification("Note Title", "Optional body text", noteId)
 ```
 
