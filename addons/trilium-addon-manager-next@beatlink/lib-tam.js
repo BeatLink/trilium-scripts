@@ -4,6 +4,8 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
+const TAM_ID = "trilium-addon-manager@beatlink"
+const TAM_VERSION = "2.0.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -74,6 +76,10 @@ async function getAllRepositories() {
         for (const [addonId, addonData] of Object.entries(repoData.addons || {})) {
             if (installedAddons[addonId]) {
                 Object.assign(addonData, installedAddons[addonId])
+            } else if (addonId === TAM_ID) {
+                addonData.installedVersion = TAM_VERSION
+                addonData.updateAvailable = addonData.latestVersion !== TAM_VERSION
+                addonData.enabled = true
             }
         }
     }
@@ -354,11 +360,11 @@ async function connectAddonPersistence(repoId, addonId) {
                 const key = relation.name.split("AddonData:")[1]
                 let persistNoteId = existingNotes[key]
                 if (!persistNoteId) {
-                    // Branch the data note into the persistence tree — no copy needed.
-                    // The same note gains a second parent (persistRoot), so it survives
-                    // addon deletion (which only removes the addon-tree branch).
-                    api.getNote(relation.value).ensureBranch(persistRoot)
-                    persistNoteId = relation.value
+                    const origTitle = api.getNote(relation.value).title
+                    const dup = api.duplicateSubtree(relation.value, persistRoot)
+                    dup.note.title = origTitle
+                    dup.note.save()
+                    persistNoteId = dup.note.noteId
                 }
                 note.setRelation(relation.name, persistNoteId)
                 result[key] = persistNoteId
@@ -397,9 +403,6 @@ async function selfUpdateAddon(repoId, addonId) {
     if (!repoId.trim() || !addonId.trim()) return
 
     let database = await loadDatabase()
-    const installed = (database.installedAddons[repoId] || {})[addonId]
-    if (!installed) throw new Error(`TAM: ${addonId} is not installed`)
-
     const manifest = await fetchManifest(repoId, addonId)
     const m = manifest.manifest ?? {
         notes: manifest.notes ?? [],
@@ -407,7 +410,26 @@ async function selfUpdateAddon(repoId, addonId) {
         labels: manifest.labels ?? [], root: null, dependencies: [], exports: {}
     }
 
-    const { noteMap } = installed
+    const installed = (database.installedAddons[repoId] || {})[addonId]
+    let noteMap
+    if (installed) {
+        noteMap = installed.noteMap
+    } else {
+        // TAM was imported manually — discover note IDs by traversing from lib-tam upward
+        const libTamNoteId = api.currentNote.noteId
+        noteMap = await api.runOnBackend((libTamNoteId, manifestNotes) => {
+            const result = {}
+            const sourceCode = api.getNote(libTamNoteId).getParentNotes()[0]
+            const tamRoot = sourceCode ? sourceCode.getParentNotes()[0] : null
+            if (!tamRoot) return result
+            for (const noteId of tamRoot.getSubtreeNoteIds()) {
+                const note = api.getNote(noteId)
+                const def = manifestNotes.find(n => n.title === note.title)
+                if (def) result[def.id] = noteId
+            }
+            return result
+        }, [libTamNoteId, m.notes])
+    }
 
     for (const noteDef of m.notes) {
         if (noteDef.skipOnUpdate) continue
@@ -419,8 +441,19 @@ async function selfUpdateAddon(repoId, addonId) {
         }, [realNoteId, content])
     }
 
-    database.installedAddons[repoId][addonId].installedVersion = manifest.latestVersion
-    database.installedAddons[repoId][addonId].updateAvailable  = false
+    if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
+    if (!installed) {
+        database.installedAddons[repoId][addonId] = {
+            installedVersion: manifest.latestVersion,
+            rootNoteId: noteMap[m.root],
+            noteMap,
+            exportedNotes: {},
+            enabled: true
+        }
+    } else {
+        database.installedAddons[repoId][addonId].installedVersion = manifest.latestVersion
+        database.installedAddons[repoId][addonId].updateAvailable  = false
+    }
     await saveDatabase(database)
 }
 
