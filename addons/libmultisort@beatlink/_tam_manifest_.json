@@ -6,7 +6,7 @@
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libmultisort@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
-    "type": "script",
+    "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",

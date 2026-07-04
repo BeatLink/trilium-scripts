@@ -23,10 +23,11 @@ TAM_REPO  = "BeatLink/trilium-scripts"
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 
 TYPE_COLORS = {
-    "widget": "#2563eb",
-    "theme":  "#7c3aed",
-    "css":    "#059669",
-    "script": "#d97706",
+    "widget":  "#2563eb",
+    "theme":   "#7c3aed",
+    "css":     "#059669",
+    "script":  "#d97706",
+    "library": "#0891b2",
 }
 
 
