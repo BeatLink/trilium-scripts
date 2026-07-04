@@ -1,0 +1,26 @@
+{
+    "id": "libmultisort@beatlink",
+    "name": "MultiSort Library",
+    "description": "Shared library for sorting TriliumNext notes by multiple attributes and criteria.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libmultisort@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "libmultisort", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libmultisort.js"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-sort-alt-2"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

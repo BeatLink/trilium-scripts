@@ -1,0 +1,30 @@
+{
+    "id": "multisort@beatlink",
+    "name": "MultiSort",
+    "description": "Sorts note children by multiple attributes and criteria using the #multiSorted label.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/multisort@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root",   "title": "multisort@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
+            {"id": "script", "title": "multisort.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "multisort.js"}
+        ],
+        "children": [
+            {"parent": "root",   "child": "script"},
+            {"parent": "script", "addon": "libmultisort@beatlink", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "root",   "name": "iconClass", "value": "bx bx-sort-alt-2"},
+            {"note": "script", "name": "run",       "value": "frontendStartup"},
+            {"note": "script", "name": "iconClass", "value": "bx bx-sort-alt-2"}
+        ],
+        "dependencies": ["libmultisort@beatlink"],
+        "exports": {}
+    }
+}
