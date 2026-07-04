@@ -55,7 +55,12 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 - **`notes[]`** — one entry per note (`id` = local id used only within the manifest, `title`, Trilium
   `type`, `mime`, `sourceUrl` pointing at a flat file in the same directory holding the note's
   content). `publish.py` inlines each `sourceUrl` file into a `content` field to produce the
-  distribution JSON; nothing else reads `sourceUrl` at runtime.
+  distribution JSON; nothing else reads `sourceUrl` at runtime. Add `"binary": true` on a note whose
+  `sourceUrl` is non-text (e.g. a `type: "file"` note with mime `audio/wav`) — `publish.py` then
+  base64-encodes it into `content` instead of reading it as text, and `lib-tam.js`'s `createNotes`
+  decodes it back into a `Buffer` before `setContent()`. `convert_zip.py` sets this flag
+  automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
+  real example (bundled `.wav` sound effects).
 - **`children[]`** — parent/child tree structure, either local (`{parent, child}`) or cross-addon
   (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map).
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
@@ -84,6 +89,21 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full
 install/update/persistence/self-update state machine — it's long and not worth duplicating here.
+
+### Library note titles must be fully qualified
+
+Trilium resolves both `require("Title")` and the implicit bundle-global it creates for a cloned
+code/JSX note by that note's exact **title** (punctuation stripped for the implicit-global form,
+kept verbatim for explicit `require()`/`import` calls). This means a library's title is effectively
+a global identifier shared across every addon that clones it — a generic title (e.g. `lib`,
+`libsettings`) risks colliding with an unrelated library that happens to pick the same short name.
+Give every library note a fully-qualified, distinctive title matching what consumers actually
+`require()`/`import` (e.g. `libSettings.js`, `libNotificationBackend.js`, `FormToggleButton.jsx`),
+never a bare generic name. This applies to every note a consumer can reference by name, including
+secondary exports (a `-Backend`/`-UI` suffix, not a second copy of the base name). Renaming an
+already-shipped library's title is a breaking change for every consumer — bump the library's own
+`latestVersion` and update every consuming addon's `require()`/`import` string and its own
+`latestVersion` in the same change.
 
 ## Workflow for adding/editing an addon
 
