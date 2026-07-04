@@ -1,11 +1,41 @@
-# Template Picker
+# Templates
 
-## Overview
+A collection of note templates for tasks, projects, notes, and areas, designed to work alongside the [Agenda Next](./../Agenda%20Next/) and [Template Picker](../template-picker@beatlink/) addons.
 
-This is a simple widget that allows you to quickly select the template for the current note. It works by doing a search for all notes with tthe #template label and loading them as options in the dropdown. Selecting a template will automatically update the relation for the current note.
+## Templates
+
+| Template | Icon | Purpose |
+|----------|------|---------|
+| 1. High Priority | `bx-error` | Urgent tasks that need immediate attention |
+| 2. Routine | `bx-sync` | Recurring tasks and habits |
+| 3. Task | `bx-check` | Standard single tasks |
+| 4. Future | `bxs-hourglass` | Someday/maybe items and deferred tasks |
+| 5. Project | `bx-check-double` | Multi-step projects with subtasks |
+| 6. Note | `bx-notepad` | General-purpose notes |
+| 7. Area | `bxs-circle` | Areas of responsibility (list view) |
+| 8. Special | *(none)* | Root container template — used by the templates root note itself |
+
+All templates carry the `#template` label so they are automatically discoverable by the [Template Picker](../template-picker@beatlink/) widget. Task-type templates (High Priority, Routine, Task, Future, Project) also carry `#agendaTaskWidget` for integration with the Agenda Next task display.
+
+## Customization
+
+Template content is entirely up to you. After installation, open any template note and add whatever default content, structure, or labels you want new notes of that type to inherit.
+
+Because these are user-customizable, all templates are tracked via `AddonData:` relations in the persistence tree. If you customize a template and a future addon update changes the default content, TAM will show an **Update Review** prompt so you can choose whether to keep your version or accept the new default — your edits are never silently overwritten.
+
+## Labels Applied
+
+Each task-type template receives these labels at install time:
+
+| Label | Value | Purpose |
+|-------|-------|---------|
+| `#template` | *(empty)* | Marks the note as a Trilium template |
+| `#agendaTaskWidget` | *(empty)* | Enables the Agenda Next task display widget |
+| `#label:area` | `single` | Restricts the `area` label to a single value |
+| `#iconClass` | *(varies)* | Sets the tree icon |
+
+The `7. Area` template additionally has `#viewType=list` to default new area notes to list view.
 
 ## Installation
 
-1. Create a JS Frontend note and paste the contents of [./templatePickerWidget.js](./templatePickerWidget.js)
-2. Add `#widget` as a label to the above note
-3. Reload the frontend.
+Install via [Trilium Addon Manager](https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager%40beatlink) by adding `BeatLink/trilium-scripts` as a repository, or import the ZIP from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest).
