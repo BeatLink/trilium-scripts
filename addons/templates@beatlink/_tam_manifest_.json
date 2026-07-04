@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "template",
     "readme": "README.md",
     "manifest": {
@@ -21,70 +21,14 @@
                 "sourceUrl": null,
                 "skipOnUpdate": true
             },
-            {
-                "id": "high-priority",
-                "title": "1. High Priority",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "high-priority.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "routine",
-                "title": "2. Routine",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "routine.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "task",
-                "title": "3. Task",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "task.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "future",
-                "title": "4. Future",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "future.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "project",
-                "title": "5. Project",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "project.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "note",
-                "title": "6. Note",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "note.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "area",
-                "title": "7. Area",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "area.md",
-                "promptOnUpdate": true
-            },
-            {
-                "id": "special",
-                "title": "8. Special",
-                "type": "text",
-                "mime": "text/markdown",
-                "sourceUrl": "special.md",
-                "promptOnUpdate": true
-            }
+            {"id": "high-priority", "title": "1. High Priority", "type": "text", "mime": "text/html", "sourceUrl": "high-priority.html", "promptOnUpdate": true},
+            {"id": "routine",       "title": "2. Routine",       "type": "text", "mime": "text/html", "sourceUrl": "routine.html",       "promptOnUpdate": true},
+            {"id": "task",          "title": "3. Task",          "type": "text", "mime": "text/html", "sourceUrl": "task.html",           "promptOnUpdate": true},
+            {"id": "future",        "title": "4. Future",        "type": "text", "mime": "text/html", "sourceUrl": "future.html",         "promptOnUpdate": true},
+            {"id": "project",       "title": "5. Project",       "type": "text", "mime": "text/html", "sourceUrl": "project.html",        "promptOnUpdate": true},
+            {"id": "note",          "title": "6. Note",          "type": "text", "mime": "text/html", "sourceUrl": "note.html",           "promptOnUpdate": true},
+            {"id": "area",          "title": "7. Area",          "type": "text", "mime": "text/html", "sourceUrl": "area.html",           "promptOnUpdate": true},
+            {"id": "special",       "title": "8. Special",       "type": "text", "mime": "text/html", "sourceUrl": "special.html",        "promptOnUpdate": true}
         ],
         "children": [
             {

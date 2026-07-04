@@ -1,6 +1,0 @@
-## Description
-
-
-
-## Why / When
-
