@@ -4,14 +4,10 @@ Backend API endpoint for the [Trilium API Cinnamon panel applet](https://cinnamo
 
 ## Setup
 
-After installing, edit the `cinnamon-applet-inbox.js` note:
+After installing:
 
-| Attribute              | Value                       | Description                                                     |
-|------------------------|------------------------------|-------------------------------------------------------------------|
-| `apiKey` (label)       | a random string you choose   | Shared secret checked against the applet's configured API key     |
-| `inboxNote` (relation) | → your inbox note            | Points at the note whose first line should be surfaced            |
-
-> Labels/relations are reset to their manifest defaults whenever this addon is updated through TAM — re-check them after updating.
+1. Open **Trilium Addon Manager → Addon Data → cinnamon-applet-inbox@beatlink → config.json** and set `apiKey` to a random string you choose. This is a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edit survives addon updates.
+2. On the `cinnamon-applet-inbox.js` note, add (or point) the `inboxNote` relation at the note whose first line should be surfaced. This relation is not managed by TAM and must be set manually after every reinstall/update.
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `inboxPanel` (must match the `customRequestHandler` label on `cinnamon-applet-inbox.js`)

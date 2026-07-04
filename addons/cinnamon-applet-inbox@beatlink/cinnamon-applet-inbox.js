@@ -1,4 +1,6 @@
-let apiKey = api.currentNote.getLabelValue("apiKey")
+let configNoteId = api.currentNote.getRelationValue("AddonData:config")
+let config = JSON.parse(api.getNote(configNoteId).getContent())
+let apiKey = config.apiKey
 let inboxNoteId = api.currentNote.getRelationValue("inboxNote")
 
 if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {

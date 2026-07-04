@@ -5,26 +5,27 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
             {"id": "root",   "title": "cinnamon-applet-agenda@beatlink", "type": "text", "mime": "text/html",                          "sourceUrl": null},
-            {"id": "script", "title": "cinnamonAppletAgenda.js",         "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"}
+            {"id": "script", "title": "cinnamonAppletAgenda.js",         "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamonAppletAgenda.js"},
+            {"id": "config", "title": "config.json",                    "type": "code", "mime": "application/json",                    "sourceUrl": "config.json"}
         ],
         "children": [
-            {"parent": "root", "child": "script"}
+            {"parent": "root",   "child": "script"},
+            {"parent": "script", "child": "config"}
         ],
-        "relations": [],
+        "relations": [
+            {"from": "script", "type": "AddonData:config", "to": "config"}
+        ],
         "labels": [
             {"note": "root",   "name": "iconClass",            "value": "bx bx-calendar-check"},
             {"note": "script", "name": "iconClass",             "value": "bx bx-calendar-check"},
-            {"note": "script", "name": "customRequestHandler",  "value": "agenda_panel"},
-            {"note": "script", "name": "apiKey",                 "value": "CHANGE_ME"},
-            {"note": "script", "name": "dateLabel",              "value": "dueDate"},
-            {"note": "script", "name": "taskOrder",              "value": "earliest"}
+            {"note": "script", "name": "customRequestHandler",  "value": "agenda_panel"}
         ],
         "dependencies": [],
         "exports": {}

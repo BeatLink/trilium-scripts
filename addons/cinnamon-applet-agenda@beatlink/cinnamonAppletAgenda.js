@@ -1,6 +1,8 @@
-let apiKey = api.currentNote.getLabelValue("apiKey")
-let dateLabel = api.currentNote.getLabelValue("dateLabel")
-let taskOrder = api.currentNote.getLabelValue("taskOrder")
+let configNoteId = api.currentNote.getRelationValue("AddonData:config")
+let config = JSON.parse(api.getNote(configNoteId).getContent())
+let apiKey = config.apiKey
+let dateLabel = config.dateLabel
+let taskOrder = config.taskOrder
 
 if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
 

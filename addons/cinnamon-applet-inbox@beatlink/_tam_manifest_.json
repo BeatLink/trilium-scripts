@@ -5,24 +5,27 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
             {"id": "root",   "title": "cinnamon-applet-inbox@beatlink", "type": "text", "mime": "text/html",                          "sourceUrl": null},
-            {"id": "script", "title": "cinnamon-applet-inbox.js",       "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamon-applet-inbox.js"}
+            {"id": "script", "title": "cinnamon-applet-inbox.js",       "type": "code", "mime": "application/javascript;env=backend", "sourceUrl": "cinnamon-applet-inbox.js"},
+            {"id": "config", "title": "config.json",                   "type": "code", "mime": "application/json",                    "sourceUrl": "config.json"}
         ],
         "children": [
-            {"parent": "root", "child": "script"}
+            {"parent": "root",   "child": "script"},
+            {"parent": "script", "child": "config"}
         ],
-        "relations": [],
+        "relations": [
+            {"from": "script", "type": "AddonData:config", "to": "config"}
+        ],
         "labels": [
             {"note": "root",   "name": "iconClass",            "value": "bx bx-inbox"},
             {"note": "script", "name": "iconClass",             "value": "bx bx-inbox"},
-            {"note": "script", "name": "customRequestHandler",  "value": "inboxPanel"},
-            {"note": "script", "name": "apiKey",                 "value": "CHANGE_ME"}
+            {"note": "script", "name": "customRequestHandler",  "value": "inboxPanel"}
         ],
         "dependencies": [],
         "exports": {}
