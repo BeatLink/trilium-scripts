@@ -81,9 +81,10 @@ def render_index(addons):
     </div>
   </a>""")
 
-    filter_btns = ['<button class="filter active" data-type="all">All</button>']
+    filter_btns = ['<button class="filter active" data-type="all" style="--c:#2563eb">All</button>']
     for t in types_present:
-        filter_btns.append(f'<button class="filter" data-type="{t}">{t.title()}</button>')
+        color = TYPE_COLORS.get(t, "#2563eb")
+        filter_btns.append(f'<button class="filter" data-type="{t}" style="--c:{color}">{t.title()}</button>')
 
     body = f"""<header>
   <div class="hdr">
@@ -105,7 +106,9 @@ def render_index(addons):
 </header>
 <main>
   <div class="toolbar">
-    <input type="search" id="search" placeholder="Search addons…" autocomplete="off" spellcheck="false">
+    <div class="search-wrap">
+      <input type="search" id="search" placeholder="Search addons…" autocomplete="off" spellcheck="false">
+    </div>
     <div class="filters">
       {" ".join(filter_btns)}
     </div>
@@ -353,35 +356,49 @@ footer { text-align: center; padding: 24px; font-size: 13px; color: #94a3b8; bor
 footer a { color: #64748b; }
 
 /* Toolbar */
-.toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") center/contain no-repeat;
+  pointer-events: none;
+}
 #search {
-  flex: 1;
-  min-width: 180px;
-  padding: 7px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 14px;
   color: #0f172a;
   background: #fff;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-#search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+#search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+#search::placeholder { color: #94a3b8; }
 .filters { display: flex; gap: 6px; flex-wrap: wrap; }
 .filter {
-  padding: 5px 14px;
+  padding: 7px 16px;
   border-radius: 20px;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   background: #fff;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   cursor: pointer;
   color: #64748b;
-  transition: all 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
+  text-transform: uppercase;
 }
-.filter:hover { border-color: #93c5fd; color: #2563eb; }
-.filter.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.filter:hover { border-color: var(--c, #2563eb); color: var(--c, #2563eb); }
+.filter.active { background: var(--c, #2563eb); border-color: var(--c, #2563eb); color: #fff; }
 
 /* Responsive */
 @media (max-width: 768px) {
