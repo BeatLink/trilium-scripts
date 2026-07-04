@@ -278,6 +278,12 @@ def main():
         for r in mf.get("relations", []):
             if r.get("addon"):
                 ids.add(r["addon"])
+        # Some dependencies are never cloned as a child/relation (e.g. a
+        # static-resource-only vendor library referenced by a fixed URL
+        # string rather than a note id) — manifest.dependencies is the
+        # source of truth for "must be installed", independent of cloning.
+        for dep_id in mf.get("dependencies", []):
+            ids.add(dep_id)
         return ids
 
     all_warnings = []

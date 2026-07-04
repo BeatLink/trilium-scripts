@@ -1,0 +1,31 @@
+{
+    "id": "libcalendarwidget@beatlink",
+    "name": "Calendar Widget",
+    "description": "Reusable Preact component wrapping FullCalendar for TriliumNext widget UIs — renders a day/week/month grid from a plain events array, a raw ics string, or any ics feed URL.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcalendarwidget@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib",   "title": "CalendarWidget.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "CalendarWidget.jsx"},
+            {"id": "style", "title": "CalendarWidget.css", "type": "code", "mime": "text/css", "sourceUrl": "CalendarWidget.css"}
+        ],
+        "children": [
+            {"parent": "lib", "child": "style"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib",   "name": "iconClass", "value": "bx bx-calendar-week"},
+            {"note": "style", "name": "appCss",    "value": ""},
+            {"note": "style", "name": "iconClass", "value": "bx bx-calendar-week"}
+        ],
+        "dependencies": ["libfullcalendar@arshaw", "libical@kewisch"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

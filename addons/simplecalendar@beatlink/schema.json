@@ -1,0 +1,42 @@
+{
+    "mode": {
+        "type": "select",
+        "label": "Mode",
+        "description": "Where events come from",
+        "options": [
+            {"value": "search", "label": "Trilium Search"},
+            {"value": "url", "label": "External Feed URL"}
+        ],
+        "default": "search"
+    },
+    "feedUrl": {
+        "type": "string",
+        "label": "Feed URL",
+        "description": "Used when Mode is 'External Feed URL'",
+        "default": ""
+    },
+    "searchQuery": {
+        "type": "string",
+        "label": "Search Query",
+        "description": "Trilium search query for notes to show (used when Mode is 'Trilium Search')",
+        "default": "#startDateTime"
+    },
+    "startDateLabel": {
+        "type": "string",
+        "label": "Start Date Label",
+        "description": "Label holding each note's start datetime",
+        "default": "startDateTime"
+    },
+    "dueDateLabel": {
+        "type": "string",
+        "label": "Due Date Label",
+        "description": "Label holding each note's due datetime",
+        "default": "dueDateTime"
+    },
+    "recurrenceLabel": {
+        "type": "string",
+        "label": "Recurrence Label",
+        "description": "Label holding an RRULE string, if any",
+        "default": "recurrence"
+    }
+}

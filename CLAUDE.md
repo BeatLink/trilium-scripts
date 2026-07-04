@@ -12,8 +12,12 @@ to `main`.
 
 Not every directory under `addons/` is TAM-managed — only directories named `name@author` with a
 `_tam_manifest_.json` participate in validate/publish/export. Directories without an `@author` suffix
-(`Agenda`, `Agenda Next`, `Calendar`, `Recurrence`, `Reschedule`,
-`Archived/`) are legacy/pre-TAM addons kept for reference and are skipped by the scripts.
+(`Archived/`) are legacy/pre-TAM addons kept for reference and are skipped by the scripts.
+`Recurrence`, `Reschedule`, and `Calendar` (also legacy/pre-TAM) were removed once
+`librecurrence@beatlink`/`libagendatask@beatlink` and `libcalendar@beatlink`/
+`libcalendarwidget@beatlink`/`simplecalendar@beatlink` fully subsumed them respectively — same
+feature scope plus real fixes (unhandled recurrence exhaustion, a hardcoded `127.0.0.1:PORT` URL,
+redundant triple-triggered ical regeneration) — with no functionality actually lost.
 
 ## Development commands
 
@@ -61,12 +65,25 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   decodes it back into a `Buffer` before `setContent()`. `convert_zip.py` sets this flag
   automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
   real example (bundled `.wav` sound effects).
+- **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend`,
+  `;env=backend`, or `;env=hybrid`. A frontend script can't `require()` a backend-only note or vice
+  versa — they're separate bundles. `env=hybrid` is for code with no environment-specific globals
+  (pure computation, e.g. a vendored library like `libical@kewisch`'s `ical.min.js`) that genuinely
+  needs to be `require()`-able from both frontend and backend consumers without shipping two copies.
+  Don't reach for hybrid by default — most real code (anything touching `window`, `Notification`,
+  DOM, or Node-only APIs) is genuinely one or the other; `libnotification@beatlink` ships separate
+  frontend/backend exports precisely because the underlying `Notification` API is frontend-only.
 - **`children[]`** — parent/child tree structure, either local (`{parent, child}`) or cross-addon
   (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map).
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
   local-vs-cross-addon shape.
 - **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link
-  against.
+  against. A dependency doesn't strictly need a matching `children`/`relations` cross-addon entry —
+  e.g. a static-resource-only vendor library (see `libfullcalendar@arshaw`) is referenced by a fixed
+  `custom/...` URL string baked into the consumer's code, not by cloning a note, so it only ever
+  appears in `dependencies[]`. `lib-tam.js`'s real install path already handles this correctly (it
+  walks `dependencies[]` directly, independent of any cloning); `export_zip.py`'s dependency
+  discovery also treats `dependencies[]` as authoritative for what to bundle, for the same reason.
 - **`skipOnUpdate`** (note never overwritten on update — settings/database notes) and
   **`promptOnUpdate`** (user is shown a Keep-Mine-vs-Use-New-Default diff on update — customizable
   content notes) control TAM's update behavior; both only make sense on notes also tracked by an

@@ -8,7 +8,9 @@ feed.
 
 Depends on [libagendatask@beatlink](../libagendatask@beatlink/) (rescheduling),
 [libnotification@beatlink](../libnotification@beatlink/) (due-task notifications),
-[libical@kewisch](../libical@kewisch/) (iCal generation), and
+[libcalendar@beatlink](../libcalendar@beatlink/) (iCal generation — this used to build its own ics
+string inline; that logic now lives in one place, shared with
+[simplecalendar@beatlink](../simplecalendar@beatlink/)), and
 [libmultisort@beatlink](../libmultisort@beatlink/) (sorting).
 
 ## Dependency injection
@@ -122,5 +124,5 @@ the task lists.
 
 ### `setCalendarEvents(profileNoteIds, constants, icalNoteId)`
 
-Builds an iCal feed (one `VEVENT` per task with both a start and due datetime, with an `RRULE` if the
-task recurs) from `getTaskList` and writes it to `icalNoteId`.
+Resolves `getTaskList`'s note ids to notes, builds an iCal feed via
+[libCalendar.js](../libcalendar@beatlink/)'s `generateCalendar`, and writes it to `icalNoteId`.

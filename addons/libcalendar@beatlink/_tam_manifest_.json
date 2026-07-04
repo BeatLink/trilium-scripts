@@ -1,0 +1,28 @@
+{
+    "id": "libcalendar@beatlink",
+    "name": "Calendar",
+    "description": "Backend library for generating an iCalendar (RFC 5545) feed from a list of notes, and serving it as an HTTP response. The calling script resolves its own notes and wires up its own endpoint (customRequestHandler) — this library only knows how to turn notes into an ics string and how to send that string back correctly.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcalendar@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "libCalendar.js", "type": "code", "mime": "application/javascript;env=hybrid", "sourceUrl": "libCalendar.js"}
+        ],
+        "children": [
+            {"parent": "lib", "addon": "libical@kewisch", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar-event"}
+        ],
+        "dependencies": ["libical@kewisch"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

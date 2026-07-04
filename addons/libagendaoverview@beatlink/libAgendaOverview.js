@@ -1,6 +1,6 @@
 const notifications = require("libNotification.js")
 const task = require("libAgendaTask.js")
-const ical = require("ical.min.js")
+const { generateCalendar } = require("libCalendar.js")
 const multisort = require("libMultisort.js")
 
 
@@ -247,36 +247,12 @@ async function rescheduleAllTasks(profileNoteIds, constants, icalNoteId, days = 
 
 async function setCalendarEvents(profileNoteIds, constants, icalNoteId) {
     const taskList = await getTaskList(profileNoteIds)
-
-    // Generate caldav object from found tasks
-    let calendar = new ical.Component(['vcalendar', [], []]);
-    calendar.updatePropertyWithValue('prodid', '-//Beatlink/Trilium Calendar Script');
-    calendar.updatePropertyWithValue('version', '2.0');
-    let now = new ical.Time.now()
-    for (let taskId of taskList) {
-        let task = await api.getNote(taskId)
-        let startDate = task.getLabelValue(constants.START_DATETIME_LABEL)
-        let dueDate = task.getLabelValue(constants.DUE_DATETIME_LABEL)
-        let recurrence = task.getLabelValue(constants.RECURRENCE_LABEL)
-        if (
-            (startDate) && (startDate != "")
-            && (dueDate) && (dueDate != "")
-        ){
-            let vevent = new ical.Component("vevent")
-            let event = new ical.Event(vevent)
-            vevent.updatePropertyWithValue('dtstamp', now);
-            event.uid = String(task.noteId)
-            event.summary = String(task.title)
-            event.startDate = ical.Time.fromJSDate(new Date(startDate))
-            event.endDate = ical.Time.fromJSDate(new Date(dueDate))
-            if (recurrence) {
-                vevent.updatePropertyWithValue("rrule", ical.Recur.fromString(recurrence))
-            }
-            calendar.addSubcomponent(vevent)
-        }
-    }
-    // Save ical data to file
-    let icalString = calendar.toString()
+    const notes = await Promise.all(taskList.map(taskId => api.getNote(taskId)))
+    const icalString = generateCalendar(notes, {
+        startDateLabel: constants.START_DATETIME_LABEL,
+        dueDateLabel: constants.DUE_DATETIME_LABEL,
+        recurrenceLabel: constants.RECURRENCE_LABEL
+    })
     await api.runOnBackend((icalNoteId, icalString) => {
         const icalNote = api.getNote(icalNoteId)
         icalNote.setContent(icalString, {forceSave: true})

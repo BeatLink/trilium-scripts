@@ -1,0 +1,54 @@
+{
+    "id": "simplecalendar@beatlink",
+    "name": "Simple Calendar",
+    "description": "Shows a FullCalendar day/week/month view of either an external ics feed URL, or notes matching a configurable Trilium search, mapped to start/due date labels. Settings-driven, no manual note setup required.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "settingsNote": "settings-page",
+        "notes": [
+            {"id": "root",          "title": "simplecalendar@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "view",          "title": "view.jsx",                "type": "code",   "mime": "text/jsx",                            "sourceUrl": "view.jsx"},
+            {"id": "settings-page", "title": "Settings",                "type": "render", "mime": "text/html",                          "sourceUrl": null},
+            {"id": "settings",      "title": "settings.jsx",            "type": "code",   "mime": "text/jsx",                            "sourceUrl": "settings.jsx"},
+            {"id": "schema",        "title": "schema.json",             "type": "code",   "mime": "application/json",                    "sourceUrl": "schema.json"},
+            {"id": "config",        "title": "config.json",             "type": "code",   "mime": "application/json",                    "sourceUrl": "config.json"},
+            {"id": "feed",          "title": "simpleCalendarFeed.js",   "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "simpleCalendarFeed.js"}
+        ],
+        "children": [
+            {"parent": "root",     "child": "view"},
+            {"parent": "root",     "child": "settings-page"},
+            {"parent": "settings-page", "child": "settings"},
+            {"parent": "root",     "child": "schema"},
+            {"parent": "root",     "child": "config"},
+            {"parent": "root",     "child": "feed"},
+            {"parent": "view",     "addon": "libcalendarwidget@beatlink", "child": "lib"},
+            {"parent": "view",     "addon": "libsettings@beatlink",      "child": "ui"},
+            {"parent": "settings", "addon": "libsettings@beatlink",      "child": "ui"},
+            {"parent": "feed",     "addon": "libsettings@beatlink",      "child": "backend"},
+            {"parent": "feed",     "addon": "libcalendar@beatlink",      "child": "lib"}
+        ],
+        "relations": [
+            {"from": "settings",      "type": "AddonData:config", "to": "config"},
+            {"from": "settings",      "type": "schemaNote",        "to": "schema"},
+            {"from": "view",          "type": "schemaNote",        "to": "schema"},
+            {"from": "view",          "type": "settingsNote",      "to": "settings"},
+            {"from": "feed",          "type": "schemaNote",        "to": "schema"},
+            {"from": "feed",          "type": "settingsNote",      "to": "settings"},
+            {"from": "root",          "type": "renderNote",        "to": "view"},
+            {"from": "settings-page", "type": "renderNote",        "to": "settings"}
+        ],
+        "labels": [
+            {"note": "root", "name": "iconClass", "value": "bx bx-calendar-week"},
+            {"note": "feed", "name": "iconClass", "value": "bx bx-calendar-week"},
+            {"note": "feed", "name": "customRequestHandler", "value": "simpleCalendarFeed"}
+        ],
+        "dependencies": ["libcalendarwidget@beatlink", "libcalendar@beatlink", "libsettings@beatlink"],
+        "exports": {}
+    }
+}

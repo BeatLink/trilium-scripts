@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendaoverview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "library",
     "readme": "README.md",
     "manifest": {
@@ -16,14 +16,14 @@
         "children": [
             {"parent": "lib", "addon": "libagendatask@beatlink",  "child": "lib"},
             {"parent": "lib", "addon": "libnotification@beatlink", "child": "lib"},
-            {"parent": "lib", "addon": "libical@kewisch",          "child": "lib"},
+            {"parent": "lib", "addon": "libcalendar@beatlink",     "child": "lib"},
             {"parent": "lib", "addon": "libmultisort@beatlink",    "child": "lib"}
         ],
         "relations": [],
         "labels": [
             {"note": "lib", "name": "iconClass", "value": "bx bx-calendar-check"}
         ],
-        "dependencies": ["libagendatask@beatlink", "libnotification@beatlink", "libical@kewisch", "libmultisort@beatlink"],
+        "dependencies": ["libagendatask@beatlink", "libnotification@beatlink", "libcalendar@beatlink", "libmultisort@beatlink"],
         "exports": {
             "lib": "lib"
         }
