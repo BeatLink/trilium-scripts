@@ -1,0 +1,28 @@
+{
+    "id": "librecurrence@beatlink",
+    "name": "Recurrence",
+    "description": "Converts between an RRULE string and a plain object shaped for a recurrence-picker UI, on top of the vendored rrule.js library.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librecurrence@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "libRecurrence.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libRecurrence.js"}
+        ],
+        "children": [
+            {"parent": "lib", "addon": "librrule@jkbrzt", "child": "lib"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-repeat"}
+        ],
+        "dependencies": ["librrule@jkbrzt"],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

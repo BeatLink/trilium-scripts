@@ -1,0 +1,26 @@
+{
+    "id": "libical@kewisch",
+    "name": "ical.js",
+    "description": "Vendored ical.js library (iCalendar/RFC 5545 parsing and generation) bundled as a reusable TriliumNext library.",
+    "author": "kewisch",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libical@kewisch",
+    "license": "MPL-2.0",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "ical.min.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "ical.min.js"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}

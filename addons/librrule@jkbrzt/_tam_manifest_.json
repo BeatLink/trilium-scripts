@@ -1,0 +1,26 @@
+{
+    "id": "librrule@jkbrzt",
+    "name": "rrule.js",
+    "description": "Vendored rrule.js library (RFC 5545 recurrence rules) bundled as a reusable TriliumNext library.",
+    "author": "jkbrzt",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librrule@jkbrzt",
+    "license": "MIT",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {"id": "lib", "title": "rrule.min.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "rrule.min.js"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "lib", "name": "iconClass", "value": "bx bx-repeat"}
+        ],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        }
+    }
+}
