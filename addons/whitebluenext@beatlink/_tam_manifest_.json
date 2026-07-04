@@ -1,0 +1,26 @@
+{
+    "id": "whitebluenext@beatlink",
+    "name": "WhiteBlueNext",
+    "description": "This theme has a heavy emphasis on the use of white backgrounds throughout the interface for light users. Light greys and other non white colors are removed where possible. A light blue color is used as an accent for controls, headings and other areas of interest",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluenext@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "theme",
+    "readme": "README.md",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {"id": "root", "title": "whitebluenext@beatlink", "type": "code", "mime": "text/css", "sourceUrl": "whitebluenext@beatlink.css"}
+        ],
+        "children": [],
+        "relations": [],
+        "labels": [
+            {"note": "root", "name": "appThemeBase", "value": "next"},
+            {"note": "root", "name": "appTheme",     "value": "WhiteBlueNext"},
+            {"note": "root", "name": "iconClass",    "value": "bx bx-code"}
+        ],
+        "dependencies": [],
+        "exports": {}
+    }
+}
