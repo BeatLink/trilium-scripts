@@ -5,7 +5,7 @@
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
-    "latestVersion": "0.7.1",
+    "latestVersion": "0.7.2",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
@@ -13,13 +13,15 @@
         "notes": [
             {"id": "root",     "title": "drawio@siriusxt",  "type": "text",  "mime": "text/html",                           "sourceUrl": null},
             {"id": "widget",   "title": "trilium-drawio",   "type": "code",  "mime": "application/javascript;env=frontend", "sourceUrl": "trilium-drawio.js"},
-            {"id": "template", "title": "drawio",           "type": "image", "mime": "image/svg+xml",                       "sourceUrl": "drawio.svg"}
+            {"id": "template", "title": "drawio",           "type": "image", "mime": "image/svg+xml",                       "sourceUrl": "drawio.svg", "promptOnUpdate": true}
         ],
         "children": [
             {"parent": "root", "child": "widget"},
             {"parent": "root", "child": "template"}
         ],
-        "relations": [],
+        "relations": [
+            {"from": "root", "type": "AddonData:template", "to": "template"}
+        ],
         "labels": [
             {"note": "root",     "name": "iconClass", "value": "bx bx-shape-square"},
             {"note": "widget",   "name": "widget",    "value": ""},

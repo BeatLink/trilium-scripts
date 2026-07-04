@@ -65,7 +65,12 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 - **`skipOnUpdate`** (note never overwritten on update — settings/database notes) and
   **`promptOnUpdate`** (user is shown a Keep-Mine-vs-Use-New-Default diff on update — customizable
   content notes) control TAM's update behavior; both only make sense on notes also tracked by an
-  `AddonData:key` persistence relation.
+  `AddonData:key` persistence relation. To make a note persistent + promptable, add both
+  `"promptOnUpdate": true` on the note and a `{"from": "root", "type": "AddonData:<local-note-id>",
+  "to": "<local-note-id>"}` relation (see `templates@beatlink` or `drawio@siriusxt` for examples) —
+  the key by convention matches the note's local manifest id.
+- **`latestVersion`** must be bumped whenever a manifest's structure or note content changes —
+  that's the only thing that makes TAM show existing installs an update prompt.
 
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full
@@ -83,3 +88,9 @@ install/update/persistence/self-update state machine — it's long and not worth
 
 Always run `validate` before considering the change done. Use `export_zip addons/{id}/` if you need
 to hand someone (or yourself, for manual Trilium import testing) a ZIP without waiting for CI.
+
+## Maintaining this file
+
+Keep this file up to date as the repo evolves: when a task reveals a convention, gotcha, or workflow
+not already captured here (e.g. a new script, a new manifest field convention, a recurring mistake),
+update the relevant section in the same session rather than leaving it for later.
