@@ -86,7 +86,16 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   additional bare pseudo-global parameter (`highlight.min.js` → `highlightminjs`) alongside
   `require()`, not instead of it.
 - **`children[]`** — parent/child tree structure, either local (`{parent, child}`) or cross-addon
-  (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map).
+  (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map). A local
+  note **can** be listed under more than one parent within the same manifest (a same-addon clone —
+  e.g. a shared settings-resolver note pulled in as a child of several widget notes so `require()`/
+  `import` can find it from each). `lib-tam.js`'s `createNotes` (fixed in TAM 2.5.2) creates the note
+  once under whichever `{parent, child}` entry appears first, then wires every later entry as a real
+  clone via `api.toggleNoteInParent` — before that fix it used a flat `child → parent` map, which
+  silently overwrote earlier entries and left the note attached only to whichever parent was *last*
+  in the array (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, and `togglenotes@beatlink`,
+  2 separate cases, for real examples this broke). `export_zip.py`'s `process_manifest` has the same
+  first-occurrence-is-real / later-occurrences-are-clones handling for the same reason.
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
   local-vs-cross-addon shape.
 - **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link
@@ -141,6 +150,34 @@ Database" button) audits all of this against the live note tree — dependency/d
 symmetric, every recorded note id (root, noteMap, exportedNotes, settingsNoteId, persistence
 root/notes) still exists, and every live `AddonData:` relation still points at the persisted copy
 TAM thinks it does — returning a flat list of issues rather than silently trusting the database.
+
+### `api.currentNote` vs `api.startNote` vs the active-note-context
+
+Three distinct notions of "which note", easy to conflate and a real source of bugs:
+
+- **`api.currentNote`** — the note whose *code* is currently executing. Inside a single bundle
+  (a widget note plus everything it `require()`s/imports), this changes per module: code physically
+  written in a shared library note sees `currentNote` as *that library's own note*, not the note that
+  imported it.
+- **`api.startNote`** (also importable as `startNote` from `"trilium:api"`) — the note that kicked
+  off the whole execution (e.g. the widget note with the `widget` label that Trilium actually
+  loaded). This stays the same across every module in that bundle, including shared libraries it
+  imports.
+- **`useActiveNoteContext()`'s `note`** (Preact-only) — the note the user currently has open/visible
+  in the main editor pane. Unrelated to either of the above; a persistent right-pane widget's own
+  note stays fixed while this changes as the user navigates.
+
+The bug this caused: a shared helper (`getAgendaSettings()` in `agenda@beatlink/agendaSettings.jsx`)
+read `api.currentNote.getRelationValue("schemaNote")` to fetch relations that live on *whichever
+widget note imports it* (`task`/`overview`/`now-window`, each carrying its own `schemaNote`/
+`settingsNote`/etc. relations per the manifest) — but since that code physically lives in
+`agendaSettings.jsx`'s own note (which has zero attributes), `currentNote` resolved to itself, not
+the caller, and the relation lookups silently returned `null`. Fixed by switching to `startNote`,
+which correctly stays bound to whichever widget note started the bundle regardless of which shared
+module the code calling it lives in. Rule of thumb: any code reading relations that the *manifest*
+places on a specific note (not the note the function happens to be written in) should use
+`startNote`, never `currentNote` — `currentNote` only does what you want when the reading code and
+the relation-bearing note are guaranteed to be the same note.
 
 ### Library note titles must be fully qualified
 

@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.5.1"
+const TAM_VERSION = "2.5.2"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -191,20 +191,32 @@ function topologicalSort(noteIds, parentMap) {
 }
 
 async function createNotes(m, addonRootNoteId) {
-    const parentMap = {}
+    // A local note can be listed as a child of more than one parent within
+    // the same manifest (a same-addon clone, e.g. a shared settings note
+    // pulled into several widgets) — only the first occurrence is where the
+    // note actually gets created; every later occurrence is wired up as an
+    // additional clone branch afterward. A flat parent-per-child map would
+    // silently drop every parent but the last one processed.
+    const primaryParent = {}
+    const extraParents = {}
     for (const c of (m.children || []).filter(c => !c.addon)) {
-        parentMap[c.child] = c.parent
+        if (!(c.child in primaryParent)) {
+            primaryParent[c.child] = c.parent
+        } else {
+            extraParents[c.child] = extraParents[c.child] || []
+            extraParents[c.child].push(c.parent)
+        }
     }
 
     const noteIds = m.notes.map(n => n.id)
-    const sortedIds = topologicalSort(noteIds, parentMap)
+    const sortedIds = topologicalSort(noteIds, primaryParent)
 
     const noteMap = {}
     for (const localId of sortedIds) {
         const noteDef = m.notes.find(n => n.id === localId)
         if (!noteDef) continue
 
-        const parentLocalId = parentMap[localId]
+        const parentLocalId = primaryParent[localId]
         const parentRealId = parentLocalId ? noteMap[parentLocalId] : addonRootNoteId
         const content   = noteDef.content  ?? ""
         const noteType  = noteDef.type     ?? "text"
@@ -227,6 +239,19 @@ async function createNotes(m, addonRootNoteId) {
         )
         noteMap[localId] = realNoteId
     }
+
+    for (const [childLocalId, parentLocalIds] of Object.entries(extraParents)) {
+        const childRealId = noteMap[childLocalId]
+        if (!childRealId) continue
+        for (const parentLocalId of parentLocalIds) {
+            const parentRealId = noteMap[parentLocalId]
+            if (!parentRealId) continue
+            await api.runOnBackend((sourceId, parentId) => {
+                api.toggleNoteInParent(true, sourceId, parentId)
+            }, [childRealId, parentRealId])
+        }
+    }
+
     return noteMap
 }
 

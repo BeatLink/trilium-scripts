@@ -63,10 +63,20 @@ def process_manifest(full_manifest, addon_dir, deps_map):
     notes_by_id = {n["id"]: n for n in m.get("notes", [])}
     uuid_map    = {lid: gen_note_id() for lid in notes_by_id}
 
+    # A local child can be listed under more than one parent (a same-addon
+    # clone, e.g. a shared settings note pulled into several widgets). Only
+    # the first occurrence actually builds/writes the note; every later
+    # occurrence becomes a plain isClone reference to the same generated
+    # noteId, mirroring how cross-addon dependency children already work.
     children_map = {}
+    seen_local_children = set()
     for c in m.get("children", []):
-        if not c.get("addon"):
-            children_map.setdefault(c["parent"], []).append(c["child"])
+        if c.get("addon"):
+            continue
+        child_lid = c["child"]
+        is_clone_ref = child_lid in seen_local_children
+        seen_local_children.add(child_lid)
+        children_map.setdefault(c["parent"], []).append((child_lid, is_clone_ref))
 
     dep_children_map = {}
     for c in m.get("children", []):
@@ -180,10 +190,20 @@ def process_manifest(full_manifest, addon_dir, deps_map):
             pos += 10
 
         child_entries = []
-        for i, child_lid in enumerate(local_children, start=1):
-            child_entries.append(
-                build_entry(child_lid, i * 10, child_prefix, current_path)
-            )
+        for i, (child_lid, is_clone_ref) in enumerate(local_children, start=1):
+            if is_clone_ref:
+                child_entries.append({
+                    "isClone":      True,
+                    "noteId":       uuid_map[child_lid],
+                    "notePath":     current_path + [uuid_map[child_lid]],
+                    "notePosition": i * 10,
+                    "prefix":       None,
+                    "isExpanded":   False,
+                })
+            else:
+                child_entries.append(
+                    build_entry(child_lid, i * 10, child_prefix, current_path)
+                )
 
         for j, dep_c in enumerate(dep_children, start=len(local_children) + 1):
             dep_id      = dep_c["addon"]

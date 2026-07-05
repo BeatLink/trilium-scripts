@@ -187,7 +187,7 @@ When a dependent addon references `"addon": "this-addon@author", "child": "lib"`
 
 1. TAM fetches `{repoId}.json` from the GitHub release (the addon's full manifest with inlined content).
 2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated (delete + reinstall, same as a manual update) first if already installed at an older version than the dependency's own `latestVersion`. Either way, this addon is then recorded as a **dependent** of each dependency — see [Dependency Tracking](#dependency-tracking).
-3. Notes are created in topological order (parents before children) under the Addons root note, using `api.createTextNote`.
+3. Notes are created in topological order (parents before children) under the Addons root note, using `api.createTextNote`. A local note listed under more than one parent in `children[]` (a same-addon clone) is only actually created once, under whichever entry appears first — every later entry clones it into that additional parent with `api.toggleNoteInParent` instead of creating a duplicate note.
 4. Cross-addon children are wired using `api.toggleNoteInParent` to create a clone branch from the dependency note into the new parent.
 5. Labels are applied with `note.setLabel`.
 6. Relations are applied with `note.setRelation`. Cross-addon relations resolve the target note ID through the dependency's stored `exportedNotes` map.
