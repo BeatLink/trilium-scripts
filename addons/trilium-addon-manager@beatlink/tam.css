@@ -40,7 +40,27 @@
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
     border-radius: 8px !important;
+    /* Clips .TAM-header's now-square top corners to this same radius —
+       the header spans edge-to-edge (no radius of its own, see below) so
+       it needs the parent to do the rounding for it. */
+    overflow: hidden !important;
     padding: 0 !important;
+
+    /* The header spans full width with zero inset (see .TAM-header below);
+       every other direct child gets its own horizontal inset instead, so
+       only the header actually touches the left/right edges. Matches the
+       header's own horizontal padding for visual alignment. The last
+       non-header child also gets a bottom inset so content doesn't touch
+       the very bottom edge either — anything before it already gets its
+       gap from the `> * + *` rule below plus the next sibling's own inset. */
+    & > *:not(.TAM-header) {
+        margin-left: 24px !important;
+        margin-right: 24px !important;
+
+        &:last-child {
+            margin-bottom: 24px !important;
+        }
+    }
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */
@@ -102,10 +122,10 @@
     }
 }
 
-/* The website's own .back link is light blue (#93c5fd) because it sits
-   inside the dark header bar; TAM's "Back to Addons" sits in the white
-   sidebar/settings card instead, so it uses the site's regular link blue
-   for contrast rather than copying that value out of its original context. */
+/* Unlike the website's own .back link (light blue #93c5fd, tuned for
+   contrast against its dark header bar), TAM keeps every link — including
+   this one, despite it living in .TAM-header too — on the site's one
+   regular link color, per instruction: no per-context color variants. */
 .TAM-back {
     display: block !important;
     color: #2563eb !important;
@@ -130,11 +150,14 @@
     to { transform: rotate(360deg); }
 }
 
-/* Header -------------------------------------------------------------------- */
+/* Header --------------------------------------------------------------------
+   No border-radius of its own — it spans .TAM-body edge-to-edge (see the
+   `> *:not(.TAM-header)` margin rule above); .TAM-body's own overflow:hidden
+   clips its square top corners to match the body's rounded shape. Padding
+   matches the website's header (28px vertical) + .hdr (24px horizontal). */
 .TAM-header {
     background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
-    border-radius: 8px !important;
-    padding: 36px 32px !important;
+    padding: 28px 24px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -142,15 +165,19 @@
     flex-wrap: wrap !important;
     color: #fff !important;
 
-    @media (max-width: 700px) {
+    @media (max-width: 768px) {
         flex-direction: column !important;
         align-items: flex-start !important;
     }
 }
 
 .TAM-header-titles {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+
     & h2 {
-        font-size: 28px !important;
+        font-size: 26px !important;
         font-weight: 700 !important;
         letter-spacing: -0.4px !important;
         line-height: 1.3 !important;
@@ -178,14 +205,13 @@
     flex: 1 !important;
     min-width: 200px !important;
     width: 100% !important;
-    height: 44px !important;
-    padding: 0 14px 0 40px !important;
+    padding: 9px 12px 9px 34px !important;
     border: 1.5px solid #e2e8f0 !important;
     border-radius: 8px !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
     color: #0f172a !important;
-    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 14px center !important;
-    background-size: 16px 16px !important;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 11px center !important;
+    background-size: 15px 15px !important;
     outline: none !important;
     transition: border-color 0.15s, box-shadow 0.15s !important;
 
@@ -207,15 +233,11 @@
 
 .TAM-filter-pill {
     --c: var(--TAM-accent) !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    height: 44px !important;
-    line-height: 1 !important;
-    padding: 0 20px !important;
-    border-radius: 22px !important;
+    padding: 7px 16px !important;
+    border-radius: 20px !important;
     border: 1.5px solid #e2e8f0 !important;
     background: #fff !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     letter-spacing: 0.03em !important;
     text-transform: uppercase !important;
@@ -349,7 +371,7 @@
     gap: 28px !important;
     align-items: start !important;
 
-    @media (max-width: 700px) {
+    @media (max-width: 768px) {
         grid-template-columns: 1fr !important;
     }
 }
@@ -365,7 +387,7 @@
     flex-direction: column !important;
     gap: 10px !important;
 
-    @media (max-width: 700px) {
+    @media (max-width: 768px) {
         position: static !important;
     }
 
@@ -401,6 +423,13 @@
         padding-right: 12px !important;
         white-space: nowrap !important;
         width: 1% !important;
+    }
+
+    & code {
+        font-size: 11px !important;
+        background: #f1f5f9 !important;
+        padding: 1px 4px !important;
+        border-radius: 3px !important;
     }
 }
 

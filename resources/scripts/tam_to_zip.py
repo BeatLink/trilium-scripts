@@ -143,6 +143,14 @@ def process_manifest(full_manifest, addon_dir, deps_map):
 
         dir_name = base if has_children else None
 
+        # A title that already includes its own extension (e.g. "libTAM.js")
+        # makes data_name == base == dir_name once the note gains a child —
+        # impossible on a real filesystem/zip (the same path can't be both a
+        # file and a directory). Disambiguate by reserving a second name in
+        # the same collision-avoidance bucket already used for sibling titles.
+        if dir_name is not None and dir_name == data_name:
+            dir_name = unique_base(dir_prefix, dir_name)
+
         if note_type == "render":
             content = b""
         else:

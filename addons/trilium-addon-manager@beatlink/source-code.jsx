@@ -74,6 +74,43 @@ function computeStats(addons, catalogs) {
 }
 
 
+// Shared by ListView and CatalogBrowseView — both need the same
+// search-box + type-filter-pills toolbar over a grid of addons.
+function SearchFilterToolbar({ search, onSearchChange, typeFilter, onTypeFilterChange, availableTypes }) {
+    return (
+        <div className="TAM-toolbar">
+            <input
+                type="text"
+                className="TAM-search"
+                placeholder="Search addons..."
+                value={search}
+                onChange={e => onSearchChange(e.target.value)}
+            />
+            {availableTypes.length > 0 && (
+                <div className="TAM-filters">
+                    <button
+                        className={`TAM-filter-pill${typeFilter === null ? " TAM-filter-active" : ""}`}
+                        onClick={() => onTypeFilterChange(null)}
+                    >
+                        All
+                    </button>
+                    {availableTypes.map(type => (
+                        <button
+                            key={type}
+                            className={`TAM-filter-pill${typeFilter === type ? " TAM-filter-active" : ""}`}
+                            style={{ "--c": typeColor(type) }}
+                            onClick={() => onTypeFilterChange(type)}
+                        >
+                            {titleCase(type)}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
 // List View -------------------------------------------------------------------
 function AddonCard({ addonData, onOpen, onInstall }) {
     return (
@@ -140,35 +177,13 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
                     </div>
                 </div>
             )}
-            <div className="TAM-toolbar">
-                <input
-                    type="text"
-                    className="TAM-search"
-                    placeholder="Search addons..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
-                {availableTypes.length > 0 && (
-                    <div className="TAM-filters">
-                        <button
-                            className={`TAM-filter-pill${typeFilter === null ? " TAM-filter-active" : ""}`}
-                            onClick={() => setTypeFilter(null)}
-                        >
-                            All
-                        </button>
-                        {availableTypes.map(type => (
-                            <button
-                                key={type}
-                                className={`TAM-filter-pill${typeFilter === type ? " TAM-filter-active" : ""}`}
-                                style={{ "--c": typeColor(type) }}
-                                onClick={() => setTypeFilter(type)}
-                            >
-                                {titleCase(type)}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <SearchFilterToolbar
+                search={search}
+                onSearchChange={setSearch}
+                typeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
+                availableTypes={availableTypes}
+            />
 
             {allAddons.length === 0 ? (
                 <div className="TAM-empty-state">
@@ -192,21 +207,45 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
 
 
 // Catalog Browse View -----------------------------------------------------------
-function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds, onBack, onOpenAddon, onInstall }) {
+function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds, onOpenAddon, onInstall }) {
+    const [search, setSearch] = useState("")
+    const [typeFilter, setTypeFilter] = useState(null)
+
+    const availableTypes = [...new Set(entries.map(a => a.type))].filter(Boolean).sort()
+    const searchLower = search.trim().toLowerCase()
+    const visible = entries.filter(addonData => {
+        if (typeFilter && addonData.type !== typeFilter) return false
+        if (!searchLower) return true
+        return [addonData.name, addonData.description, addonData.author]
+            .some(field => (field || "").toLowerCase().includes(searchLower))
+    })
+
     return (
         <div>
-            <BackLink onClick={onBack} text="Back to Addons" />
             <h2>Browsing: {catalogUrl}</h2>
             {webUrl && <p><a href={webUrl} target="_blank">Visit Website ↗</a></p>}
+            {!loading && entries.length > 0 && (
+                <SearchFilterToolbar
+                    search={search}
+                    onSearchChange={setSearch}
+                    typeFilter={typeFilter}
+                    onTypeFilterChange={setTypeFilter}
+                    availableTypes={availableTypes}
+                />
+            )}
             {loading ? (
                 <Spinner />
             ) : entries.length === 0 ? (
                 <div className="TAM-empty-state">
                     <p>No addons found at this catalog (or it couldn't be fetched).</p>
                 </div>
+            ) : visible.length === 0 ? (
+                <div className="TAM-empty-state">
+                    <p>No addons match your search.</p>
+                </div>
             ) : (
                 <div className="TAM-grid">
-                    {entries.map(addonData => (
+                    {visible.map(addonData => (
                         installedIds.has(addonData.id) ? (
                             <AddonCard key={addonData.id} addonData={{ ...addonData, installedVersion: "installed" }} onOpen={() => onOpenAddon(addonData.id)} />
                         ) : (
@@ -221,7 +260,7 @@ function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds,
 
 
 // Addon Detail View -------------------------------------------------------------
-function AddonDetail({ addonData, isSelf, onBack, onInstall, onDelete, onUpdate, onEnable }) {
+function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnable }) {
     const [readmeHtml, setReadmeHtml] = useState(null)
     const [readmeLoading, setReadmeLoading] = useState(false)
 
@@ -242,7 +281,6 @@ function AddonDetail({ addonData, isSelf, onBack, onInstall, onDelete, onUpdate,
     return (
         <div className="TAM-addon-layout">
             <div className="TAM-addon-sidebar">
-                <BackLink onClick={onBack} />
                 <Badge type={addonData.type} />
                 <h2>{addonData.name}</h2>
                 <table className="TAM-meta-table">
@@ -331,14 +369,12 @@ function NewAddonByUrl({ onSave }) {
 }
 
 function SettingsView({
-    addons, catalogs, onBack, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onInstallByUrl, onCheckUpdates, onUpdateAll,
+    addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onInstallByUrl, onCheckUpdates, onUpdateAll,
     onValidate, onCleanup, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
         <div className="TAM-settings">
-            <BackLink onClick={onBack} />
-
             <div>
                 <h3>Statistics</h3>
                 <div className="TAM-stats-grid">
@@ -672,7 +708,6 @@ export default function RepoManager() {
                 addons={addons}
                 catalogs={catalogs}
                 anyUpdateAvailable={anyUpdateAvailable}
-                onBack={() => setView({ type: "list" })}
                 onAddCatalog={url => setCommand({ command: "add-catalog", url })}
                 onDeleteCatalog={url => setCommand({ command: "delete-catalog", url })}
                 onVisitCatalogWebsite={url => setCommand({ command: "visit-catalog-website", url })}
@@ -692,7 +727,6 @@ export default function RepoManager() {
                 entries={catalogBrowse?.entries ?? []}
                 loading={catalogBrowse?.loading ?? true}
                 installedIds={installedIds}
-                onBack={() => setView({ type: "list" })}
                 onOpenAddon={addonId => setView({ type: "detail", addonId })}
                 onInstall={entryData => {
                     const catalogContext = Object.fromEntries(
@@ -710,13 +744,12 @@ export default function RepoManager() {
     } else if (view.type === "detail") {
         const addonData = addons[view.addonId]
         if (!addonData) {
-            bodyContent = <p>Addon not found. <BackLink onClick={() => setView({ type: "list" })} /></p>
+            bodyContent = <p>Addon not found.</p>
         } else {
             bodyContent = (
                 <AddonDetail
                     addonData={addonData}
                     isSelf={view.addonId === TAM_ID}
-                    onBack={() => setView({ type: "list" })}
                     onInstall={entryData => setCommand({
                         command: "install-addon",
                         addon: entryData.id,
@@ -748,6 +781,9 @@ export default function RepoManager() {
         <div className="TAM-body">
             <div className="TAM-header">
                 <div className="TAM-header-titles">
+                    {view.type !== "list" && (
+                        <BackLink onClick={() => setView({ type: "list" })} />
+                    )}
                     <h2>Trilium Addon Manager</h2>
                 </div>
                 {view.type === "list" && (
