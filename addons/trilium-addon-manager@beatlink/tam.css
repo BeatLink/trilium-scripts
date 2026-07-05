@@ -15,6 +15,17 @@
     padding: 1rem;
 }
 
+/* This widget's own headings (card/section titles) are plain UI chrome, not
+   note content — override Trilium's note-content heading style (which tints
+   headings with the link color) so they read as normal text. */
+.TAM-body h1, .TAM-body h2, .TAM-body h3, .TAM-body h4, .TAM-body h5 {
+    color: var(--main-text-color);
+}
+
+.TAM-header h2 {
+    color: #fff;
+}
+
 .TAM-body > * + * {
     margin-top: 1rem;
 }
@@ -59,6 +70,19 @@
 
 .TAM-search input {
     width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--main-border-color);
+    background-color: var(--main-background-color);
+    color: var(--main-text-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9rem;
+}
+
+.TAM-search input:focus {
+    outline: none;
+    border-color: var(--TAM-accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .TAM-filters {
@@ -150,6 +174,7 @@
 
 .TAM-card-title {
     margin: 0;
+    color: var(--main-text-color);
 }
 
 .TAM-card-meta {
@@ -205,6 +230,7 @@
 .TAM-addon-sidebar h2 {
     margin: 0;
     font-size: 1.1rem;
+    color: var(--main-text-color);
 }
 
 .TAM-meta-table {
