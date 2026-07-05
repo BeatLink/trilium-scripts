@@ -98,13 +98,24 @@
     margin: 0;
 }
 
-.TAM-validation-results ul {
+.TAM-validation-content {
+    font-family: monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
     margin: 0;
-    padding-left: 1.25rem;
+    padding: 0.75rem;
+    background-color: var(--main-background-color);
+    border-radius: 0.5rem;
+    user-select: all;
 }
 
-.TAM-validation-results button.btn.btn-secondary {
-    align-self: flex-start;
+.TAM-validation-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
 }
 
 /* Prompt Review */

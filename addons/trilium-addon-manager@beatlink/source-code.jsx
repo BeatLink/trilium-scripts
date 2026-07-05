@@ -422,19 +422,27 @@ export default function RepoManager() {
                             : `${validationIssues.length} issue(s) found`}
                     </h4>
                     {validationIssues.length > 0 && (
-                        <ul>
-                            {validationIssues.map((issue, i) => (
-                                <li key={i}>
-                                    <strong>{issue.repoId} / {issue.addonId}</strong>: {issue.message}
-                                </li>
-                            ))}
-                        </ul>
+                        <pre className="TAM-validation-content">
+                            {validationIssues.map(issue => `${issue.repoId} / ${issue.addonId}: ${issue.message}`).join("\n")}
+                        </pre>
                     )}
-                    <Button
-                        icon="bx bx-x"
-                        text="Dismiss"
-                        onClick={e => { setValidationIssues(null) }}
-                    />
+                    <div className="TAM-validation-buttons">
+                        {validationIssues.length > 0 && <Button
+                            icon="bx bx-copy"
+                            text="Copy to Clipboard"
+                            onClick={e => {
+                                const text = validationIssues
+                                    .map(issue => `${issue.repoId} / ${issue.addonId}: ${issue.message}`)
+                                    .join("\n")
+                                navigator.clipboard.writeText(text)
+                            }}
+                        />}
+                        <Button
+                            icon="bx bx-x"
+                            text="Dismiss"
+                            onClick={e => { setValidationIssues(null) }}
+                        />
+                    </div>
                 </div>
             )}
             <div>

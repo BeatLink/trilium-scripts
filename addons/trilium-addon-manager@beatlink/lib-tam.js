@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.5.0"
+const TAM_VERSION = "2.5.1"
 const addonLabels = [
     "widget",
     "renderNote",
