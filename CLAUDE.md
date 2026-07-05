@@ -25,21 +25,27 @@ Python tooling is only available inside the Nix dev shell — `python3`/`gh` are
 Either `nix-shell` into an interactive shell, or run one-off commands with `nix-shell --run "..."`:
 
 ```bash
-nix-shell --run "python3 scripts/validate.py"
+nix-shell --run "python3 resources/scripts/validate.py"
 ```
 
 Inside `nix-shell`, these shell functions are defined (see `shell.nix`):
 
 ```bash
-validate                   # scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
-strip                      # scripts/strip_no_import.py — delete noImport-flagged files from a raw Trilium export
-publish                    # scripts/publish.py — build metadata.json + per-addon {id}.json (inlines sourceUrl content)
+validate                   # resources/scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
+strip                      # resources/scripts/strip_no_import.py — delete noImport-flagged files from a raw Trilium export
+publish                    # resources/scripts/publish.py — build metadata.json + per-addon {id}.json (inlines sourceUrl content)
 ci                         # validate && publish
-import_addon <zip>         # scripts/import_addon.py — legacy pre-TAM importer, kept for reference only
-generate_pages             # scripts/generate_pages.py — build docs/ (GitHub Pages) and regenerate README.md
-convert_zip <zip>          # scripts/convert_zip.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
-export_zip <manifest-dir>  # scripts/export_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
+import_addon <zip>         # resources/scripts/import_addon.py — legacy pre-TAM importer, kept for reference only
+generate_pages             # resources/scripts/generate_pages.py — build docs/ (GitHub Pages) and regenerate README.md
+convert_zip <zip>          # resources/scripts/convert_zip.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
+export_zip <manifest-dir>  # resources/scripts/export_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
+build_addon_zips           # resources/scripts/build_addon_zips.py — CI-only: {id}.zip for every addon via export_zip.py
+publish_release            # resources/scripts/publish_release.py — CI-only: upload *.json/*.zip to the 'latest' GitHub release
 ```
+
+Scripts live in `resources/scripts/`, not `scripts/` — all invocations (shell.nix functions and CI
+workflow steps) assume the process's cwd is the repository root, not the scripts directory itself,
+since several scripts resolve `addons/`/`docs/` as plain relative paths.
 
 `validate` is the closest thing to a test suite here — always run it after editing any
 `_tam_manifest_.json` or adding/removing addon source files. It checks required top-level fields,

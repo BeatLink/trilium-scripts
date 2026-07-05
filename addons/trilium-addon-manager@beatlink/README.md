@@ -480,7 +480,7 @@ TAM fetches `metadata.json` when you click "Update Repositories" and fetches `{a
 
 ## Scripts Reference
 
-All scripts live in `scripts/` and are run from the repository root.
+All scripts live in `resources/scripts/` and are run from the repository root.
 
 ### `validate.py`
 
@@ -498,7 +498,7 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 Run in CI before every publish. Exits with code 1 if any errors are found.
 
 ```
-python scripts/validate.py [--fix]
+python resources/scripts/validate.py [--fix]
 ```
 
 ### `publish.py`
@@ -509,7 +509,7 @@ Builds the distribution files released to GitHub:
 - Produces `metadata.json` — a merged registry of all addon metadata (top-level fields only, no manifest content).
 
 ```
-python scripts/publish.py
+python resources/scripts/publish.py
 ```
 
 ### `export_zip.py`
@@ -521,7 +521,7 @@ Converts a `_tam_manifest_.json` into a Trilium-importable ZIP export (the forma
 - Cross-addon clone children and relations are wired using the generated UUIDs, resolved via each dependency's `exports` map.
 
 ```
-python scripts/export_zip.py addons/{addon-id}/ [--out output.zip] [--addons-dir path/to/addons/]
+python resources/scripts/export_zip.py addons/{addon-id}/ [--out output.zip] [--addons-dir path/to/addons/]
 ```
 
 The `--addons-dir` defaults to the parent directory of the addon being exported (i.e., `addons/`). Override it if running from a different working directory.
@@ -538,7 +538,7 @@ Converts a Trilium export ZIP into a `_tam_manifest_.json` + flat source files. 
 - Outputs a `_tam_manifest_.json` with `FILL_IN` placeholders for top-level metadata fields that must be filled in manually.
 
 ```
-python scripts/convert_zip.py path/to/export.zip [--out ./output-dir/]
+python resources/scripts/convert_zip.py path/to/export.zip [--out ./output-dir/]
 ```
 
 After running, fill in the `FILL_IN` fields in `_tam_manifest_.json`, review the auto-generated local IDs, add `dependencies`/`exports` if needed, and set `skipOnUpdate`/`promptOnUpdate` on appropriate notes.
@@ -556,7 +556,7 @@ Generates the static GitHub Pages catalog site at `docs/`. For each addon:
 Also regenerates `README.md` from `README_base.md` by injecting an addon table between `<!-- GENERATED:START -->` and `<!-- GENERATED:END -->` markers.
 
 ```
-python scripts/generate_pages.py
+python resources/scripts/generate_pages.py
 ```
 
 Requires the `markdown` package (`pip install markdown`).
@@ -574,7 +574,7 @@ A cleanup utility for raw Trilium export directories. Trilium exports sometimes 
 - Removes those entries from `!!!meta.json`.
 
 ```
-python scripts/strip_no_import.py
+python resources/scripts/strip_no_import.py
 ```
 
 Run this on a freshly extracted Trilium export before running `convert_zip.py` if you want a clean directory.
@@ -582,6 +582,22 @@ Run this on a freshly extracted Trilium export before running `convert_zip.py` i
 ### `import_addon.py` *(legacy)*
 
 An older utility that extracts a Trilium export ZIP into the pre-TAM repo structure (`addons/{name}/{note-title}/` with a `metadata.json` stub). This format predates `_tam_manifest_.json` and is no longer used for new addons. Kept for reference.
+
+### `build_addon_zips.py` *(CI-only)*
+
+Builds `{addon-id}.zip` for every TAM-managed addon by calling `export_zip.py` once per `addons/*/_tam_manifest_.json`. Used by the publish workflow instead of a hand-rolled shell loop.
+
+```
+python resources/scripts/build_addon_zips.py
+```
+
+### `publish_release.py` *(CI-only)*
+
+Uploads the `*.json`/`*.zip` files produced by `publish.py` and `build_addon_zips.py` to the repo's `latest` GitHub release (creating it if it doesn't exist yet). Requires an authenticated `gh` CLI (`GITHUB_TOKEN` in the environment).
+
+```
+python resources/scripts/publish_release.py
+```
 
 ---
 

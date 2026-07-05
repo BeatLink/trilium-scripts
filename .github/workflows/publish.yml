@@ -18,26 +18,15 @@ jobs:
           python-version: "3.11"
 
       - name: Validate
-        run: python scripts/validate.py
+        run: python resources/scripts/validate.py
 
       - name: Build distribution files
-        run: python scripts/publish.py
+        run: python resources/scripts/publish.py
 
       - name: Build addon ZIPs
-        run: |
-          for dir in addons/*/; do
-            if [ -f "$dir/_tam_manifest_.json" ]; then
-              addon_id=$(python3 -c "import json,sys; print(json.load(open('$dir/_tam_manifest_.json'))['id'])")
-              python3 scripts/export_zip.py "$dir" --out "${addon_id}.zip"
-            fi
-          done
+        run: python resources/scripts/build_addon_zips.py
 
       - name: Publish to latest release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create latest \
-            --title "Latest" \
-            --notes "Auto-published from \`${{ github.sha }}\`" \
-            --latest 2>/dev/null || true
-          gh release upload latest *.json *.zip --clobber
+        run: python resources/scripts/publish_release.py
