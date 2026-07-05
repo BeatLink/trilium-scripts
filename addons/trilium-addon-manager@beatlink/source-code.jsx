@@ -1,12 +1,10 @@
 // Imports --------------------------------------------------------------------
+// Deliberately not using trilium:preact's Button/FormTextBox/LinkButton/
+// RawHtml/LoadingSpinner — their rendered markup/classes are Trilium's own
+// and not fully under our control, which fought every CSS fix in this file.
+// Plain native elements give TAM's own CSS full, predictable control.
 import {
-    defineWidget,
     useActiveNoteContext,
-    FormTextBox,
-    Button,
-    LinkButton,
-    RawHtml,
-    LoadingSpinner,
     useState,
     useEffect
 } from "trilium:preact"
@@ -38,6 +36,23 @@ function titleCase(s) {
 
 function Badge({ type }) {
     return <span className="TAM-badge" style={{ backgroundColor: typeColor(type) }}>{type}</span>
+}
+
+function TamButton({ icon, text, onClick, className = "" }) {
+    return (
+        <button className={`btn ${className}`.trim()} onClick={onClick}>
+            {icon && <i className={icon}></i>}
+            <span>{text}</span>
+        </button>
+    )
+}
+
+function BackLink({ onClick, text = "Back to Addons" }) {
+    return <a className="TAM-back" onClick={onClick}>← {text}</a>
+}
+
+function Spinner() {
+    return <div className="TAM-spinner" />
 }
 
 function computeStats(repositories) {
@@ -78,7 +93,7 @@ function AddonCard({ repoId, addonId, addonData, onOpen, onInstall }) {
             <p className="TAM-card-desc">{addonData.description}</p>
             {!addonData.installedVersion && (
                 <div className="TAM-card-install">
-                    <Button
+                    <TamButton
                         icon="bx bx-download"
                         text="Install"
                         onClick={e => {
@@ -122,11 +137,12 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
     return (
         <div>
             <div className="TAM-toolbar">
-                <FormTextBox
-                    placeholder="Search addons..."
-                    currentValue={search}
-                    onChange={setSearch}
+                <input
+                    type="text"
                     className="TAM-search"
+                    placeholder="Search addons..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
                 />
                 {availableTypes.length > 0 && (
                     <div className="TAM-filters">
@@ -153,7 +169,7 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
             {allAddons.length === 0 ? (
                 <div className="TAM-empty-state">
                     <p>No repositories added yet.</p>
-                    <Button icon="bx bx-cog" text="Go to Settings to add a repository" onClick={onOpenSettings} />
+                    <TamButton icon="bx bx-cog" text="Go to Settings to add a repository" onClick={onOpenSettings} />
                 </div>
             ) : visible.length === 0 ? (
                 <div className="TAM-empty-state">
@@ -197,7 +213,7 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
     return (
         <div className="TAM-addon-layout">
             <div className="TAM-addon-sidebar">
-                <LinkButton icon="bx bx-arrow-back" text="Back to Addons" onClick={onBack} />
+                <BackLink onClick={onBack} />
                 <Badge type={addonData.type} />
                 <h2>{addonData.name}</h2>
                 <table className="TAM-meta-table">
@@ -209,28 +225,28 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
                     </tbody>
                 </table>
                 <div className="TAM-addon-actions">
-                    <Button icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
+                    <TamButton icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
                     {!addonData.installedVersion && (
-                        <Button icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonId)} />
+                        <TamButton icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonId)} />
                     )}
                     {addonData.installedVersion && !isSelf && (
-                        <Button icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonId)} />
+                        <TamButton icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonId)} />
                     )}
                     {addonData.installedVersion && (
-                        <Button
+                        <TamButton
                             icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
                             text={addonData.enabled ? "Disable Addon" : "Enable Addon"}
                             onClick={() => onEnable(addonId, !addonData.enabled)}
                         />
                     )}
                     {addonData.installedVersion && addonData.settingsNoteId && (
-                        <Button icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
+                        <TamButton icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
                     )}
                     {addonData.installedVersion && (
-                        <Button icon="bx bx-wrench" text="Repair" onClick={() => onRepair(addonId)} />
+                        <TamButton icon="bx bx-wrench" text="Repair" onClick={() => onRepair(addonId)} />
                     )}
                     {addonData.updateAvailable && (
-                        <Button icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonId)} />
+                        <TamButton icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonId)} />
                     )}
                 </div>
             </div>
@@ -238,9 +254,9 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
                 <p className="TAM-addon-description">{addonData.description}</p>
                 {addonData.installedVersion ? (
                     readmeLoading ? (
-                        <LoadingSpinner />
+                        <Spinner />
                     ) : readmeHtml ? (
-                        <RawHtml className="TAM-readme" html={readmeHtml} />
+                        <div className="TAM-readme" dangerouslySetInnerHTML={{ __html: readmeHtml }} />
                     ) : (
                         <p className="TAM-muted">No README available for this addon.</p>
                     )
@@ -261,13 +277,14 @@ function NewRepo({ onSave }) {
     const [repoId, setRepoId] = useState("")
     return (
         <div className="TAM-new-repository-div">
-            <FormTextBox
+            <input
+                type="text"
                 placeholder="owner/repo"
-                currentValue={repoId}
-                onChange={(newValue) => { setRepoId(newValue) }}
+                value={repoId}
+                onChange={e => setRepoId(e.target.value)}
                 className="TAM-new-repository-text"
             />
-            <Button
+            <TamButton
                 icon="bx bx-plus"
                 text="Add Repository"
                 onClick={e => {
@@ -285,7 +302,7 @@ function SettingsView({
     const stats = computeStats(repositories)
     return (
         <div className="TAM-settings">
-            <LinkButton icon="bx bx-arrow-back" text="Back to Addons" onClick={onBack} />
+            <BackLink onClick={onBack} />
 
             <div>
                 <h3>Statistics</h3>
@@ -315,7 +332,7 @@ function SettingsView({
                     {Object.keys(repositories).map(repoId => (
                         <div key={repoId} className="TAM-repo-row">
                             <span>{repoId}</span>
-                            <Button
+                            <TamButton
                                 icon="bx bx-trash"
                                 text="Delete"
                                 onClick={() => {
@@ -336,12 +353,12 @@ function SettingsView({
             <div>
                 <h3>Maintenance</h3>
                 <div className="TAM-maintenance-actions">
-                    <Button icon="bx bx-sync" text="Update Repositories" onClick={onUpdateRepos} />
-                    {anyUpdateAvailable && <Button icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
-                    <Button icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
-                    <Button icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
-                    <Button icon="bx bx-tag" text="Backfill Note IDs" onClick={onBackfillIds} />
-                    <Button icon="bx bx-archive" text="Backfill Installed Manifests" onClick={onBackfillManifests} />
+                    <TamButton icon="bx bx-sync" text="Update Repositories" onClick={onUpdateRepos} />
+                    {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
+                    <TamButton icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
+                    <TamButton icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
+                    <TamButton icon="bx bx-tag" text="Backfill Note IDs" onClick={onBackfillIds} />
+                    <TamButton icon="bx bx-archive" text="Backfill Installed Manifests" onClick={onBackfillManifests} />
                 </div>
             </div>
         </div>
@@ -380,7 +397,7 @@ function PromptReview({ prompts, onResolve }) {
                     </div>
                 </div>
             ))}
-            <Button icon="bx bx-check" text="Apply" onClick={() => onResolve(decisions)} />
+            <TamButton icon="bx bx-check" text="Apply" onClick={() => onResolve(decisions)} />
         </div>
     )
 }
@@ -615,7 +632,7 @@ export default function RepoManager() {
     } else if (view.type === "detail") {
         const addonData = repositories[view.repoId]?.addons?.[view.addonId]
         if (!addonData) {
-            bodyContent = <p>Addon not found. <LinkButton text="Back to Addons" onClick={() => setView({ type: "list" })} /></p>
+            bodyContent = <p>Addon not found. <BackLink onClick={() => setView({ type: "list" })} /></p>
         } else {
             bodyContent = (
                 <AddonDetail
@@ -652,7 +669,7 @@ export default function RepoManager() {
                 </div>
                 {view.type === "list" && (
                     <div className="TAM-header-actions">
-                        <Button icon="bx bx-cog" text="Settings" onClick={() => setView({ type: "settings" })} />
+                        <TamButton icon="bx bx-cog" text="Settings" onClick={() => setView({ type: "settings" })} />
                     </div>
                 )}
             </div>
@@ -670,7 +687,7 @@ export default function RepoManager() {
                         </pre>
                     )}
                     <div className="TAM-validation-buttons">
-                        {validationIssues.length > 0 && <Button
+                        {validationIssues.length > 0 && <TamButton
                             icon="bx bx-copy"
                             text="Copy to Clipboard"
                             onClick={e => {
@@ -680,7 +697,7 @@ export default function RepoManager() {
                                 navigator.clipboard.writeText(text)
                             }}
                         />}
-                        <Button
+                        <TamButton
                             icon="bx bx-x"
                             text="Dismiss"
                             onClick={e => { setValidationIssues(null) }}
