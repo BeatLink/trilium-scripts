@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.6.1"
+const TAM_VERSION = "2.6.3"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -740,6 +740,39 @@ async function selfUpdateAddon(repoId, addonId) {
         await api.runOnBackend((noteId, content) => {
             api.getNote(noteId).setContent(content)
         }, [realNoteId, content])
+    }
+
+    // Structural moves: reparent any note whose live parent(s) no longer
+    // match what the manifest declares. `skipOnUpdate` only protects a
+    // note's *content* — its position in the tree can still change between
+    // versions (e.g. a note moved to be a direct child of root instead of
+    // nested deeper), and self-update has to apply that too, since TAM never
+    // gets the delete+reinstall every other addon's update goes through.
+    const validParents = {}
+    for (const c of (m.children || []).filter(c => !c.addon)) {
+        validParents[c.child] = validParents[c.child] || []
+        validParents[c.child].push(c.parent)
+    }
+    for (const [childLocalId, parentLocalIds] of Object.entries(validParents)) {
+        const childRealId = noteMap[childLocalId]
+        if (!childRealId) continue
+        const desiredParentIds = parentLocalIds.map(pid => noteMap[pid]).filter(Boolean)
+        if (desiredParentIds.length === 0) continue
+
+        await api.runOnBackend((childId, desiredParentIds) => {
+            const note = api.getNote(childId)
+            const currentParentIds = note.getParentNotes().map(p => p.noteId)
+            for (const parentId of desiredParentIds) {
+                if (!currentParentIds.includes(parentId)) {
+                    api.toggleNoteInParent(true, childId, parentId)
+                }
+            }
+            for (const parentId of currentParentIds) {
+                if (!desiredParentIds.includes(parentId)) {
+                    api.toggleNoteInParent(false, childId, parentId)
+                }
+            }
+        }, [childRealId, desiredParentIds])
     }
 
     if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}

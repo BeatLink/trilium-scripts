@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.6.1",
+    "latestVersion": "2.6.3",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
@@ -77,11 +77,11 @@
                 "child": "source-code"
             },
             {
-                "parent": "database",
+                "parent": "root",
                 "child": "addons"
             },
             {
-                "parent": "database",
+                "parent": "root",
                 "child": "addon-data"
             },
             {
