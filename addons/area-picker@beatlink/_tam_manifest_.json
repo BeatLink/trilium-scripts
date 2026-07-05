@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.0.3",
     "type": "widget",
     "readme": "README.md",
     "manifest": {

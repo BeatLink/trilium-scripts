@@ -5,7 +5,7 @@
     "author": "jkbrzt",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librrule@jkbrzt",
     "license": "MIT",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.0.1",
     "type": "library",
     "readme": "README.md",
     "manifest": {

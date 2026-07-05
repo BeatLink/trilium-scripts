@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.4",
+    "latestVersion": "1.0.5",
     "type": "template",
     "readme": "README.md",
     "manifest": {

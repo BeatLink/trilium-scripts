@@ -5,7 +5,7 @@
     "author": "kewisch",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libical@kewisch",
     "license": "MPL-2.0",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.2.1",
     "type": "library",
     "readme": "README.md",
     "manifest": {

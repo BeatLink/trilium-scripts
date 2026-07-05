@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libsettings@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.2.1",
     "type": "library",
     "readme": "README.md",
     "manifest": {

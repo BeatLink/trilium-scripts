@@ -5,7 +5,7 @@
     "author": "arshaw",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libfullcalendar@arshaw",
     "license": "MIT",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.0.1",
     "type": "library",
     "readme": "README.md",
     "manifest": {
