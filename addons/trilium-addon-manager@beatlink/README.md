@@ -44,6 +44,42 @@ trilium-addon-manager@beatlink  (render note)
 
 ---
 
+## Note Identity: `#TAMFILEID`
+
+Every note TAM creates or resolves gets a permanent label: `#TAMFILEID="{addonId}/{localId}"` (e.g.
+`#TAMFILEID="libical@kewisch/lib"`). This label — not any id TAM caches in the Database — is the
+canonical way to answer "which real Trilium note is local id X of addon Y": the note carries its
+own identity, so it can always be found directly by searching Trilium's own attribute index
+(`api.getNoteWithLabel("TAMFILEID", value)`), instead of trusting an external id map that could
+silently drift out of sync with the actual note tree (a partial install failure, a manual edit, a
+bug).
+
+This makes resolving/placing a note **idempotent**: whether a note is being created for the first
+time, or one already exists (a retried operation, a note that survived from before, a cross-addon
+export being referenced), the same "look it up by TAMFILEID, then clone or create" logic applies —
+`installAddon` never needs to special-case "did this already happen".
+
+- **Never inheritable.** `#TAMFILEID` is set with a plain `setLabel`/`note.setLabel` call (no
+  `isInheritable` flag) — it identifies exactly one note, and must never propagate to its children,
+  which would make every descendant falsely match the same lookup.
+- **Only `rootNoteId` and `settingsNoteId` are still cached** in the Database per addon (both
+  single-valued and read on hot paths — `enableAddon`, `deleteAddon`, every UI render of the addon
+  list). The old `noteMap` (local id → real id) and `exportedNotes` (export name → real id) maps are
+  gone entirely — nothing needs them once every note can be found live by its own label, and keeping
+  them "as a cache" would have reintroduced exactly the drift risk this convention exists to remove.
+- **Migration**: addons installed before this convention existed have no `#TAMFILEID` labels yet.
+  `backfillTamFileIds()` tags every note already recorded in an addon's now-otherwise-unused old
+  `noteMap` (leftover in the Database from before), run opportunistically whenever "Update
+  Repositories" is clicked (see [Dependency Tracking](#dependency-tracking)'s
+  `cleanupEmptyPersistenceRoots`, which runs alongside it). This only ever *adds* a label to a note
+  that already exists — it never creates, deletes, or moves anything.
+- **Soft deletes are accounted for.** `note.deleteNote()` is a soft delete (`note.isDeleted`), so
+  every TAMFILEID lookup treats a deleted match as "not found" rather than resurrecting/cloning a
+  note that's on its way out — this is why `deleteAddon` followed by a reinstall still always
+  produces fresh notes, never resurrects the old (now-deleted) ones.
+
+---
+
 ## The `_tam_manifest_.json` Format
 
 Every addon in a TAM-compatible repository must have a `_tam_manifest_.json` file at the root of its addon directory.
@@ -113,7 +149,7 @@ An array of note definitions. Each entry describes one note to create:
 
 | Field | Description |
 |-------|-------------|
-| `id` | Local identifier for this note, used to reference it throughout the manifest. Not stored in Trilium — TAM maps local IDs to real Trilium note IDs after creation. |
+| `id` | Local identifier for this note, used to reference it throughout the manifest. Not stored verbatim in Trilium, but TAM tags the resolved note with a permanent `#TAMFILEID="{addonId}/{id}"` label (see [Note Identity](#note-identity-tamfileid)) so it can find this exact note again later. |
 | `title` | The Trilium note title. |
 | `type` | Trilium note type: `text`, `code`, `render`, `book`, `canvas`, `mermaid`, etc. |
 | `mime` | MIME type. For code notes: `application/javascript;env=frontend`, `application/javascript;env=backend`, `text/jsx`, `text/css`, `application/json`, etc. |
@@ -135,7 +171,9 @@ Defines the parent-child tree structure. There are two forms:
 ```json
 {"parent": "script-note", "addon": "libmultisort@beatlink", "child": "lib"}
 ```
-`child` is the export name from the dependency's `exports` map (see [Exports](#exports)).
+`child` is the export name from the dependency's `exports` map (see [Exports](#exports)). Resolved
+live: TAM looks up the dependency's *local id* for that export name (from the dependency's own
+fetched manifest), then finds the real note by `#TAMFILEID="{depAddonId}/{localId}"`.
 
 #### `relations`
 
@@ -179,22 +217,21 @@ Maps export names to local note IDs. This is how other addons reference specific
 }
 ```
 
-When a dependent addon references `"addon": "this-addon@author", "child": "lib"`, TAM resolves `"lib"` through this map to get the real Trilium note ID.
+When a dependent addon references `"addon": "this-addon@author", "child": "lib"`, TAM resolves `"lib"` through this map to get the *local id*, then finds the real note live by its `#TAMFILEID` (see [Note Identity](#note-identity-tamfileid)). `exports{}` stays purely a manifest-level encapsulation boundary — it lets an addon restructure its own internal local ids across a version bump without breaking consumers, as long as the exported name keeps meaning the same thing — no note ids are cached from it.
 
 ---
 
 ## How Installation Works
 
 1. TAM fetches `{repoId}.json` from the GitHub release (the addon's full manifest with inlined content).
-2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated (delete + reinstall, same as a manual update) first if already installed at an older version than the dependency's own `latestVersion`. Either way, this addon is then recorded as a **dependent** of each dependency — see [Dependency Tracking](#dependency-tracking).
-3. Notes are created in topological order (parents before children) under the Addons root note, using `api.createTextNote`. A local note listed under more than one parent in `children[]` (a same-addon clone) is only actually created once, under whichever entry appears first — every later entry clones it into that additional parent with `api.toggleNoteInParent` instead of creating a duplicate note.
-4. Cross-addon children are wired using `api.toggleNoteInParent` to create a clone branch from the dependency note into the new parent.
+2. Dependencies listed in `manifest.dependencies` are installed first (recursively) — or updated (delete + reinstall, same as a manual update) first if already installed at an older version than the dependency's own `latestVersion`. Either way, this addon is then recorded as a **dependent** of each dependency — see [Dependency Tracking](#dependency-tracking). Each dependency's own manifest (fetched here regardless of which branch ran) is kept around just for this install, since `applyDepChildren`/`applyRelations` below need its `exports` map.
+3. Notes are resolved in topological order (parents before children) under the Addons root note: for each, TAM looks up its `#TAMFILEID` — if found (and not soft-deleted), the existing note is cloned into the correct parent (`api.ensureNoteIsPresentInParent`) and its content/type/mime overwritten (unless `skipOnUpdate`/`promptOnUpdate` say otherwise); if not found, a fresh note is created via `api.createTextNote` and immediately tagged. See [Note Identity](#note-identity-tamfileid). A local note listed under more than one parent in `children[]` (a same-addon clone) only goes through this resolve-or-create step once, under whichever entry appears first — every later entry just clones the same resolved note into that additional parent.
+4. Cross-addon children are resolved live by `#TAMFILEID` (through the dependency's `exports` map — see [Exports](#exports)) and cloned in with `api.ensureNoteIsPresentInParent`.
 5. Labels are applied with `note.setLabel`.
-6. Relations are applied with `note.setRelation`. Cross-addon relations resolve the target note ID through the dependency's stored `exportedNotes` map.
-7. The local ID → real Trilium note ID mapping (`noteMap`) and exported note IDs (`exportedNotes`) are saved to the Database note.
-8. The addon is registered in `database.installedAddons[repoId][addonId]` with `installedVersion`, `rootNoteId`, `noteMap`, `exportedNotes`, `dependencies`, `dependents`, and `manuallyInstalled` — merged onto (not replacing) any `persistence` sub-object already sitting on that record from a previous install of this same addonId (see [Persistence](#persistence)). Every "is this addon already installed?" check elsewhere in TAM looks for `installedVersion` specifically, since a record can exist with *only* a `persistence` field for an addon that isn't currently installed at all.
-9. Persistence is initialized — see [Persistence](#persistence).
-10. The addon is left disabled. The user enables it manually (or it can be auto-enabled by the installing user).
+6. Relations are applied with `note.setRelation`. Cross-addon relations resolve the target note the same live way as step 4.
+7. The addon is registered in `database.installedAddons[repoId][addonId]` with `installedVersion`, `rootNoteId`, `settingsNoteId`, `dependencies`, `dependents`, and `manuallyInstalled` — merged onto (not replacing) any `persistence` sub-object already sitting on that record from a previous install of this same addonId (see [Persistence](#persistence)). Every "is this addon already installed?" check elsewhere in TAM looks for `installedVersion` specifically, since a record can exist with *only* a `persistence` field for an addon that isn't currently installed at all.
+8. Persistence is initialized — see [Persistence](#persistence).
+9. The addon is left disabled. The user enables it manually (or it can be auto-enabled by the installing user).
 
 ---
 
@@ -204,7 +241,7 @@ Updating an addon does **not** do an in-place content patch. Instead:
 
 1. TAM fetches the latest manifest.
 2. Before deleting anything, `collectPendingPrompts` scans for notes with `promptOnUpdate: true`, compares their current persisted content against the new content in the manifest, and stores any differences in the Database.
-3. The old addon note tree is deleted entirely — every note gets a fresh Trilium note ID on reinstall, none of the old ones survive.
+3. The old addon note tree is deleted entirely — every note gets a fresh Trilium note ID on reinstall, none of the old ones survive. (`note.deleteNote()` is a soft delete, but the reinstall's TAMFILEID lookups explicitly treat a deleted match as "not found," so a soft-deleted note is never resurrected/cloned back in — see [Note Identity](#note-identity-tamfileid).)
 4. The addon is reinstalled from scratch (following the install steps above).
 5. Its `dependents` list (who clones this addon's exports) is restored across the delete/reinstall — `installAddon` always starts a fresh record with an empty list, since from its own perspective it doesn't know who depends on it yet.
 6. Persistence is reconnected — existing persisted notes are reattached rather than duplicated (see [Persistence](#persistence)).
@@ -242,8 +279,9 @@ Addons with `"type": "library"` are never shown in TAM's addon list — there's 
 
 The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits the installed-addon registry against the live Trilium note tree and reports anything inconsistent:
 
+- **Duplicate `#TAMFILEID`s** — no two live notes claim the same `{addonId}/{localId}` value. This is the one thing a live-lookup-based design can't self-correct (`getNoteWithLabel` just returns whichever match it finds first), so it's the one thing worth actively checking for — a bad migration run or a manually duplicated note are the realistic causes.
 - **Dependency graph symmetry** — every `dependencies` edge has a matching reverse `dependents` edge on the other side, and vice versa. Skipped for records that only hold surviving `persistence` data with nothing currently installed.
-- **Note existence** — the addon's `rootNoteId`, every entry in `noteMap`, every entry in `exportedNotes`, and `settingsNoteId` (if set) still resolve to real, non-deleted notes. Same as above, only checked while the addon is actually installed.
+- **Note existence** — the addon's `rootNoteId` and `settingsNoteId` (if set) still resolve to real, non-deleted notes. Same as above, only checked while the addon is actually installed. (`noteMap`/`exportedNotes` no longer exist as stored fields to check — see [Note Identity](#note-identity-tamfileid).)
 - **Persistence integrity** — the record's `persistence.rootNote` and every `persistence.persistenceNotes` entry still exist, and (for addons that are actually installed) every live `AddonData:key` relation found while walking the addon's subtree still points at the persisted note TAM's database says it should. This check runs even for records with no currently-installed addon, since surviving persisted data should stay valid regardless.
 
 It returns a flat list of `{ repoId, addonId, message }` issues (empty if everything checks out), which the UI renders as a dismissible panel. This doesn't fix anything automatically — it's a diagnostic for tracking down drift (e.g. a note deleted by hand outside TAM, or a relation that got repointed) rather than a repair tool.
@@ -321,12 +359,11 @@ After reinstallation, if there are pending prompts, TAM shows the **Update Revie
 TAM's own update path is different because deleting and reinstalling TAM while it is running would break the process. Instead, `selfUpdateAddon` does an in-place content update:
 
 1. TAM fetches the latest manifest for itself.
-2. For each note in the manifest, if `skipOnUpdate` is false, TAM writes the new content directly to the existing note (looked up from `noteMap`).
-3. Notes with `skipOnUpdate: true` (Database, Addons root, Addon Data root) have their content left untouched, preserving all installed addon state and user data.
-4. **Structural moves are applied regardless of `skipOnUpdate`.** For every note in the manifest's `children[]`, TAM compares its live parent(s) against what the manifest currently declares and reparents it with `toggleNoteInParent` if they differ — adding any parent it should have and detaching it from any parent it no longer should. `skipOnUpdate` only protects *content*; a note's position in the tree can still change between versions (e.g. Addons/Addon Data moving to be direct children of root instead of nested under Database), and since TAM never goes through the delete+reinstall every other addon's update uses, this is the only path that would ever apply such a move to an already-installed TAM.
-5. The installed version is updated in the Database.
-
-If TAM was originally imported via ZIP (not installed through TAM), there is no `noteMap` in the database. In that case, TAM discovers note IDs by traversing the note tree upward from `libTAM.js` and matching note titles against the manifest.
+2. For each note in the manifest, TAM resolves it by `#TAMFILEID="trilium-addon-manager@beatlink/{localId}"` — uniformly, whether TAM was TAM-installed or manually ZIP-imported, since there's no separate `noteMap`-based branch anymore (see [Note Identity](#note-identity-tamfileid)). Any note not yet tagged (a fresh manual import, or one from before this convention existed) falls back to the old title-matching traversal — discovering note ids by walking the tree upward from `libTAM.js` and matching manifest note titles against live note titles — for *that one note only*, then immediately tags it. This self-heals after the first successful self-update; the traversal never needs to run again for a note once it's tagged.
+3. If `skipOnUpdate` is false, TAM writes the new content directly to the resolved note.
+4. Notes with `skipOnUpdate: true` (Database, Addons root, Addon Data root) have their content left untouched, preserving all installed addon state and user data.
+5. **Structural moves are applied regardless of `skipOnUpdate`.** For every note in the manifest's `children[]`, TAM compares its live parent(s) against what the manifest currently declares and reparents it with `api.ensureNoteIsPresentInParent`/`api.ensureNoteIsAbsentFromParent` if they differ — adding any parent it should have and detaching it from any parent it no longer should. `skipOnUpdate` only protects *content*; a note's position in the tree can still change between versions (e.g. Addons/Addon Data moving to be direct children of root instead of nested under Database), and since TAM never goes through the delete+reinstall every other addon's update uses, this is the only path that would ever apply such a move to an already-installed TAM.
+6. The installed version is updated in the Database, and `rootNoteId` is refreshed from the just-resolved note (self-healing it if it had ever drifted).
 
 ---
 
@@ -480,5 +517,5 @@ TAM itself is bootstrapped differently from other addons because there is no TAM
 1. Download `trilium-addon-manager@beatlink.zip` from the [latest release](https://github.com/BeatLink/trilium-scripts/releases/latest).
 2. In TriliumNext, use **Import** to import the ZIP under any note.
 3. Open the imported `trilium-addon-manager@beatlink` render note.
-4. TAM will detect it was imported manually (no `noteMap` in the database) and handle self-updates correctly.
+4. TAM will detect any of its own notes not yet carrying a `#TAMFILEID` label (a manual import has none yet) and handle self-updates correctly regardless — see [Self-Update](#self-update).
 5. Add `BeatLink/trilium-scripts` as a repository and click "Update Repositories" to populate the addon list.

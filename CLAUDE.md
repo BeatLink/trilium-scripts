@@ -61,10 +61,23 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   content). `publish.py` inlines each `sourceUrl` file into a `content` field to produce the
   distribution JSON; nothing else reads `sourceUrl` at runtime. Add `"binary": true` on a note whose
   `sourceUrl` is non-text (e.g. a `type: "file"` note with mime `audio/wav`) — `publish.py` then
-  base64-encodes it into `content` instead of reading it as text, and `lib-tam.js`'s `createNotes`
+  base64-encodes it into `content` instead of reading it as text, and `lib-tam.js`'s `resolveNotes`
   decodes it back into a `Buffer` before `setContent()`. `convert_zip.py` sets this flag
   automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
   real example (bundled `.wav` sound effects).
+- **Note identity: `#TAMFILEID`** — every note TAM creates or resolves carries a permanent,
+  non-inheritable label `#TAMFILEID="{addonId}/{localId}"` (e.g.
+  `#TAMFILEID="libical@kewisch/lib"`). This, not any id cached in TAM's Database, is the canonical
+  way to find "which real note is local id X of addon Y" — `api.getNoteWithLabel("TAMFILEID",
+  value)` looks it up directly against Trilium's own attribute index, so it can never silently drift
+  the way an external id map (the old `noteMap`/`exportedNotes` fields, removed in TAM 2.8.0) could.
+  Resolution is find-or-create: if a tagged note already exists (and isn't soft-deleted —
+  `note.deleteNote()` never immediately removes it), it's cloned into whatever new parent needs it
+  and its content is reconciled (respecting `skipOnUpdate`/`promptOnUpdate`); otherwise a fresh note
+  is created and tagged immediately. Only `rootNoteId`/`settingsNoteId` are still cached in the
+  Database (single-valued, hot-path reads) — everything else resolves live. See
+  `trilium-addon-manager@beatlink/README.md`'s "Note Identity" section for the full design and the
+  one-time `backfillTamFileIds()` migration for addons installed before this convention existed.
 - **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend` or
   `;env=backend`. **There is no `env=hybrid`** — Trilium's bundler only lets a note `require()`
   another note of the *same* environment (`packages/trilium-core/.../script_context.ts` and
@@ -89,13 +102,15 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map). A local
   note **can** be listed under more than one parent within the same manifest (a same-addon clone —
   e.g. a shared settings-resolver note pulled in as a child of several widget notes so `require()`/
-  `import` can find it from each). `lib-tam.js`'s `createNotes` (fixed in TAM 2.5.2) creates the note
-  once under whichever `{parent, child}` entry appears first, then wires every later entry as a real
-  clone via `api.toggleNoteInParent` — before that fix it used a flat `child → parent` map, which
-  silently overwrote earlier entries and left the note attached only to whichever parent was *last*
-  in the array (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, and `togglenotes@beatlink`,
-  2 separate cases, for real examples this broke). `export_zip.py`'s `process_manifest` has the same
-  first-occurrence-is-real / later-occurrences-are-clones handling for the same reason.
+  `import` can find it from each). `lib-tam.js`'s `resolveNotes` (renamed from `createNotes` in TAM
+  2.8.0, the fix itself landed earlier in 2.5.2) resolves the note once under whichever
+  `{parent, child}` entry appears first, then wires every later entry as a real clone via
+  `api.ensureNoteIsPresentInParent` — before the 2.5.2 fix this used a flat `child → parent` map,
+  which silently overwrote earlier entries and left the note attached only to whichever parent was
+  *last* in the array (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, and
+  `togglenotes@beatlink`, 2 separate cases, for real examples this broke). `export_zip.py`'s
+  `process_manifest` has the same first-occurrence-is-real / later-occurrences-are-clones handling
+  for the same reason.
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
   local-vs-cross-addon shape.
 - **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link

@@ -2,10 +2,11 @@
 const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
+const tamFileIdLabel = "TAMFILEID"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.7.0"
+const TAM_VERSION = "2.8.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -125,6 +126,7 @@ async function updateRepositories() {
     await saveDatabase(database)
     await checkForAddonUpdates()
     await cleanupEmptyPersistenceRoots()
+    await backfillTamFileIds()
 }
 
 async function checkForAddonUpdates() {
@@ -209,11 +211,22 @@ function topologicalSort(noteIds, parentMap) {
     return result
 }
 
-async function createNotes(m, addonRootNoteId) {
+// Resolves every note in an addon's own manifest against the live Trilium
+// tree by its permanent #TAMFILEID label (`{addonId}/{localId}`) rather than
+// any externally-tracked id map — the note itself is the source of truth for
+// its own identity, so this is naturally idempotent: re-running it (a retried
+// install after a partial failure, a note that survived from a previous
+// install) finds and reconciles the existing note instead of creating a
+// duplicate. Content/type/mime are only overwritten on a found note if
+// `skipOnUpdate`/`promptOnUpdate` don't say otherwise — `createNotes` never
+// used to hit an existing note at all (always a fresh create), so this
+// gating is new: without it, a found note could silently clobber user data
+// it wasn't expecting to still be there.
+async function resolveNotes(m, addonId, addonRootNoteId) {
     // A local note can be listed as a child of more than one parent within
     // the same manifest (a same-addon clone, e.g. a shared settings note
     // pulled into several widgets) — only the first occurrence is where the
-    // note actually gets created; every later occurrence is wired up as an
+    // note actually gets resolved; every later occurrence is wired up as an
     // additional clone branch afterward. A flat parent-per-child map would
     // silently drop every parent but the last one processed.
     const primaryParent = {}
@@ -241,9 +254,26 @@ async function createNotes(m, addonRootNoteId) {
         const noteType  = noteDef.type     ?? "text"
         const mime      = noteDef.mime     ?? "text/html"
         const isBinary  = noteDef.binary   ?? false
+        const tamFileId = `${addonId}/${localId}`
 
         const realNoteId = await api.runOnBackend(
-            (parentRealId, title, noteType, mime, content, isBinary) => {
+            (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, content, isBinary, skipOnUpdate, promptOnUpdate) => {
+                let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+                if (existing && existing.isDeleted) existing = null
+
+                if (existing) {
+                    api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
+                    if (!skipOnUpdate && !promptOnUpdate) {
+                        if (noteType !== "text" || mime !== "text/html") {
+                            existing.type = noteType
+                            existing.mime = mime
+                            existing.save()
+                        }
+                        existing.setContent(isBinary ? Buffer.from(content, "base64") : content)
+                    }
+                    return existing.noteId
+                }
+
                 const result = api.createTextNote(parentRealId, title, "")
                 const note = result.note
                 if (noteType !== "text" || mime !== "text/html") {
@@ -252,9 +282,11 @@ async function createNotes(m, addonRootNoteId) {
                     note.save()
                 }
                 note.setContent(isBinary ? Buffer.from(content, "base64") : content)
+                note.setLabel(tamFileIdLabel, tamFileId)
                 return note.noteId
             },
-            [parentRealId, noteDef.title, noteType, mime, content, isBinary]
+            [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, noteType, mime, content, isBinary,
+                !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate]
         )
         noteMap[localId] = realNoteId
     }
@@ -266,7 +298,7 @@ async function createNotes(m, addonRootNoteId) {
             const parentRealId = noteMap[parentLocalId]
             if (!parentRealId) continue
             await api.runOnBackend((sourceId, parentId) => {
-                api.toggleNoteInParent(true, sourceId, parentId)
+                api.ensureNoteIsPresentInParent(sourceId, parentId)
             }, [childRealId, parentRealId])
         }
     }
@@ -274,25 +306,43 @@ async function createNotes(m, addonRootNoteId) {
     return noteMap
 }
 
-async function applyDepChildren(m, noteMap, database, repoId) {
+// Resolves a dependency's exported note live, by TAMFILEID, instead of a
+// cached `exportedNotes` id map: `exports[localId]` (from the dependency's
+// own fetched manifest, passed in via `depExportsMap`) tells us the export
+// name -> local id, then `#TAMFILEID="{depAddonId}/{localId}"` finds the real
+// note. `exports{}` itself stays in the manifest as a real encapsulation
+// boundary (a dependency can rename its internal local ids across a version
+// bump without breaking consumers) — only the *resolution* is now live.
+async function resolveDepNoteId(depAddonId, exportName, depExportsMap) {
+    const depExports = depExportsMap.get(depAddonId)
+    const depLocalId = depExports?.[exportName]
+    if (!depLocalId) return null
+
+    const tamFileId = `${depAddonId}/${depLocalId}`
+    return await api.runOnBackend((tamFileIdLabel, tamFileId) => {
+        const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+        return (note && !note.isDeleted) ? note.noteId : null
+    }, [tamFileIdLabel, tamFileId])
+}
+
+async function applyDepChildren(m, noteMap, depExportsMap) {
     for (const c of (m.children || []).filter(c => c.addon)) {
         const parentRealId = noteMap[c.parent]
         if (!parentRealId) continue
 
-        const depInstalled = (database.installedAddons[repoId] || {})[c.addon]
-        if (!depInstalled?.installedVersion) {
+        if (!depExportsMap.has(c.addon)) {
             console.error(`TAM: dependency ${c.addon} not installed, skipping clone`)
             continue
         }
-        const depExportId = (depInstalled.exportedNotes || {})[c.child]
-        if (!depExportId) {
-            console.error(`TAM: dependency ${c.addon} has no export '${c.child}', skipping`)
+        const depNoteId = await resolveDepNoteId(c.addon, c.child, depExportsMap)
+        if (!depNoteId) {
+            console.error(`TAM: dependency ${c.addon} has no export '${c.child}' (or its note is missing), skipping`)
             continue
         }
 
         await api.runOnBackend((sourceId, parentId) => {
-            api.toggleNoteInParent(true, sourceId, parentId)
-        }, [depExportId, parentRealId])
+            api.ensureNoteIsPresentInParent(sourceId, parentId)
+        }, [depNoteId, parentRealId])
     }
 }
 
@@ -306,15 +356,14 @@ async function applyLabels(labels, noteMap) {
     }
 }
 
-async function applyRelations(relations, noteMap, database, repoId) {
+async function applyRelations(relations, noteMap, depExportsMap) {
     for (const rel of relations) {
         const fromRealId = noteMap[rel.from]
         if (!fromRealId) continue
 
         let toRealId
         if (rel.addon) {
-            const depInstalled = (database.installedAddons[repoId] || {})[rel.addon]
-            toRealId = (depInstalled?.exportedNotes || {})[rel.to]
+            toRealId = await resolveDepNoteId(rel.addon, rel.to, depExportsMap)
         } else {
             toRealId = noteMap[rel.to] || rel.to
         }
@@ -324,16 +373,6 @@ async function applyRelations(relations, noteMap, database, repoId) {
             api.getNote(fromId).setRelation(type, toId)
         }, [fromRealId, rel.type, toRealId])
     }
-}
-
-function storeExports(exports, noteMap) {
-    const exportedNotes = {}
-    for (const [localId, exportName] of Object.entries(exports || {})) {
-        if (noteMap[localId]) {
-            exportedNotes[exportName] = noteMap[localId]
-        }
-    }
-    return exportedNotes
 }
 
 async function installAddon(repoId, addonId, options = {}) {
@@ -371,16 +410,22 @@ async function installAddon(repoId, addonId, options = {}) {
     // Install dependencies first — and update any that are already installed
     // but stale, otherwise a dependency bump (e.g. a note title rename) never
     // reaches addons that already had it installed before the bump, even via
-    // "Update All Addons" on the addon that actually changed.
+    // "Update All Addons" on the addon that actually changed. Also collect
+    // each dependency's own `exports` map (from whichever manifest fetch
+    // already happened below) — `applyDepChildren`/`applyRelations` need it
+    // to resolve `{addon, child}`/`{addon, to}` references live, by
+    // TAMFILEID, instead of trusting a cached note-id map.
+    const depExportsMap = new Map()
     for (const depAddonId of (m.dependencies || [])) {
         const installedDep = (database.installedAddons[repoId] || {})[depAddonId]
+        let depManifestFetched = null
         if (!installedDep?.installedVersion) {
             await installAddon(repoId, depAddonId, { manual: false, updating })
             database = await loadDatabase()
         } else {
-            const depManifest = await fetchManifest(repoId, depAddonId)
-            if (depManifest.latestVersion && installedDep.installedVersion &&
-                versionCompare(depManifest.latestVersion, installedDep.installedVersion) > 0) {
+            depManifestFetched = await fetchManifest(repoId, depAddonId)
+            if (depManifestFetched.latestVersion && installedDep.installedVersion &&
+                versionCompare(depManifestFetched.latestVersion, installedDep.installedVersion) > 0) {
                 await updateAddon(repoId, depAddonId, updating)
                 database = await loadDatabase()
             }
@@ -397,19 +442,22 @@ async function installAddon(repoId, addonId, options = {}) {
                 await saveDatabase(database)
             }
         }
+
+        if (!depManifestFetched) depManifestFetched = await fetchManifest(repoId, depAddonId)
+        const depM = depManifestFetched.manifest ?? { exports: {} }
+        depExportsMap.set(depAddonId, depM.exports || {})
     }
 
     const addonRootNoteId = await getAddonRootNoteId()
-    const noteMap = await createNotes(m, addonRootNoteId)
+    const noteMap = await resolveNotes(m, addonId, addonRootNoteId)
 
-    if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not created for ${addonId}`)
+    if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
     const rootNoteId = noteMap[m.root]
 
-    await applyDepChildren(m, noteMap, database, repoId)
+    await applyDepChildren(m, noteMap, depExportsMap)
     await applyLabels(m.labels || [], noteMap)
-    await applyRelations(m.relations || [], noteMap, database, repoId)
+    await applyRelations(m.relations || [], noteMap, depExportsMap)
 
-    const exportedNotes = storeExports(m.exports, noteMap)
     const settingsNoteId = m.settingsNote ? (noteMap[m.settingsNote] || null) : null
 
     if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
@@ -420,8 +468,6 @@ async function installAddon(repoId, addonId, options = {}) {
     database.installedAddons[repoId][addonId] = {
         installedVersion: manifest.latestVersion,
         rootNoteId,
-        noteMap,
-        exportedNotes,
         settingsNoteId,
         dependencies: m.dependencies || [],
         dependents: [],
@@ -559,6 +605,37 @@ async function cleanupEmptyPersistenceRoots() {
     }
 
     if (changed) await saveDatabase(database)
+}
+
+// One-time-per-note backfill for addons installed before #TAMFILEID existed:
+// tags every note already recorded in an addon's (now otherwise-unused)
+// `noteMap` leftover from a previous install, so live TAMFILEID lookups work
+// immediately without needing every addon reinstalled first. Only ever adds
+// a label to a note that already exists — never creates, deletes, or moves
+// anything, and never touches persistence data. Idempotent per note (skips
+// anything already tagged), so an interrupted run just resumes correctly
+// next time rather than being skipped wholesale. Run opportunistically from
+// `updateRepositories`, same spot as `cleanupEmptyPersistenceRoots`.
+async function backfillTamFileIds() {
+    const database = await loadDatabase()
+
+    for (const [, addons] of Object.entries(database.installedAddons || {})) {
+        for (const [addonId, addonRecord] of Object.entries(addons || {})) {
+            if (!addonRecord.installedVersion || !addonRecord.noteMap) continue
+
+            const entries = Object.entries(addonRecord.noteMap).map(
+                ([localId, realId]) => [realId, `${addonId}/${localId}`]
+            )
+            await api.runOnBackend((tamFileIdLabel, entries) => {
+                for (const [noteId, tamFileId] of entries) {
+                    const note = api.getNote(noteId)
+                    if (!note || note.isDeleted) continue
+                    if (note.hasLabel(tamFileIdLabel)) continue
+                    note.setLabel(tamFileIdLabel, tamFileId)
+                }
+            }, [tamFileIdLabel, entries])
+        }
+    }
 }
 
 async function deleteAddon(repoId, addonId) {
@@ -759,24 +836,49 @@ async function selfUpdateAddon(repoId, addonId) {
     }
 
     const installed = (database.installedAddons[repoId] || {})[addonId]
-    let noteMap
-    if (installed) {
-        noteMap = installed.noteMap
-    } else {
-        // TAM was imported manually — discover note IDs by traversing from lib-tam upward
-        const libTamNoteId = api.currentNote.noteId
-        noteMap = await api.runOnBackend((libTamNoteId, manifestNotes) => {
-            const result = {}
-            const sourceCode = api.getNote(libTamNoteId).getParentNotes()[0]
-            const tamRoot = sourceCode ? sourceCode.getParentNotes()[0] : null
-            if (!tamRoot) return result
-            for (const noteId of tamRoot.getSubtreeNoteIds()) {
-                const note = api.getNote(noteId)
-                const def = manifestNotes.find(n => n.title === note.title)
-                if (def) result[def.id] = noteId
+
+    // Resolve every one of TAM's own notes by its permanent #TAMFILEID label
+    // — works uniformly whether TAM was TAM-installed or manually
+    // ZIP-imported, so there's no separate "installed vs not" branch here
+    // like there used to be. Any note not yet tagged (a fresh manual import,
+    // or one that predates this convention) falls back to the old
+    // title-matching traversal exactly once — and gets tagged immediately
+    // afterward, so this self-heals after the very first successful
+    // self-update and never needs the traversal again for that note.
+    const noteMap = {}
+    let titleTraversal = null
+    for (const noteDef of m.notes) {
+        const tamFileId = `${addonId}/${noteDef.id}`
+        let realNoteId = await api.runOnBackend((tamFileIdLabel, tamFileId) => {
+            const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+            return (note && !note.isDeleted) ? note.noteId : null
+        }, [tamFileIdLabel, tamFileId])
+
+        if (!realNoteId) {
+            if (!titleTraversal) {
+                const libTamNoteId = api.currentNote.noteId
+                titleTraversal = await api.runOnBackend((libTamNoteId, manifestNotes) => {
+                    const result = {}
+                    const sourceCode = api.getNote(libTamNoteId).getParentNotes()[0]
+                    const tamRoot = sourceCode ? sourceCode.getParentNotes()[0] : null
+                    if (!tamRoot) return result
+                    for (const noteId of tamRoot.getSubtreeNoteIds()) {
+                        const note = api.getNote(noteId)
+                        const def = manifestNotes.find(n => n.title === note.title)
+                        if (def) result[def.id] = noteId
+                    }
+                    return result
+                }, [libTamNoteId, m.notes])
             }
-            return result
-        }, [libTamNoteId, m.notes])
+            realNoteId = titleTraversal[noteDef.id]
+            if (realNoteId) {
+                await api.runOnBackend((noteId, tamFileIdLabel, tamFileId) => {
+                    api.getNote(noteId).setLabel(tamFileIdLabel, tamFileId)
+                }, [realNoteId, tamFileIdLabel, tamFileId])
+            }
+        }
+
+        if (realNoteId) noteMap[noteDef.id] = realNoteId
     }
 
     for (const noteDef of m.notes) {
@@ -810,13 +912,11 @@ async function selfUpdateAddon(repoId, addonId) {
             const note = api.getNote(childId)
             const currentParentIds = note.getParentNotes().map(p => p.noteId)
             for (const parentId of desiredParentIds) {
-                if (!currentParentIds.includes(parentId)) {
-                    api.toggleNoteInParent(true, childId, parentId)
-                }
+                api.ensureNoteIsPresentInParent(childId, parentId)
             }
             for (const parentId of currentParentIds) {
                 if (!desiredParentIds.includes(parentId)) {
-                    api.toggleNoteInParent(false, childId, parentId)
+                    api.ensureNoteIsAbsentFromParent(childId, parentId)
                 }
             }
         }, [childRealId, desiredParentIds])
@@ -827,8 +927,6 @@ async function selfUpdateAddon(repoId, addonId) {
         database.installedAddons[repoId][addonId] = {
             installedVersion: manifest.latestVersion,
             rootNoteId: noteMap[m.root],
-            noteMap,
-            exportedNotes: {},
             dependencies: [],
             dependents: [],
             manuallyInstalled: true,
@@ -837,6 +935,11 @@ async function selfUpdateAddon(repoId, addonId) {
     } else {
         database.installedAddons[repoId][addonId].installedVersion = manifest.latestVersion
         database.installedAddons[repoId][addonId].updateAvailable  = false
+        // Self-heal rootNoteId from the live resolution above, in case it
+        // ever drifted from what's actually cloned under the Addons root.
+        if (noteMap[m.root]) {
+            database.installedAddons[repoId][addonId].rootNoteId = noteMap[m.root]
+        }
     }
     await saveDatabase(database)
 }
@@ -881,14 +984,39 @@ async function enableAddon(repoId, addonId, enabled) {
 
 
 // Validates the whole installed-addon graph against the real Trilium note
-// tree: dependency/dependent edges are symmetric, every note id TAM recorded
-// (root, noteMap, exportedNotes, settingsNoteId, persistence root/notes)
-// still exists, and every live AddonData: relation in an addon's subtree
-// still points at the persisted copy TAM thinks it does. Returns a flat list
-// of { repoId, addonId, message } issues (empty if everything checks out).
+// tree: dependency/dependent edges are symmetric, every note id TAM still
+// caches (root, settingsNoteId, persistence root/notes) still exists, no two
+// live notes claim the same #TAMFILEID (the one thing genuinely ambiguous to
+// a live lookup — everything else here just resolves by that label instead
+// of trusting a cached id), and every live AddonData: relation in an addon's
+// subtree still points at the persisted copy TAM thinks it does. Returns a
+// flat list of { repoId, addonId, message } issues (empty if everything
+// checks out).
 async function validateDatabase() {
     const database = await loadDatabase()
     const issues = []
+
+    const duplicateTamFileIds = await api.runOnBackend((tamFileIdLabel) => {
+        const byValue = {}
+        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+            if (note.isDeleted) continue
+            const value = note.getLabelValue(tamFileIdLabel)
+            byValue[value] = byValue[value] || []
+            byValue[value].push(note.noteId)
+        }
+        return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
+    }, [tamFileIdLabel])
+
+    for (const [tamFileId, noteIds] of duplicateTamFileIds) {
+        const dupAddonId = tamFileId.split("/")[0]
+        const dupRepoId = Object.entries(database.installedAddons || {})
+            .find(([, addons]) => dupAddonId in (addons || {}))?.[0] || "unknown"
+        issues.push({
+            repoId: dupRepoId,
+            addonId: dupAddonId,
+            message: `TAMFILEID '${tamFileId}' is duplicated across notes ${noteIds.join(", ")}`
+        })
+    }
 
     for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
         for (const [addonId, addon] of Object.entries(addons || {})) {
@@ -907,18 +1035,6 @@ async function validateDatabase() {
                 if (isInstalled) {
                     if (!noteExists(addon.rootNoteId)) {
                         found.push(`root note (${addon.rootNoteId}) is missing`)
-                    }
-
-                    for (const [localId, realId] of Object.entries(addon.noteMap || {})) {
-                        if (!noteExists(realId)) {
-                            found.push(`note '${localId}' (${realId}) is missing`)
-                        }
-                    }
-
-                    for (const [exportName, realId] of Object.entries(addon.exportedNotes || {})) {
-                        if (!noteExists(realId)) {
-                            found.push(`export '${exportName}' (${realId}) is missing`)
-                        }
                     }
 
                     if (addon.settingsNoteId && !noteExists(addon.settingsNoteId)) {
