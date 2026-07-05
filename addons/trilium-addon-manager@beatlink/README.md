@@ -320,8 +320,9 @@ TAM's own update path is different because deleting and reinstalling TAM while i
 
 1. TAM fetches the latest manifest for itself.
 2. For each note in the manifest, if `skipOnUpdate` is false, TAM writes the new content directly to the existing note (looked up from `noteMap`).
-3. Notes with `skipOnUpdate: true` (Database, Addons root, Addon Data root) are left untouched, preserving all installed addon state and user data.
-4. The installed version is updated in the Database.
+3. Notes with `skipOnUpdate: true` (Database, Addons root, Addon Data root) have their content left untouched, preserving all installed addon state and user data.
+4. **Structural moves are applied regardless of `skipOnUpdate`.** For every note in the manifest's `children[]`, TAM compares its live parent(s) against what the manifest currently declares and reparents it with `toggleNoteInParent` if they differ — adding any parent it should have and detaching it from any parent it no longer should. `skipOnUpdate` only protects *content*; a note's position in the tree can still change between versions (e.g. Addons/Addon Data moving to be direct children of root instead of nested under Database), and since TAM never goes through the delete+reinstall every other addon's update uses, this is the only path that would ever apply such a move to an already-installed TAM.
+5. The installed version is updated in the Database.
 
 If TAM was originally imported via ZIP (not installed through TAM), there is no `noteMap` in the database. In that case, TAM discovers note IDs by traversing the note tree upward from `libTAM.js` and matching note titles against the manifest.
 
