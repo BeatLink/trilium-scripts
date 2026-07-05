@@ -14,7 +14,7 @@ import {
 } from "trilium:api"
 
 
-function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate, onEnable, isSelf}){
+function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onRepair, onEnable, isSelf}){
     return (
         <div  className="TAM-addon-div" key={addonId}>
             <div className="TAM-addon-info-div">
@@ -58,18 +58,18 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate,
                         activateNote(addonData.settingsNoteId)
                     }}
                 />}
-                {addonData.updateAvailable && !isSelf && <Button
+                {addonData.installedVersion && <Button
+                    icon="bx bx-wrench"
+                    text="Repair"
+                    onClick={e => {
+                        onRepair(addonId)
+                    }}
+                />}
+                {addonData.updateAvailable && <Button
                     icon="bx bx-sync"
                     text={`Update Addon (${addonData.latestVersion})`}
                     onClick={e => {
                         onUpdate(addonId)
-                    }}
-                />}
-                {addonData.updateAvailable && isSelf && <Button
-                    icon="bx bx-sync"
-                    text={`Self-Update (${addonData.latestVersion})`}
-                    onClick={e => {
-                        onSelfUpdate(addonId)
                     }}
                 />}
             </div>
@@ -78,7 +78,7 @@ function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onSelfUpdate,
 }
 
 
-function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAddon, onUpdateAddon, onSelfUpdateAddon, onEnableAddon}) {
+function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAddon, onUpdateAddon, onRepairAddon, onEnableAddon}) {
     return (
         <div key={repoId} className="TAM-repository-div">
             <div className="TAM-repository-controls">
@@ -112,7 +112,7 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
                         onInstall={addonId => {onInstallAddon(repoId, addonId)}}
                         onDelete={addonId => {onDeleteAddon(repoId, addonId)}}
                         onUpdate={addonId => {onUpdateAddon(repoId, addonId)}}
-                        onSelfUpdate={addonId => {onSelfUpdateAddon(repoId, addonId)}}
+                        onRepair={addonId => {onRepairAddon(repoId, addonId)}}
                         onEnable={(addonId, enabled) => {onEnableAddon(repoId, addonId, enabled)}}
                     />
                 ))}
@@ -193,6 +193,7 @@ export default function RepoManager() {
     const [promptContext, setPromptContext] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
     const [validationIssues, setValidationIssues] = useState(null)
+    const [validationTitle, setValidationTitle] = useState("Database Validation")
 
     // Main Command Handler
     useEffect(() => {
@@ -224,7 +225,7 @@ export default function RepoManager() {
                     break
                 }
                 case "install-addon": {
-                    await libTAMjs.installAddon(command["repository"], command["addon"])
+                    await libTAMjs.syncAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
                     await activateNote(displayNote)
                     window.location.reload();
@@ -238,7 +239,7 @@ export default function RepoManager() {
                     break
                 }
                 case "update-addon": {
-                    await libTAMjs.updateAddon(command["repository"], command["addon"])
+                    await libTAMjs.syncAddon(command["repository"], command["addon"])
                     const prompts = await libTAMjs.getPendingPrompts(command["repository"], command["addon"])
                     if (prompts.length > 0) {
                         setPendingPrompts(prompts)
@@ -292,13 +293,9 @@ export default function RepoManager() {
 
                     const queue = []
                     for (const { repoId, addonId } of targets) {
-                        if (addonId === "trilium-addon-manager@beatlink") {
-                            await libTAMjs.selfUpdateAddon(repoId, addonId)
-                        } else {
-                            await libTAMjs.updateAddon(repoId, addonId)
-                            const prompts = await libTAMjs.getPendingPrompts(repoId, addonId)
-                            if (prompts.length > 0) queue.push({ repoId, addonId })
-                        }
+                        await libTAMjs.syncAddon(repoId, addonId)
+                        const prompts = await libTAMjs.getPendingPrompts(repoId, addonId)
+                        if (prompts.length > 0) queue.push({ repoId, addonId })
                     }
 
                     if (queue.length > 0) {
@@ -315,11 +312,11 @@ export default function RepoManager() {
                     }
                     break
                 }
-                case "self-update-addon": {
-                    await libTAMjs.selfUpdateAddon(command["repository"], command["addon"])
-                    setCommand({command: "load-repository"})
-                    await activateNote(displayNote)
-                    window.location.reload();
+                case "repair-addon": {
+                    const issues = await libTAMjs.repairAddon(command["repository"], command["addon"])
+                    setValidationTitle(`Repair: ${command["addon"]}`)
+                    setValidationIssues(issues)
+                    setCommand(null)
                     break
                 }
                 case "enable-addon": {
@@ -330,6 +327,7 @@ export default function RepoManager() {
                     break
                 }
                 case "validate-database": {
+                    setValidationTitle("Database Validation")
                     setValidationIssues(await libTAMjs.validateDatabase())
                     setCommand(null)
                     break
@@ -416,7 +414,7 @@ export default function RepoManager() {
             {validationIssues !== null && (
                 <div className="TAM-validation-results">
                     <h4>
-                        Database Validation —{" "}
+                        {validationTitle} —{" "}
                         {validationIssues.length === 0
                             ? "no issues found"
                             : `${validationIssues.length} issue(s) found`}
@@ -478,9 +476,9 @@ export default function RepoManager() {
                                 addon: addonId
                             })
                         }}
-                        onSelfUpdateAddon={(repoId, addonId) => {
+                        onRepairAddon={(repoId, addonId) => {
                             setCommand({
-                                command: "self-update-addon",
+                                command: "repair-addon",
                                 repository: repoId,
                                 addon: addonId
                             })
