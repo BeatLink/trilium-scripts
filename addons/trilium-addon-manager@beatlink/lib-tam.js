@@ -6,7 +6,7 @@ const tamFileIdLabel = "TAMFILEID"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "3.2.1"
+const TAM_VERSION = "3.2.2"
 const addonLabels = [
     "widget",
     "renderNote",
