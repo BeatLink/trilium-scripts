@@ -161,15 +161,21 @@ function AddonCard({ addonData, onOpen, onInstall }) {
     )
 }
 
-function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatalog }) {
+function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall }) {
     const [search, setSearch] = useState("")
     const [typeFilter, setTypeFilter] = useState(null)
 
     // Libraries are an implementation detail of whatever addon depends on
     // them — TAM installs/updates/uninstalls them automatically via the
     // dependency graph, so there's nothing for the user to do with one
-    // directly.
-    const allAddons = Object.values(addons).filter(a => a.type !== "library")
+    // directly. Catalog entries already installed are represented by their
+    // real installed record instead — dedup by id.
+    const installedIds = new Set(Object.keys(addons))
+    const catalogOnly = Object.values(catalogAddons).filter(a => a.type !== "library" && !installedIds.has(a.id))
+    const allAddons = [
+        ...Object.values(addons).filter(a => a.type !== "library"),
+        ...catalogOnly
+    ]
     allAddons.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
     const availableTypes = [...new Set(allAddons.map(a => a.type))].sort()
@@ -184,15 +190,6 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
 
     return (
         <div>
-            {catalogs.length > 0 && (
-                <div className="filters TAM-catalog-row">
-                    {catalogs.map(url => (
-                        <button key={url} className="filter" onClick={() => onBrowseCatalog(url)}>
-                            Browse: {url.replace(/^https?:\/\//, "")}
-                        </button>
-                    ))}
-                </div>
-            )}
             <SearchFilterToolbar
                 search={search}
                 onSearchChange={setSearch}
@@ -213,7 +210,12 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
             ) : (
                 <div className="grid">
                     {visible.map(addonData => (
-                        <AddonCard key={addonData.id} addonData={addonData} onOpen={onOpenAddon} />
+                        <AddonCard
+                            key={addonData.id}
+                            addonData={addonData}
+                            onOpen={onOpenAddon}
+                            onInstall={!addonData.installedVersion ? onInstall : undefined}
+                        />
                     ))}
                 </div>
             )}
@@ -384,7 +386,7 @@ function NewAddonByUrl({ onSave }) {
 }
 
 function SettingsView({
-    addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onInstallByUrl, onCheckUpdates, onUpdateAll,
+    addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
     onValidate, onCleanup, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
@@ -419,6 +421,7 @@ function SettingsView({
                         <div key={url} className="TAM-repo-row">
                             <span>{url}</span>
                             <div className="TAM-validation-buttons">
+                                <TamButton className="btn-ghost" icon="bx bx-list-ul" text="Browse" onClick={() => onBrowseCatalog(url)} />
                                 <TamButton className="btn-ghost" icon="bx bx-globe" text="Visit Website" onClick={() => onVisitCatalogWebsite(url)} />
                                 <TamButton className="btn-ghost" icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
                             </div>
@@ -490,6 +493,7 @@ export default function RepoManager() {
     const [addons, setAddons] = useState(null)
     const [catalogs, setCatalogs] = useState([])
     const [catalogBrowse, setCatalogBrowse] = useState(null) // { url, webUrl, entries, loading }
+    const [catalogAddons, setCatalogAddons] = useState({}) // merged { [addonId]: entry } across every added catalog
     const [pendingPrompts, setPendingPrompts] = useState([])
     const [promptAddonId, setPromptAddonId] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
@@ -502,6 +506,23 @@ export default function RepoManager() {
         setAddons(freshAddons)
         setCatalogs(await libTAMjs.getCatalogs())
         return freshAddons
+    }
+
+    // Merges every added catalog's addons into one id-keyed map, so the main
+    // list can show everything browsable, not just what's installed.
+    async function loadCatalogAddons(catalogUrls) {
+        const results = await Promise.all(catalogUrls.map(async url => {
+            try {
+                const { addons: entries } = await libTAMjs.fetchCatalogAddons(url)
+                return entries
+            } catch (e) {
+                console.error("TAM: failed to fetch catalog", url, e)
+                return []
+            }
+        }))
+        const merged = {}
+        for (const entries of results) for (const e of entries) merged[e.id] = e
+        setCatalogAddons(merged)
     }
 
     // Main Command Handler

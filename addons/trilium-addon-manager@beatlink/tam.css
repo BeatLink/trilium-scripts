@@ -13,6 +13,11 @@
    these are the actual added controls, kept visually consistent with the
    copied rules above via the same palette/spacing/radii. */
 
+
+div:has(.TAM-body) {
+    height: 100% !important;
+}
+
 .TAM-body {
 
     /* `all: revert` strips every property Trilium's own CSS authored back
@@ -163,6 +168,8 @@
         margin: 0 auto !important;
         padding: 28px 24px !important;
         display: block !important;
+        overflow: auto !important;
+        max-height: 100% !important;
     }
 
     /* Card grid --------------------------------------------------------------- */
