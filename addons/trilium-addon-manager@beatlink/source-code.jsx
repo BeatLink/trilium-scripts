@@ -122,13 +122,12 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
     return (
         <div>
             <div className="TAM-toolbar">
-                <div className="TAM-search">
-                    <FormTextBox
-                        placeholder="Search addons..."
-                        currentValue={search}
-                        onChange={setSearch}
-                    />
-                </div>
+                <FormTextBox
+                    placeholder="Search addons..."
+                    currentValue={search}
+                    onChange={setSearch}
+                    className="TAM-search"
+                />
                 {availableTypes.length > 0 && (
                     <div className="TAM-filters">
                         <button
