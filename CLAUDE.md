@@ -115,9 +115,32 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   and `root` in turn has a `renderNote` relation to the actual settings JSX — so the same note opens
   whether you click the addon's root note directly or the Settings button in TAM.
 
+- **`type`** — `widget`/`script`/`theme` are user-facing and always shown in TAM's addon list;
+  `library` is TAM-managed only. TAM's UI hides `type: "library"` addons entirely — a user never
+  installs or uninstalls one directly, TAM does it automatically via `dependencies[]`/`dependents`
+  as a side effect of installing/updating/uninstalling whatever depends on it (see below). If a
+  library would be independently useful to a user on its own (not just as plumbing for another
+  addon), split it into a thin user-facing `type` addon plus the actual `type: "library"` it depends
+  on — e.g. `notifications@beatlink` (user-facing) wrapping `libnotification@beatlink` (hidden) —
+  rather than shipping one library the user would have to find and install manually.
+
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full
 install/update/persistence/self-update state machine — it's long and not worth duplicating here.
+Since library addons are hidden from the list, a library's own available update is never shown
+directly — `checkForAddonUpdates` propagates `updateAvailable` up through the installed
+`dependents` graph (fixed-point loop, so it reaches transitive dependents too) so it surfaces on
+whichever visible addon(s) actually depend on that library. TAM also tracks a full dependency graph
+per install (`dependencies`/`dependents`/`manuallyInstalled` on each `installedAddons[repoId][addonId]`
+record): installing an addon auto-installs (and, if stale, updates) its dependencies and records the
+reverse edge; updating an addon cascades to every dependent (since update is delete+reinstall, and a
+dependent's clones of the updated addon's exports would otherwise point at deleted notes);
+uninstalling an addon cascades down to any dependency that's now unused (`dependents.length === 0`)
+and wasn't itself manually installed. `libTAMjs.validateDatabase()` (wired to TAM's "Validate
+Database" button) audits all of this against the live note tree — dependency/dependent edges are
+symmetric, every recorded note id (root, noteMap, exportedNotes, settingsNoteId, persistence
+root/notes) still exists, and every live `AddonData:` relation still points at the persisted copy
+TAM thinks it does — returning a flat list of issues rather than silently trusting the database.
 
 ### Library note titles must be fully qualified
 

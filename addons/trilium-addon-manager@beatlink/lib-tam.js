@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.4.0"
+const TAM_VERSION = "2.5.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -120,6 +120,28 @@ async function checkForAddonUpdates() {
                         remoteAddon.latestVersion,
                         installedAddon.installedVersion
                     ) > 0
+                }
+            }
+
+            // Libraries are hidden from the UI, so an update sitting on one
+            // would otherwise be invisible. Surface it on whatever depends on
+            // it (directly or transitively) instead. Fixed-point loop since
+            // updateAvailable only ever flips false->true here, so it always
+            // terminates and is insensitive to iteration order (a diamond
+            // dependency can otherwise get visited before its own upstream
+            // flag has propagated).
+            let changed = true
+            while (changed) {
+                changed = false
+                for (const addon of Object.values(installedRepo)) {
+                    if (!addon.updateAvailable) continue
+                    for (const dependentId of (addon.dependents || [])) {
+                        const dependent = installedRepo[dependentId]
+                        if (dependent && !dependent.updateAvailable) {
+                            dependent.updateAvailable = true
+                            changed = true
+                        }
+                    }
                 }
             }
         }
@@ -703,6 +725,110 @@ async function enableAddon(repoId, addonId, enabled) {
 }
 
 
+// Validates the whole installed-addon graph against the real Trilium note
+// tree: dependency/dependent edges are symmetric, every note id TAM recorded
+// (root, noteMap, exportedNotes, settingsNoteId, persistence root/notes)
+// still exists, and every live AddonData: relation in an addon's subtree
+// still points at the persisted copy TAM thinks it does. Returns a flat list
+// of { repoId, addonId, message } issues (empty if everything checks out).
+async function validateDatabase() {
+    const database = await loadDatabase()
+    const issues = []
+
+    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
+        for (const [addonId, addon] of Object.entries(addons || {})) {
+            const persistence = database.persistence?.[repoId]?.[addonId] || {}
+
+            const backendIssues = await api.runOnBackend((addon, persistence) => {
+                const found = []
+
+                function noteExists(noteId) {
+                    if (!noteId) return false
+                    const note = api.getNote(noteId)
+                    return !!(note && !note.isDeleted)
+                }
+
+                if (!noteExists(addon.rootNoteId)) {
+                    found.push(`root note (${addon.rootNoteId}) is missing`)
+                }
+
+                for (const [localId, realId] of Object.entries(addon.noteMap || {})) {
+                    if (!noteExists(realId)) {
+                        found.push(`note '${localId}' (${realId}) is missing`)
+                    }
+                }
+
+                for (const [exportName, realId] of Object.entries(addon.exportedNotes || {})) {
+                    if (!noteExists(realId)) {
+                        found.push(`export '${exportName}' (${realId}) is missing`)
+                    }
+                }
+
+                if (addon.settingsNoteId && !noteExists(addon.settingsNoteId)) {
+                    found.push(`settings note (${addon.settingsNoteId}) is missing`)
+                }
+
+                if (persistence.rootNote && !noteExists(persistence.rootNote)) {
+                    found.push(`persistence root note (${persistence.rootNote}) is missing`)
+                }
+
+                for (const [key, realId] of Object.entries(persistence.persistenceNotes || {})) {
+                    if (!noteExists(realId)) {
+                        found.push(`persisted note '${key}' (${realId}) is missing`)
+                    }
+                }
+
+                if (noteExists(addon.rootNoteId)) {
+                    for (const noteId of api.getNote(addon.rootNoteId).getSubtreeNoteIds()) {
+                        const note = api.getNote(noteId)
+                        if (!note) continue
+                        for (const relation of note.getRelations()) {
+                            if (!relation.name.includes("AddonData:")) continue
+                            const key = relation.name.split("AddonData:")[1]
+                            const expected = (persistence.persistenceNotes || {})[key]
+                            if (!expected) {
+                                found.push(`relation '${relation.name}' on note ${noteId} has no matching persistence record for key '${key}'`)
+                            } else if (relation.value !== expected) {
+                                found.push(`relation '${relation.name}' on note ${noteId} points at ${relation.value}, expected persisted note ${expected}`)
+                            }
+                        }
+                    }
+                }
+
+                return found
+            }, [addon, persistence])
+
+            for (const message of backendIssues) {
+                issues.push({ repoId, addonId, message })
+            }
+
+            for (const depAddonId of (addon.dependencies || [])) {
+                const dep = addons[depAddonId]
+                if (!dep) {
+                    issues.push({ repoId, addonId, message: `depends on '${depAddonId}', which is not installed` })
+                    continue
+                }
+                if (!(dep.dependents || []).includes(addonId)) {
+                    issues.push({ repoId, addonId, message: `depends on '${depAddonId}', but is not listed in its dependents` })
+                }
+            }
+            for (const dependentId of (addon.dependents || [])) {
+                const dependent = addons[dependentId]
+                if (!dependent) {
+                    issues.push({ repoId, addonId, message: `lists '${dependentId}' as a dependent, but it is not installed` })
+                    continue
+                }
+                if (!(dependent.dependencies || []).includes(addonId)) {
+                    issues.push({ repoId, addonId, message: `lists '${dependentId}' as a dependent, but it does not declare this as a dependency` })
+                }
+            }
+        }
+    }
+
+    return issues
+}
+
+
 // Exports ---------------------------------------------------------------------
 module.exports.addRepository      = addRepository
 module.exports.getAllRepositories  = getAllRepositories
@@ -717,3 +843,4 @@ module.exports.enableAddon        = enableAddon
 module.exports.getPendingPrompts  = getPendingPrompts
 module.exports.resolvePrompt      = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
+module.exports.validateDatabase    = validateDatabase

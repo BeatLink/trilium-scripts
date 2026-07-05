@@ -97,7 +97,13 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
                 />
             </div>
             <div>
-                {Object.entries(repoData.addons ?? {}).map(([addonId, addonData]) => (
+                {Object.entries(repoData.addons ?? {})
+                    // Libraries are an implementation detail of whatever addon
+                    // depends on them — TAM installs/updates/uninstalls them
+                    // automatically via the dependency graph, so there's
+                    // nothing for the user to do with one directly.
+                    .filter(([, addonData]) => addonData.type !== "library")
+                    .map(([addonId, addonData]) => (
                     <Addon
                         key={addonId}
                         addonId={addonId}
@@ -111,7 +117,7 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
                     />
                 ))}
                 {/* Optional placeholder if no addons */}
-                {(!repoData.addons || Object.keys(repoData.addons).length === 0) && (
+                {Object.entries(repoData.addons ?? {}).filter(([, a]) => a.type !== "library").length === 0 && (
                     <p>No addons available.</p>
                 )}
             </div>
@@ -186,6 +192,7 @@ export default function RepoManager() {
     const [pendingPrompts, setPendingPrompts] = useState([])
     const [promptContext, setPromptContext] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
+    const [validationIssues, setValidationIssues] = useState(null)
 
     // Main Command Handler
     useEffect(() => {
@@ -271,6 +278,12 @@ export default function RepoManager() {
                     const targets = []
                     for (const [repoId, repoData] of Object.entries(repositories)) {
                         for (const [addonId, addonData] of Object.entries(repoData.addons ?? {})) {
+                            // Libraries are hidden and update themselves as a
+                            // side effect of updating whatever depends on them
+                            // (their updateAvailable flag is already
+                            // propagated up to those dependents) — updating
+                            // them here too would just be redundant work.
+                            if (addonData.type === "library") continue
                             if (addonData.installedVersion && addonData.updateAvailable) {
                                 targets.push({ repoId, addonId })
                             }
@@ -316,6 +329,11 @@ export default function RepoManager() {
                     window.location.reload();
                     break
                 }
+                case "validate-database": {
+                    setValidationIssues(await libTAMjs.validateDatabase())
+                    setCommand(null)
+                    break
+                }
             }
         }
         commandHandler()
@@ -355,7 +373,7 @@ export default function RepoManager() {
     }
 
     const anyUpdateAvailable = Object.values(repositories).some(repoData =>
-        Object.values(repoData.addons ?? {}).some(a => a.installedVersion && a.updateAvailable)
+        Object.values(repoData.addons ?? {}).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
     )
 
     return (
@@ -381,6 +399,13 @@ export default function RepoManager() {
                             setCommand({ command: "update-all" })
                         }}
                     />}
+                    <Button
+                        icon="bx bx-shield-quarter"
+                        text="Validate Database"
+                        onClick={e => {
+                            setCommand({ command: "validate-database" })
+                        }}
+                    />
                     <NewRepo
                         onSave={value => {
                             setCommand({ command: "add-repository", repository: value })
@@ -388,6 +413,30 @@ export default function RepoManager() {
                     />
                 </div>
             </div>
+            {validationIssues !== null && (
+                <div className="TAM-validation-results">
+                    <h4>
+                        Database Validation —{" "}
+                        {validationIssues.length === 0
+                            ? "no issues found"
+                            : `${validationIssues.length} issue(s) found`}
+                    </h4>
+                    {validationIssues.length > 0 && (
+                        <ul>
+                            {validationIssues.map((issue, i) => (
+                                <li key={i}>
+                                    <strong>{issue.repoId} / {issue.addonId}</strong>: {issue.message}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <Button
+                        icon="bx bx-x"
+                        text="Dismiss"
+                        onClick={e => { setValidationIssues(null) }}
+                    />
+                </div>
+            )}
             <div>
                 <h4>Repositories</h4>
                 {Object.entries(repositories).map(([repoId, repoData]) => (

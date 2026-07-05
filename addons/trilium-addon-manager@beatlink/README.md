@@ -232,6 +232,22 @@ Installing an addon that's already installed only ever *promotes* `manuallyInsta
 
 Addons installed before this tracking existed won't have these fields; they're treated conservatively (`manuallyInstalled` defaults to `true`, `dependencies`/`dependents` default to empty) until they're next installed, updated, or otherwise touched, at which point the fields get populated normally.
 
+### Hidden libraries and update propagation
+
+Addons with `"type": "library"` are never shown in TAM's addon list — there's nothing for a user to do with one directly, since TAM installs, updates, and uninstalls them automatically as a side effect of managing whatever depends on them. This means a library's own available update would otherwise be invisible. To fix that, `checkForAddonUpdates` propagates `updateAvailable` up through the `dependents` graph after computing each addon's direct version comparison: if a library has an update, every addon that depends on it — directly or transitively — is also flagged, using a fixed-point loop so the flag reaches dependents-of-dependents too. The visible addon's own "Update Addon" button then updates it as usual, which (via the dependency-staleness check in `installAddon`'s reinstall path) picks up the library update along the way. "Update All Addons" skips library entries directly for the same reason — updating the visible addon(s) that depend on them already covers it.
+
+---
+
+## Validating the Database
+
+The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits the installed-addon registry against the live Trilium note tree and reports anything inconsistent:
+
+- **Dependency graph symmetry** — every `dependencies` edge has a matching reverse `dependents` edge on the other side, and vice versa.
+- **Note existence** — the addon's `rootNoteId`, every entry in `noteMap`, every entry in `exportedNotes`, and `settingsNoteId` (if set) still resolve to real, non-deleted notes.
+- **Persistence integrity** — the persistence tree's `rootNote` and every `persistenceNotes` entry still exist, and every live `AddonData:key` relation found while walking the addon's subtree still points at the persisted note TAM's database says it should.
+
+It returns a flat list of `{ repoId, addonId, message }` issues (empty if everything checks out), which the UI renders as a dismissible panel. This doesn't fix anything automatically — it's a diagnostic for tracking down drift (e.g. a note deleted by hand outside TAM, or a relation that got repointed) rather than a repair tool.
+
 ---
 
 ## Enabling and Disabling

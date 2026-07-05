@@ -84,6 +84,29 @@
     justify-content: space-between;
 }
 
+/* Validation Results */
+.TAM-validation-results {
+    background-color: var(--card-background-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.TAM-validation-results h4 {
+    margin: 0;
+}
+
+.TAM-validation-results ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.TAM-validation-results button.btn.btn-secondary {
+    align-self: flex-start;
+}
+
 /* Prompt Review */
 .TAM-prompt-review {
     display: flex;
