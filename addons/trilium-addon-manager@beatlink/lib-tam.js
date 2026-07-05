@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.5.2"
+const TAM_VERSION = "2.6.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -106,6 +106,7 @@ async function updateRepositories() {
     }
     await saveDatabase(database)
     await checkForAddonUpdates()
+    await cleanupEmptyPersistenceRoots()
 }
 
 async function checkForAddonUpdates() {
@@ -421,20 +422,12 @@ async function connectAddonPersistence(repoId, addonId) {
     const persistenceRoot = await getPersistenceNoteId()
     let database = await loadDatabase()
 
-    if (!database.persistence[repoId][addonId].rootNote) {
-        const addonPersistRoot = await api.runOnBackend((persistenceRoot, addonId) => {
-            const result = api.createTextNote(persistenceRoot, addonId, "")
-            result.note.setLabel("iconClass", "bx bx-customize")
-            return result.note.noteId
-        }, [persistenceRoot, addonId])
-        database.persistence[repoId][addonId].rootNote = addonPersistRoot
-    }
     if (!database.persistence[repoId][addonId].persistenceNotes) {
         database.persistence[repoId][addonId].persistenceNotes = {}
     }
 
     const addonNoteId = database.installedAddons[repoId][addonId].rootNoteId
-    const persistRoot  = database.persistence[repoId][addonId].rootNote
+    const existingPersistRoot = database.persistence[repoId][addonId].rootNote || null
     const existingNotes = database.persistence[repoId][addonId].persistenceNotes
 
     // Single pass: create persisted copies, rewire AddonData: relations, delete originals.
@@ -442,9 +435,15 @@ async function connectAddonPersistence(repoId, addonId) {
     // which properly updates becca's targetRelations reverse index for the old target note.
     // This prevents deleteNote's cascade from finding and killing the rewired relation.
     // Everything runs in one runOnBackend so UI reload from note deletion can't interrupt it.
-    const newPersistenceNotes = await api.runOnBackend((addonNoteId, persistRoot, existingNotes) => {
+    // The addon's own persistence folder (`persistRoot`) is created lazily, the first time a note
+    // actually needs to be duplicated into it — most addons persist nothing, and shouldn't get an
+    // empty folder under Addon Data for it. If nothing ends up living in it (nothing to persist, or
+    // everything that was persisted got removed since), it's deleted again before returning.
+    const outcome = await api.runOnBackend((addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes) => {
         const result = {}
         const toDelete = []
+        let persistRoot = existingPersistRoot
+
         for (const noteId of api.getNote(addonNoteId).getSubtreeNoteIds()) {
             const note = api.getNote(noteId)
             for (const relation of note.getRelations()) {
@@ -453,6 +452,11 @@ async function connectAddonPersistence(repoId, addonId) {
                 const origNoteId = relation.value
                 let persistNoteId = existingNotes[key]
                 if (!persistNoteId || !api.getNote(persistNoteId)) {
+                    if (!persistRoot) {
+                        const rootResult = api.createTextNote(persistenceRoot, addonId, "")
+                        rootResult.note.setLabel("iconClass", "bx bx-customize")
+                        persistRoot = rootResult.note.noteId
+                    }
                     const origTitle = api.getNote(origNoteId).title
                     const dup = api.duplicateSubtree(origNoteId, persistRoot)
                     dup.note.title = origTitle
@@ -471,14 +475,60 @@ async function connectAddonPersistence(repoId, addonId) {
             const note = api.getNote(noteId)
             if (note) note.deleteNote()
         }
-        return result
-    }, [addonNoteId, persistRoot, existingNotes])
 
+        if (persistRoot) {
+            const rootNote = api.getNote(persistRoot)
+            if (rootNote && rootNote.getChildNotes().length === 0) {
+                rootNote.deleteNote()
+                persistRoot = null
+            }
+        }
+
+        return { persistRoot, persistenceNotes: result }
+    }, [addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes])
+
+    if (outcome.persistRoot) {
+        database.persistence[repoId][addonId].rootNote = outcome.persistRoot
+    } else {
+        delete database.persistence[repoId][addonId].rootNote
+    }
     database.persistence[repoId][addonId].persistenceNotes = {
         ...existingNotes,
-        ...newPersistenceNotes
+        ...outcome.persistenceNotes
     }
     await saveDatabase(database)
+}
+
+// Retroactive sweep for addons whose persistence folder was created before
+// it was made just-in-time (or whose persisted notes all disappeared some
+// other way) — removes any recorded persistence root that's now empty and
+// clears the stale reference. Run opportunistically from
+// `updateRepositories` rather than needing its own UI trigger.
+async function cleanupEmptyPersistenceRoots() {
+    let database = await loadDatabase()
+    let changed = false
+
+    for (const addons of Object.values(database.persistence || {})) {
+        for (const persistence of Object.values(addons || {})) {
+            const rootNoteId = persistence.rootNote
+            if (!rootNoteId) continue
+
+            const isEmpty = await api.runOnBackend((rootNoteId) => {
+                const note = api.getNote(rootNoteId)
+                if (!note) return true
+                if (note.getChildNotes().length > 0) return false
+                note.deleteNote()
+                return true
+            }, [rootNoteId])
+
+            if (isEmpty) {
+                delete persistence.rootNote
+                changed = true
+            }
+        }
+    }
+
+    if (changed) await saveDatabase(database)
 }
 
 async function deleteAddon(repoId, addonId) {

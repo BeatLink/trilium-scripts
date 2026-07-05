@@ -270,7 +270,7 @@ Some addon notes are meant to hold user data (settings, cached data, user-custom
 
 When an addon is first installed:
 1. TAM scans the addon's note subtree for any `AddonData:key` relations.
-2. For each one found, TAM duplicates the target note into the **Addon Data** tree (`addonPersistenceLabel` note), under a per-addon folder.
+2. For each one found, TAM duplicates the target note into the **Addon Data** tree, under a per-addon folder — created **just in time**, the first time this addon actually has something to persist. An addon with no `AddonData:` relations at all never gets a folder under Addon Data.
 3. The `AddonData:key` relation on the addon note is updated to point to the persisted copy instead of the original.
 4. The mapping `key → persistedNoteId` is saved in the Database.
 
@@ -279,7 +279,7 @@ On reinstall after an update:
 2. Instead of duplicating again, the relation is rewired to point to the already-existing persisted note.
 3. User data is preserved unchanged.
 
-Notes in the persistence tree are never deleted by TAM (even if the addon is uninstalled), ensuring data is not accidentally lost.
+Notes in the persistence tree are never deleted by TAM (even if the addon is uninstalled), ensuring data is not accidentally lost. The one exception is the per-addon *folder* itself: if it ends up with zero children (nothing to persist, or everything that was persisted is gone), TAM deletes the empty folder and clears its Database reference — checked for the addon just installed/updated every time `connectAddonPersistence` runs, and swept across every installed addon by `cleanupEmptyPersistenceRoots` whenever "Update Repositories" is clicked (this is what retroactively cleans up addons that got an empty folder before persistence roots were made just-in-time).
 
 ---
 
