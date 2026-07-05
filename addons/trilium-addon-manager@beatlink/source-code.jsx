@@ -37,7 +37,7 @@ function titleCase(s) {
 }
 
 function Badge({ type }) {
-    return <span className="TAM-badge" style={{ backgroundColor: typeColor(type) }}>{type}</span>
+    return <span className="badge" style={{ backgroundColor: typeColor(type) }}>{type}</span>
 }
 
 function TamButton({ icon, text, onClick, className = "" }) {
@@ -49,8 +49,8 @@ function TamButton({ icon, text, onClick, className = "" }) {
     )
 }
 
-function BackLink({ onClick, text = "Back to Addons" }) {
-    return <a className="TAM-back" onClick={onClick}>← {text}</a>
+function BackLink({ onClick, text = "All Addons" }) {
+    return <a className="back" onClick={onClick}>← {text}</a>
 }
 
 function Spinner() {
@@ -78,18 +78,23 @@ function computeStats(addons, catalogs) {
 // search-box + type-filter-pills toolbar over a grid of addons.
 function SearchFilterToolbar({ search, onSearchChange, typeFilter, onTypeFilterChange, availableTypes }) {
     return (
-        <div className="TAM-toolbar">
-            <input
-                type="text"
-                className="TAM-search"
-                placeholder="Search addons..."
-                value={search}
-                onChange={e => onSearchChange(e.target.value)}
-            />
+        <div className="toolbar">
+            <div className="search-wrap">
+                <input
+                    type="search"
+                    id="search"
+                    placeholder="Search addons…"
+                    autoComplete="off"
+                    spellCheck="false"
+                    value={search}
+                    onChange={e => onSearchChange(e.target.value)}
+                />
+            </div>
             {availableTypes.length > 0 && (
-                <div className="TAM-filters">
+                <div className="filters">
                     <button
-                        className={`TAM-filter-pill${typeFilter === null ? " TAM-filter-active" : ""}`}
+                        className={`filter${typeFilter === null ? " active" : ""}`}
+                        style={{ "--c": "#2563eb" }}
                         onClick={() => onTypeFilterChange(null)}
                     >
                         All
@@ -97,7 +102,7 @@ function SearchFilterToolbar({ search, onSearchChange, typeFilter, onTypeFilterC
                     {availableTypes.map(type => (
                         <button
                             key={type}
-                            className={`TAM-filter-pill${typeFilter === type ? " TAM-filter-active" : ""}`}
+                            className={`filter${typeFilter === type ? " active" : ""}`}
                             style={{ "--c": typeColor(type) }}
                             onClick={() => onTypeFilterChange(type)}
                         >
@@ -114,19 +119,32 @@ function SearchFilterToolbar({ search, onSearchChange, typeFilter, onTypeFilterC
 // List View -------------------------------------------------------------------
 function AddonCard({ addonData, onOpen, onInstall }) {
     return (
-        <div className="TAM-card" onClick={() => onOpen(addonData.id)}>
-            <div className="TAM-card-top">
-                <Badge type={addonData.type} />
-                {addonData.installedVersion && addonData.updateAvailable && (
-                    <span className="TAM-pill TAM-pill-update">Update available</span>
-                )}
-                {addonData.installedVersion && !addonData.updateAvailable && (
-                    <span className="TAM-pill TAM-pill-installed">Installed</span>
-                )}
+        <div className="card" onClick={() => onOpen(addonData.id)}>
+            <div className="card-top">
+                <span className="card-name">{addonData.name}</span>
+                <div className="TAM-card-badges">
+                    <Badge type={addonData.type} />
+                    {addonData.installedVersion && addonData.updateAvailable && (
+                        <span className="TAM-pill TAM-pill-update">Update</span>
+                    )}
+                    {addonData.installedVersion && !addonData.updateAvailable && (
+                        <span className="TAM-pill TAM-pill-installed">Installed</span>
+                    )}
+                </div>
             </div>
-            <h3 className="TAM-card-title">{addonData.name}</h3>
-            <p className="TAM-card-meta">by {addonData.author} · v{addonData.installedVersion ?? addonData.latestVersion}</p>
-            <p className="TAM-card-desc">{addonData.description}</p>
+            <p className="card-desc">{addonData.description}</p>
+            <div className="card-foot">
+                <span>v{addonData.installedVersion ?? addonData.latestVersion}</span>
+                <span
+                    className="card-author"
+                    onClick={e => {
+                        e.stopPropagation()
+                        window.open(`https://github.com/${addonData.author}`, "_blank")
+                    }}
+                >
+                    {addonData.author}
+                </span>
+            </div>
             {!addonData.installedVersion && onInstall && (
                 <div className="TAM-card-install">
                     <TamButton
@@ -167,14 +185,12 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
     return (
         <div>
             {catalogs.length > 0 && (
-                <div className="TAM-toolbar">
-                    <div className="TAM-filters">
-                        {catalogs.map(url => (
-                            <button key={url} className="TAM-filter-pill" onClick={() => onBrowseCatalog(url)}>
-                                Browse: {url.replace(/^https?:\/\//, "")}
-                            </button>
-                        ))}
-                    </div>
+                <div className="filters TAM-catalog-row">
+                    {catalogs.map(url => (
+                        <button key={url} className="filter" onClick={() => onBrowseCatalog(url)}>
+                            Browse: {url.replace(/^https?:\/\//, "")}
+                        </button>
+                    ))}
                 </div>
             )}
             <SearchFilterToolbar
@@ -195,7 +211,7 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
                     <p>No addons match your search.</p>
                 </div>
             ) : (
-                <div className="TAM-grid">
+                <div className="grid">
                     {visible.map(addonData => (
                         <AddonCard key={addonData.id} addonData={addonData} onOpen={onOpenAddon} />
                     ))}
@@ -244,7 +260,7 @@ function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds,
                     <p>No addons match your search.</p>
                 </div>
             ) : (
-                <div className="TAM-grid">
+                <div className="grid">
                     {visible.map(addonData => (
                         installedIds.has(addonData.id) ? (
                             <AddonCard key={addonData.id} addonData={{ ...addonData, installedVersion: "installed" }} onOpen={() => onOpenAddon(addonData.id)} />
@@ -279,52 +295,51 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnabl
     }, [addonData.id, addonData.installedVersion, addonData.manifest?.readmeNote])
 
     return (
-        <div className="TAM-addon-layout">
-            <div className="TAM-addon-sidebar">
-                <Badge type={addonData.type} />
-                <h2>{addonData.name}</h2>
-                <table className="TAM-meta-table">
+        <div className="addon-layout">
+            <aside className="addon-sidebar">
+                <table className="meta-table">
                     <tbody>
-                        <tr><td>Author</td><td>{addonData.author}</td></tr>
-                        <tr><td>Version</td><td>{addonData.installedVersion ?? addonData.latestVersion}</td></tr>
-                        <tr><td>License</td><td>{addonData.license}</td></tr>
+                        <tr><th>Author</th><td>{addonData.author}</td></tr>
+                        <tr><th>Version</th><td>{addonData.installedVersion ?? addonData.latestVersion}</td></tr>
+                        <tr><th>License</th><td>{addonData.license}</td></tr>
                     </tbody>
                 </table>
-                <div className="TAM-addon-actions">
-                    <TamButton icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
+                <div className="addon-actions">
+                    <TamButton className="btn-ghost" icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
                     {!addonData.installedVersion && (
                         <TamButton icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonData)} />
                     )}
                     {addonData.installedVersion && !isSelf && (
-                        <TamButton icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonData.id)} />
+                        <TamButton className="btn-ghost" icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonData.id)} />
                     )}
                     {addonData.installedVersion && (
                         <TamButton
+                            className="btn-ghost"
                             icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
                             text={addonData.enabled ? "Disable Addon" : "Enable Addon"}
                             onClick={() => onEnable(addonData.id, !addonData.enabled)}
                         />
                     )}
                     {addonData.installedVersion && addonData.settingsNoteId && (
-                        <TamButton icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
+                        <TamButton className="btn-ghost" icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
                     )}
                     {addonData.updateAvailable && (
                         <TamButton icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonData.id)} />
                     )}
                 </div>
-            </div>
-            <div className="TAM-addon-main">
+            </aside>
+            <div className="addon-content">
                 <p className="TAM-addon-description">{addonData.description}</p>
                 {addonData.installedVersion ? (
                     readmeLoading ? (
                         <Spinner />
                     ) : readmeHtml ? (
-                        <div className="TAM-readme" dangerouslySetInnerHTML={{ __html: readmeHtml }} />
+                        <div className="readme" dangerouslySetInnerHTML={{ __html: readmeHtml }} />
                     ) : (
-                        <p className="TAM-muted">No README available for this addon.</p>
+                        <p className="no-readme">No README available for this addon.</p>
                     )
                 ) : (
-                    <p className="TAM-muted">
+                    <p className="no-readme">
                         Install this addon to view its full README, or{" "}
                         <a href={addonData.homepage} target="_blank">view it on GitHub</a>.
                     </p>
@@ -404,8 +419,8 @@ function SettingsView({
                         <div key={url} className="TAM-repo-row">
                             <span>{url}</span>
                             <div className="TAM-validation-buttons">
-                                <TamButton icon="bx bx-globe" text="Visit Website" onClick={() => onVisitCatalogWebsite(url)} />
-                                <TamButton icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
+                                <TamButton className="btn-ghost" icon="bx bx-globe" text="Visit Website" onClick={() => onVisitCatalogWebsite(url)} />
+                                <TamButton className="btn-ghost" icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
                             </div>
                         </div>
                     ))}
@@ -420,10 +435,10 @@ function SettingsView({
             <div>
                 <h3>Maintenance</h3>
                 <div className="TAM-maintenance-actions">
-                    <TamButton icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
+                    <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
-                    <TamButton icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
-                    <TamButton icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
+                    <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
+                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
                 </div>
             </div>
         </div>
@@ -679,22 +694,24 @@ export default function RepoManager() {
     if (pendingPrompts.length > 0 && promptAddonId) {
         return (
             <div className="TAM-body">
-                <div className="TAM-header">
-                    <div className="TAM-header-titles">
-                        <h2>Trilium Addon Manager</h2>
+                <header>
+                    <div className="hdr">
+                        <h1>Trilium Addon Manager</h1>
                     </div>
-                </div>
-                {promptQueue.length > 0 && (
-                    <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
-                )}
-                <PromptReview
-                    prompts={pendingPrompts}
-                    onResolve={(decisions) => setCommand({
-                        command: "resolve-prompts",
-                        addonId: promptAddonId,
-                        decisions
-                    })}
-                />
+                </header>
+                <main>
+                    {promptQueue.length > 0 && (
+                        <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
+                    )}
+                    <PromptReview
+                        prompts={pendingPrompts}
+                        onResolve={(decisions) => setCommand({
+                            command: "resolve-prompts",
+                            addonId: promptAddonId,
+                            decisions
+                        })}
+                    />
+                </main>
             </div>
         )
     }
@@ -777,57 +794,88 @@ export default function RepoManager() {
         )
     }
 
+    const installedCount = Object.values(addons).filter(a => a.type !== "library" && a.installedVersion).length
+
+    let headerContent
+    if (view.type === "list") {
+        headerContent = (
+            <div className="hdr">
+                <div className="hdr-left">
+                    <h1>Trilium Addon Manager</h1>
+                    <p>{installedCount} addon{installedCount === 1 ? "" : "s"} installed</p>
+                </div>
+                <div className="hdr-right">
+                    <div className="hdr-links">
+                        <a onClick={() => setView({ type: "settings" })}>Settings</a>
+                    </div>
+                </div>
+            </div>
+        )
+    } else if (view.type === "detail" && addons[view.addonId]) {
+        const addonData = addons[view.addonId]
+        headerContent = (
+            <div className="hdr">
+                <BackLink onClick={() => setView({ type: "list" })} />
+                <div className="hdr-name">
+                    <h1>{addonData.name}</h1>
+                    <Badge type={addonData.type} />
+                </div>
+            </div>
+        )
+    } else {
+        headerContent = (
+            <div className="hdr">
+                <BackLink onClick={() => setView({ type: "list" })} />
+                <div className="hdr-name">
+                    <h1>Trilium Addon Manager</h1>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="TAM-body">
-            <div className="TAM-header">
-                <div className="TAM-header-titles">
-                    {view.type !== "list" && (
-                        <BackLink onClick={() => setView({ type: "list" })} />
-                    )}
-                    <h2>Trilium Addon Manager</h2>
-                </div>
-                {view.type === "list" && (
-                    <div className="TAM-header-actions">
-                        <TamButton icon="bx bx-cog" text="Settings" onClick={() => setView({ type: "settings" })} />
+            <header>{headerContent}</header>
+            <main>
+                {validationIssues !== null && (
+                    <div className="TAM-validation-results">
+                        <h4>
+                            {validationTitle} —{" "}
+                            {validationIssues.length === 0
+                                ? "no issues found"
+                                : `${validationIssues.length} issue(s) found`}
+                        </h4>
+                        {validationIssues.length > 0 && (
+                            <>
+                                <p className="no-readme">There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these.</p>
+                                <pre className="TAM-validation-content">
+                                    {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
+                                </pre>
+                            </>
+                        )}
+                        <div className="TAM-validation-buttons">
+                            {validationIssues.length > 0 && <TamButton
+                                className="btn-ghost"
+                                icon="bx bx-copy"
+                                text="Copy to Clipboard"
+                                onClick={e => {
+                                    const text = validationIssues
+                                        .map(issue => `${issue.addonId}: ${issue.message}`)
+                                        .join("\n")
+                                    navigator.clipboard.writeText(text)
+                                }}
+                            />}
+                            <TamButton
+                                className="btn-ghost"
+                                icon="bx bx-x"
+                                text="Dismiss"
+                                onClick={e => { setValidationIssues(null) }}
+                            />
+                        </div>
                     </div>
                 )}
-            </div>
-            {validationIssues !== null && (
-                <div className="TAM-validation-results">
-                    <h4>
-                        {validationTitle} —{" "}
-                        {validationIssues.length === 0
-                            ? "no issues found"
-                            : `${validationIssues.length} issue(s) found`}
-                    </h4>
-                    {validationIssues.length > 0 && (
-                        <>
-                            <p className="TAM-muted">There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these.</p>
-                            <pre className="TAM-validation-content">
-                                {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
-                            </pre>
-                        </>
-                    )}
-                    <div className="TAM-validation-buttons">
-                        {validationIssues.length > 0 && <TamButton
-                            icon="bx bx-copy"
-                            text="Copy to Clipboard"
-                            onClick={e => {
-                                const text = validationIssues
-                                    .map(issue => `${issue.addonId}: ${issue.message}`)
-                                    .join("\n")
-                                navigator.clipboard.writeText(text)
-                            }}
-                        />}
-                        <TamButton
-                            icon="bx bx-x"
-                            text="Dismiss"
-                            onClick={e => { setValidationIssues(null) }}
-                        />
-                    </div>
-                </div>
-            )}
-            {bodyContent}
+                {bodyContent}
+            </main>
         </div>
     )
 }
