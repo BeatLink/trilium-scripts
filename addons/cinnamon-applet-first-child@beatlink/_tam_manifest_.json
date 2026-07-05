@@ -34,8 +34,6 @@
             {"from": "root",     "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
-            {"note": "root",   "name": "iconClass",            "value": "bx bx-chevron-right-square"},
-            {"note": "script", "name": "iconClass",             "value": "bx bx-chevron-right-square"},
             {"note": "script", "name": "customRequestHandler",  "value": "first_child_panel"}
         ],
         "dependencies": ["libsettings@beatlink"],

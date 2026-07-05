@@ -19,9 +19,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib",   "name": "iconClass", "value": "bx bx-calendar-week"},
-            {"note": "style", "name": "appCss",    "value": ""},
-            {"note": "style", "name": "iconClass", "value": "bx bx-calendar-week"}
+            {"note": "style", "name": "appCss",    "value": ""}
         ],
         "dependencies": ["libfullcalendar@arshaw", "libical@kewisch"],
         "exports": {

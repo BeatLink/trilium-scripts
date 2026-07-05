@@ -21,7 +21,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-calendar-check"}
+            
         ],
         "dependencies": ["libagendatask@beatlink", "libnotification@beatlink", "libcalendar@beatlink", "libmultisort@beatlink"],
         "exports": {

@@ -18,7 +18,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-task"}
+            
         ],
         "dependencies": ["librecurrence@beatlink"],
         "exports": {

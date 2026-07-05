@@ -39,8 +39,6 @@
             {"from": "root",         "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
-            {"note": "root",         "name": "iconClass", "value": "bx bx-calculator"},
-            {"note": "script",       "name": "iconClass", "value": "bx bx-calculator"},
             {"note": "table-widget", "name": "widget",    "value": ""}
         ],
         "dependencies": ["libsettings@beatlink"],

@@ -23,11 +23,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",    "name": "iconClass", "value": "bx bx-slider"},
-            {"note": "backend", "name": "iconClass", "value": "bx bx-slider"},
-            {"note": "ui",      "name": "iconClass", "value": "bx bx-slider"},
-            {"note": "style",   "name": "appCss",    "value": ""},
-            {"note": "style",   "name": "iconClass", "value": "bx bx-slider"}
+            {"note": "style",   "name": "appCss",    "value": ""}
         ],
         "dependencies": [],
         "exports": {

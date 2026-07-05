@@ -35,8 +35,6 @@
             {"from": "root",     "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
-            {"note": "root",   "name": "iconClass",            "value": "bx bx-inbox"},
-            {"note": "script", "name": "iconClass",             "value": "bx bx-inbox"},
             {"note": "script", "name": "customRequestHandler",  "value": "inboxPanel"}
         ],
         "dependencies": ["libsettings@beatlink", "libnotification@beatlink"],

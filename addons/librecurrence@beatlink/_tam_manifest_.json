@@ -18,7 +18,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-repeat"}
+            
         ],
         "dependencies": ["librrule@jkbrzt"],
         "exports": {

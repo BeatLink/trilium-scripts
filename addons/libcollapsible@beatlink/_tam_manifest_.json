@@ -16,7 +16,7 @@
         "children": [],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-chevron-down-square"}
+            
         ],
         "dependencies": [],
         "exports": {

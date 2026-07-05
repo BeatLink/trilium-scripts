@@ -20,9 +20,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",   "name": "iconClass", "value": "bx bx-bell"},
-            {"note": "script", "name": "run",       "value": "frontendStartup"},
-            {"note": "script", "name": "iconClass", "value": "bx bx-bell"}
+            {"note": "script", "name": "run",       "value": "frontendStartup"}
         ],
         "dependencies": ["libnotification@beatlink"],
         "exports": {}

@@ -19,8 +19,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib",     "name": "iconClass", "value": "bx bx-bell"},
-            {"note": "backend", "name": "iconClass", "value": "bx bx-bell"}
+            
         ],
         "dependencies": [],
         "exports": {

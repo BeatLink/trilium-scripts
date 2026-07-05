@@ -20,9 +20,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",   "name": "iconClass", "value": "bx bx-sort-alt-2"},
-            {"note": "script", "name": "run",       "value": "frontendStartup"},
-            {"note": "script", "name": "iconClass", "value": "bx bx-sort-alt-2"}
+            {"note": "script", "name": "run",       "value": "frontendStartup"}
         ],
         "dependencies": ["libmultisort@beatlink"],
         "exports": {}

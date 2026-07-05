@@ -18,7 +18,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib", "name": "iconClass", "value": "bx bx-window-open"}
+            
         ],
         "dependencies": ["libagendaoverview@beatlink"],
         "exports": {

@@ -16,8 +16,7 @@
         "children": [],
         "relations": [],
         "labels": [
-            {"note": "root", "name": "appCss",    "value": ""},
-            {"note": "root", "name": "iconClass", "value": "bx bx-code"}
+            {"note": "root", "name": "appCss",    "value": ""}
         ],
         "dependencies": [],
         "exports": {}

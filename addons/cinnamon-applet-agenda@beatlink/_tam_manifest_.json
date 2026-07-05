@@ -34,8 +34,6 @@
             {"from": "root",     "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
-            {"note": "root",   "name": "iconClass",            "value": "bx bx-calendar-check"},
-            {"note": "script", "name": "iconClass",             "value": "bx bx-calendar-check"},
             {"note": "script", "name": "customRequestHandler",  "value": "agenda_panel"}
         ],
         "dependencies": ["libsettings@beatlink"],

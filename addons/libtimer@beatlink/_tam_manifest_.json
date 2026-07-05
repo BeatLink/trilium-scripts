@@ -23,7 +23,6 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "lib",    "name": "iconClass", "value": "bx bx-timer"},
             {"note": "select", "name": "customResourceProvider", "value": "libtimerSelect.wav"},
             {"note": "start",  "name": "customResourceProvider", "value": "libtimerStart.wav"},
             {"note": "end",    "name": "customResourceProvider", "value": "libtimerEnd.wav"}

@@ -44,8 +44,6 @@
             {"from": "settings-page", "type": "renderNote",        "to": "settings"}
         ],
         "labels": [
-            {"note": "root", "name": "iconClass", "value": "bx bx-calendar-week"},
-            {"note": "feed", "name": "iconClass", "value": "bx bx-calendar-week"},
             {"note": "feed", "name": "customRequestHandler", "value": "simpleCalendarFeed"}
         ],
         "dependencies": ["libcalendarwidget@beatlink", "libcalendar@beatlink", "libsettings@beatlink"],

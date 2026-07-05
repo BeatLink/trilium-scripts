@@ -23,9 +23,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",    "name": "iconClass", "value": "bx bx-calendar-event"},
-            {"note": "lib",     "name": "iconClass", "value": "bx bx-calendar-event"},
-            {"note": "backend", "name": "iconClass", "value": "bx bx-calendar-event"}
+            
         ],
         "dependencies": ["libical@kewisch"],
         "exports": {

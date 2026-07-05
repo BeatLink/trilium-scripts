@@ -123,17 +123,12 @@
             {"from": "now-window", "type": "LauncherWidget",     "to": "now-launcher"}
         ],
         "labels": [
-            {"note": "root",       "name": "iconClass", "value": "bx bx-calendar-check"},
-            {"note": "ical",       "name": "iconClass", "value": "bx bx-calendar"},
             {"note": "ical",       "name": "customResourceProvider", "value": "agendaCalendar.ical"},
             {"note": "common-css", "name": "appCss", "value": ""},
             {"note": "task-css",   "name": "appCss", "value": ""},
             {"note": "now-css",    "name": "appCss", "value": ""},
-            {"note": "overview",   "name": "iconClass", "value": "bx bx-calendar-check"},
             {"note": "overview",   "name": "widget", "value": ""},
-            {"note": "task",       "name": "iconClass", "value": "bx bx-task"},
             {"note": "task",       "name": "widget", "value": ""},
-            {"note": "now-window", "name": "iconClass", "value": "bx bx-window-open"},
             {"note": "now-window", "name": "widget", "value": ""}
         ],
         "dependencies": [

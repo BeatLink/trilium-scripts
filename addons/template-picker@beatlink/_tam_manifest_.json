@@ -21,7 +21,6 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",   "name": "iconClass", "value": "bx bx-layout"},
             {"note": "widget", "name": "widget",    "value": ""},
             {"note": "style",  "name": "appCss",    "value": ""}
         ],

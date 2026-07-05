@@ -21,10 +21,7 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "root",    "name": "iconClass", "value": "bx bx-calendar"},
-            {"note": "lib",     "name": "iconClass", "value": "bx bx-calendar"},
-            {"note": "lib",     "name": "customResourceProvider", "value": "libIcal.js"},
-            {"note": "backend", "name": "iconClass", "value": "bx bx-calendar"}
+            {"note": "lib",     "name": "customResourceProvider", "value": "libIcal.js"}
         ],
         "dependencies": [],
         "exports": {

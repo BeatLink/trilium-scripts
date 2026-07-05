@@ -26,7 +26,6 @@
             {"from": "setup",  "type": "scriptNote", "to": "updateExpanded"}
         ],
         "labels": [
-            {"note": "root",   "name": "iconClass", "value": "bx bx-code"},
             {"note": "widget", "name": "widget",    "value": ""},
             {"note": "setup",  "name": "run",       "value": "frontendStartup"}
         ],

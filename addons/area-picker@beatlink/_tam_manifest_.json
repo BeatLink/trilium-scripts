@@ -63,11 +63,6 @@
         ],
         "labels": [
             {
-                "note": "root",
-                "name": "iconClass",
-                "value": "bx bx-code"
-            },
-            {
                 "note": "script",
                 "name": "widget",
                 "value": ""
@@ -76,16 +71,6 @@
                 "note": "style",
                 "name": "appCss",
                 "value": ""
-            },
-            {
-                "note": "style",
-                "name": "iconClass",
-                "value": "bx bx-code"
-            },
-            {
-                "note": "profile",
-                "name": "iconClass",
-                "value": "bx bx-code"
             }
         ],
         "dependencies": [],

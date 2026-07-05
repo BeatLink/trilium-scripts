@@ -23,10 +23,7 @@
             {"from": "setupButtons", "type": "MobileViewWidget", "to": "mobileView"}
         ],
         "labels": [
-            {"note": "root",         "name": "iconClass", "value": "bx bx-code"},
-            {"note": "mobileView",   "name": "iconClass", "value": "bx bx-code"},
-            {"note": "setupButtons", "name": "run",       "value": "frontendStartup"},
-            {"note": "setupButtons", "name": "iconClass", "value": "bx bx-code"}
+            {"note": "setupButtons", "name": "run",       "value": "frontendStartup"}
         ],
         "dependencies": [],
         "exports": {}

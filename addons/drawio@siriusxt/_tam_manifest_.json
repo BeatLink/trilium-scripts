@@ -23,7 +23,6 @@
             {"from": "root", "type": "AddonData:template", "to": "template"}
         ],
         "labels": [
-            {"note": "root",     "name": "iconClass", "value": "bx bx-shape-square"},
             {"note": "widget",   "name": "widget",    "value": ""},
             {"note": "template", "name": "template",  "value": ""}
         ],

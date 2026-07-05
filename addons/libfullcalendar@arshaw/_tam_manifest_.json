@@ -19,7 +19,6 @@
         ],
         "relations": [],
         "labels": [
-            {"note": "core",      "name": "iconClass", "value": "bx bx-calendar-week"},
             {"note": "core",      "name": "customResourceProvider", "value": "libFullCalendar.js"},
             {"note": "icalendar", "name": "customResourceProvider", "value": "libFullCalendarICalendar.js"}
         ],

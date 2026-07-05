@@ -149,19 +149,9 @@
     ],
     "labels": [
       {
-        "note": "togglenote",
-        "name": "iconClass",
-        "value": "bx bx-code"
-      },
-      {
         "note": "rightpane-jsx",
         "name": "widget",
         "value": ""
-      },
-      {
-        "note": "startup-js",
-        "name": "iconClass",
-        "value": "bx bx-code"
       },
       {
         "note": "startup-js",
@@ -172,11 +162,6 @@
         "note": "style-css",
         "name": "appCss",
         "value": ""
-      },
-      {
-        "note": "style-css",
-        "name": "iconClass",
-        "value": "bx bx-code"
       }
     ]
   }

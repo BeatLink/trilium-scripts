@@ -17,8 +17,7 @@
         "relations": [],
         "labels": [
             {"note": "root", "name": "appThemeBase", "value": "next"},
-            {"note": "root", "name": "appTheme",     "value": "WhiteBlueNext"},
-            {"note": "root", "name": "iconClass",    "value": "bx bx-code"}
+            {"note": "root", "name": "appTheme",     "value": "WhiteBlueNext"}
         ],
         "dependencies": [],
         "exports": {}
