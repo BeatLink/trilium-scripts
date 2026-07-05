@@ -1,11 +1,11 @@
 :root {
-    --TAM-accent: #2563eb;
-    --TAM-type-widget: #2563eb;
-    --TAM-type-theme: #7c3aed;
-    --TAM-type-css: #059669;
-    --TAM-type-script: #d97706;
-    --TAM-type-library: #0891b2;
-    --TAM-type-template: #be185d;
+    --TAM-accent: #2563eb !important;
+    --TAM-type-widget: #2563eb !important;
+    --TAM-type-theme: #7c3aed !important;
+    --TAM-type-css: #059669 !important;
+    --TAM-type-script: #d97706 !important;
+    --TAM-type-library: #0891b2 !important;
+    --TAM-type-template: #be185d !important;
 }
 
 /* Reset ------------------------------------------------------------------
@@ -27,20 +27,20 @@
     & *,
     & *::before,
     & *::after {
-        all: revert;
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+        all: revert !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    display: block;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
-    color: #1a1a2e;
-    background: #f1f5f9;
-    border-radius: 8px;
-    padding: 0;
+    display: block !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: #1a1a2e !important;
+    background: #f1f5f9 !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */
@@ -48,24 +48,24 @@
     & input,
     & select,
     & textarea {
-        font-family: inherit;
-        font-size: inherit;
-        color: inherit;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        color: inherit !important;
     }
 
     & h1, & h2, & h3, & h4, & h5 {
-        display: block;
-        font-weight: 700;
-        color: #0f172a;
+        display: block !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
     }
 
     & a {
-        color: #2563eb;
-        text-decoration: none;
-        cursor: pointer;
+        color: #2563eb !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
 
         &:hover {
-            text-decoration: underline;
+            text-decoration: underline !important;
         }
     }
 
@@ -75,30 +75,30 @@
        match the website's own solid `.btn` so actions look consistent with the
        catalog rather than Trilium's native button chrome. */
     & button {
-        display: inline-block;
-        cursor: pointer;
+        display: inline-block !important;
+        cursor: pointer !important;
 
         &.btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 14px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            background: #2563eb;
-            color: #fff;
-            transition: opacity 0.15s;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding: 8px 14px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            background: #2563eb !important;
+            color: #fff !important;
+            transition: opacity 0.15s !important;
 
             &:hover {
-                opacity: 0.85;
+                opacity: 0.85 !important;
             }
         }
     }
 
     & > * + * {
-        margin-top: 20px;
+        margin-top: 20px !important;
     }
 }
 
@@ -107,23 +107,23 @@
    sidebar/settings card instead, so it uses the site's regular link blue
    for contrast rather than copying that value out of its original context. */
 .TAM-back {
-    display: block;
-    color: #2563eb;
-    font-size: 13px;
-    cursor: pointer;
+    display: block !important;
+    color: #2563eb !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
 
     &:hover {
-        text-decoration: underline;
+        text-decoration: underline !important;
     }
 }
 
 .TAM-spinner {
-    width: 26px;
-    height: 26px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #2563eb;
-    border-radius: 50%;
-    animation: TAM-spin 0.6s linear infinite;
+    width: 26px !important;
+    height: 26px !important;
+    border: 3px solid #e2e8f0 !important;
+    border-top-color: #2563eb !important;
+    border-radius: 50% !important;
+    animation: TAM-spin 0.6s linear infinite !important;
 }
 
 @keyframes TAM-spin {
@@ -132,544 +132,544 @@
 
 /* Header -------------------------------------------------------------------- */
 .TAM-header {
-    background: linear-gradient(135deg, #0f172a, #1e3a5f);
-    border-radius: 8px;
-    padding: 36px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-    color: #fff;
+    background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
+    border-radius: 8px !important;
+    padding: 36px 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    flex-wrap: wrap !important;
+    color: #fff !important;
 
     @media (max-width: 700px) {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: column !important;
+        align-items: flex-start !important;
     }
 }
 
 .TAM-header-titles {
     & h2 {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -0.4px;
-        line-height: 1.3;
-        color: #fff;
+        font-size: 28px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.4px !important;
+        line-height: 1.3 !important;
+        color: #fff !important;
     }
 }
 
 .TAM-header-actions {
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
 }
 
 /* Toolbar (search + filters) ------------------------------------------------ */
 .TAM-toolbar {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
+    display: flex !important;
+    gap: 10px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
 }
 
 /* input is a replaced element — browsers don't render ::before/::after on it
    — so the search icon is drawn as a background-image on the input itself
    rather than an absolutely-positioned pseudo-element in a wrapper div. */
 .TAM-search {
-    display: block;
-    flex: 1;
-    min-width: 200px;
-    width: 100%;
-    height: 44px;
-    padding: 0 14px 0 40px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 15px;
-    color: #0f172a;
-    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 14px center;
-    background-size: 16px 16px;
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    display: block !important;
+    flex: 1 !important;
+    min-width: 200px !important;
+    width: 100% !important;
+    height: 44px !important;
+    padding: 0 14px 0 40px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    color: #0f172a !important;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 14px center !important;
+    background-size: 16px 16px !important;
+    outline: none !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
 
     &:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 
     &::placeholder {
-        color: #94a3b8;
+        color: #94a3b8 !important;
     }
 }
 
 .TAM-filters {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
 }
 
 .TAM-filter-pill {
-    --c: var(--TAM-accent);
-    display: inline-flex;
-    align-items: center;
-    height: 44px;
-    line-height: 1;
-    padding: 0 20px;
-    border-radius: 22px;
-    border: 1.5px solid #e2e8f0;
-    background: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    cursor: pointer;
-    color: #64748b;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    --c: var(--TAM-accent) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 44px !important;
+    line-height: 1 !important;
+    padding: 0 20px !important;
+    border-radius: 22px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    background: #fff !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    color: #64748b !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s !important;
 
     &:hover {
-        border-color: var(--c);
-        color: var(--c);
+        border-color: var(--c) !important;
+        color: var(--c) !important;
     }
 
     &.TAM-filter-active {
-        background: var(--c);
-        border-color: var(--c);
-        color: #fff;
+        background: var(--c) !important;
+        border-color: var(--c) !important;
+        color: #fff !important;
     }
 }
 
 /* Card grid ------------------------------------------------------------------ */
 .TAM-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-    gap: 14px;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;
+    gap: 14px !important;
 }
 
 .TAM-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px 18px;
-    cursor: pointer;
-    transition: box-shadow 0.15s, border-color 0.15s;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px 18px !important;
+    cursor: pointer !important;
+    transition: box-shadow 0.15s, border-color 0.15s !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
 
     &:hover {
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
-        border-color: #93c5fd;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09) !important;
+        border-color: #93c5fd !important;
     }
 }
 
 .TAM-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
 }
 
 .TAM-badge {
-    display: inline-block;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: 10px;
-    font-weight: 700;
-    color: #fff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
-    flex-shrink: 0;
+    display: inline-block !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    padding: 2px 8px !important;
+    border-radius: 10px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
 }
 
 .TAM-pill {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
+    display: inline-block !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
+    padding: 2px 8px !important;
+    border-radius: 10px !important;
+    white-space: nowrap !important;
 }
 
 .TAM-pill-installed {
-    background: rgba(5, 150, 105, 0.12);
-    color: #059669;
+    background: rgba(5, 150, 105, 0.12) !important;
+    color: #059669 !important;
 }
 
 .TAM-pill-update {
-    background: rgba(217, 119, 6, 0.12);
-    color: #d97706;
+    background: rgba(217, 119, 6, 0.12) !important;
+    color: #d97706 !important;
 }
 
 .TAM-card-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 600;
-    color: #0f172a;
+    display: block !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
 }
 
 .TAM-card-meta {
-    font-size: 12px;
-    color: #94a3b8;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 10px;
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding-top: 10px !important;
 }
 
 .TAM-card-desc {
-    font-size: 13px;
-    color: #64748b;
-    flex: 1;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-size: 13px !important;
+    color: #64748b !important;
+    flex: 1 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 .TAM-card-install {
-    align-self: flex-start;
+    align-self: flex-start !important;
 }
 
 .TAM-empty-state {
-    background: #fff;
-    border: 1px dashed #e2e8f0;
-    border-radius: 8px;
-    padding: 32px;
-    text-align: center;
-    color: #64748b;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+    background: #fff !important;
+    border: 1px dashed #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 32px !important;
+    text-align: center !important;
+    color: #64748b !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
 }
 
 /* Addon detail page ------------------------------------------------------------ */
 .TAM-addon-layout {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 28px;
-    align-items: start;
+    display: grid !important;
+    grid-template-columns: 220px 1fr !important;
+    gap: 28px !important;
+    align-items: start !important;
 
     @media (max-width: 700px) {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 }
 
 .TAM-addon-sidebar {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    position: sticky;
-    top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    position: sticky !important;
+    top: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
 
     @media (max-width: 700px) {
-        position: static;
+        position: static !important;
     }
 
     & h2 {
-        font-size: 17px;
-        color: #0f172a;
+        font-size: 17px !important;
+        color: #0f172a !important;
     }
 }
 
 .TAM-meta-table {
-    display: table;
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
 
-    & tbody { display: table-row-group; }
-    & tr { display: table-row; }
+    & tbody { display: table-row-group !important; }
+    & tr { display: table-row !important; }
 
     & td {
-        display: table-cell;
-        color: #0f172a;
-        padding: 5px 0;
-        word-break: break-word;
-        vertical-align: top;
+        display: table-cell !important;
+        color: #0f172a !important;
+        padding: 5px 0 !important;
+        word-break: break-word !important;
+        vertical-align: top !important;
     }
 
     & tr + tr td {
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid #f1f5f9 !important;
     }
 
     & td:first-child {
-        color: #64748b;
-        padding-right: 12px;
-        white-space: nowrap;
-        width: 1%;
+        color: #64748b !important;
+        padding-right: 12px !important;
+        white-space: nowrap !important;
+        width: 1% !important;
     }
 }
 
 .TAM-addon-actions {
-    margin-top: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    margin-top: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
 
     & button.btn {
-        display: flex;
-        justify-content: center;
-        width: 100%;
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
     }
 }
 
 .TAM-addon-main {
-    min-width: 0;
+    min-width: 0 !important;
 }
 
 .TAM-addon-description {
-    font-size: 15px;
-    color: #334155;
+    font-size: 15px !important;
+    color: #334155 !important;
 }
 
 .TAM-muted {
-    color: #94a3b8;
-    font-style: italic;
+    color: #94a3b8 !important;
+    font-style: italic !important;
 }
 
 /* Rendered README markdown --------------------------------------------------- */
 .TAM-readme {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 24px 28px;
-    line-height: 1.6;
-    word-break: break-word;
-    color: #1a1a2e;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 24px 28px !important;
+    line-height: 1.6 !important;
+    word-break: break-word !important;
+    color: #1a1a2e !important;
 
-    & h1 { font-size: 21px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
-    & h2 { font-size: 17px; margin: 20px 0 8px; }
-    & h3 { font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
-    & p { margin-bottom: 12px; }
-    & ul, & ol { display: block; margin: 0 0 12px 20px; }
-    & ul { list-style: disc; }
-    & ol { list-style: decimal; }
-    & li { display: list-item; margin-bottom: 3px; }
-    & a { color: #2563eb; }
-    & code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px; }
+    & h1 { font-size: 21px !important; margin-bottom: 12px !important; border-bottom: 1px solid #e2e8f0 !important; padding-bottom: 8px !important; }
+    & h2 { font-size: 17px !important; margin: 20px 0 8px !important; }
+    & h3 { font-size: 14px !important; font-weight: 600 !important; margin: 14px 0 6px !important; }
+    & p { margin-bottom: 12px !important; }
+    & ul, & ol { display: block !important; margin: 0 0 12px 20px !important; }
+    & ul { list-style: disc !important; }
+    & ol { list-style: decimal !important; }
+    & li { display: list-item !important; margin-bottom: 3px !important; }
+    & a { color: #2563eb !important; }
+    & code { font-family: "SFMono-Regular", Consolas, monospace !important; font-size: 12px !important; background: #f1f5f9 !important; padding: 1px 5px !important; border-radius: 3px !important; }
 
     & pre {
-        background: #0f172a;
-        color: #e2e8f0;
-        padding: 16px;
-        border-radius: 6px;
-        overflow-x: auto;
-        margin: 12px 0;
-        font-size: 12px;
-        line-height: 1.5;
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+        padding: 16px !important;
+        border-radius: 6px !important;
+        overflow-x: auto !important;
+        margin: 12px 0 !important;
+        font-size: 12px !important;
+        line-height: 1.5 !important;
 
-        & code { background: none; padding: 0; color: inherit; }
+        & code { background: none !important; padding: 0 !important; color: inherit !important; }
     }
 
-    & img { max-width: 100%; border-radius: 6px; margin: 8px 0; display: block; }
+    & img { max-width: 100% !important; border-radius: 6px !important; margin: 8px 0 !important; display: block !important; }
 
-    & table { display: table; border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 13px; }
-    & thead { display: table-header-group; }
-    & tbody { display: table-row-group; }
-    & tr { display: table-row; }
-    & th, & td { display: table-cell; border: 1px solid #e2e8f0; padding: 6px 12px; }
-    & th { background: #f8fafc; font-weight: 600; }
+    & table { display: table !important; border-collapse: collapse !important; margin: 12px 0 !important; width: 100% !important; font-size: 13px !important; }
+    & thead { display: table-header-group !important; }
+    & tbody { display: table-row-group !important; }
+    & tr { display: table-row !important; }
+    & th, & td { display: table-cell !important; border: 1px solid #e2e8f0 !important; padding: 6px 12px !important; }
+    & th { background: #f8fafc !important; font-weight: 600 !important; }
 
-    & blockquote { border-left: 3px solid #e2e8f0; margin: 12px 0; padding: 4px 16px; color: #64748b; }
+    & blockquote { border-left: 3px solid #e2e8f0 !important; margin: 12px 0 !important; padding: 4px 16px !important; color: #64748b !important; }
 }
 
 /* Settings page ---------------------------------------------------------------- */
 .TAM-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 28px !important;
 
     & h3 {
-        font-size: 16px;
-        margin-bottom: 10px;
-        color: #0f172a;
+        font-size: 16px !important;
+        margin-bottom: 10px !important;
+        color: #0f172a !important;
     }
 }
 
 .TAM-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 14px;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 14px !important;
 }
 
 .TAM-stat-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
 }
 
 .TAM-stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #2563eb;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #2563eb !important;
 }
 
 .TAM-stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #94a3b8;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    color: #94a3b8 !important;
 }
 
 .TAM-repo-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
 }
 
 .TAM-repo-row {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #0f172a;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 10px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    font-size: 14px !important;
+    color: #0f172a !important;
 }
 
 .TAM-new-repository-div {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
 }
 
 .TAM-new-repository-text {
-    display: block;
-    flex: 1;
-    height: 44px;
-    padding: 0 14px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #0f172a;
-    background: #fff;
-    outline: none;
+    display: block !important;
+    flex: 1 !important;
+    height: 44px !important;
+    padding: 0 14px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    color: #0f172a !important;
+    background: #fff !important;
+    outline: none !important;
 
     &:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 }
 
 .TAM-maintenance-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
 }
 
 /* Validation Results ------------------------------------------------------------ */
 .TAM-validation-results {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
 
     & h4 {
-        font-size: 14px;
-        color: #0f172a;
+        font-size: 14px !important;
+        color: #0f172a !important;
     }
 }
 
 .TAM-validation-content {
-    display: block;
-    font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 13px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 300px;
-    overflow-y: auto;
-    padding: 12px;
-    background: #f1f5f9;
-    border-radius: 6px;
-    color: #1a1a2e;
-    user-select: all;
+    display: block !important;
+    font-family: "SFMono-Regular", Consolas, monospace !important;
+    font-size: 13px !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    padding: 12px !important;
+    background: #f1f5f9 !important;
+    border-radius: 6px !important;
+    color: #1a1a2e !important;
+    user-select: all !important;
 }
 
 .TAM-validation-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
 }
 
 /* Prompt Review ------------------------------------------------------------------ */
 .TAM-prompt-review {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
 }
 
 .TAM-prompt-item {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
 
     & h4 {
-        font-size: 14px;
-        color: #0f172a;
+        font-size: 14px !important;
+        color: #0f172a !important;
     }
 }
 
 .TAM-prompt-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
 }
 
 .TAM-prompt-option {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px;
-    cursor: pointer;
-    transition: border-color 0.15s;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    cursor: pointer !important;
+    transition: border-color 0.15s !important;
 
     &:hover {
-        border-color: #94a3b8;
+        border-color: #94a3b8 !important;
     }
 
     &.TAM-prompt-selected {
-        border-color: #2563eb;
+        border-color: #2563eb !important;
     }
 
     & label {
-        display: block;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #0f172a;
-        cursor: pointer;
+        display: block !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        color: #0f172a !important;
+        cursor: pointer !important;
     }
 }
 
 .TAM-prompt-content {
-    display: block;
-    font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 200px;
-    overflow-y: auto;
-    color: #64748b;
+    display: block !important;
+    font-family: "SFMono-Regular", Consolas, monospace !important;
+    font-size: 12px !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    color: #64748b !important;
 }
