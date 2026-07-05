@@ -12,13 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.0.2"
-// TAM can't discover its own update-check URL from a catalog (it isn't
-// necessarily a member of one), so its own manifestSourceUrl is hardcoded
-// here, same spirit as TAM_ID/TAM_VERSION above — used as a fallback
-// whenever a TAM install has no recorded manifestSourceUrl yet (e.g. a
-// fresh manual-ZIP-import that's never gone through syncAddon).
-const TAM_MANIFEST_URL = "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json"
+const TAM_VERSION = "4.1.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -589,42 +583,6 @@ async function applyRelations(relations, noteMap, depExportsMap) {
     }
 }
 
-// TAM's manual-ZIP-import bootstrap bridge: for any of TAM's own manifest
-// notes not yet carrying a #TAMFILEID (a fresh import, or one predating this
-// convention), fall back to the old title-matching traversal exactly once
-// and tag immediately — so resolveNotes only ever needs to *find*, never
-// create, any of TAM's own notes.
-async function tagUntaggedSelfNotes(m, addonId) {
-    let titleTraversal = null
-    for (const noteDef of m.notes) {
-        const existing = await resolveStoredNoteId(addonId, noteDef.id)
-        if (existing) continue
-
-        if (!titleTraversal) {
-            const libTamNoteId = api.currentNote.noteId
-            titleTraversal = await api.runOnBackend((libTamNoteId, manifestNotes) => {
-                const result = {}
-                const sourceCode = api.getNote(libTamNoteId).getParentNotes()[0]
-                const tamRoot = sourceCode ? sourceCode.getParentNotes()[0] : null
-                if (!tamRoot) return result
-                for (const noteId of tamRoot.getSubtreeNoteIds()) {
-                    const note = api.getNote(noteId)
-                    const def = manifestNotes.find(n => n.title === note.title)
-                    if (def) result[def.id] = noteId
-                }
-                return result
-            }, [libTamNoteId, m.notes])
-        }
-        const realNoteId = titleTraversal[noteDef.id]
-        if (realNoteId) {
-            const tamFileId = `${addonId}/${noteDef.id}`
-            await api.runOnBackend((noteId, tamFileIdLabel, tamFileId) => {
-                api.getNote(noteId).setLabel(tamFileIdLabel, tamFileId)
-            }, [realNoteId, tamFileIdLabel, tamFileId])
-        }
-    }
-}
-
 // The one entry point for getting an addon's notes to match its manifest,
 // whether that's a genuine first install, a version update, or TAM's own
 // self-sync (no delete/reinstall capability, externally-rooted note tree).
@@ -650,7 +608,7 @@ async function syncAddon(addonId, options = {}) {
     const existing = database.installedAddons[addonId]
     const wasInstalled = !!existing?.installedVersion
 
-    const fetchUrl = manifestSourceUrl || existing?.manifestSourceUrl || (isSelf ? TAM_MANIFEST_URL : null)
+    const fetchUrl = manifestSourceUrl || existing?.manifestSourceUrl
     if (!fetchUrl) throw new Error(`TAM: no manifestSourceUrl available to sync '${addonId}' (not installed yet, and none provided)`)
 
     const manifest = await fetchManifest(fetchUrl)
@@ -714,8 +672,6 @@ async function syncAddon(addonId, options = {}) {
         const dep = database.installedAddons[depId]
         depExportsMap.set(depId, dep?.manifest?.exports || {})
     }
-
-    if (isSelf) await tagUntaggedSelfNotes(m, addonId)
 
     const addonRootNoteId = await getAddonRootNoteId()
     const noteMap = await resolveNotes(m, addonId, addonRootNoteId, fetchUrl, { rootExternallyParented: isSelf })
@@ -1069,7 +1025,11 @@ async function enableAddon(addonId, enabled) {
 // Unlike the old per-repository model, this never touches the network:
 // browsing what's available from a catalog is a separate, on-demand action
 // (fetchCatalogAddons), since a catalog is now just a flat list of URLs with
-// no cached summary data.
+// no cached summary data. TAM itself is not special-cased here — its own
+// Database record (seeded with just a manifestSourceUrl in database.json)
+// gets turned into a real, fully-populated entry the same way any other
+// addon's does, via an ordinary syncAddon call the UI triggers on load if
+// it isn't fully installed yet (see RepoManager's "load-addons" handler).
 async function getAllAddons() {
     let database = await loadDatabase()
 
@@ -1102,9 +1062,6 @@ async function getAllAddons() {
             ...(resolved[addonId] || {})
         }
     }
-    if (!addons[TAM_ID]) {
-        addons[TAM_ID] = { id: TAM_ID, name: "Trilium Addon Manager", installedVersion: TAM_VERSION, enabled: true, type: "widget" }
-    }
     return addons
 }
 
@@ -1118,9 +1075,8 @@ async function checkForAddonUpdates() {
     const installed = database.installedAddons || {}
 
     await Promise.all(Object.entries(installed).map(async ([addonId, addon]) => {
-        if (!addon.installedVersion) return
-        const url = addon.manifestSourceUrl || (addonId === TAM_ID ? TAM_MANIFEST_URL : null)
-        if (!url) return
+        if (!addon.installedVersion || !addon.manifestSourceUrl) return
+        const url = addon.manifestSourceUrl
         try {
             const manifest = await fetchManifest(url)
             if (manifest.latestVersion) {

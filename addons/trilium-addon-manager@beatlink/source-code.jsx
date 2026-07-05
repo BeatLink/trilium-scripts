@@ -447,8 +447,10 @@ export default function RepoManager() {
     const [view, setView] = useState({ type: "list" })
 
     async function reload() {
-        setAddons(await libTAMjs.getAllAddons())
+        const freshAddons = await libTAMjs.getAllAddons()
+        setAddons(freshAddons)
         setCatalogs(await libTAMjs.getCatalogs())
+        return freshAddons
     }
 
     // Main Command Handler
@@ -458,8 +460,22 @@ export default function RepoManager() {
             const displayNote = await currentNote.getRelationValue("displayNote")
             switch (command["command"]) {
                 case "load-addons": {
-                    await reload()
-                    setCommand(null)
+                    const freshAddons = await reload()
+                    // TAM's own Database record starts out seeded with just a
+                    // manifestSourceUrl (see database.json) — not a full
+                    // record, since there's nowhere to derive one from before
+                    // an actual sync resolves the real note tree. If that
+                    // first sync has never completed yet, run it now, the
+                    // exact same way any other addon's first sync would run
+                    // — this is what actually gets TAM into its own
+                    // installedAddons (fixing "Check for Updates"/"Update"
+                    // never seeing it, since both work by iterating that
+                    // list) rather than a synthetic display-only stand-in.
+                    if (!freshAddons[TAM_ID]?.installedVersion) {
+                        setCommand({ command: "update-addon", addon: TAM_ID })
+                    } else {
+                        setCommand(null)
+                    }
                     break
                 }
                 case "add-catalog": {

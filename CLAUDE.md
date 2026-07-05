@@ -110,7 +110,11 @@ below. It declares a tree of Trilium notes rather than raw exported files:
   protected if it's an `AddonData:`-relation target — see the persistence note below); otherwise a
   fresh note is created and tagged immediately. **Nothing about note identity is cached in the
   Database at all** — not even `rootNoteId`/`settingsNoteId` anymore, as of the schema change
-  described below; everything resolves live via TAMFILEID whenever needed. See
+  described below; everything resolves live via TAMFILEID whenever needed. `tam_to_zip.py` bakes a
+  real `#TAMFILEID` label into every note of every exported ZIP at build time — so a manually
+  imported addon (most importantly TAM itself, which can only ever be bootstrapped this way) is
+  already fully self-identifying from the moment of import, with no separate runtime bootstrap/
+  tagging bridge needed. See
   `trilium-addon-manager@beatlink/README.md`'s "Note Identity" section for the full design.
 - **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend` or
   `;env=backend`. **There is no `env=hybrid`** — Trilium's bundler only lets a note `require()`

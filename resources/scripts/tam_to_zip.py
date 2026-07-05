@@ -166,6 +166,22 @@ def process_manifest(full_manifest, addon_dir, deps_map):
 
         attrs = []
         pos   = 10
+
+        # Every note TAM manages carries a permanent #TAMFILEID label
+        # ("{addonId}/{localId}") as its sole identity mechanism (see
+        # CLAUDE.md's "Note Identity" section) — baking it in here means a
+        # manually-imported ZIP is already fully self-identifying from the
+        # moment of import, with no separate bootstrap/tagging step needed
+        # to bridge it into TAM's TAMFILEID-based lookups afterward.
+        attrs.append({
+            "type": "label",
+            "name": "TAMFILEID",
+            "value": f"{full_manifest.get('id', '')}/{local_id}",
+            "isInheritable": False,
+            "position": pos,
+        })
+        pos += 10
+
         for lbl in note_labels.get(local_id, []):
             attrs.append({
                 "type": "label",
