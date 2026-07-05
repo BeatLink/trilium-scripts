@@ -5,7 +5,7 @@ const addonPersistenceLabel = "addonPersistence"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.6.3"
+const TAM_VERSION = "2.7.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -49,7 +49,26 @@ async function loadDatabase() {
     }, [databaseId])
     if (!database.repositories)    database.repositories    = {}
     if (!database.installedAddons) database.installedAddons = {}
-    if (!database.persistence)     database.persistence     = {}
+
+    // One-time migration: persistence used to live in its own top-level tree,
+    // parallel to installedAddons, duplicating every repoId/addonId lookup
+    // (and requiring separate checks to keep it alive across an uninstall).
+    // Fold each entry into that addon's own record instead. Idempotent and
+    // safe to run on every load — whichever save happens next naturally
+    // drops the stale top-level key once the merged shape is written back.
+    if (database.persistence) {
+        for (const [repoId, addons] of Object.entries(database.persistence)) {
+            for (const [addonId, persistence] of Object.entries(addons || {})) {
+                if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
+                if (!database.installedAddons[repoId][addonId]) database.installedAddons[repoId][addonId] = {}
+                if (!database.installedAddons[repoId][addonId].persistence) {
+                    database.installedAddons[repoId][addonId].persistence = persistence
+                }
+            }
+        }
+        delete database.persistence
+    }
+
     return database
 }
 
@@ -69,7 +88,6 @@ async function addRepository(repoId) {
     if (!database.repositories[repoId])            { database.repositories[repoId]            = {} }
     if (!database.repositories[repoId].addons)     { database.repositories[repoId].addons     = {} }
     if (!database.installedAddons[repoId])         { database.installedAddons[repoId]         = {} }
-    if (!database.persistence[repoId])             { database.persistence[repoId]             = {} }
     await saveDatabase(database)
     await updateRepositories()
 }
@@ -79,7 +97,7 @@ async function getAllRepositories() {
     for (const [repoId, repoData] of Object.entries(database.repositories)) {
         const installedAddons = database.installedAddons[repoId] || {}
         for (const [addonId, addonData] of Object.entries(repoData.addons || {})) {
-            if (installedAddons[addonId]) {
+            if (installedAddons[addonId]?.installedVersion) {
                 Object.assign(addonData, installedAddons[addonId])
             } else if (addonId === TAM_ID) {
                 addonData.installedVersion = TAM_VERSION
@@ -262,7 +280,7 @@ async function applyDepChildren(m, noteMap, database, repoId) {
         if (!parentRealId) continue
 
         const depInstalled = (database.installedAddons[repoId] || {})[c.addon]
-        if (!depInstalled) {
+        if (!depInstalled?.installedVersion) {
             console.error(`TAM: dependency ${c.addon} not installed, skipping clone`)
             continue
         }
@@ -324,7 +342,7 @@ async function installAddon(repoId, addonId, options = {}) {
 
     let database = await loadDatabase()
     const existing = (database.installedAddons[repoId] || {})[addonId]
-    if (existing) {
+    if (existing?.installedVersion) {
         // Promote a dependency-only install to a real, user-owned install —
         // but never demote the other way (a dependency-resolution call here
         // must not downgrade something the user already installed directly).
@@ -356,7 +374,7 @@ async function installAddon(repoId, addonId, options = {}) {
     // "Update All Addons" on the addon that actually changed.
     for (const depAddonId of (m.dependencies || [])) {
         const installedDep = (database.installedAddons[repoId] || {})[depAddonId]
-        if (!installedDep) {
+        if (!installedDep?.installedVersion) {
             await installAddon(repoId, depAddonId, { manual: false, updating })
             database = await loadDatabase()
         } else {
@@ -395,6 +413,10 @@ async function installAddon(repoId, addonId, options = {}) {
     const settingsNoteId = m.settingsNote ? (noteMap[m.settingsNote] || null) : null
 
     if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
+    // Preserve any persistence data surviving from a previous install of this
+    // same addonId (e.g. it was uninstalled but had persisted notes) — only
+    // the installed-specific fields below are meant to start fresh.
+    const priorPersistence = database.installedAddons[repoId][addonId]?.persistence
     database.installedAddons[repoId][addonId] = {
         installedVersion: manifest.latestVersion,
         rootNoteId,
@@ -404,10 +426,9 @@ async function installAddon(repoId, addonId, options = {}) {
         dependencies: m.dependencies || [],
         dependents: [],
         manuallyInstalled: manual,
-        enabled: false
+        enabled: false,
+        ...(priorPersistence ? { persistence: priorPersistence } : {})
     }
-    if (!database.persistence[repoId])          database.persistence[repoId]          = {}
-    if (!database.persistence[repoId][addonId]) database.persistence[repoId][addonId] = {}
 
     await saveDatabase(database)
     await enableAddon(repoId, addonId, false)
@@ -422,13 +443,13 @@ async function connectAddonPersistence(repoId, addonId) {
     const persistenceRoot = await getPersistenceNoteId()
     let database = await loadDatabase()
 
-    if (!database.persistence[repoId][addonId].persistenceNotes) {
-        database.persistence[repoId][addonId].persistenceNotes = {}
-    }
+    const addonRecord = database.installedAddons[repoId][addonId]
+    if (!addonRecord.persistence) addonRecord.persistence = {}
+    if (!addonRecord.persistence.persistenceNotes) addonRecord.persistence.persistenceNotes = {}
 
-    const addonNoteId = database.installedAddons[repoId][addonId].rootNoteId
-    const existingPersistRoot = database.persistence[repoId][addonId].rootNote || null
-    const existingNotes = database.persistence[repoId][addonId].persistenceNotes
+    const addonNoteId = addonRecord.rootNoteId
+    const existingPersistRoot = addonRecord.persistence.rootNote || null
+    const existingNotes = addonRecord.persistence.persistenceNotes
 
     // Single pass: create persisted copies, rewire AddonData: relations, delete originals.
     // Uses removeRelation + addRelation instead of setRelation: removeRelation fires attributeDeleted
@@ -488,11 +509,11 @@ async function connectAddonPersistence(repoId, addonId) {
     }, [addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes])
 
     if (outcome.persistRoot) {
-        database.persistence[repoId][addonId].rootNote = outcome.persistRoot
+        addonRecord.persistence.rootNote = outcome.persistRoot
     } else {
-        delete database.persistence[repoId][addonId].rootNote
+        delete addonRecord.persistence.rootNote
     }
-    database.persistence[repoId][addonId].persistenceNotes = {
+    addonRecord.persistence.persistenceNotes = {
         ...existingNotes,
         ...outcome.persistenceNotes
     }
@@ -508,9 +529,10 @@ async function cleanupEmptyPersistenceRoots() {
     let database = await loadDatabase()
     let changed = false
 
-    for (const addons of Object.values(database.persistence || {})) {
-        for (const persistence of Object.values(addons || {})) {
-            const rootNoteId = persistence.rootNote
+    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
+        for (const [addonId, addonRecord] of Object.entries(addons || {})) {
+            const persistence = addonRecord.persistence
+            const rootNoteId = persistence?.rootNote
             if (!rootNoteId) continue
 
             const isEmpty = await api.runOnBackend((rootNoteId) => {
@@ -524,6 +546,14 @@ async function cleanupEmptyPersistenceRoots() {
             if (isEmpty) {
                 delete persistence.rootNote
                 changed = true
+
+                // Nothing installed and nothing left worth keeping — drop the
+                // whole record rather than leaving an empty husk behind.
+                const hasPersistedNotes = persistence.persistenceNotes &&
+                    Object.keys(persistence.persistenceNotes).length > 0
+                if (!addonRecord.installedVersion && !hasPersistedNotes && !persistence.pendingPrompts) {
+                    delete database.installedAddons[repoId][addonId]
+                }
             }
         }
     }
@@ -534,13 +564,27 @@ async function cleanupEmptyPersistenceRoots() {
 async function deleteAddon(repoId, addonId) {
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
-    const rootNoteId = database.installedAddons[repoId][addonId].rootNoteId
+    const addonRecord = database.installedAddons[repoId][addonId]
+    const rootNoteId = addonRecord.rootNoteId
     await api.runOnBackend((noteId) => {
         api.getNote(noteId).deleteNote()
     }, [rootNoteId])
-    delete database.installedAddons[repoId][addonId]
-    if (Object.keys(database.installedAddons[repoId]).length === 0) {
-        delete database.installedAddons[repoId]
+
+    const persistence = addonRecord.persistence
+    const hasPersistedData = persistence && (
+        persistence.rootNote ||
+        (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
+    )
+
+    if (hasPersistedData) {
+        // Drop everything describing the now-deleted installed state, but
+        // keep the persisted user data around — it must survive uninstall.
+        database.installedAddons[repoId][addonId] = { persistence }
+    } else {
+        delete database.installedAddons[repoId][addonId]
+        if (Object.keys(database.installedAddons[repoId]).length === 0) {
+            delete database.installedAddons[repoId]
+        }
     }
     await saveDatabase(database)
 }
@@ -554,7 +598,7 @@ async function uninstallAddon(repoId, addonId) {
     if (!repoId.trim() || !addonId.trim()) return
     let database = await loadDatabase()
     const installed = (database.installedAddons[repoId] || {})[addonId]
-    if (!installed) return
+    if (!installed?.installedVersion) return
 
     const dependencies = installed.dependencies || []
 
@@ -577,7 +621,7 @@ async function uninstallAddon(repoId, addonId) {
 
 async function collectPendingPrompts(repoId, addonId, m) {
     let database = await loadDatabase()
-    const persistenceNotes = database.persistence?.[repoId]?.[addonId]?.persistenceNotes || {}
+    const persistenceNotes = database.installedAddons?.[repoId]?.[addonId]?.persistence?.persistenceNotes || {}
 
     const prompts = []
     for (const noteDef of (m.notes || [])) {
@@ -634,9 +678,12 @@ async function updateAddon(repoId, addonId, updating = new Set()) {
 
     if (pendingPrompts.length > 0) {
         let database = await loadDatabase()
-        if (!database.persistence[repoId])          database.persistence[repoId]          = {}
-        if (!database.persistence[repoId][addonId]) database.persistence[repoId][addonId] = {}
-        database.persistence[repoId][addonId].pendingPrompts = pendingPrompts
+        if (!database.installedAddons[repoId])          database.installedAddons[repoId]          = {}
+        if (!database.installedAddons[repoId][addonId]) database.installedAddons[repoId][addonId] = {}
+        if (!database.installedAddons[repoId][addonId].persistence) {
+            database.installedAddons[repoId][addonId].persistence = {}
+        }
+        database.installedAddons[repoId][addonId].persistence.pendingPrompts = pendingPrompts
         await saveDatabase(database)
     }
 
@@ -678,13 +725,13 @@ async function updateAddon(repoId, addonId, updating = new Set()) {
 
 async function getPendingPrompts(repoId, addonId) {
     const database = await loadDatabase()
-    return database.persistence?.[repoId]?.[addonId]?.pendingPrompts || []
+    return database.installedAddons?.[repoId]?.[addonId]?.persistence?.pendingPrompts || []
 }
 
 async function resolvePrompt(repoId, addonId, noteLocalId, useNew) {
     if (!useNew) return
     const database = await loadDatabase()
-    const prompts = database.persistence?.[repoId]?.[addonId]?.pendingPrompts || []
+    const prompts = database.installedAddons?.[repoId]?.[addonId]?.persistence?.pendingPrompts || []
     const prompt = prompts.find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
     await api.runOnBackend((noteId, content) => {
@@ -694,8 +741,8 @@ async function resolvePrompt(repoId, addonId, noteLocalId, useNew) {
 
 async function clearPendingPrompts(repoId, addonId) {
     let database = await loadDatabase()
-    if (database.persistence?.[repoId]?.[addonId]) {
-        delete database.persistence[repoId][addonId].pendingPrompts
+    if (database.installedAddons?.[repoId]?.[addonId]?.persistence) {
+        delete database.installedAddons[repoId][addonId].persistence.pendingPrompts
     }
     await saveDatabase(database)
 }
@@ -845,9 +892,10 @@ async function validateDatabase() {
 
     for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
         for (const [addonId, addon] of Object.entries(addons || {})) {
-            const persistence = database.persistence?.[repoId]?.[addonId] || {}
+            const isInstalled = !!addon.installedVersion
+            const persistence = addon.persistence || {}
 
-            const backendIssues = await api.runOnBackend((addon, persistence) => {
+            const backendIssues = await api.runOnBackend((addon, persistence, isInstalled) => {
                 const found = []
 
                 function noteExists(noteId) {
@@ -856,24 +904,26 @@ async function validateDatabase() {
                     return !!(note && !note.isDeleted)
                 }
 
-                if (!noteExists(addon.rootNoteId)) {
-                    found.push(`root note (${addon.rootNoteId}) is missing`)
-                }
-
-                for (const [localId, realId] of Object.entries(addon.noteMap || {})) {
-                    if (!noteExists(realId)) {
-                        found.push(`note '${localId}' (${realId}) is missing`)
+                if (isInstalled) {
+                    if (!noteExists(addon.rootNoteId)) {
+                        found.push(`root note (${addon.rootNoteId}) is missing`)
                     }
-                }
 
-                for (const [exportName, realId] of Object.entries(addon.exportedNotes || {})) {
-                    if (!noteExists(realId)) {
-                        found.push(`export '${exportName}' (${realId}) is missing`)
+                    for (const [localId, realId] of Object.entries(addon.noteMap || {})) {
+                        if (!noteExists(realId)) {
+                            found.push(`note '${localId}' (${realId}) is missing`)
+                        }
                     }
-                }
 
-                if (addon.settingsNoteId && !noteExists(addon.settingsNoteId)) {
-                    found.push(`settings note (${addon.settingsNoteId}) is missing`)
+                    for (const [exportName, realId] of Object.entries(addon.exportedNotes || {})) {
+                        if (!noteExists(realId)) {
+                            found.push(`export '${exportName}' (${realId}) is missing`)
+                        }
+                    }
+
+                    if (addon.settingsNoteId && !noteExists(addon.settingsNoteId)) {
+                        found.push(`settings note (${addon.settingsNoteId}) is missing`)
+                    }
                 }
 
                 if (persistence.rootNote && !noteExists(persistence.rootNote)) {
@@ -886,7 +936,7 @@ async function validateDatabase() {
                     }
                 }
 
-                if (noteExists(addon.rootNoteId)) {
+                if (isInstalled && noteExists(addon.rootNoteId)) {
                     for (const noteId of api.getNote(addon.rootNoteId).getSubtreeNoteIds()) {
                         const note = api.getNote(noteId)
                         if (!note) continue
@@ -904,15 +954,17 @@ async function validateDatabase() {
                 }
 
                 return found
-            }, [addon, persistence])
+            }, [addon, persistence, isInstalled])
 
             for (const message of backendIssues) {
                 issues.push({ repoId, addonId, message })
             }
 
+            if (!isInstalled) continue
+
             for (const depAddonId of (addon.dependencies || [])) {
                 const dep = addons[depAddonId]
-                if (!dep) {
+                if (!dep?.installedVersion) {
                     issues.push({ repoId, addonId, message: `depends on '${depAddonId}', which is not installed` })
                     continue
                 }
@@ -922,7 +974,7 @@ async function validateDatabase() {
             }
             for (const dependentId of (addon.dependents || [])) {
                 const dependent = addons[dependentId]
-                if (!dependent) {
+                if (!dependent?.installedVersion) {
                     issues.push({ repoId, addonId, message: `lists '${dependentId}' as a dependent, but it is not installed` })
                     continue
                 }

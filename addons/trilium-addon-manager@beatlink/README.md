@@ -36,7 +36,7 @@ trilium-addon-manager@beatlink  (render note)
 
 ### Key notes
 
-- **Database** — a JSON code note that holds all TAM state: repository metadata, installed addon registry, persistence data, and pending update prompts. TAM reads and writes this note on every operation.
+- **Database** — a JSON code note that holds all TAM state: repository metadata and, per addon, a single merged record covering its installed state, dependency graph, persisted data, and pending update prompts (see [Dependency Tracking](#dependency-tracking) and [Persistence](#persistence)). TAM reads and writes this note on every operation.
 - **Addons** — the parent note under which all installed addons are placed as children.
 - **Addon Data** — the parent note under which persistence copies of addon data notes are stored (see [Persistence](#persistence)).
 - **libTAM.js** — the frontend library that does all the heavy lifting. It runs in the browser but uses `api.runOnBackend` and `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access (fetching URLs, creating notes, modifying note content).
@@ -192,7 +192,7 @@ When a dependent addon references `"addon": "this-addon@author", "child": "lib"`
 5. Labels are applied with `note.setLabel`.
 6. Relations are applied with `note.setRelation`. Cross-addon relations resolve the target note ID through the dependency's stored `exportedNotes` map.
 7. The local ID → real Trilium note ID mapping (`noteMap`) and exported note IDs (`exportedNotes`) are saved to the Database note.
-8. The addon is registered in `database.installedAddons` with `installedVersion`, `rootNoteId`, `noteMap`, `exportedNotes`, `dependencies`, `dependents`, and `manuallyInstalled`.
+8. The addon is registered in `database.installedAddons[repoId][addonId]` with `installedVersion`, `rootNoteId`, `noteMap`, `exportedNotes`, `dependencies`, `dependents`, and `manuallyInstalled` — merged onto (not replacing) any `persistence` sub-object already sitting on that record from a previous install of this same addonId (see [Persistence](#persistence)). Every "is this addon already installed?" check elsewhere in TAM looks for `installedVersion` specifically, since a record can exist with *only* a `persistence` field for an addon that isn't currently installed at all.
 9. Persistence is initialized — see [Persistence](#persistence).
 10. The addon is left disabled. The user enables it manually (or it can be auto-enabled by the installing user).
 
@@ -220,7 +220,7 @@ This approach ensures the note structure is always clean and matches the manifes
 
 ## Dependency Tracking
 
-Every installed addon's Database entry carries three extra fields:
+Every installed addon's Database entry carries three extra fields (on top of `persistence` — see [Persistence](#persistence) — which is the one field allowed to survive after the addon is no longer installed):
 
 - **`dependencies`** — the addon IDs it directly depends on (copied from `manifest.dependencies` at install time, so uninstalling later doesn't need to refetch a manifest that may have changed or disappeared).
 - **`dependents`** — the addon IDs that directly depend on *it* (the reverse edge, built up as other addons install/update and declare it as a dependency).
@@ -242,9 +242,9 @@ Addons with `"type": "library"` are never shown in TAM's addon list — there's 
 
 The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits the installed-addon registry against the live Trilium note tree and reports anything inconsistent:
 
-- **Dependency graph symmetry** — every `dependencies` edge has a matching reverse `dependents` edge on the other side, and vice versa.
-- **Note existence** — the addon's `rootNoteId`, every entry in `noteMap`, every entry in `exportedNotes`, and `settingsNoteId` (if set) still resolve to real, non-deleted notes.
-- **Persistence integrity** — the persistence tree's `rootNote` and every `persistenceNotes` entry still exist, and every live `AddonData:key` relation found while walking the addon's subtree still points at the persisted note TAM's database says it should.
+- **Dependency graph symmetry** — every `dependencies` edge has a matching reverse `dependents` edge on the other side, and vice versa. Skipped for records that only hold surviving `persistence` data with nothing currently installed.
+- **Note existence** — the addon's `rootNoteId`, every entry in `noteMap`, every entry in `exportedNotes`, and `settingsNoteId` (if set) still resolve to real, non-deleted notes. Same as above, only checked while the addon is actually installed.
+- **Persistence integrity** — the record's `persistence.rootNote` and every `persistence.persistenceNotes` entry still exist, and (for addons that are actually installed) every live `AddonData:key` relation found while walking the addon's subtree still points at the persisted note TAM's database says it should. This check runs even for records with no currently-installed addon, since surviving persisted data should stay valid regardless.
 
 It returns a flat list of `{ repoId, addonId, message }` issues (empty if everything checks out), which the UI renders as a dismissible panel. This doesn't fix anything automatically — it's a diagnostic for tracking down drift (e.g. a note deleted by hand outside TAM, or a relation that got repointed) rather than a repair tool.
 
@@ -266,20 +266,22 @@ TAM scans the entire subtree of the addon's root note, so activation labels on a
 
 ## Persistence
 
-Some addon notes are meant to hold user data (settings, cached data, user-customized content) that should survive addon updates. These notes are marked with an `AddonData:key` relation in the manifest.
+Some addon notes are meant to hold user data (settings, cached data, user-customized content) that should survive addon updates *and* uninstalls. These notes are marked with an `AddonData:key` relation in the manifest.
+
+Persistence data lives nested under the same `database.installedAddons[repoId][addonId]` record as everything else TAM tracks about that addon (`persistence: { rootNote, persistenceNotes, pendingPrompts }`) — there is no separate top-level tree to keep in sync with it. `installedVersion`/`rootNoteId`/`noteMap`/etc. describe the *currently installed* state and disappear on uninstall; `persistence` is the one part of the record that's allowed to outlive it.
 
 When an addon is first installed:
 1. TAM scans the addon's note subtree for any `AddonData:key` relations.
-2. For each one found, TAM duplicates the target note into the **Addon Data** tree, under a per-addon folder — created **just in time**, the first time this addon actually has something to persist. An addon with no `AddonData:` relations at all never gets a folder under Addon Data.
+2. For each one found, TAM duplicates the target note into the **Addon Data** tree, under a per-addon folder — created **just in time**, the first time this addon actually has something to persist. An addon with no `AddonData:` relations at all never gets a folder under Addon Data, and its record carries no `persistence` field at all.
 3. The `AddonData:key` relation on the addon note is updated to point to the persisted copy instead of the original.
-4. The mapping `key → persistedNoteId` is saved in the Database.
+4. The mapping `key → persistedNoteId` is saved into the addon's own `persistence.persistenceNotes`.
 
 On reinstall after an update:
-1. TAM finds the existing persistence mapping from the Database.
+1. TAM finds the existing persistence mapping already on the addon's record.
 2. Instead of duplicating again, the relation is rewired to point to the already-existing persisted note.
 3. User data is preserved unchanged.
 
-Notes in the persistence tree are never deleted by TAM (even if the addon is uninstalled), ensuring data is not accidentally lost. The one exception is the per-addon *folder* itself: if it ends up with zero children (nothing to persist, or everything that was persisted is gone), TAM deletes the empty folder and clears its Database reference — checked for the addon just installed/updated every time `connectAddonPersistence` runs, and swept across every installed addon by `cleanupEmptyPersistenceRoots` whenever "Update Repositories" is clicked (this is what retroactively cleans up addons that got an empty folder before persistence roots were made just-in-time).
+Notes in the persistence tree are never deleted by TAM (even if the addon is uninstalled), ensuring data is not accidentally lost — `deleteAddon` deletes the addon's own note tree and every *installed*-state field, but if the record has any surviving `persistence` data (a `rootNote` or a non-empty `persistenceNotes`), it keeps a reduced record containing just that `persistence` sub-object rather than removing the entry outright. A later reinstall of that same addonId picks the surviving data back up automatically (see [How Installation Works](#how-installation-works)). The one exception is the per-addon *folder* itself: if it ends up with zero children (nothing to persist, or everything that was persisted is gone), TAM deletes the empty folder and clears the `rootNote` reference — checked for the addon just installed/updated every time `connectAddonPersistence` runs, and swept across every installed addon by `cleanupEmptyPersistenceRoots` whenever "Update Repositories" is clicked (this is what retroactively cleans up addons that got an empty folder before persistence roots were made just-in-time). If that sweep empties out a record that also has no installed state and no pending prompts, the whole record is dropped.
 
 ---
 

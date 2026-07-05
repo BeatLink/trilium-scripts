@@ -145,7 +145,12 @@ record): installing an addon auto-installs (and, if stale, updates) its dependen
 reverse edge; updating an addon cascades to every dependent (since update is delete+reinstall, and a
 dependent's clones of the updated addon's exports would otherwise point at deleted notes);
 uninstalling an addon cascades down to any dependency that's now unused (`dependents.length === 0`)
-and wasn't itself manually installed. `libTAMjs.validateDatabase()` (wired to TAM's "Validate
+and wasn't itself manually installed. Persisted user data (`AddonData:` notes) lives nested on that
+same `installedAddons[repoId][addonId]` record as a `persistence` sub-object rather than a separate
+top-level tree — `deleteAddon` strips every installed-state field on uninstall but keeps `persistence`
+if it has anything in it, so a record can exist for an addonId that isn't currently installed at all;
+every "is this addon installed" check in `lib-tam.js` therefore tests `installedVersion` presence, not
+just whether the record exists. `libTAMjs.validateDatabase()` (wired to TAM's "Validate
 Database" button) audits all of this against the live note tree — dependency/dependent edges are
 symmetric, every recorded note id (root, noteMap, exportedNotes, settingsNoteId, persistence
 root/notes) still exists, and every live `AddonData:` relation still points at the persisted copy
