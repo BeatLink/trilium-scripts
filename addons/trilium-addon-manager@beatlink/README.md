@@ -4,6 +4,10 @@
 
 Browse available addons at **https://beatlink.github.io/trilium-scripts/**
 
+> ⚠️ **Work in progress.** TAM's manifest format and its Database/persistence model are under
+> active development and changing frequently. Data loss is possible. Install this to test and
+> explore only — do not use it to manage real/production Trilium data yet.
+
 ## Overview
 
 Trilium Addon Manager (TAM) is a widget-based addon installer for [TriliumNext Notes](https://github.com/TriliumNext/Notes). It lets you install, update, enable, disable, and remove addons from GitHub repositories without leaving Trilium. Addons are described by a `_tam_manifest_.json` file that tells TAM what notes to create, how to wire them together, and how to handle updates.
@@ -307,6 +311,8 @@ TAM scans the entire subtree of the addon's root note, so activation labels on a
 Some addon notes are meant to hold user data (settings, cached data, user-customized content) that should survive addon updates *and* uninstalls. These notes are marked with an `AddonData:key` relation in the manifest.
 
 Persistence data lives nested under the same `database.installedAddons[repoId][addonId]` record as everything else TAM tracks about that addon (`persistence: { rootNote, persistenceNotes, pendingPrompts }`) — there is no separate top-level tree to keep in sync with it. `installedVersion`/`rootNoteId`/`noteMap`/etc. describe the *currently installed* state and disappear on uninstall; `persistence` is the one part of the record that's allowed to outlive it.
+
+**A persisted note's content is always protected from `resolveNotes`' content-overwrite, regardless of `skipOnUpdate`/`promptOnUpdate`.** `api.duplicateSubtree` (used below to create the persisted copy) copies every attribute from the original — including its `#TAMFILEID` label — so once the original is deleted, the persisted copy becomes the only note left carrying that tag. Without this protection, the next sync's TAMFILEID lookup would find the persisted copy, clone it back into the addon's tree, and overwrite its content with the manifest's shipped default, destroying the user's actual saved data. `resolveNotes` checks every manifest note against the set of `AddonData:`-relation targets and skips the content overwrite unconditionally for any match.
 
 When an addon is first installed:
 1. TAM scans the addon's note subtree for any `AddonData:key` relations.

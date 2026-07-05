@@ -4,6 +4,10 @@ A collection of widgets, themes, and scripts for [TriliumNext Notes](https://git
 
 Browse the addon catalog: **https://beatlink.github.io/trilium-scripts/**
 
+> ⚠️ **Work in progress.** The addon system (TAM, its manifest format, and how addons store data)
+> is under active development and changing frequently. Data loss is possible. Download this to
+> test and explore only — do not point it at real/production Trilium data yet.
+
 ## Installation
 
 Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this repository to TAM:

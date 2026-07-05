@@ -6,7 +6,7 @@ const tamFileIdLabel = "TAMFILEID"
 const githubURL = "https://github.com"
 const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "2.8.0"
+const TAM_VERSION = "2.8.1"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -240,6 +240,21 @@ async function resolveNotes(m, addonId, addonRootNoteId) {
         }
     }
 
+    // A note targeted by an AddonData: relation holds persisted user data once
+    // connectAddonPersistence has run — and since api.duplicateSubtree copies
+    // every attribute (including this very #TAMFILEID label) onto the
+    // persisted copy it creates, that copy becomes the *only* note left
+    // carrying the tag once the original is deleted. On the next sync, a
+    // plain content overwrite here would silently clobber the user's actual
+    // saved data with the manifest's shipped default. Protect any such note
+    // unconditionally — independent of skipOnUpdate/promptOnUpdate, since the
+    // manifest already declares the intent via the relation itself.
+    const persistedLocalIds = new Set(
+        (m.relations || [])
+            .filter(r => r.type.startsWith("AddonData:"))
+            .map(r => r.to)
+    )
+
     const noteIds = m.notes.map(n => n.id)
     const sortedIds = topologicalSort(noteIds, primaryParent)
 
@@ -255,15 +270,16 @@ async function resolveNotes(m, addonId, addonRootNoteId) {
         const mime      = noteDef.mime     ?? "text/html"
         const isBinary  = noteDef.binary   ?? false
         const tamFileId = `${addonId}/${localId}`
+        const isPersisted = persistedLocalIds.has(localId)
 
         const realNoteId = await api.runOnBackend(
-            (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, content, isBinary, skipOnUpdate, promptOnUpdate) => {
+            (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, content, isBinary, skipOnUpdate, promptOnUpdate, isPersisted) => {
                 let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
                 if (existing && existing.isDeleted) existing = null
 
                 if (existing) {
                     api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
-                    if (!skipOnUpdate && !promptOnUpdate) {
+                    if (!skipOnUpdate && !promptOnUpdate && !isPersisted) {
                         if (noteType !== "text" || mime !== "text/html") {
                             existing.type = noteType
                             existing.mime = mime
@@ -286,7 +302,7 @@ async function resolveNotes(m, addonId, addonRootNoteId) {
                 return note.noteId
             },
             [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, noteType, mime, content, isBinary,
-                !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate]
+                !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, isPersisted]
         )
         noteMap[localId] = realNoteId
     }
