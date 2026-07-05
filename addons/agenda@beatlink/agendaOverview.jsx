@@ -9,6 +9,8 @@ import {
     useState
 } from "trilium:preact"
 
+import { startNote } from "trilium:api"
+
 import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
@@ -114,7 +116,7 @@ function AgendaOverviewWidgetJSX() {
     useEffect(() => {
         (async () => {
             const { constants, profileNoteIds } = await getAgendaSettings()
-            const icalNoteId = await api.currentNote.getRelationValue("icalNote")
+            const icalNoteId = await startNote.getRelationValue("icalNote")
             setIds({ constants, profileNoteIds, icalNoteId })
         })()
     }, [])

@@ -1,4 +1,5 @@
 import { defineLauncherWidget, useActiveNoteContext, useEffect, useState } from "trilium:preact";
+import { startNote } from "trilium:api"
 
 const { addTaskToAgendaNow, launchAgendaNow } = require("libAgendaNow.js")
 
@@ -8,8 +9,8 @@ function LaunchBarWidget() {
 
     useEffect(() => {
         (async () => {
-            const nowNoteId = await api.currentNote.getRelationValue("nowNote")
-            const configNoteId = await api.currentNote.getRelationValue("agendaNowConfig")
+            const nowNoteId = await startNote.getRelationValue("nowNote")
+            const configNoteId = await startNote.getRelationValue("agendaNowConfig")
             setIds({ nowNoteId, configNoteId })
         })()
     }, [])

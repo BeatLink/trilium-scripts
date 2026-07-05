@@ -13,6 +13,7 @@ import {
     activateNote,
     activateNewNote,
     setHoistedNoteId,
+    startNote,
 } from "trilium:api"
 
 import { Timer } from "Timer.jsx"
@@ -46,9 +47,9 @@ function AgendaNow() {
     useEffect(() => {
         (async () => {
             const { constants, profileNoteIds } = await getAgendaSettings()
-            const nowNoteId = await api.currentNote.getRelationValue("nowNote")
-            const widgetNoteId = await api.currentNote.getRelationValue("LauncherWidget")
-            const configNoteId = await api.currentNote.getRelationValue("agendaNowConfig")
+            const nowNoteId = await startNote.getRelationValue("nowNote")
+            const widgetNoteId = await startNote.getRelationValue("LauncherWidget")
+            const configNoteId = await startNote.getRelationValue("agendaNowConfig")
             setIds({ constants, profileNoteIds, nowNoteId, widgetNoteId, configNoteId })
         })()
     }, [])

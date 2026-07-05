@@ -1,14 +1,17 @@
+import { startNote } from "trilium:api"
 import { loadSettings } from "libSettingsUI.jsx"
 
 // Resolves this addon's settings into the shape every agenda library expects:
 // a `constants` label-name object and a `profileNoteIds` array. Every widget
-// that needs either calls this once (it re-reads its own relations, so it
-// must run with `api.currentNote` pointing at that widget's own note).
+// that needs either calls this once. Must read via `startNote` (the note
+// actually running the widget script), not `api.currentNote` (whichever note
+// the user currently has open) — the schemaNote/settingsNote/defaultProfileNote
+// relations live on the widget's own note, not on whatever's being viewed.
 export async function getAgendaSettings() {
-    const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
-    const settingsNoteId = await api.currentNote.getRelationValue("settingsNote")
+    const schemaNoteId = await startNote.getRelationValue("schemaNote")
+    const settingsNoteId = await startNote.getRelationValue("settingsNote")
     const configNoteId = (await api.getNote(settingsNoteId)).getRelationValue("AddonData:config")
-    const defaultProfileNoteId = await api.currentNote.getRelationValue("defaultProfileNote")
+    const defaultProfileNoteId = await startNote.getRelationValue("defaultProfileNote")
 
     const settings = await loadSettings(schemaNoteId, configNoteId)
 
