@@ -263,6 +263,7 @@ function stripManifestForStorage(m) {
     return {
         root: m.root,
         settingsNote: m.settingsNote,
+        readmeNote: m.readmeNote,
         notes: (m.notes || []).map(n => ({
             id: n.id,
             title: n.title,
@@ -301,6 +302,22 @@ async function resolveStoredNoteId(addonId, localId) {
         const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
         return (note && !note.isDeleted) ? note.noteId : null
     }, [tamFileIdLabel, `${addonId}/${localId}`])
+}
+
+// Renders an addon's README as HTML for the detail view. The README is a
+// note in the addon's own manifest (its `readmeNote` local id) resolved live
+// via #TAMFILEID exactly like any other note — never a network fetch, since
+// it's already part of the installed note tree. Returns null if the addon
+// declares no readmeNote, or that note can't currently be resolved.
+async function fetchReadmeHtml(addonId, readmeLocalId) {
+    const noteId = await resolveStoredNoteId(addonId, readmeLocalId)
+    if (!noteId) return null
+    return await api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId)
+        if (!note) return null
+        const marked = require("marked")
+        return marked.parse(note.getContent())
+    }, [noteId])
 }
 
 // Resolves every note in an addon's own manifest against the live Trilium
@@ -1296,3 +1313,7 @@ module.exports.getPendingPrompts  = getPendingPrompts
 module.exports.resolvePrompt      = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase    = validateDatabase
+module.exports.fetchReadmeHtml     = fetchReadmeHtml
+module.exports.cleanupEmptyPersistenceRoots  = cleanupEmptyPersistenceRoots
+module.exports.backfillTamFileIds            = backfillTamFileIds
+module.exports.backfillInstalledManifests    = backfillInstalledManifests

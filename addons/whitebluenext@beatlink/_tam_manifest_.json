@@ -5,21 +5,48 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluenext@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.2",
+    "latestVersion": "0.0.3",
     "type": "theme",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root", "title": "whitebluenext@beatlink", "type": "code", "mime": "text/css", "sourceUrl": "whitebluenext@beatlink.css"}
+            {
+                "id": "root",
+                "title": "whitebluenext@beatlink",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "whitebluenext@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
         "relations": [],
         "labels": [
-            {"note": "root", "name": "appThemeBase", "value": "next"},
-            {"note": "root", "name": "appTheme",     "value": "WhiteBlueNext"}
+            {
+                "note": "root",
+                "name": "appThemeBase",
+                "value": "next"
+            },
+            {
+                "note": "root",
+                "name": "appTheme",
+                "value": "WhiteBlueNext"
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

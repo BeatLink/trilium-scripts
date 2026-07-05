@@ -5,27 +5,64 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendaoverview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.1",
+    "latestVersion": "1.1.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "libAgendaOverview.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaOverview.js"}
+            {
+                "id": "lib",
+                "title": "libAgendaOverview.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libAgendaOverview.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "lib", "addon": "libagendatask@beatlink",  "child": "lib"},
-            {"parent": "lib", "addon": "libnotification@beatlink", "child": "lib"},
-            {"parent": "lib", "addon": "libcalendar@beatlink",     "child": "lib"},
-            {"parent": "lib", "addon": "libmultisort@beatlink",    "child": "lib"}
+            {
+                "parent": "lib",
+                "addon": "libagendatask@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "libnotification@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "libcalendar@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "libmultisort@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
         ],
         "relations": [],
-        "labels": [
-            
+        "labels": [],
+        "dependencies": [
+            "libagendatask@beatlink",
+            "libnotification@beatlink",
+            "libcalendar@beatlink",
+            "libmultisort@beatlink"
         ],
-        "dependencies": ["libagendatask@beatlink", "libnotification@beatlink", "libcalendar@beatlink", "libmultisort@beatlink"],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }

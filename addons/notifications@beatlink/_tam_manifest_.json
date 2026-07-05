@@ -5,24 +5,61 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/notifications@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.1",
+    "latestVersion": "1.1.2",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root",   "title": "notifications@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
-            {"id": "script", "title": "notifications.js",       "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "notifications.js"}
+            {
+                "id": "root",
+                "title": "notifications@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "script",
+                "title": "notifications.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "notifications.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "root",   "child": "script"},
-            {"parent": "script", "addon": "libnotification@beatlink", "child": "lib"}
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "script",
+                "addon": "libnotification@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
         ],
         "relations": [],
         "labels": [
-            {"note": "script", "name": "run",       "value": "frontendStartup"}
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            }
         ],
-        "dependencies": ["libnotification@beatlink"],
-        "exports": {}
+        "dependencies": [
+            "libnotification@beatlink"
+        ],
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

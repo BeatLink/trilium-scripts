@@ -5,22 +5,39 @@
     "author": "jkbrzt",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librrule@jkbrzt",
     "license": "MIT",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "rrule.min.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "rrule.min.js"}
+            {
+                "id": "lib",
+                "title": "rrule.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "rrule.min.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
         "relations": [],
-        "labels": [
-            
-        ],
+        "labels": [],
         "dependencies": [],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }

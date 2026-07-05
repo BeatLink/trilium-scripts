@@ -5,31 +5,92 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root",          "title": "expanded@beatlink", "type": "text", "mime": "text/html",                            "sourceUrl": null},
-            {"id": "widget",        "title": "expandedWidget",    "type": "code", "mime": "text/jsx",                             "sourceUrl": "expandedWidget.jsx"},
-            {"id": "updateExpanded","title": "updateExpanded.js", "type": "code", "mime": "application/javascript;env=backend",   "sourceUrl": "updateExpanded.js"},
-            {"id": "setup",         "title": "setup.js",          "type": "code", "mime": "application/javascript;env=frontend",  "sourceUrl": "setup.js"}
+            {
+                "id": "root",
+                "title": "expanded@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "expandedWidget",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "expandedWidget.jsx"
+            },
+            {
+                "id": "updateExpanded",
+                "title": "updateExpanded.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "updateExpanded.js"
+            },
+            {
+                "id": "setup",
+                "title": "setup.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setup.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "root", "child": "widget"},
-            {"parent": "root", "child": "updateExpanded"},
-            {"parent": "root", "child": "setup"}
+            {
+                "parent": "root",
+                "child": "widget"
+            },
+            {
+                "parent": "root",
+                "child": "updateExpanded"
+            },
+            {
+                "parent": "root",
+                "child": "setup"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
         ],
         "relations": [
-            {"from": "widget", "type": "scriptNote", "to": "updateExpanded"},
-            {"from": "setup",  "type": "scriptNote", "to": "updateExpanded"}
+            {
+                "from": "widget",
+                "type": "scriptNote",
+                "to": "updateExpanded"
+            },
+            {
+                "from": "setup",
+                "type": "scriptNote",
+                "to": "updateExpanded"
+            }
         ],
         "labels": [
-            {"note": "widget", "name": "widget",    "value": ""},
-            {"note": "setup",  "name": "run",       "value": "frontendStartup"}
+            {
+                "note": "widget",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "setup",
+                "name": "run",
+                "value": "frontendStartup"
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

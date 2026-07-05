@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "1.0.4",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
@@ -38,6 +38,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "area.json"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
             }
         ],
         "children": [
@@ -52,6 +59,10 @@
             {
                 "parent": "root",
                 "child": "profile"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
             }
         ],
         "relations": [
@@ -74,6 +85,7 @@
             }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

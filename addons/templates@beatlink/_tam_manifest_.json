@@ -1,11 +1,11 @@
 {
     "id": "templates@beatlink",
     "name": "Templates",
-    "description": "A set of note templates for tasks, projects, notes, and areas — designed to work with the Agenda Next and Template Picker addons.",
+    "description": "A set of note templates for tasks, projects, notes, and areas \u2014 designed to work with the Agenda Next and Template Picker addons.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.5",
+    "latestVersion": "1.0.6",
     "type": "template",
     "readme": "README.md",
     "manifest": {
@@ -21,14 +21,77 @@
                 "sourceUrl": null,
                 "skipOnUpdate": true
             },
-            {"id": "goal",          "title": "1. Goal",          "type": "text", "mime": "text/html", "sourceUrl": "goal.html",           "promptOnUpdate": true},
-            {"id": "routine",       "title": "2. Routine",       "type": "text", "mime": "text/html", "sourceUrl": "routine.html",       "promptOnUpdate": true},
-            {"id": "task",          "title": "3. Task",          "type": "text", "mime": "text/html", "sourceUrl": "task.html",           "promptOnUpdate": true},
-            {"id": "future",        "title": "4. Future",        "type": "text", "mime": "text/html", "sourceUrl": "future.html",         "promptOnUpdate": true},
-            {"id": "project",       "title": "5. Project",       "type": "text", "mime": "text/html", "sourceUrl": "project.html",        "promptOnUpdate": true},
-            {"id": "note",          "title": "6. Note",          "type": "text", "mime": "text/html", "sourceUrl": "note.html",           "promptOnUpdate": true},
-            {"id": "area",          "title": "7. Area",          "type": "text", "mime": "text/html", "sourceUrl": "area.html",           "promptOnUpdate": true},
-            {"id": "special",       "title": "8. Special",       "type": "text", "mime": "text/html", "sourceUrl": "special.html",        "promptOnUpdate": true}
+            {
+                "id": "goal",
+                "title": "1. Goal",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "goal.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "routine",
+                "title": "2. Routine",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "routine.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "task",
+                "title": "3. Task",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "task.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "future",
+                "title": "4. Future",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "future.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "project",
+                "title": "5. Project",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "project.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "note",
+                "title": "6. Note",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "note.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "area",
+                "title": "7. Area",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "area.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "special",
+                "title": "8. Special",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "special.html",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
             {
@@ -62,6 +125,10 @@
             {
                 "parent": "root",
                 "child": "special"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
             }
         ],
         "relations": [
@@ -252,6 +319,7 @@
                 "name": "template",
                 "value": ""
             }
-        ]
+        ],
+        "readmeNote": "readme"
     }
 }

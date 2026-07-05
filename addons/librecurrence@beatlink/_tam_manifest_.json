@@ -5,24 +5,46 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librecurrence@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "libRecurrence.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libRecurrence.js"}
+            {
+                "id": "lib",
+                "title": "libRecurrence.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libRecurrence.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "lib", "addon": "librrule@jkbrzt", "child": "lib"}
+            {
+                "parent": "lib",
+                "addon": "librrule@jkbrzt",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
         ],
         "relations": [],
-        "labels": [
-            
+        "labels": [],
+        "dependencies": [
+            "librrule@jkbrzt"
         ],
-        "dependencies": ["librrule@jkbrzt"],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }

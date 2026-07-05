@@ -5,22 +5,39 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformdatetime@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "FormDatetime.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "FormDatetime.jsx"}
+            {
+                "id": "lib",
+                "title": "FormDatetime.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormDatetime.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
         "relations": [],
-        "labels": [
-            
-        ],
+        "labels": [],
         "dependencies": [],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }

@@ -5,22 +5,39 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libmultisort@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.1",
+    "latestVersion": "1.1.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "libMultisort.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libmultisort.js"}
+            {
+                "id": "lib",
+                "title": "libMultisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libmultisort.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
         "relations": [],
-        "labels": [
-            
-        ],
+        "labels": [],
         "dependencies": [],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }

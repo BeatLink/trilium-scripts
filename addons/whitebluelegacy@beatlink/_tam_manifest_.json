@@ -5,20 +5,43 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluelegacy@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "theme",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root", "title": "whitebluelegacy@beatlink", "type": "code", "mime": "text/css", "sourceUrl": "whitebluelegacy@beatlink.css"}
+            {
+                "id": "root",
+                "title": "whitebluelegacy@beatlink",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "whitebluelegacy@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
         "relations": [],
         "labels": [
-            {"note": "root", "name": "appTheme",  "value": "WhiteBlueLegacy"}
+            {
+                "note": "root",
+                "name": "appTheme",
+                "value": "WhiteBlueLegacy"
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

@@ -118,6 +118,12 @@ for manifest_file in manifest_files:
     if root_id not in note_ids:
         error(manifest_file, f"manifest.root '{root_id}' not found in notes")
 
+    # settingsNote/readmeNote, if present, must reference a real note
+    for field in ("settingsNote", "readmeNote"):
+        local_id = m.get(field)
+        if local_id and local_id not in note_ids:
+            error(manifest_file, f"manifest.{field} '{local_id}' not found in notes")
+
     # --- sourceUrl files must exist ------------------------------------------
     for note in notes:
         nid = note.get("id", note.get("title", "?"))

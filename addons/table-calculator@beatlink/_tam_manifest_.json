@@ -1,47 +1,156 @@
 {
     "id": "table-calculator@beatlink",
     "name": "Table Calculator",
-    "description": "Recursively sums a numeric label across a note's children, rolling child totals up into parent notes — useful for budget/table-style note trees. Supports multiple independent table profiles.",
+    "description": "Recursively sums a numeric label across a note's children, rolling child totals up into parent notes \u2014 useful for budget/table-style note trees. Supports multiple independent table profiles.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/table-calculator@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.1",
+    "latestVersion": "1.2.2",
     "type": "script",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "settingsNote": "root",
         "notes": [
-            {"id": "root",         "title": "table-calculator@beatlink", "type": "render", "mime": "text/html",                          "sourceUrl": null},
-            {"id": "script",       "title": "TableCalculator.js",        "type": "code",   "mime": "application/javascript;env=backend", "sourceUrl": "TableCalculator.js"},
-            {"id": "schema",       "title": "schema.json",               "type": "code",   "mime": "application/json",                    "sourceUrl": "schema.json"},
-            {"id": "config",       "title": "config.json",               "type": "code",   "mime": "application/json",                    "sourceUrl": "config.json"},
-            {"id": "settings",     "title": "settings.jsx",              "type": "code",   "mime": "text/jsx",                            "sourceUrl": "settings.jsx"},
-            {"id": "table-widget", "title": "table-widget.jsx",          "type": "code",   "mime": "text/jsx",                            "sourceUrl": "table-widget.jsx"}
+            {
+                "id": "root",
+                "title": "table-calculator@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "script",
+                "title": "TableCalculator.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "TableCalculator.js"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config.json"
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "table-widget",
+                "title": "table-widget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "table-widget.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "root",         "child": "script"},
-            {"parent": "root",         "child": "schema"},
-            {"parent": "root",         "child": "config"},
-            {"parent": "root",         "child": "settings"},
-            {"parent": "root",         "child": "table-widget"},
-            {"parent": "script",       "addon": "libsettings@beatlink", "child": "backend"},
-            {"parent": "settings",     "addon": "libsettings@beatlink", "child": "ui"},
-            {"parent": "table-widget", "addon": "libsettings@beatlink", "child": "ui"}
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "root",
+                "child": "schema"
+            },
+            {
+                "parent": "root",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "settings"
+            },
+            {
+                "parent": "root",
+                "child": "table-widget"
+            },
+            {
+                "parent": "script",
+                "addon": "libsettings@beatlink",
+                "child": "backend"
+            },
+            {
+                "parent": "settings",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
+                "parent": "table-widget",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
         ],
         "relations": [
-            {"from": "settings",     "type": "AddonData:config", "to": "config"},
-            {"from": "settings",     "type": "schemaNote",        "to": "schema"},
-            {"from": "script",       "type": "schemaNote",        "to": "schema"},
-            {"from": "script",       "type": "settingsNote",      "to": "settings"},
-            {"from": "table-widget", "type": "schemaNote",        "to": "schema"},
-            {"from": "table-widget", "type": "settingsNote",      "to": "settings"},
-            {"from": "root",         "type": "renderNote",        "to": "settings"}
+            {
+                "from": "settings",
+                "type": "AddonData:config",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "table-widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "table-widget",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "root",
+                "type": "renderNote",
+                "to": "settings"
+            }
         ],
         "labels": [
-            {"note": "table-widget", "name": "widget",    "value": ""}
+            {
+                "note": "table-widget",
+                "name": "widget",
+                "value": ""
+            }
         ],
-        "dependencies": ["libsettings@beatlink"],
-        "exports": {}
+        "dependencies": [
+            "libsettings@beatlink"
+        ],
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

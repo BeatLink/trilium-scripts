@@ -5,20 +5,43 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/margin-top@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "css",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root", "title": "margin-top@beatlink", "type": "code", "mime": "text/css", "sourceUrl": "margin-top@beatlink.css"}
+            {
+                "id": "root",
+                "title": "margin-top@beatlink",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "margin-top@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
-        "children": [],
+        "children": [
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
         "relations": [],
         "labels": [
-            {"note": "root", "name": "appCss",    "value": ""}
+            {
+                "note": "root",
+                "name": "appCss",
+                "value": ""
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

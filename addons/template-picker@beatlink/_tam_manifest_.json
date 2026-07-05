@@ -5,26 +5,70 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root",   "title": "template-picker@beatlink", "type": "text", "mime": "text/html",         "sourceUrl": null},
-            {"id": "widget", "title": "templatePickerPreact",     "type": "code", "mime": "text/jsx",          "sourceUrl": "templatePickerPreact.jsx"},
-            {"id": "style",  "title": "templatePickerPreact.css", "type": "code", "mime": "text/css",          "sourceUrl": "templatePickerPreact.css"}
+            {
+                "id": "root",
+                "title": "template-picker@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "templatePickerPreact",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "templatePickerPreact.jsx"
+            },
+            {
+                "id": "style",
+                "title": "templatePickerPreact.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "templatePickerPreact.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "root", "child": "widget"},
-            {"parent": "root", "child": "style"}
+            {
+                "parent": "root",
+                "child": "widget"
+            },
+            {
+                "parent": "root",
+                "child": "style"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
         ],
         "relations": [],
         "labels": [
-            {"note": "widget", "name": "widget",    "value": ""},
-            {"note": "style",  "name": "appCss",    "value": ""}
+            {
+                "note": "widget",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

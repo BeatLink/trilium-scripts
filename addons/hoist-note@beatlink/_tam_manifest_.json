@@ -5,27 +5,71 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "widget",
     "readme": "README.md",
     "manifest": {
         "root": "root",
         "notes": [
-            {"id": "root",         "title": "hoist-note@beatlink", "type": "text", "mime": "text/html",                           "sourceUrl": null},
-            {"id": "setupButtons", "title": "setupButtons.js",      "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "setupButtons.js"},
-            {"id": "hoistNote",    "title": "hoistNote.js",         "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "hoistNote.js"}
+            {
+                "id": "root",
+                "title": "hoist-note@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "setupButtons",
+                "title": "setupButtons.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setupButtons.js"
+            },
+            {
+                "id": "hoistNote",
+                "title": "hoistNote.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "hoistNote.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "root", "child": "setupButtons"},
-            {"parent": "root", "child": "hoistNote"}
+            {
+                "parent": "root",
+                "child": "setupButtons"
+            },
+            {
+                "parent": "root",
+                "child": "hoistNote"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
         ],
         "relations": [
-            {"from": "setupButtons", "type": "hoistNoteScript", "to": "hoistNote"}
+            {
+                "from": "setupButtons",
+                "type": "hoistNoteScript",
+                "to": "hoistNote"
+            }
         ],
         "labels": [
-            {"note": "setupButtons", "name": "run",       "value": "frontendStartup"}
+            {
+                "note": "setupButtons",
+                "name": "run",
+                "value": "frontendStartup"
+            }
         ],
         "dependencies": [],
-        "exports": {}
+        "exports": {},
+        "readmeNote": "readme"
     }
 }

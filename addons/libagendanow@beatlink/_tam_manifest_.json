@@ -5,24 +5,46 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendanow@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "library",
     "readme": "README.md",
     "manifest": {
         "root": "lib",
         "notes": [
-            {"id": "lib", "title": "libAgendaNow.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaNow.js"}
+            {
+                "id": "lib",
+                "title": "libAgendaNow.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libAgendaNow.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
         ],
         "children": [
-            {"parent": "lib", "addon": "libagendaoverview@beatlink", "child": "lib"}
+            {
+                "parent": "lib",
+                "addon": "libagendaoverview@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
         ],
         "relations": [],
-        "labels": [
-            
+        "labels": [],
+        "dependencies": [
+            "libagendaoverview@beatlink"
         ],
-        "dependencies": ["libagendaoverview@beatlink"],
         "exports": {
             "lib": "lib"
-        }
+        },
+        "readmeNote": "readme"
     }
 }
