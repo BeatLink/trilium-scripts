@@ -14,6 +14,7 @@
    copied rules above via the same palette/spacing/radii. */
 
 .TAM-body {
+
     /* `all: revert` strips every property Trilium's own CSS authored back
        to the user-agent stylesheet, without the "everything becomes
        display:inline" trap `all: initial` has. Matches the website's own
@@ -31,12 +32,17 @@
     }
 
     display: block !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-family: -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif !important;
     font-size: 15px !important;
     line-height: 1.6 !important;
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
     overflow: hidden !important;
+    height: 100% !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */
@@ -49,7 +55,11 @@
         color: inherit !important;
     }
 
-    & h1, & h2, & h3, & h4, & h5 {
+    & h1,
+    & h2,
+    & h3,
+    & h4,
+    & h5 {
         display: block !important;
         font-weight: 700 !important;
         color: #0f172a !important;
@@ -83,18 +93,55 @@
         flex-wrap: wrap !important;
     }
 
-    & header h1 { font-size: 26px !important; font-weight: 700 !important; letter-spacing: -0.4px !important; color: #fff !important; }
-    & header p  { color: #94a3b8 !important; margin-top: 4px !important; font-size: 14px !important; }
-    & header p a { color: #93c5fd !important; }
+    & header h1 {
+        font-size: 26px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.4px !important;
+        color: #fff !important;
+    }
 
-    & .hdr-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 10px !important; }
+    & header p {
+        color: #94a3b8 !important;
+        margin-top: 4px !important;
+        font-size: 14px !important;
+    }
 
-    & .hdr-links { display: flex !important; gap: 16px !important; }
-    & .hdr-links a { color: #93c5fd !important; font-size: 13px !important; }
+    & header p a {
+        color: #93c5fd !important;
+    }
+
+    & .hdr-right {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        gap: 10px !important;
+    }
+
+    & .hdr-links {
+        display: flex !important;
+        gap: 16px !important;
+    }
+
+    & .hdr-links a {
+        color: #93c5fd !important;
+        font-size: 13px !important;
+    }
 
     /* Addon-detail header variant */
-    & .back { color: #93c5fd !important; font-size: 13px !important; display: block !important; margin-bottom: 10px !important; cursor: pointer !important; }
-    & .hdr-name { display: flex !important; align-items: center !important; gap: 12px !important; flex-wrap: wrap !important; }
+    & .back {
+        color: #93c5fd !important;
+        font-size: 13px !important;
+        display: block !important;
+        margin-bottom: 10px !important;
+        cursor: pointer !important;
+    }
+
+    & .hdr-name {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        flex-wrap: wrap !important;
+    }
 
     /* Badge ------------------------------------------------------------------ */
     & .badge {
@@ -111,7 +158,12 @@
     }
 
     /* Main --------------------------------------------------------------- */
-    & main { max-width: 1100px !important; margin: 0 auto !important; padding: 28px 24px !important; display: block !important; }
+    & main {
+        max-width: 1100px !important;
+        margin: 0 auto !important;
+        padding: 28px 24px !important;
+        display: block !important;
+    }
 
     /* Card grid --------------------------------------------------------------- */
     & .grid {
@@ -139,8 +191,19 @@
         }
     }
 
-    & .card-top { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important; }
-    & .card-name { font-size: 15px !important; font-weight: 600 !important; color: #0f172a !important; }
+    & .card-top {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+    }
+
+    & .card-name {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+    }
+
     & .card-desc {
         font-size: 13px !important;
         color: #64748b !important;
@@ -150,6 +213,7 @@
         -webkit-box-orient: vertical !important;
         overflow: hidden !important;
     }
+
     & .card-foot {
         display: flex !important;
         justify-content: space-between !important;
@@ -159,8 +223,15 @@
         padding-top: 10px !important;
         margin-top: auto !important;
     }
-    & .card-author { cursor: pointer !important; }
-    & .card-author:hover { color: #2563eb !important; text-decoration: underline !important; }
+
+    & .card-author {
+        cursor: pointer !important;
+    }
+
+    & .card-author:hover {
+        color: #2563eb !important;
+        text-decoration: underline !important;
+    }
 
     /* Addon detail --------------------------------------------------------- */
     & .addon-layout {
@@ -185,8 +256,14 @@
         border-collapse: collapse !important;
         font-size: 13px !important;
 
-        & tbody { display: table-row-group !important; }
-        & tr { display: table-row !important; }
+        & tbody {
+            display: table-row-group !important;
+        }
+
+        & tr {
+            display: table-row !important;
+        }
+
         & th {
             display: table-cell !important;
             color: #64748b !important;
@@ -196,12 +273,33 @@
             white-space: nowrap !important;
             width: 1% !important;
         }
-        & td { display: table-cell !important; color: #0f172a !important; padding: 5px 0 !important; word-break: break-word !important; }
-        & tr + tr th, & tr + tr td { border-top: 1px solid #f1f5f9 !important; }
-        & code { font-size: 11px !important; background: #f1f5f9 !important; padding: 1px 4px !important; border-radius: 3px !important; }
+
+        & td {
+            display: table-cell !important;
+            color: #0f172a !important;
+            padding: 5px 0 !important;
+            word-break: break-word !important;
+        }
+
+        & tr+tr th,
+        & tr+tr td {
+            border-top: 1px solid #f1f5f9 !important;
+        }
+
+        & code {
+            font-size: 11px !important;
+            background: #f1f5f9 !important;
+            padding: 1px 4px !important;
+            border-radius: 3px !important;
+        }
     }
 
-    & .addon-actions { margin-top: 14px !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+    & .addon-actions {
+        margin-top: 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
 
     & .btn {
         display: block !important;
@@ -218,11 +316,21 @@
 
         /* The website's buttons never carry an icon — TAM's do, so this is
            the one genuinely added rule in an otherwise copied block. */
-        & i { margin-right: 6px !important; }
+        & i {
+            margin-right: 6px !important;
+        }
 
-        &:hover { opacity: 0.85 !important; text-decoration: none !important; }
+        &:hover {
+            opacity: 0.85 !important;
+            text-decoration: none !important;
+        }
     }
-    & .btn-ghost { background: transparent !important; color: #2563eb !important; border: 1px solid #2563eb !important; }
+
+    & .btn-ghost {
+        background: transparent !important;
+        color: #2563eb !important;
+        border: 1px solid #2563eb !important;
+    }
 
     /* README ------------------------------------------------------------------ */
     & .readme {
@@ -231,16 +339,58 @@
         border-radius: 8px !important;
         padding: 24px 28px !important;
 
-        & h1 { font-size: 21px !important; margin-bottom: 12px !important; border-bottom: 1px solid #e2e8f0 !important; padding-bottom: 8px !important; }
-        & h2 { font-size: 17px !important; margin: 20px 0 8px !important; }
-        & h3 { font-size: 14px !important; font-weight: 600 !important; margin: 14px 0 6px !important; }
-        & p  { margin-bottom: 12px !important; }
-        & ul, & ol { display: block !important; margin: 0 0 12px 20px !important; }
-        & ul { list-style: disc !important; }
-        & ol { list-style: decimal !important; }
-        & li { display: list-item !important; margin-bottom: 3px !important; }
-        & a  { color: #2563eb !important; }
-        & code { font-family: "SFMono-Regular", Consolas, monospace !important; font-size: 12px !important; background: #f1f5f9 !important; padding: 1px 5px !important; border-radius: 3px !important; }
+        & h1 {
+            font-size: 21px !important;
+            margin-bottom: 12px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding-bottom: 8px !important;
+        }
+
+        & h2 {
+            font-size: 17px !important;
+            margin: 20px 0 8px !important;
+        }
+
+        & h3 {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            margin: 14px 0 6px !important;
+        }
+
+        & p {
+            margin-bottom: 12px !important;
+        }
+
+        & ul,
+        & ol {
+            display: block !important;
+            margin: 0 0 12px 20px !important;
+        }
+
+        & ul {
+            list-style: disc !important;
+        }
+
+        & ol {
+            list-style: decimal !important;
+        }
+
+        & li {
+            display: list-item !important;
+            margin-bottom: 3px !important;
+        }
+
+        & a {
+            color: #2563eb !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            background: #f1f5f9 !important;
+            padding: 1px 5px !important;
+            border-radius: 3px !important;
+        }
 
         & pre {
             background: #0f172a !important;
@@ -252,24 +402,74 @@
             font-size: 12px !important;
             line-height: 1.5 !important;
 
-            & code { background: none !important; padding: 0 !important; color: inherit !important; }
+            & code {
+                background: none !important;
+                padding: 0 !important;
+                color: inherit !important;
+            }
         }
 
-        & img { max-width: 100% !important; border-radius: 6px !important; margin: 8px 0 !important; display: block !important; }
+        & img {
+            max-width: 100% !important;
+            border-radius: 6px !important;
+            margin: 8px 0 !important;
+            display: block !important;
+        }
 
-        & table { display: table !important; border-collapse: collapse !important; margin: 12px 0 !important; width: 100% !important; font-size: 13px !important; }
-        & thead { display: table-header-group !important; }
-        & tbody { display: table-row-group !important; }
-        & tr { display: table-row !important; }
-        & th, & td { display: table-cell !important; border: 1px solid #e2e8f0 !important; padding: 6px 12px !important; }
-        & th { background: #f8fafc !important; font-weight: 600 !important; }
+        & table {
+            display: table !important;
+            border-collapse: collapse !important;
+            margin: 12px 0 !important;
+            width: 100% !important;
+            font-size: 13px !important;
+        }
 
-        & blockquote { border-left: 3px solid #e2e8f0 !important; margin: 12px 0 !important; padding: 4px 16px !important; color: #64748b !important; }
+        & thead {
+            display: table-header-group !important;
+        }
+
+        & tbody {
+            display: table-row-group !important;
+        }
+
+        & tr {
+            display: table-row !important;
+        }
+
+        & th,
+        & td {
+            display: table-cell !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 6px 12px !important;
+        }
+
+        & th {
+            background: #f8fafc !important;
+            font-weight: 600 !important;
+        }
+
+        & blockquote {
+            border-left: 3px solid #e2e8f0 !important;
+            margin: 12px 0 !important;
+            padding: 4px 16px !important;
+            color: #64748b !important;
+        }
     }
-    & .no-readme { color: #94a3b8 !important; font-style: italic !important; }
+
+    & .no-readme {
+        color: #94a3b8 !important;
+        font-style: italic !important;
+    }
 
     /* Toolbar ------------------------------------------------------------------ */
-    & .toolbar { display: flex !important; gap: 10px !important; align-items: center !important; margin-bottom: 24px !important; flex-wrap: wrap !important; }
+    & .toolbar {
+        display: flex !important;
+        gap: 10px !important;
+        align-items: center !important;
+        margin-bottom: 24px !important;
+        flex-wrap: wrap !important;
+    }
+
     & .search-wrap {
         position: relative !important;
         flex: 1 !important;
@@ -288,6 +488,7 @@
             pointer-events: none !important;
         }
     }
+
     & #search {
         display: block !important;
         width: 100% !important;
@@ -300,10 +501,22 @@
         outline: none !important;
         transition: border-color 0.15s, box-shadow 0.15s !important;
 
-        &:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important; }
-        &::placeholder { color: #94a3b8 !important; }
+        &:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+        }
+
+        &::placeholder {
+            color: #94a3b8 !important;
+        }
     }
-    & .filters { display: flex !important; gap: 6px !important; flex-wrap: wrap !important; }
+
+    & .filters {
+        display: flex !important;
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+    }
+
     & .filter {
         display: inline-block !important;
         padding: 7px 16px !important;
@@ -319,15 +532,35 @@
         white-space: nowrap !important;
         text-transform: uppercase !important;
 
-        &:hover { border-color: var(--c, #2563eb) !important; color: var(--c, #2563eb) !important; }
-        &.active { background: var(--c, #2563eb) !important; border-color: var(--c, #2563eb) !important; color: #fff !important; }
+        &:hover {
+            border-color: var(--c, #2563eb) !important;
+            color: var(--c, #2563eb) !important;
+        }
+
+        &.active {
+            background: var(--c, #2563eb) !important;
+            border-color: var(--c, #2563eb) !important;
+            color: #fff !important;
+        }
     }
 
     @media (max-width: 768px) {
-        & .hdr { flex-direction: column !important; align-items: flex-start !important; }
-        & .hdr-right { align-items: flex-start !important; }
-        & .addon-layout { grid-template-columns: 1fr !important; }
-        & .addon-sidebar { position: static !important; }
+        & .hdr {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+
+        & .hdr-right {
+            align-items: flex-start !important;
+        }
+
+        & .addon-layout {
+            grid-template-columns: 1fr !important;
+        }
+
+        & .addon-sidebar {
+            position: static !important;
+        }
     }
 
     /* TAM-only additions ----------------------------------------------------
@@ -337,9 +570,16 @@
        catalog management, update prompts, database validation) — built
        from the exact same palette/spacing/radii as the rules above. */
 
-    & .TAM-card-badges { display: flex !important; align-items: center !important; gap: 6px !important; flex-shrink: 0 !important; }
+    & .TAM-card-badges {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+    }
 
-    & .TAM-catalog-row { margin-bottom: 24px !important; }
+    & .TAM-catalog-row {
+        margin-bottom: 24px !important;
+    }
 
     & .TAM-pill {
         display: inline-block !important;
@@ -351,10 +591,20 @@
         border-radius: 10px !important;
         white-space: nowrap !important;
     }
-    & .TAM-pill-installed { background: rgba(5, 150, 105, 0.12) !important; color: #059669 !important; }
-    & .TAM-pill-update { background: rgba(217, 119, 6, 0.12) !important; color: #d97706 !important; }
 
-    & .TAM-card-install { align-self: flex-start !important; }
+    & .TAM-pill-installed {
+        background: rgba(5, 150, 105, 0.12) !important;
+        color: #059669 !important;
+    }
+
+    & .TAM-pill-update {
+        background: rgba(217, 119, 6, 0.12) !important;
+        color: #d97706 !important;
+    }
+
+    & .TAM-card-install {
+        align-self: flex-start !important;
+    }
 
     & .TAM-empty-state {
         background: #fff !important;
@@ -378,8 +628,15 @@
         animation: TAM-spin 0.6s linear infinite !important;
     }
 
-    & .addon-content { min-width: 0 !important; }
-    & .TAM-addon-description { font-size: 15px !important; color: #334155 !important; margin-bottom: 16px !important; }
+    & .addon-content {
+        min-width: 0 !important;
+    }
+
+    & .TAM-addon-description {
+        font-size: 15px !important;
+        color: #334155 !important;
+        margin-bottom: 16px !important;
+    }
 
     /* Settings page */
     & .TAM-settings {
@@ -387,10 +644,19 @@
         flex-direction: column !important;
         gap: 28px !important;
 
-        & h3 { font-size: 16px !important; margin-bottom: 10px !important; color: #0f172a !important; }
+        & h3 {
+            font-size: 16px !important;
+            margin-bottom: 10px !important;
+            color: #0f172a !important;
+        }
     }
 
-    & .TAM-stats-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; gap: 14px !important; }
+    & .TAM-stats-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+        gap: 14px !important;
+    }
+
     & .TAM-stat-card {
         background: #fff !important;
         border: 1px solid #e2e8f0 !important;
@@ -401,10 +667,26 @@
         flex-direction: column !important;
         gap: 4px !important;
     }
-    & .TAM-stat-value { font-size: 24px !important; font-weight: 700 !important; color: #2563eb !important; }
-    & .TAM-stat-label { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; color: #94a3b8 !important; }
 
-    & .TAM-repo-list { display: flex !important; flex-direction: column !important; gap: 8px !important; }
+    & .TAM-stat-value {
+        font-size: 24px !important;
+        font-weight: 700 !important;
+        color: #2563eb !important;
+    }
+
+    & .TAM-stat-label {
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        color: #94a3b8 !important;
+    }
+
+    & .TAM-repo-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
     & .TAM-repo-row {
         background: #fff !important;
         border: 1px solid #e2e8f0 !important;
@@ -417,7 +699,14 @@
         color: #0f172a !important;
         gap: 12px !important;
     }
-    & .TAM-new-repository-div { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 6px !important; }
+
+    & .TAM-new-repository-div {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
     & .TAM-new-repository-text {
         display: block !important;
         flex: 1 !important;
@@ -430,9 +719,17 @@
         background: #fff !important;
         outline: none !important;
 
-        &:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important; }
+        &:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+        }
     }
-    & .TAM-maintenance-actions { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }
+
+    & .TAM-maintenance-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
 
     /* Validation results */
     & .TAM-validation-results {
@@ -445,8 +742,12 @@
         gap: 10px !important;
         margin-bottom: 20px !important;
 
-        & h4 { font-size: 14px !important; color: #0f172a !important; }
+        & h4 {
+            font-size: 14px !important;
+            color: #0f172a !important;
+        }
     }
+
     & .TAM-validation-content {
         display: block !important;
         font-family: "SFMono-Regular", Consolas, monospace !important;
@@ -461,10 +762,20 @@
         color: #1a1a2e !important;
         user-select: all !important;
     }
-    & .TAM-validation-buttons { display: flex !important; flex-direction: row !important; gap: 8px !important; }
+
+    & .TAM-validation-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+    }
 
     /* Prompt review */
-    & .TAM-prompt-review { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+    & .TAM-prompt-review {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
     & .TAM-prompt-item {
         background: #fff !important;
         border: 1px solid #e2e8f0 !important;
@@ -474,9 +785,18 @@
         flex-direction: column !important;
         gap: 12px !important;
 
-        & h4 { font-size: 14px !important; color: #0f172a !important; }
+        & h4 {
+            font-size: 14px !important;
+            color: #0f172a !important;
+        }
     }
-    & .TAM-prompt-options { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+
+    & .TAM-prompt-options {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+    }
+
     & .TAM-prompt-option {
         display: flex !important;
         flex-direction: column !important;
@@ -487,8 +807,13 @@
         cursor: pointer !important;
         transition: border-color 0.15s !important;
 
-        &:hover { border-color: #94a3b8 !important; }
-        &.TAM-prompt-selected { border-color: #2563eb !important; }
+        &:hover {
+            border-color: #94a3b8 !important;
+        }
+
+        &.TAM-prompt-selected {
+            border-color: #2563eb !important;
+        }
 
         & label {
             display: block !important;
@@ -500,6 +825,7 @@
             cursor: pointer !important;
         }
     }
+
     & .TAM-prompt-content {
         display: block !important;
         font-family: "SFMono-Regular", Consolas, monospace !important;
@@ -513,5 +839,7 @@
 }
 
 @keyframes TAM-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
