@@ -232,6 +232,9 @@ function AddonDetail({ addonData, isSelf, onBack, onInstall, onDelete, onUpdate,
         libTAMjs.fetchReadmeHtml(addonData.id, readmeLocalId).then(html => {
             setReadmeHtml(html)
             setReadmeLoading(false)
+        }).catch(e => {
+            console.error("TAM: failed to render README", e)
+            setReadmeLoading(false)
         })
     }, [addonData.id, addonData.installedVersion, addonData.manifest?.readmeNote])
 

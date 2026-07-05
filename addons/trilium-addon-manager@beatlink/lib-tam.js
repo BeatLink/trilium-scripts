@@ -1,10 +1,18 @@
+// require() resolves by note title against this note's own children (see
+// CLAUDE.md's "Library note titles must be fully qualified") — this only
+// works at module top level. Inside an api.runOnBackend callback, `require`
+// is real Node require instead (no note-tree access there at all), which is
+// why fetchReadmeHtml below fetches raw content on the backend but calls
+// marked.parse() out here on the frontend, not inside that callback.
+const marked = require("marked.min.js")
+
 // Constants -------------------------------------------------------------------
 const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.0.0"
+const TAM_VERSION = "4.0.1"
 // TAM can't discover its own update-check URL from a catalog (it isn't
 // necessarily a member of one), so its own manifestSourceUrl is hardcoded
 // here, same spirit as TAM_ID/TAM_VERSION above — used as a fallback
@@ -233,12 +241,12 @@ async function resolveStoredNoteId(addonId, localId) {
 async function fetchReadmeHtml(addonId, readmeLocalId) {
     const noteId = await resolveStoredNoteId(addonId, readmeLocalId)
     if (!noteId) return null
-    return await api.runOnBackend((noteId) => {
+    const markdown = await api.runOnBackend((noteId) => {
         const note = api.getNote(noteId)
-        if (!note) return null
-        const marked = require("marked")
-        return marked.parse(note.getContent())
+        return note ? note.getContent() : null
     }, [noteId])
+    if (markdown === null) return null
+    return marked.parse(markdown)
 }
 
 // Resolves every note in an addon's own manifest against the live Trilium
