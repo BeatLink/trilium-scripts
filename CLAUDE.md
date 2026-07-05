@@ -142,6 +142,14 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@beatlink`, where `settingsNote` is `root`
   and `root` in turn has a `renderNote` relation to the actual settings JSX — so the same note opens
   whether you click the addon's root note directly or the Settings button in TAM.
+- **`readmeNote`** (optional, sibling of `root`/`settingsNote`) — local id of a note (typically
+  `type: "code"`, `mime: "text/markdown"`, `sourceUrl` pointing at the addon's own `README.md`) that
+  ships as part of the addon's installed note tree. TAM's per-addon detail page resolves it live via
+  `#TAMFILEID` and renders it with `marked` — deliberately a manifest-native installed note rather
+  than a network fetch of the addon's GitHub README, so viewing it never needs network access and
+  never risks rendering a mismatched version. Only meaningful once the addon is actually installed;
+  an addon's catalog metadata (`metadata.json`, see `publish.py`) carries no manifest content, so an
+  uninstalled addon's detail page links out to its GitHub homepage instead of trying to render one.
 
 - **`type`** — `widget`/`script`/`theme` are user-facing and always shown in TAM's addon list;
   `library` is TAM-managed only. TAM's UI hides `type: "library"` addons entirely — a user never

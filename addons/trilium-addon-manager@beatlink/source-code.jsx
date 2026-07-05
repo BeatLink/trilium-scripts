@@ -4,6 +4,9 @@ import {
     useActiveNoteContext,
     FormTextBox,
     Button,
+    LinkButton,
+    RawHtml,
+    LoadingSpinner,
     useState,
     useEffect
 } from "trilium:preact"
@@ -14,111 +17,239 @@ import {
 } from "trilium:api"
 
 
-function Addon({addonId, addonData, onInstall, onDelete, onUpdate, onRepair, onEnable, isSelf}){
+// Same palette as scripts/generate_pages.py's TYPE_COLORS, so TAM's own UI
+// matches the GitHub Pages catalog's badge colors exactly.
+const TYPE_COLORS = {
+    widget: "#2563eb",
+    theme: "#7c3aed",
+    css: "#059669",
+    script: "#d97706",
+    library: "#0891b2",
+    template: "#be185d"
+}
+
+function typeColor(type) {
+    return TYPE_COLORS[type] || "#6b7280"
+}
+
+function titleCase(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function Badge({ type }) {
+    return <span className="TAM-badge" style={{ backgroundColor: typeColor(type) }}>{type}</span>
+}
+
+function computeStats(repositories) {
+    let repoCount = 0, installedCount = 0, persistedCount = 0, updateCount = 0
+    for (const repoData of Object.values(repositories)) {
+        repoCount++
+        for (const addonData of Object.values(repoData.addons ?? {})) {
+            if (!addonData.installedVersion) continue
+            installedCount++
+            if (addonData.updateAvailable) updateCount++
+            const persistence = addonData.persistence
+            const hasPersisted = persistence && (
+                persistence.rootNote ||
+                (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
+            )
+            if (hasPersisted) persistedCount++
+        }
+    }
+    return { repoCount, installedCount, persistedCount, updateCount }
+}
+
+
+// List View -------------------------------------------------------------------
+function AddonCard({ repoId, addonId, addonData, onOpen, onInstall }) {
     return (
-        <div  className="TAM-addon-div" key={addonId}>
-            <div className="TAM-addon-info-div">
-                <label>{addonData.name} by {addonData.author} ({addonData.installedVersion ?? addonData.latestVersion})</label>
-                <label>{addonData.description}</label>
-                <label>License: {addonData.license}</label>
+        <div className="TAM-card" onClick={() => onOpen(repoId, addonId)}>
+            <div className="TAM-card-top">
+                <Badge type={addonData.type} />
+                {addonData.installedVersion && addonData.updateAvailable && (
+                    <span className="TAM-pill TAM-pill-update">Update available</span>
+                )}
+                {addonData.installedVersion && !addonData.updateAvailable && (
+                    <span className="TAM-pill TAM-pill-installed">Installed</span>
+                )}
             </div>
-            <div className="TAM-addon-button-div">
-                <Button
-                    icon="bx bx-globe"
-                    text="Home Page"
-                    onClick={e => {
-                         window.open(addonData.homepage, "_blank");
-                    }}
-                />
-                {!addonData.installedVersion && <Button
-                    icon="bx bx-download"
-                    text="Install Addon"
-                    onClick={e => {
-                        onInstall(addonId)
-                    }}
-                />}
-                {addonData.installedVersion && !isSelf && <Button
-                    icon="bx bx-trash"
-                    text="Delete Addon"
-                    onClick={e => {
-                        onDelete(addonId)
-                    }}
-                />}
-                {addonData.installedVersion && <Button
-                    icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
-                    text={addonData.enabled ? "Disable Addon" : "Enable Addon"}
-                    onClick={e => {
-                        onEnable(addonId, !addonData.enabled)
-                    }}
-                />}
-                {addonData.installedVersion && addonData.settingsNoteId && <Button
-                    icon="bx bx-cog"
-                    text="Settings"
-                    onClick={e => {
-                        activateNote(addonData.settingsNoteId)
-                    }}
-                />}
-                {addonData.installedVersion && <Button
-                    icon="bx bx-wrench"
-                    text="Repair"
-                    onClick={e => {
-                        onRepair(addonId)
-                    }}
-                />}
-                {addonData.updateAvailable && <Button
-                    icon="bx bx-sync"
-                    text={`Update Addon (${addonData.latestVersion})`}
-                    onClick={e => {
-                        onUpdate(addonId)
-                    }}
-                />}
+            <h3 className="TAM-card-title">{addonData.name}</h3>
+            <p className="TAM-card-meta">by {addonData.author} · v{addonData.installedVersion ?? addonData.latestVersion}</p>
+            <p className="TAM-card-desc">{addonData.description}</p>
+            {!addonData.installedVersion && (
+                <div className="TAM-card-install">
+                    <Button
+                        icon="bx bx-download"
+                        text="Install"
+                        onClick={e => {
+                            e.stopPropagation()
+                            onInstall(repoId, addonId)
+                        }}
+                    />
+                </div>
+            )}
+        </div>
+    )
+}
+
+function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings }) {
+    const [search, setSearch] = useState("")
+    const [typeFilter, setTypeFilter] = useState(null)
+
+    const allAddons = []
+    for (const [repoId, repoData] of Object.entries(repositories)) {
+        for (const [addonId, addonData] of Object.entries(repoData.addons ?? {})) {
+            // Libraries are an implementation detail of whatever addon depends
+            // on them — TAM installs/updates/uninstalls them automatically via
+            // the dependency graph, so there's nothing for the user to do with
+            // one directly.
+            if (addonData.type === "library") continue
+            allAddons.push({ repoId, addonId, addonData })
+        }
+    }
+    allAddons.sort((a, b) => (a.addonData.name || "").localeCompare(b.addonData.name || ""))
+
+    const availableTypes = [...new Set(allAddons.map(a => a.addonData.type))].sort()
+
+    const searchLower = search.trim().toLowerCase()
+    const visible = allAddons.filter(({ addonData }) => {
+        if (typeFilter && addonData.type !== typeFilter) return false
+        if (!searchLower) return true
+        return [addonData.name, addonData.description, addonData.author]
+            .some(field => (field || "").toLowerCase().includes(searchLower))
+    })
+
+    return (
+        <div>
+            <div className="TAM-toolbar">
+                <div className="TAM-search">
+                    <FormTextBox
+                        placeholder="Search addons..."
+                        currentValue={search}
+                        onChange={setSearch}
+                    />
+                </div>
+                {availableTypes.length > 0 && (
+                    <div className="TAM-filters">
+                        <button
+                            className={`TAM-filter-pill${typeFilter === null ? " TAM-filter-active" : ""}`}
+                            onClick={() => setTypeFilter(null)}
+                        >
+                            All
+                        </button>
+                        {availableTypes.map(type => (
+                            <button
+                                key={type}
+                                className={`TAM-filter-pill${typeFilter === type ? " TAM-filter-active" : ""}`}
+                                style={{ "--c": typeColor(type) }}
+                                onClick={() => setTypeFilter(type)}
+                            >
+                                {titleCase(type)}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {allAddons.length === 0 ? (
+                <div className="TAM-empty-state">
+                    <p>No repositories added yet.</p>
+                    <Button icon="bx bx-cog" text="Go to Settings to add a repository" onClick={onOpenSettings} />
+                </div>
+            ) : visible.length === 0 ? (
+                <div className="TAM-empty-state">
+                    <p>No addons match your search.</p>
+                </div>
+            ) : (
+                <div className="TAM-grid">
+                    {visible.map(({ repoId, addonId, addonData }) => (
+                        <AddonCard
+                            key={`${repoId}::${addonId}`}
+                            repoId={repoId}
+                            addonId={addonId}
+                            addonData={addonData}
+                            onOpen={onOpenAddon}
+                            onInstall={onInstallAddon}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
 
 
-function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAddon, onUpdateAddon, onRepairAddon, onEnableAddon}) {
+// Addon Detail View -------------------------------------------------------------
+function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, onDelete, onUpdate, onRepair, onEnable }) {
+    const [readmeHtml, setReadmeHtml] = useState(null)
+    const [readmeLoading, setReadmeLoading] = useState(false)
+
+    useEffect(() => {
+        setReadmeHtml(null)
+        const readmeLocalId = addonData.manifest?.readmeNote
+        if (!addonData.installedVersion || !readmeLocalId) return
+        setReadmeLoading(true)
+        libTAMjs.fetchReadmeHtml(addonId, readmeLocalId).then(html => {
+            setReadmeHtml(html)
+            setReadmeLoading(false)
+        })
+    }, [addonId, addonData.installedVersion, addonData.manifest?.readmeNote])
+
     return (
-        <div key={repoId} className="TAM-repository-div">
-            <div className="TAM-repository-controls">
-                <h5>{repoId}</h5>
-                <Button
-                    icon="bx bx-trash"
-                    text="Delete Repository"
-                    onClick={e => {
-                        const hasInstalled = Object.values(repoData.addons ?? {}).some(a => a.installedVersion)
-                        if (hasInstalled) {
-                            api.showMessage("Cannot delete repository: some addons are still installed. Uninstall them first.")
-                            return
-                        }
-                        onDeleteRepo(repoId)
-                    }}
-                />
+        <div className="TAM-addon-layout">
+            <div className="TAM-addon-sidebar">
+                <LinkButton icon="bx bx-arrow-back" text="Back to Addons" onClick={onBack} />
+                <Badge type={addonData.type} />
+                <h2>{addonData.name}</h2>
+                <table className="TAM-meta-table">
+                    <tbody>
+                        <tr><td>Author</td><td>{addonData.author}</td></tr>
+                        <tr><td>Version</td><td>{addonData.installedVersion ?? addonData.latestVersion}</td></tr>
+                        <tr><td>License</td><td>{addonData.license}</td></tr>
+                        <tr><td>Repository</td><td>{repoId}</td></tr>
+                    </tbody>
+                </table>
+                <div className="TAM-addon-actions">
+                    <Button icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
+                    {!addonData.installedVersion && (
+                        <Button icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonId)} />
+                    )}
+                    {addonData.installedVersion && !isSelf && (
+                        <Button icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonId)} />
+                    )}
+                    {addonData.installedVersion && (
+                        <Button
+                            icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
+                            text={addonData.enabled ? "Disable Addon" : "Enable Addon"}
+                            onClick={() => onEnable(addonId, !addonData.enabled)}
+                        />
+                    )}
+                    {addonData.installedVersion && addonData.settingsNoteId && (
+                        <Button icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
+                    )}
+                    {addonData.installedVersion && (
+                        <Button icon="bx bx-wrench" text="Repair" onClick={() => onRepair(addonId)} />
+                    )}
+                    {addonData.updateAvailable && (
+                        <Button icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonId)} />
+                    )}
+                </div>
             </div>
-            <div>
-                {Object.entries(repoData.addons ?? {})
-                    // Libraries are an implementation detail of whatever addon
-                    // depends on them — TAM installs/updates/uninstalls them
-                    // automatically via the dependency graph, so there's
-                    // nothing for the user to do with one directly.
-                    .filter(([, addonData]) => addonData.type !== "library")
-                    .map(([addonId, addonData]) => (
-                    <Addon
-                        key={addonId}
-                        addonId={addonId}
-                        addonData={addonData}
-                        isSelf={addonId === "trilium-addon-manager@beatlink"}
-                        onInstall={addonId => {onInstallAddon(repoId, addonId)}}
-                        onDelete={addonId => {onDeleteAddon(repoId, addonId)}}
-                        onUpdate={addonId => {onUpdateAddon(repoId, addonId)}}
-                        onRepair={addonId => {onRepairAddon(repoId, addonId)}}
-                        onEnable={(addonId, enabled) => {onEnableAddon(repoId, addonId, enabled)}}
-                    />
-                ))}
-                {/* Optional placeholder if no addons */}
-                {Object.entries(repoData.addons ?? {}).filter(([, a]) => a.type !== "library").length === 0 && (
-                    <p>No addons available.</p>
+            <div className="TAM-addon-main">
+                <p className="TAM-addon-description">{addonData.description}</p>
+                {addonData.installedVersion ? (
+                    readmeLoading ? (
+                        <LoadingSpinner />
+                    ) : readmeHtml ? (
+                        <RawHtml className="TAM-readme" html={readmeHtml} />
+                    ) : (
+                        <p className="TAM-muted">No README available for this addon.</p>
+                    )
+                ) : (
+                    <p className="TAM-muted">
+                        Install this addon to view its full README, or{" "}
+                        <a href={addonData.homepage} target="_blank">view it on GitHub</a>.
+                    </p>
                 )}
             </div>
         </div>
@@ -126,16 +257,17 @@ function Repository({repoId, repoData, onDeleteRepo, onInstallAddon, onDeleteAdd
 }
 
 
-function NewRepo({onSave}){
+// Settings View -----------------------------------------------------------------
+function NewRepo({ onSave }) {
     const [repoId, setRepoId] = useState("")
     return (
         <div className="TAM-new-repository-div">
             <FormTextBox
                 placeholder="owner/repo"
                 currentValue={repoId}
-                onChange={(newValue) => {setRepoId(newValue)}}
+                onChange={(newValue) => { setRepoId(newValue) }}
                 className="TAM-new-repository-text"
-            />    
+            />
             <Button
                 icon="bx bx-plus"
                 text="Add Repository"
@@ -147,7 +279,78 @@ function NewRepo({onSave}){
     )
 }
 
-// Prompt Review ---------------------------------------------------------------
+function SettingsView({
+    repositories, onBack, onAddRepo, onDeleteRepo, onUpdateRepos, onUpdateAll,
+    onValidate, onCleanup, onBackfillIds, onBackfillManifests, anyUpdateAvailable
+}) {
+    const stats = computeStats(repositories)
+    return (
+        <div className="TAM-settings">
+            <LinkButton icon="bx bx-arrow-back" text="Back to Addons" onClick={onBack} />
+
+            <div>
+                <h3>Statistics</h3>
+                <div className="TAM-stats-grid">
+                    <div className="TAM-stat-card">
+                        <span className="TAM-stat-value">{stats.repoCount}</span>
+                        <span className="TAM-stat-label">Repositories</span>
+                    </div>
+                    <div className="TAM-stat-card">
+                        <span className="TAM-stat-value">{stats.installedCount}</span>
+                        <span className="TAM-stat-label">Installed Addons</span>
+                    </div>
+                    <div className="TAM-stat-card">
+                        <span className="TAM-stat-value">{stats.persistedCount}</span>
+                        <span className="TAM-stat-label">With Saved Data</span>
+                    </div>
+                    <div className="TAM-stat-card">
+                        <span className="TAM-stat-value">{stats.updateCount}</span>
+                        <span className="TAM-stat-label">Updates Available</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3>Repositories</h3>
+                <div className="TAM-repo-list">
+                    {Object.keys(repositories).map(repoId => (
+                        <div key={repoId} className="TAM-repo-row">
+                            <span>{repoId}</span>
+                            <Button
+                                icon="bx bx-trash"
+                                text="Delete"
+                                onClick={() => {
+                                    const hasInstalled = Object.values(repositories[repoId].addons ?? {}).some(a => a.installedVersion)
+                                    if (hasInstalled) {
+                                        api.showMessage("Cannot delete repository: some addons are still installed. Uninstall them first.")
+                                        return
+                                    }
+                                    onDeleteRepo(repoId)
+                                }}
+                            />
+                        </div>
+                    ))}
+                    <NewRepo onSave={onAddRepo} />
+                </div>
+            </div>
+
+            <div>
+                <h3>Maintenance</h3>
+                <div className="TAM-maintenance-actions">
+                    <Button icon="bx bx-sync" text="Update Repositories" onClick={onUpdateRepos} />
+                    {anyUpdateAvailable && <Button icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
+                    <Button icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
+                    <Button icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
+                    <Button icon="bx bx-tag" text="Backfill Note IDs" onClick={onBackfillIds} />
+                    <Button icon="bx bx-archive" text="Backfill Installed Manifests" onClick={onBackfillManifests} />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
+// Prompt Review -----------------------------------------------------------------
 function PromptReview({ prompts, onResolve }) {
     const [decisions, setDecisions] = useState(
         Object.fromEntries(prompts.map(p => [p.noteLocalId, false]))
@@ -194,6 +397,7 @@ export default function RepoManager() {
     const [promptQueue, setPromptQueue] = useState([])
     const [validationIssues, setValidationIssues] = useState(null)
     const [validationTitle, setValidationTitle] = useState("Database Validation")
+    const [view, setView] = useState({ type: "list" })
 
     // Main Command Handler
     useEffect(() => {
@@ -234,6 +438,7 @@ export default function RepoManager() {
                 case "delete-addon": {
                     await libTAMjs.uninstallAddon(command["repository"], command["addon"])
                     setCommand({command: "load-repository"})
+                    setView({ type: "list" })
                     await activateNote(displayNote)
                     window.location.reload();
                     break
@@ -332,6 +537,21 @@ export default function RepoManager() {
                     setCommand(null)
                     break
                 }
+                case "cleanup-persistence": {
+                    await libTAMjs.cleanupEmptyPersistenceRoots()
+                    setCommand({command: "load-repository"})
+                    break
+                }
+                case "backfill-tamfileids": {
+                    await libTAMjs.backfillTamFileIds()
+                    setCommand({command: "load-repository"})
+                    break
+                }
+                case "backfill-manifests": {
+                    await libTAMjs.backfillInstalledManifests()
+                    setCommand({command: "load-repository"})
+                    break
+                }
             }
         }
         commandHandler()
@@ -351,8 +571,10 @@ export default function RepoManager() {
         return (
             <div className="TAM-body">
                 <div className="TAM-header">
-                    <h2>Trilium Addon Manager</h2>
-                    <a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a>
+                    <div className="TAM-header-titles">
+                        <h2>Trilium Addon Manager</h2>
+                        <p><a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a></p>
+                    </div>
                 </div>
                 {promptQueue.length > 0 && (
                     <p>{promptContext.addonId} — {promptQueue.length} more addon(s) to review after this</p>
@@ -374,42 +596,66 @@ export default function RepoManager() {
         Object.values(repoData.addons ?? {}).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
     )
 
+    let bodyContent
+    if (view.type === "settings") {
+        bodyContent = (
+            <SettingsView
+                repositories={repositories}
+                anyUpdateAvailable={anyUpdateAvailable}
+                onBack={() => setView({ type: "list" })}
+                onAddRepo={value => setCommand({ command: "add-repository", repository: value })}
+                onDeleteRepo={repoId => setCommand({ command: "delete-repository", repository: repoId })}
+                onUpdateRepos={() => setCommand({ command: "update-repositories" })}
+                onUpdateAll={() => setCommand({ command: "update-all" })}
+                onValidate={() => setCommand({ command: "validate-database" })}
+                onCleanup={() => setCommand({ command: "cleanup-persistence" })}
+                onBackfillIds={() => setCommand({ command: "backfill-tamfileids" })}
+                onBackfillManifests={() => setCommand({ command: "backfill-manifests" })}
+            />
+        )
+    } else if (view.type === "detail") {
+        const addonData = repositories[view.repoId]?.addons?.[view.addonId]
+        if (!addonData) {
+            bodyContent = <p>Addon not found. <LinkButton text="Back to Addons" onClick={() => setView({ type: "list" })} /></p>
+        } else {
+            bodyContent = (
+                <AddonDetail
+                    repoId={view.repoId}
+                    addonId={view.addonId}
+                    addonData={addonData}
+                    isSelf={view.addonId === "trilium-addon-manager@beatlink"}
+                    onBack={() => setView({ type: "list" })}
+                    onInstall={addonId => setCommand({ command: "install-addon", repository: view.repoId, addon: addonId })}
+                    onDelete={addonId => setCommand({ command: "delete-addon", repository: view.repoId, addon: addonId })}
+                    onUpdate={addonId => setCommand({ command: "update-addon", repository: view.repoId, addon: addonId })}
+                    onRepair={addonId => setCommand({ command: "repair-addon", repository: view.repoId, addon: addonId })}
+                    onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", repository: view.repoId, addon: addonId, enabled })}
+                />
+            )
+        }
+    } else {
+        bodyContent = (
+            <ListView
+                repositories={repositories}
+                onOpenAddon={(repoId, addonId) => setView({ type: "detail", repoId, addonId })}
+                onInstallAddon={(repoId, addonId) => setCommand({ command: "install-addon", repository: repoId, addon: addonId })}
+                onOpenSettings={() => setView({ type: "settings" })}
+            />
+        )
+    }
+
     return (
         <div className="TAM-body">
             <div className="TAM-header">
-                <h2>Trilium Addon Manager</h2>
-                <a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a>
-            </div>
-            <div>
-                <h4>Repository Management</h4>
-                <div className="TAM-repository-main-controls">
-                    <Button
-                        icon="bx bx-sync"
-                        text="Update Repositories"
-                        onClick={e => {
-                            setCommand({ command: "update-repositories" })
-                        }}
-                    />
-                    {anyUpdateAvailable && <Button
-                        icon="bx bx-sync"
-                        text="Update All Addons"
-                        onClick={e => {
-                            setCommand({ command: "update-all" })
-                        }}
-                    />}
-                    <Button
-                        icon="bx bx-shield-quarter"
-                        text="Validate Database"
-                        onClick={e => {
-                            setCommand({ command: "validate-database" })
-                        }}
-                    />
-                    <NewRepo
-                        onSave={value => {
-                            setCommand({ command: "add-repository", repository: value })
-                        }}
-                    />
+                <div className="TAM-header-titles">
+                    <h2>Trilium Addon Manager</h2>
+                    <p><a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a></p>
                 </div>
+                {view.type === "list" && (
+                    <div className="TAM-header-actions">
+                        <Button icon="bx bx-cog" text="Settings" onClick={() => setView({ type: "settings" })} />
+                    </div>
+                )}
             </div>
             {validationIssues !== null && (
                 <div className="TAM-validation-results">
@@ -443,57 +689,7 @@ export default function RepoManager() {
                     </div>
                 </div>
             )}
-            <div>
-                <h4>Repositories</h4>
-                {Object.entries(repositories).map(([repoId, repoData]) => (
-                    <Repository
-                        repoId={repoId}
-                        repoData={repoData}
-                        onDeleteRepo={repoId => {
-                            setCommand({
-                                command: "delete-repository",
-                                repository: repoId
-                            })
-                        }}
-                        onInstallAddon={(repoId, addonId) => {
-                            setCommand({
-                                command: "install-addon",
-                                repository: repoId,
-                                addon: addonId
-                            })
-                        }}
-                        onDeleteAddon={(repoId, addonId) => {
-                            setCommand({
-                                command: "delete-addon",
-                                repository: repoId,
-                                addon: addonId
-                            })
-                        }}
-                        onUpdateAddon={(repoId, addonId) => {
-                            setCommand({
-                                command: "update-addon",
-                                repository: repoId,
-                                addon: addonId
-                            })
-                        }}
-                        onRepairAddon={(repoId, addonId) => {
-                            setCommand({
-                                command: "repair-addon",
-                                repository: repoId,
-                                addon: addonId
-                            })
-                        }}
-                        onEnableAddon={(repoId, addonId, enabled) => {
-                            setCommand({
-                                command: "enable-addon",
-                                repository: repoId,
-                                addon: addonId,
-                                enabled: enabled
-                            })
-                        }}
-                    />
-                ))}
-            </div>
+            {bodyContent}
         </div>
     )
 }

@@ -46,6 +46,33 @@ trilium-addon-manager@beatlink  (render note)
 - **libTAM.js** — the frontend library that does all the heavy lifting. It runs in the browser but uses `api.runOnBackend` and `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access (fetching URLs, creating notes, modifying note content).
 - **Source Code** — the Preact/JSX render widget. It calls functions from `libTAM.js` (available globally as `libTAMjs`) and manages UI state.
 
+### The UI
+
+TAM's own widget is a self-contained three-view Preact app (`source-code.jsx`), styled to match the
+GitHub Pages catalog (`docs/`) — same card grid, type badges, search/filter toolbar, and sidebar
+detail layout — while still adapting to Trilium's light/dark theme via its own CSS custom properties
+for surfaces and text. It has **no addon dependencies of its own** (`dependencies: []` in its own
+manifest) — everything below is built directly against `trilium:preact`'s built-in components rather
+than a shared library like `libsettings@beatlink`, since a dependency failure in the addon manager
+itself would risk taking down the one thing that could otherwise repair it.
+
+- **List view** (default) — a searchable, filterable card grid of every installed/available addon
+  across every repository (libraries excluded — see [Hidden libraries](#hidden-libraries-and-update-propagation)).
+  Each card shows a type badge, install/update status, and a quick **Install** button for
+  not-yet-installed addons; clicking a card opens its detail view.
+- **Addon detail view** — one page per addon (mirroring `docs/{addon-id}/index.html`): a sticky
+  sidebar with the addon's metadata table and full action set (Home Page, Install/Delete,
+  Enable/Disable, Settings, Repair, Update), and a main panel with the description and — for
+  installed addons that declare a `readmeNote` — the addon's own README rendered from its locally
+  installed note (see [`readmeNote`](#readmenote-optional)), no network fetch required.
+- **Settings view** — TAM's own housekeeping page, built manually (no `libsettings@beatlink`
+  dependency): a stats overview (repository count, installed addon count, addons with saved/persisted
+  data, addons with an update available), repository management (add/delete, Update Repositories,
+  Update All Addons, Validate Database), and manual maintenance triggers for `cleanupEmptyPersistenceRoots`,
+  `backfillTamFileIds`, and `backfillInstalledManifests` — normally run automatically from
+  `updateRepositories`, exposed here too so they can be re-run on demand without waiting for the next
+  repository refresh.
+
 ---
 
 ## Note Identity: `#TAMFILEID`
@@ -135,6 +162,16 @@ the rendered UI. See `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@be
 `settingsNote` is `root` and `root` in turn has a `renderNote` relation to the actual settings JSX —
 so the same note opens whether you click the addon's root note directly or the Settings button in
 TAM.
+
+#### `readmeNote` *(optional)*
+
+The local ID of a note (typically `type: "code"`, `mime: "text/markdown"`, `sourceUrl` pointing at
+the addon's own `README.md`) that ships as part of the addon's installed note tree, exactly parallel
+to `root`/`settingsNote`. TAM's addon detail page resolves it live via `#TAMFILEID` and renders it
+with `marked` — **no network fetch involved**, since the README is just another installed note, not
+something fetched from GitHub at view time. Only available once the addon is actually installed (an
+addon's catalog metadata has no manifest content — see [Repository Format](#repository-format) — so
+an uninstalled addon's detail page links out to its GitHub homepage instead).
 
 #### `notes`
 
@@ -235,7 +272,7 @@ Every installed addon's entry in `database.installedAddons[repoId][addonId]` is:
   "installedVersion": "1.2.3",
   "manuallyInstalled": true,
   "enabled": true,
-  "manifest": { "root": "...", "settingsNote": "...", "notes": [...], "children": [...], "relations": [...], "labels": [...], "dependencies": [...], "exports": {...} },
+  "manifest": { "root": "...", "settingsNote": "...", "readmeNote": "...", "notes": [...], "children": [...], "relations": [...], "labels": [...], "dependencies": [...], "exports": {...} },
   "persistence": { "rootNote": "...", "persistenceNotes": {...}, "pendingPrompts": [...] }
 }
 ```
