@@ -1,3 +1,25 @@
+#!/usr/bin/env python3
+"""Build the distribution files released to GitHub from every _tam_manifest_.json.
+
+Run from the repository root, with no arguments. For each addons/*/_tam_manifest_.json:
+
+- Writes {addon-id}.json: the full manifest with every note's sourceUrl file
+  inlined into a "content" field (base64-encoded when the note has
+  "binary": true) and sourceUrl cleared. This is what TAM actually installs
+  from — sourceUrl paths only resolve inside this repo, not in a downloaded
+  release asset, so the distributed manifest has to carry real content
+  instead.
+
+Also writes metadata.json: a single merged registry, keyed by addon id, of
+just the top-level fields (everything except the "manifest" key) across all
+addons. This is the lightweight catalog TAM's "browse repositories" UI and
+the GitHub Pages site list from, without downloading every addon's full
+manifest content up front.
+
+Usage:
+  tam_to_manifest.py
+"""
+
 import base64
 import json
 from pathlib import Path

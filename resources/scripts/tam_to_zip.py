@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""Convert _tam_manifest_.json to a Trilium-compatible ZIP export.
+"""Convert one or every _tam_manifest_.json into Trilium-compatible ZIP exports.
 
 Dependencies (children/relations with an "addon" field) are resolved
 automatically by reading sibling manifests from the addons/ directory.
 The addons/ dir is auto-discovered as the parent of the addon being built;
 override with --addons-dir if needed.
 
+Two modes:
+
+- Single addon (default): pass a manifest path or its containing directory.
+  Writes one ZIP, named after the addon's id unless --out overrides it.
+- All addons (--all): scans --addons-dir (default "addons") for every
+  */_tam_manifest_.json and writes one {id}.zip per addon into --out-dir
+  (default the current directory). This is what CI uses to build every
+  addon's release asset in one call instead of shelling out per addon.
+
 Usage:
-  export_zip.py path/to/_tam_manifest_.json [--out my-addon.zip]
-  export_zip.py path/to/addon-dir/
-  export_zip.py path/to/addon-dir/ --addons-dir /path/to/addons/
+  tam_to_zip.py path/to/_tam_manifest_.json [--out my-addon.zip]
+  tam_to_zip.py path/to/addon-dir/
+  tam_to_zip.py path/to/addon-dir/ --addons-dir /path/to/addons/
+  tam_to_zip.py --all [--addons-dir addons/] [--out-dir .]
 """
 
 import argparse
@@ -256,28 +266,22 @@ def process_manifest(full_manifest, addon_dir, deps_map):
     return root_entry, zip_files, warnings, uuid_map
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Convert _tam_manifest_.json to a Trilium ZIP import"
-    )
-    parser.add_argument("manifest", help="_tam_manifest_.json path or its containing directory")
-    parser.add_argument("--out", help="Output ZIP path (default: {id}.zip next to the manifest)")
-    parser.add_argument(
-        "--addons-dir",
-        metavar="DIR",
-        help="Path to addons/ directory for auto-resolving dependencies (default: parent of addon dir)",
-    )
-    args = parser.parse_args()
+def build_zip(manifest_path, out_path, addons_dir_arg):
+    """Build one Trilium-importable ZIP from a single _tam_manifest_.json.
 
-    manifest_path = Path(args.manifest)
-    if manifest_path.is_dir():
-        manifest_path = manifest_path / "_tam_manifest_.json"
+    out_path may be None, in which case it defaults to {id}.zip next to the
+    manifest — deferred until after the manifest is read so a bad manifest
+    path still fails with the "not found" check below, not a KeyError.
+    """
     if not manifest_path.exists():
         print(f"ERROR: {manifest_path} not found", file=sys.stderr)
         sys.exit(1)
 
     addon_dir     = manifest_path.parent
     full_manifest = json.loads(manifest_path.read_text())
+
+    if out_path is None:
+        out_path = addon_dir / f"{full_manifest.get('id', 'export')}.zip"
 
     m = full_manifest.get("manifest")
     if not m:
@@ -288,7 +292,7 @@ def main():
         sys.exit(1)
 
     # Resolve addons dir for dep auto-discovery
-    addons_dir = Path(args.addons_dir) if args.addons_dir else addon_dir.parent
+    addons_dir = Path(addons_dir_arg) if addons_dir_arg else addon_dir.parent
 
     def direct_deps(mf):
         ids = set()
@@ -371,9 +375,6 @@ def main():
     root_entry, zip_files, warnings, _ = process_manifest(full_manifest, addon_dir, deps_map)
     all_warnings.extend(warnings)
 
-    addon_id = full_manifest.get("id", "export")
-    out_path = Path(args.out) if args.out else addon_dir / f"{addon_id}.zip"
-
     trilium_meta = {
         "formatVersion": 2,
         "appVersion":    TRILIUM_APP_VERSION,
@@ -396,6 +397,64 @@ def main():
     bundled = f", {len(dep_root_entries)} dep(s) bundled" if dep_root_entries else ""
     skipped_str = f", {skipped} skipped" if skipped else ""
     print(f"Written: {out_path}  ({len(all_zip_files)} content files{bundled}{skipped_str})")
+
+
+def addon_id_of(manifest_path):
+    return json.loads(manifest_path.read_text()).get("id", "export")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert _tam_manifest_.json to a Trilium ZIP import"
+    )
+    parser.add_argument(
+        "manifest", nargs="?",
+        help="_tam_manifest_.json path or its containing directory (omit when using --all)",
+    )
+    parser.add_argument("--out", help="Output ZIP path (default: {id}.zip next to the manifest)")
+    parser.add_argument(
+        "--addons-dir",
+        metavar="DIR",
+        help="Path to addons/ directory for auto-resolving dependencies "
+             "(default: parent of the addon dir, or 'addons' with --all)",
+    )
+    parser.add_argument(
+        "--all", action="store_true",
+        help="Build a ZIP for every addon's _tam_manifest_.json found under --addons-dir, "
+             "instead of a single manifest",
+    )
+    parser.add_argument(
+        "--out-dir", metavar="DIR",
+        help="Directory to write each {id}.zip into with --all (default: current directory)",
+    )
+    args = parser.parse_args()
+
+    if args.all:
+        if args.manifest or args.out:
+            parser.error("--all cannot be combined with a manifest path or --out")
+
+        addons_dir = Path(args.addons_dir) if args.addons_dir else Path("addons")
+        out_dir    = Path(args.out_dir) if args.out_dir else Path(".")
+
+        manifest_paths = sorted(addons_dir.glob("*/_tam_manifest_.json"))
+        if not manifest_paths:
+            print(f"ERROR: no _tam_manifest_.json files found under {addons_dir}", file=sys.stderr)
+            sys.exit(1)
+
+        for manifest_path in manifest_paths:
+            out_path = out_dir / f"{addon_id_of(manifest_path)}.zip"
+            build_zip(manifest_path, out_path, args.addons_dir)
+        return
+
+    if not args.manifest:
+        parser.error("manifest is required unless --all is given")
+
+    manifest_path = Path(args.manifest)
+    if manifest_path.is_dir():
+        manifest_path = manifest_path / "_tam_manifest_.json"
+
+    out_path = Path(args.out) if args.out else None
+    build_zip(manifest_path, out_path, args.addons_dir)
 
 
 if __name__ == "__main__":

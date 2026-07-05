@@ -29,10 +29,10 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 nix-shell        # enter dev shell
 
 validate         # validate addon structure
-strip            # strip noImport files
-publish          # merge and zip addons
-ci               # run all three in sequence
+tam_to_manifest  # merge and zip addons
+ci               # run both in sequence
 
-import_addon <zip>        # import a Trilium export ZIP into addons/
+zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
+tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP
 generate_pages            # build GitHub Pages site into docs/ and regenerate README.md
 ```

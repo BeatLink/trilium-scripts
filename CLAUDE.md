@@ -32,14 +32,12 @@ Inside `nix-shell`, these shell functions are defined (see `shell.nix`):
 
 ```bash
 validate                   # resources/scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
-strip                      # resources/scripts/strip_no_import.py — delete noImport-flagged files from a raw Trilium export
-publish                    # resources/scripts/publish.py — build metadata.json + per-addon {id}.json (inlines sourceUrl content)
-ci                         # validate && publish
-import_addon <zip>         # resources/scripts/import_addon.py — legacy pre-TAM importer, kept for reference only
+tam_to_manifest            # resources/scripts/tam_to_manifest.py — build metadata.json + per-addon {id}.json (inlines sourceUrl content)
+ci                         # validate && tam_to_manifest
 generate_pages             # resources/scripts/generate_pages.py — build docs/ (GitHub Pages) and regenerate README.md
-convert_zip <zip>          # resources/scripts/convert_zip.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
-export_zip <manifest-dir>  # resources/scripts/export_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
-build_addon_zips           # resources/scripts/build_addon_zips.py — CI-only: {id}.zip for every addon via export_zip.py
+zip_to_tam <zip>           # resources/scripts/zip_to_tam.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
+tam_to_zip <manifest-dir>  # resources/scripts/tam_to_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
+tam_to_zip --all           # same script, all-addons mode — CI-only: {id}.zip for every addon under --addons-dir into --out-dir
 publish_release            # resources/scripts/publish_release.py — CI-only: upload *.json/*.zip to the 'latest' GitHub release
 ```
 
@@ -54,7 +52,7 @@ that the addon directory name matches `id`, that `homepage` ends with `addons/{i
 a note id that actually exists in the manifest.
 
 There is no separate build or test framework — CI (`.github/workflows/publish.yml`) just runs
-`validate` then `publish` then loops `export_zip` over every addon dir, and
+`validate` then `tam_to_manifest` then `tam_to_zip --all`, and
 `.github/workflows/pages.yml` runs `generate_pages`.
 
 ## Manifest-driven addon architecture
@@ -64,11 +62,11 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 
 - **`notes[]`** — one entry per note (`id` = local id used only within the manifest, `title`, Trilium
   `type`, `mime`, `sourceUrl` pointing at a flat file in the same directory holding the note's
-  content). `publish.py` inlines each `sourceUrl` file into a `content` field to produce the
+  content). `tam_to_manifest.py` inlines each `sourceUrl` file into a `content` field to produce the
   distribution JSON; nothing else reads `sourceUrl` at runtime. Add `"binary": true` on a note whose
-  `sourceUrl` is non-text (e.g. a `type: "file"` note with mime `audio/wav`) — `publish.py` then
+  `sourceUrl` is non-text (e.g. a `type: "file"` note with mime `audio/wav`) — `tam_to_manifest.py` then
   base64-encodes it into `content` instead of reading it as text, and `lib-tam.js`'s `resolveNotes`
-  decodes it back into a `Buffer` before `setContent()`. `convert_zip.py` sets this flag
+  decodes it back into a `Buffer` before `setContent()`. `zip_to_tam.py` sets this flag
   automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
   real example (bundled `.wav` sound effects).
 - **Note identity: `#TAMFILEID`** — every note TAM creates or resolves carries a permanent,
@@ -117,7 +115,7 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   `api.ensureNoteIsPresentInParent` — before the 2.5.2 fix this used a flat `child → parent` map,
   which silently overwrote earlier entries and left the note attached only to whichever parent was
   *last* in the array (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, and
-  `togglenotes@beatlink`, 2 separate cases, for real examples this broke). `export_zip.py`'s
+  `togglenotes@beatlink`, 2 separate cases, for real examples this broke). `tam_to_zip.py`'s
   `process_manifest` has the same first-occurrence-is-real / later-occurrences-are-clones handling
   for the same reason.
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
@@ -127,7 +125,7 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   e.g. a static-resource-only vendor library (see `libfullcalendar@arshaw`) is referenced by a fixed
   `custom/...` URL string baked into the consumer's code, not by cloning a note, so it only ever
   appears in `dependencies[]`. `lib-tam.js`'s real install path already handles this correctly (it
-  walks `dependencies[]` directly, independent of any cloning); `export_zip.py`'s dependency
+  walks `dependencies[]` directly, independent of any cloning); `tam_to_zip.py`'s dependency
   discovery also treats `dependencies[]` as authoritative for what to bundle, for the same reason.
 - **`skipOnUpdate`** (note never overwritten on update — settings/database notes) and
   **`promptOnUpdate`** (user is shown a Keep-Mine-vs-Use-New-Default diff on update — customizable
@@ -154,7 +152,7 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   `#TAMFILEID` and renders it with `marked` — deliberately a manifest-native installed note rather
   than a network fetch of the addon's GitHub README, so viewing it never needs network access and
   never risks rendering a mismatched version. Only meaningful once the addon is actually installed;
-  an addon's catalog metadata (`metadata.json`, see `publish.py`) carries no manifest content, so an
+  an addon's catalog metadata (`metadata.json`, see `tam_to_manifest.py`) carries no manifest content, so an
   uninstalled addon's detail page links out to its GitHub homepage instead of trying to render one.
 
 - **`type`** — `widget`/`script`/`theme` are user-facing and always shown in TAM's addon list;
@@ -256,22 +254,22 @@ already-shipped library's title is a breaking change for every consumer — bump
 ## Workflow for adding/editing an addon
 
 1. Hand-edit `_tam_manifest_.json` and the flat source files directly (this is the common path), or
-2. Develop inside Trilium, export via **Trilium → Export**, then `convert_zip <export.zip>` to
+2. Develop inside Trilium, export via **Trilium → Export**, then `zip_to_tam <export.zip>` to
    generate a starting `_tam_manifest_.json` + source files (it leaves `FILL_IN` placeholders for
    `id`/`name`/`description`/`author`/`homepage`/`type` that must be filled in by hand, and copies
    note content **verbatim** from the export — for `text`/`html` notes that's usually the raw
    Trilium export wrapper, not the bare fragment other templates in this repo use, so strip it down
    to match sibling notes' `sourceUrl` content).
 
-Always run `validate` before considering the change done. Use `export_zip addons/{id}/` if you need
+Always run `validate` before considering the change done. Use `tam_to_zip addons/{id}/` if you need
 to hand someone (or yourself, for manual Trilium import testing) a ZIP without waiting for CI.
 
 ## Destructive actions require confirmation
 
-Always confirm with the user before deleting a file, including cleanup after `convert_zip`/
-`import_addon` (e.g. the original exported ZIP once its contents are copied into `addons/`) —
+Always confirm with the user before deleting a file, including cleanup after `zip_to_tam`
+(e.g. the original exported ZIP once its contents are copied into `addons/`) —
 even when the deletion seems like obvious tidying. The only exceptions: the file was generated
-this session and can be trivially regenerated (a scratch `--out` ZIP from `export_zip`, a temp
+this session and can be trivially regenerated (a scratch `--out` ZIP from `tam_to_zip`, a temp
 directory), or the user has explicitly authorized the deletion. This matters most for untracked
 files, since git can't recover them.
 

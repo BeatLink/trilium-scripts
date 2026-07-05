@@ -59,7 +59,7 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 | [Templates](addons/templates@beatlink/) | template | A set of note templates for tasks, projects, notes, and areas — designed to work with the Agenda Next and Template Picker addons. | 1.0.6 |
 | [Timer](addons/libtimer@beatlink/) | library | Reusable Preact countdown timer component with optional, overridable sound effects, for TriliumNext widget UIs. | 1.0.2 |
 | [ToggleNote](addons/togglenotes@beatlink/) | widget | Configurable buttons to quickly add or remove the current note as a child of one or more parent notes. Supports exclusive mode and placement in either the right pane or left pane launchbar. | 1.0.3 |
-| [Trilium Addon Manager](addons/trilium-addon-manager@beatlink/) | widget | This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories. | 3.4.1 |
+| [Trilium Addon Manager](addons/trilium-addon-manager@beatlink/) | widget | This addon allows for the easy installation, removal and updating of Trilium addons from GitHub repositories. | 3.4.2 |
 | [WhiteBlueLegacy](addons/whitebluelegacy@beatlink/) | theme | Legacy WhiteBlue theme for older versions of Trilium. A white-dominant theme with light blue accents. | 1.0.2 |
 | [WhiteBlueNext](addons/whitebluenext@beatlink/) | theme | This theme has a heavy emphasis on the use of white backgrounds throughout the interface for light users. Light greys and other non white colors are removed where possible. A light blue color is used as an accent for controls, headings and other areas of interest | 0.0.3 |
 <!-- GENERATED:END -->
@@ -70,10 +70,10 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 nix-shell        # enter dev shell
 
 validate         # validate addon structure
-strip            # strip noImport files
-publish          # merge and zip addons
-ci               # run all three in sequence
+tam_to_manifest  # merge and zip addons
+ci               # run both in sequence
 
-import_addon <zip>        # import a Trilium export ZIP into addons/
+zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
+tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP
 generate_pages            # build GitHub Pages site into docs/ and regenerate README.md
 ```

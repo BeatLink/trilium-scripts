@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validates addon structure to catch errors before publish.py runs."""
+"""Validates addon structure to catch errors before tam_to_manifest.py runs."""
 
 import json
 import sys

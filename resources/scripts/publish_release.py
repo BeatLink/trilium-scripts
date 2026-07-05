@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Publish built distribution files to the 'latest' GitHub release.
 
-Run from the repository root, after publish.py and build_addon_zips.py have
-produced the *.json / *.zip files to upload. Requires `gh` authenticated
+Run from the repository root, after tam_to_manifest.py and tam_to_zip.py --all
+have produced the *.json / *.zip files to upload. Requires `gh` authenticated
 (GITHUB_TOKEN in the environment); GITHUB_SHA is read from the environment
 that GitHub Actions provides on every run.
 """
