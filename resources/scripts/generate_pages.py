@@ -18,7 +18,8 @@ except ImportError:
 
 REPO       = "https://github.com/BeatLink/trilium-scripts"
 RELEASES   = f"{REPO}/releases/latest"
-CATALOG_URL = "https://beatlink.github.io/trilium-scripts/catalog.json"
+PAGES_URL   = "https://beatlink.github.io/trilium-scripts/"
+CATALOG_URL = f"{PAGES_URL}catalog.json"
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static" / "pages"
 BASE_HTML  = (STATIC_DIR / "base.html").read_text()
@@ -231,7 +232,8 @@ def render_addon(meta, readme_html):
 def generate_catalog(addons, docs_dir):
     urls = [a["meta"]["manifestSourceUrl"] for a in addons if a["meta"].get("manifestSourceUrl")]
     missing = len(addons) - len(urls)
-    (docs_dir / "catalog.json").write_text(json.dumps({"tam-addons": urls}, indent=2) + "\n")
+    catalog = {"webUrl": PAGES_URL, "tam-addons": urls}
+    (docs_dir / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
     print(f"Generated docs/catalog.json with {len(urls)} addon(s)" + (f" ({missing} skipped — no manifestSourceUrl)" if missing else ""))
 
 

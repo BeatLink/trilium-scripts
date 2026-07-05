@@ -156,16 +156,6 @@
         line-height: 1.3;
         color: #fff;
     }
-
-    & p {
-        margin-top: 8px;
-        color: #94a3b8;
-        font-size: 14px;
-    }
-}
-
-.TAM-catalog-link {
-    color: #93c5fd;
 }
 
 .TAM-header-actions {

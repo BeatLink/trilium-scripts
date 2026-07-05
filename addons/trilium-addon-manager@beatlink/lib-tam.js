@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.0.1"
+const TAM_VERSION = "4.0.2"
 // TAM can't discover its own update-check URL from a catalog (it isn't
 // necessarily a member of one), so its own manifestSourceUrl is hardcoded
 // here, same spirit as TAM_ID/TAM_VERSION above — used as a fallback
@@ -101,15 +101,28 @@ async function getCatalogs() {
     return database.catalogs
 }
 
+async function fetchCatalogJson(catalogUrl) {
+    return await api.runAsyncOnBackendWithManualTransactionHandling(async (catalogUrl) => {
+        const response = await fetch(catalogUrl)
+        return await response.json()
+    }, [catalogUrl])
+}
+
+// Cheap, on-demand lookup for a catalog's own optional `webUrl` (a
+// human-browsable website for that catalog, e.g. a GitHub Pages site) —
+// used to render a "Visit Website" link per catalog without fetching every
+// addon manifest it lists.
+async function fetchCatalogMeta(catalogUrl) {
+    const catalog = await fetchCatalogJson(catalogUrl)
+    return { webUrl: catalog.webUrl || null }
+}
+
 // Fetches a catalog's addon list fresh, every time — nothing here is cached,
 // since a catalog entry is nothing more than a URL. Individual entry
 // fetch failures (a dead link, a malformed manifest) are skipped rather than
 // failing the whole browse view.
 async function fetchCatalogAddons(catalogUrl) {
-    const catalog = await api.runAsyncOnBackendWithManualTransactionHandling(async (catalogUrl) => {
-        const response = await fetch(catalogUrl)
-        return await response.json()
-    }, [catalogUrl])
+    const catalog = await fetchCatalogJson(catalogUrl)
 
     const urls = catalog["tam-addons"] || []
     const results = await Promise.all(urls.map(async (manifestSourceUrl) => {
@@ -121,7 +134,7 @@ async function fetchCatalogAddons(catalogUrl) {
             return null
         }
     }))
-    return results.filter(Boolean)
+    return { webUrl: catalog.webUrl || null, addons: results.filter(Boolean) }
 }
 
 
@@ -1273,6 +1286,7 @@ module.exports.addCatalog          = addCatalog
 module.exports.deleteCatalog       = deleteCatalog
 module.exports.getCatalogs         = getCatalogs
 module.exports.fetchCatalogAddons  = fetchCatalogAddons
+module.exports.fetchCatalogMeta    = fetchCatalogMeta
 module.exports.getAllAddons        = getAllAddons
 module.exports.checkForAddonUpdates = checkForAddonUpdates
 module.exports.syncAddon           = syncAddon

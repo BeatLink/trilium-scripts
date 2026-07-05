@@ -192,11 +192,12 @@ function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatal
 
 
 // Catalog Browse View -----------------------------------------------------------
-function CatalogBrowseView({ catalogUrl, entries, loading, installedIds, onBack, onOpenAddon, onInstall }) {
+function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds, onBack, onOpenAddon, onInstall }) {
     return (
         <div>
             <BackLink onClick={onBack} text="Back to Addons" />
             <h2>Browsing: {catalogUrl}</h2>
+            {webUrl && <p><a href={webUrl} target="_blank">Visit Website ↗</a></p>}
             {loading ? (
                 <Spinner />
             ) : entries.length === 0 ? (
@@ -330,7 +331,7 @@ function NewAddonByUrl({ onSave }) {
 }
 
 function SettingsView({
-    addons, catalogs, onBack, onAddCatalog, onDeleteCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
+    addons, catalogs, onBack, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onInstallByUrl, onCheckUpdates, onUpdateAll,
     onValidate, onCleanup, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
@@ -366,7 +367,10 @@ function SettingsView({
                     {catalogs.map(url => (
                         <div key={url} className="TAM-repo-row">
                             <span>{url}</span>
-                            <TamButton icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
+                            <div className="TAM-validation-buttons">
+                                <TamButton icon="bx bx-globe" text="Visit Website" onClick={() => onVisitCatalogWebsite(url)} />
+                                <TamButton icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
+                            </div>
                         </div>
                     ))}
                     <NewCatalog onSave={onAddCatalog} />
@@ -434,7 +438,7 @@ export default function RepoManager() {
     const [command, setCommand] = useState(null)
     const [addons, setAddons] = useState(null)
     const [catalogs, setCatalogs] = useState([])
-    const [catalogBrowse, setCatalogBrowse] = useState(null) // { url, entries, loading }
+    const [catalogBrowse, setCatalogBrowse] = useState(null) // { url, webUrl, entries, loading }
     const [pendingPrompts, setPendingPrompts] = useState([])
     const [promptAddonId, setPromptAddonId] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
@@ -471,9 +475,19 @@ export default function RepoManager() {
                     break
                 }
                 case "browse-catalog": {
-                    setCatalogBrowse({ url: command["url"], entries: [], loading: true })
-                    const entries = await libTAMjs.fetchCatalogAddons(command["url"])
-                    setCatalogBrowse({ url: command["url"], entries, loading: false })
+                    setCatalogBrowse({ url: command["url"], webUrl: null, entries: [], loading: true })
+                    const { webUrl, addons: entries } = await libTAMjs.fetchCatalogAddons(command["url"])
+                    setCatalogBrowse({ url: command["url"], webUrl, entries, loading: false })
+                    setCommand(null)
+                    break
+                }
+                case "visit-catalog-website": {
+                    const { webUrl } = await libTAMjs.fetchCatalogMeta(command["url"])
+                    if (webUrl) {
+                        window.open(webUrl, "_blank")
+                    } else {
+                        api.showMessage("This catalog doesn't declare a website URL.")
+                    }
                     setCommand(null)
                     break
                 }
@@ -616,7 +630,6 @@ export default function RepoManager() {
                 <div className="TAM-header">
                     <div className="TAM-header-titles">
                         <h2>Trilium Addon Manager</h2>
-                        <p><a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a></p>
                     </div>
                 </div>
                 {promptQueue.length > 0 && (
@@ -646,6 +659,7 @@ export default function RepoManager() {
                 onBack={() => setView({ type: "list" })}
                 onAddCatalog={url => setCommand({ command: "add-catalog", url })}
                 onDeleteCatalog={url => setCommand({ command: "delete-catalog", url })}
+                onVisitCatalogWebsite={url => setCommand({ command: "visit-catalog-website", url })}
                 onInstallByUrl={url => setCommand({ command: "install-by-url", url })}
                 onCheckUpdates={() => setCommand({ command: "check-updates" })}
                 onUpdateAll={() => setCommand({ command: "update-all" })}
@@ -658,6 +672,7 @@ export default function RepoManager() {
         bodyContent = (
             <CatalogBrowseView
                 catalogUrl={catalogBrowse?.url ?? view.url}
+                webUrl={catalogBrowse?.webUrl ?? null}
                 entries={catalogBrowse?.entries ?? []}
                 loading={catalogBrowse?.loading ?? true}
                 installedIds={installedIds}
@@ -718,7 +733,6 @@ export default function RepoManager() {
             <div className="TAM-header">
                 <div className="TAM-header-titles">
                     <h2>Trilium Addon Manager</h2>
-                    <p><a href="https://beatlink.github.io/trilium-scripts/" target="_blank" className="TAM-catalog-link">Browse Addon Catalog ↗</a></p>
                 </div>
                 {view.type === "list" && (
                     <div className="TAM-header-actions">
