@@ -8,6 +8,7 @@
     "latestVersion": "1.1.2",
     "type": "library",
     "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libagendaoverview@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "lib",
         "notes": [

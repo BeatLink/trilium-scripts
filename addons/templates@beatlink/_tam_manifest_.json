@@ -5,9 +5,10 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.6",
+    "latestVersion": "1.0.7",
     "type": "template",
     "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/templates@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "dependencies": [],

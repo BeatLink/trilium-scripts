@@ -8,6 +8,7 @@
     "latestVersion": "1.2.2",
     "type": "script",
     "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/table-calculator@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "root",

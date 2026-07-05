@@ -16,10 +16,9 @@ except ImportError:
     def render_md(text):
         return f"<pre>{text}</pre>"
 
-REPO      = "https://github.com/BeatLink/trilium-scripts"
-RELEASES  = f"{REPO}/releases/latest"
-META_URL  = f"{RELEASES}/download/metadata.json"
-TAM_REPO  = "BeatLink/trilium-scripts"
+REPO       = "https://github.com/BeatLink/trilium-scripts"
+RELEASES   = f"{REPO}/releases/latest"
+CATALOG_URL = "https://beatlink.github.io/trilium-scripts/catalog.json"
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static" / "pages"
 BASE_HTML  = (STATIC_DIR / "base.html").read_text()
@@ -97,8 +96,8 @@ def render_index(addons):
     </div>
     <div class="hdr-right">
       <div class="tam-box">
-        <span class="tam-label">Add to Trilium Addon Manager</span>
-        <code class="tam-url">{TAM_REPO}</code>
+        <span class="tam-label">Add as a Trilium Addon Manager catalog</span>
+        <code class="tam-url">{CATALOG_URL}</code>
       </div>
       <div class="hdr-links">
         <a href="{REPO}" target="_blank">GitHub</a>
@@ -169,7 +168,7 @@ def render_addon(meta, readme_html):
     t            = meta.get("type", "")
     hp           = meta.get("homepage", "")
     zip_url      = f"{RELEASES}/download/{aid}.zip"
-    manifest_url = f"{RELEASES}/download/{aid}.json"
+    manifest_url = meta.get("manifestSourceUrl", "")
 
     author_display = (
         f'<a href="https://github.com/{html.escape(author, quote=True)}" target="_blank">{html.escape(author)}</a>'
@@ -188,7 +187,8 @@ def render_addon(meta, readme_html):
     )
 
     actions = f'<a class="btn" href="{html.escape(zip_url, quote=True)}">Download ZIP</a>'
-    actions += f'\n      <a class="btn btn-ghost" href="{html.escape(manifest_url, quote=True)}" target="_blank">Download Manifest</a>'
+    if manifest_url:
+        actions += f'\n      <a class="btn btn-ghost" href="{html.escape(manifest_url, quote=True)}" target="_blank">View Manifest</a>'
     if hp:
         actions += f'\n      <a class="btn btn-ghost" href="{html.escape(hp, quote=True)}" target="_blank">Source</a>'
 
@@ -222,6 +222,17 @@ def render_addon(meta, readme_html):
 </main>"""
 
     return page(f"{name} — Trilium Addons", body, css="../style.css")
+
+
+# ---------------------------------------------------------------------------
+# TAM catalog (the {"tam-addons": [...]} format TAM's "add catalog" reads)
+# ---------------------------------------------------------------------------
+
+def generate_catalog(addons, docs_dir):
+    urls = [a["meta"]["manifestSourceUrl"] for a in addons if a["meta"].get("manifestSourceUrl")]
+    missing = len(addons) - len(urls)
+    (docs_dir / "catalog.json").write_text(json.dumps({"tam-addons": urls}, indent=2) + "\n")
+    print(f"Generated docs/catalog.json with {len(urls)} addon(s)" + (f" ({missing} skipped — no manifestSourceUrl)" if missing else ""))
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +338,7 @@ def main():
 
     print(f"Generated docs/ for {len(addons)} addons")
 
+    generate_catalog(addons, docs_dir)
     generate_readme(addons)
 
 

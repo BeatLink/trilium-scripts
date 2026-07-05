@@ -1,7 +1,6 @@
 {
-    "repositories": {
-        "BeatLink/trilium-scripts": {}
-    },
-    "installedAddons": {},
-    "persistence": {}
+    "catalogs": [
+        "https://beatlink.github.io/trilium-scripts/catalog.json"
+    ],
+    "installedAddons": {}
 }

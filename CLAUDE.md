@@ -6,9 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A collection of widgets, themes, and scripts for TriliumNext Notes, distributed through a custom
 addon manager called **TAM** (Trilium Addon Manager, `addons/trilium-addon-manager@beatlink/`).
-Addons live under `addons/`, are described by a `_tam_manifest_.json`, and get published as GitHub
-Releases + a GitHub Pages catalog (https://beatlink.github.io/trilium-scripts/) by CI on every push
-to `main`.
+Addons live under `addons/`, are described by a `_tam_manifest_.json`, and TAM installs them
+**directly from this repo** — each manifest's own `manifestSourceUrl` (a raw.githubusercontent URL)
+is exactly what TAM fetches over the network, with no separate content-inlining/distribution build
+step in between. CI still publishes a GitHub Pages catalog (https://beatlink.github.io/trilium-scripts/,
+including `catalog.json`, the flat list of every addon's `manifestSourceUrl` that TAM's "add catalog"
+action consumes) and cuts a versioned GitHub Release containing every addon's `{id}.zip` (for manual
+import without going through TAM's network install flow at all) on every push to `main`.
 
 Not every directory under `addons/` is TAM-managed — only directories named `name@author` with a
 `_tam_manifest_.json` participate in validate/publish/export. Directories without an `@author` suffix
@@ -31,14 +35,14 @@ nix-shell --run "python3 resources/scripts/validate.py"
 Inside `nix-shell`, these shell functions are defined (see `shell.nix`):
 
 ```bash
-validate                   # resources/scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
-tam_to_manifest            # resources/scripts/tam_to_manifest.py — build metadata.json + per-addon {id}.json (inlines sourceUrl content)
-ci                         # validate && tam_to_manifest
-generate_pages             # resources/scripts/generate_pages.py — build docs/ (GitHub Pages) and regenerate README.md
-zip_to_tam <zip>           # resources/scripts/zip_to_tam.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
-tam_to_zip <manifest-dir>  # resources/scripts/tam_to_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
-tam_to_zip --all           # same script, all-addons mode — CI-only: {id}.zip for every addon under --addons-dir into --out-dir
-publish_release            # resources/scripts/publish_release.py — CI-only: upload *.json/*.zip to the 'latest' GitHub release
+validate                       # resources/scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
+ci                             # validate && tam_to_zip --all
+generate_pages                 # resources/scripts/generate_pages.py — build docs/ (GitHub Pages incl. catalog.json) and regenerate README.md
+zip_to_tam <zip>               # resources/scripts/zip_to_tam.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
+tam_to_zip <manifest-dir>      # resources/scripts/tam_to_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
+tam_to_zip --all               # same script, all-addons mode — CI-only: {id}.zip for every addon under --addons-dir into --out-dir
+publish_release                # resources/scripts/publish_release.py — CI-only: cuts a new versioned release + refreshes 'latest', both carrying every {id}.zip
+backfill_manifest_source_url   # resources/scripts/backfill_manifest_source_url.py — one-time: add manifestSourceUrl to every addon missing one
 ```
 
 Scripts live in `resources/scripts/`, not `scripts/` — all invocations (shell.nix functions and CI
@@ -47,28 +51,53 @@ since several scripts resolve `addons/`/`docs/` as plain relative paths.
 
 `validate` is the closest thing to a test suite here — always run it after editing any
 `_tam_manifest_.json` or adding/removing addon source files. It checks required top-level fields,
-that the addon directory name matches `id`, that `homepage` ends with `addons/{id}`, that every
-`sourceUrl` resolves to a real file, and that every `children`/`relations`/`labels` entry references
-a note id that actually exists in the manifest.
+that `homepage` ends with `addons/{id}` when it points within this repo, that every relative
+`sourceUrl` resolves to a real file on disk (a soft, local-dev-only check — the same manifest's
+`sourceUrl` values are read verbatim by TAM at install time and resolved against `manifestSourceUrl`,
+not this repo's filesystem), that `manifestSourceUrl` is present (a warning, not an error — a
+not-yet-published addon legitimately won't have one yet), that every `children`/`relations`/`labels`
+entry references a note id that actually exists in the manifest, and that every `dependencies[]`
+entry is either a bare id string or a well-formed `{id, manifestSourceUrl}` object. It no longer
+requires the addon's directory name to match its `id` — addon identity comes from the manifest's own
+`id` field, not filesystem position, now that nothing resolves an addon by where it happens to sit in
+this repo's tree.
 
 There is no separate build or test framework — CI (`.github/workflows/publish.yml`) just runs
-`validate` then `tam_to_manifest` then `tam_to_zip --all`, and
+`validate` then `tam_to_zip --all` then `publish_release`, and
 `.github/workflows/pages.yml` runs `generate_pages`.
 
 ## Manifest-driven addon architecture
 
-Every TAM addon is a `_tam_manifest_.json` at `addons/{id}/` (id format `name@author`, must match the
-directory name). It declares a tree of Trilium notes rather than raw exported files:
+Every TAM addon is a `_tam_manifest_.json`, by convention at `addons/{id}/` in this repo (id format
+`name@author`) though nothing actually requires that folder layout anymore — see `manifestSourceUrl`
+below. It declares a tree of Trilium notes rather than raw exported files:
 
+- **`manifestSourceUrl`** (top-level, sibling of `id`/`homepage`/etc.) — a URL where this exact
+  manifest document can always be fetched from (for this repo's own addons, a
+  `raw.githubusercontent.com/.../refs/heads/main/addons/{id}/_tam_manifest_.json` URL). This is the
+  single thing that makes an addon installable/updatable by TAM at all — TAM never discovers an addon
+  by filesystem position, only by fetching whatever URL it's given (directly, or via a catalog's
+  `tam-addons[]` list). `zip_to_tam.py` auto-fills it when its output directory is inside a git
+  working copy with a `github.com` origin remote (detects the current branch + the manifest's path
+  relative to the repo root); `resources/scripts/backfill_manifest_source_url.py` does the same for
+  every existing addon in this repo (re-run it if an addon's folder ever moves). Hand-author it
+  directly for anything not authored via `zip_to_tam.py`, or when a manifest deliberately isn't meant
+  to live in this repo's own tree at all.
 - **`notes[]`** — one entry per note (`id` = local id used only within the manifest, `title`, Trilium
-  `type`, `mime`, `sourceUrl` pointing at a flat file in the same directory holding the note's
-  content). `tam_to_manifest.py` inlines each `sourceUrl` file into a `content` field to produce the
-  distribution JSON; nothing else reads `sourceUrl` at runtime. Add `"binary": true` on a note whose
-  `sourceUrl` is non-text (e.g. a `type: "file"` note with mime `audio/wav`) — `tam_to_manifest.py` then
-  base64-encodes it into `content` instead of reading it as text, and `lib-tam.js`'s `resolveNotes`
-  decodes it back into a `Buffer` before `setContent()`. `zip_to_tam.py` sets this flag
-  automatically for any `type: "file"` note found in a Trilium export. See `libtimer@beatlink` for a
-  real example (bundled `.wav` sound effects).
+  `type`, `mime`, `sourceUrl`). `sourceUrl` is the location of that note's actual content: a plain
+  relative path (resolved via `new URL(sourceUrl, manifestSourceUrl)` — exactly like an HTML
+  `<base href>`) for a file that ships alongside the manifest, or a full `http(s)://` URL for content
+  hosted anywhere else entirely (e.g. pointing straight at an upstream project's own files instead of
+  vendoring a copy into this repo). `lib-tam.js`'s `resolveNotes` fetches it fresh, backend-side, at
+  install/update time — there's no more separate "inline everything into a distribution JSON" build
+  step; the manifest committed in this repo, the manifest TAM fetches over the network, and the
+  manifest snapshot in TAM's own Database are all the same document (modulo `manifestSourceUrl`
+  itself, which is never authored for the *installed* snapshot, since it's the addon's own identity,
+  not part of its content). Add `"binary": true` on a note whose `sourceUrl` is non-text (e.g. a
+  `type: "file"` note with mime `audio/wav`) — `resolveNotes` then fetches raw bytes into a `Buffer`
+  directly (no base64 round-trip needed at all, unlike the old inlined-JSON approach) before
+  `setContent()`. `zip_to_tam.py` sets this flag automatically for any `type: "file"` note found in a
+  Trilium export. See `libtimer@beatlink` for a real example (bundled `.wav` sound effects).
 - **Note identity: `#TAMFILEID`** — every note TAM creates or resolves carries a permanent,
   non-inheritable label `#TAMFILEID="{addonId}/{localId}"` (e.g.
   `#TAMFILEID="libical@kewisch/lib"`). This, not any id cached in TAM's Database, is the canonical
@@ -82,8 +111,7 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   fresh note is created and tagged immediately. **Nothing about note identity is cached in the
   Database at all** — not even `rootNoteId`/`settingsNoteId` anymore, as of the schema change
   described below; everything resolves live via TAMFILEID whenever needed. See
-  `trilium-addon-manager@beatlink/README.md`'s "Note Identity" section for the full design and the
-  one-time `backfillTamFileIds()` migration for addons installed before this convention existed.
+  `trilium-addon-manager@beatlink/README.md`'s "Note Identity" section for the full design.
 - **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend` or
   `;env=backend`. **There is no `env=hybrid`** — Trilium's bundler only lets a note `require()`
   another note of the *same* environment (`packages/trilium-core/.../script_context.ts` and
@@ -121,12 +149,19 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
   local-vs-cross-addon shape.
 - **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link
-  against. A dependency doesn't strictly need a matching `children`/`relations` cross-addon entry —
-  e.g. a static-resource-only vendor library (see `libfullcalendar@arshaw`) is referenced by a fixed
-  `custom/...` URL string baked into the consumer's code, not by cloning a note, so it only ever
-  appears in `dependencies[]`. `lib-tam.js`'s real install path already handles this correctly (it
-  walks `dependencies[]` directly, independent of any cloning); `tam_to_zip.py`'s dependency
-  discovery also treats `dependencies[]` as authoritative for what to bundle, for the same reason.
+  against. Each `dependencies[]` entry is either a bare id string (resolved by matching against
+  whatever's already installed, or against the catalog the consuming addon itself was installed
+  from — this repo's own libraries all use this form, since a monorepo catalog naturally lists every
+  addon it depends on too) or an explicit `{"id": "...", "manifestSourceUrl": "..."}` object for a
+  dependency that genuinely lives somewhere else entirely. A dependency doesn't strictly need a
+  matching `children`/`relations` cross-addon entry — e.g. a static-resource-only vendor library (see
+  `libfullcalendar@arshaw`) is referenced by a fixed `custom/...` URL string baked into the consumer's
+  code, not by cloning a note, so it only ever appears in `dependencies[]`. `lib-tam.js`'s real
+  install path already handles this correctly (it walks `dependencies[]` directly, independent of any
+  cloning); `tam_to_zip.py`'s dependency discovery also treats `dependencies[]` as authoritative for
+  what to bundle, for the same reason — though it can only ever bundle a dependency into an offline
+  ZIP if a matching sibling `addons/{dep-id}/` folder exists locally, regardless of which
+  `dependencies[]` form declared it.
 - **`skipOnUpdate`** (note never overwritten on update — settings/database notes) and
   **`promptOnUpdate`** (user is shown a Keep-Mine-vs-Use-New-Default diff on update — customizable
   content notes) control TAM's update behavior; both only make sense on notes also tracked by an
@@ -152,7 +187,8 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
   `#TAMFILEID` and renders it with `marked` — deliberately a manifest-native installed note rather
   than a network fetch of the addon's GitHub README, so viewing it never needs network access and
   never risks rendering a mismatched version. Only meaningful once the addon is actually installed;
-  an addon's catalog metadata (`metadata.json`, see `tam_to_manifest.py`) carries no manifest content, so an
+  browsing a catalog (`catalog.json`'s flat `manifestSourceUrl` list, see `generate_pages.py`) only
+  ever fetches each addon's full manifest — no README rendering happens pre-install — so an
   uninstalled addon's detail page links out to its GitHub homepage instead of trying to render one.
 
 - **`type`** — `widget`/`script`/`theme` are user-facing and always shown in TAM's addon list;
@@ -166,28 +202,47 @@ directory name). It declares a tree of Trilium notes rather than raw exported fi
 
 TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js` +
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full sync/
-persistence/repair state machine — it's long and not worth duplicating here. The short version:
+persistence state machine — it's long and not worth duplicating here. The short version:
 
-- **One entry point.** `syncAddon(repoId, addonId, options)` replaces what used to be three separate
+- **One entry point.** `syncAddon(addonId, options)` replaces what used to be three separate
   functions (`installAddon`/`updateAddon`/`selfUpdateAddon`) — a fresh install, a version update, and
   TAM updating *itself* are all the same call now that find-or-create-by-`#TAMFILEID` removes the
-  reason delete+reinstall ever existed. Nothing is deleted-then-recreated on an ordinary sync
+  reason delete+reinstall ever existed. `options.manifestSourceUrl` is required for a fresh install
+  (nothing stored yet to fall back to) and optional for an update (falls back to whatever's already
+  recorded on the addon's own Database entry). Nothing is deleted-then-recreated on an ordinary sync
   anymore, so there's no more cascade-to-dependents either (a dependent's clone of a dependency's
   exported note points at a real id that never changes across an ordinary version bump).
+- **`database.installedAddons` is a flat map keyed by `addonId` alone** — not nested under a
+  repository/catalog key. An addon's identity is its own manifest `id`, independent of which catalog
+  (if any) it happened to be discovered through; deleting a catalog from the browse list never
+  touches anything already installed from it. `database.catalogs` is just an array of added catalog
+  URLs — nothing about a catalog's contents is ever cached, since a catalog is nothing more than a
+  `{"tam-addons": [...]}` list of other manifests' own `manifestSourceUrl`s; browsing one
+  (`fetchCatalogAddons`) fetches every listed manifest fresh, every time.
 - **Each installed addon's Database record stores its own manifest structure** (same shape as
-  `_tam_manifest_.json`'s `manifest` sub-object, minus `sourceUrl`/`content`) rather than a grab-bag
+  `_tam_manifest_.json`'s `manifest` sub-object, minus per-note `sourceUrl`) rather than a grab-bag
   of derived fields — `dependencies`/`exports` are read straight from it, and `rootNoteId`/
-  `settingsNoteId` are resolved live from `manifest.root`/`manifest.settingsNote` whenever needed. The
+  `settingsNoteId` are resolved live from `manifest.root`/`manifest.settingsNote` whenever needed. It
+  also stores a `meta` sub-object (`name`/`description`/`author`/`license`/`type`/`homepage`,
+  snapshotted from the manifest's own top-level fields at sync time) purely for rendering the addon
+  list/detail views without needing a live catalog — this didn't exist under the old repository
+  model, where those fields always came from whatever repository object was already in memory. The
   only genuinely irreducible per-install facts, stored alongside it, are `installedVersion` (a
-  manifest fetch always reflects latest, never what's installed) and `manuallyInstalled` (pure user
-  intent); `enabled` is technically derivable too (scan for `disabled:`-prefixed activation labels)
-  but is cached anyway since it's read on every addon-list render.
+  manifest fetch always reflects latest, never what's installed), `manifestSourceUrl` (exactly which
+  URL this install came from — read verbatim from the fetched manifest, never guessed by TAM itself;
+  used to re-fetch for update checks), and `manuallyInstalled` (pure user intent); `enabled` is
+  technically derivable too (scan for `disabled:`-prefixed activation labels) but is cached anyway
+  since it's read on every addon-list render.
 - **`dependents` (who depends on this addon) is computed, never stored** — `getDependents` scans
   every other installed addon's own stored `manifest.dependencies` for the reverse edge, so there is
   nothing pushed/maintained that could drift out of sync. Used by `checkForAddonUpdates`'s
   update-propagation up through hidden `type: "library"` addons (fixed-point loop, since library
   addons never show in the list, so their own available update needs surfacing on whichever visible
   addon(s) depend on them) and by `uninstallAddon`'s cascade-uninstall-if-now-unused check.
+- **`checkForAddonUpdates` fetches each installed addon's own `manifestSourceUrl` directly** and
+  compares `latestVersion` against `installedVersion` — there's no more per-repository cached registry
+  to diff against first (catalogs cache nothing), so this is now one best-effort fetch per installed
+  addon rather than one fetch per repository.
 - **Persisted user data (`AddonData:` notes)** lives nested on the same per-addon record as a
   `persistence` sub-object — the one part of a record allowed to survive after `installedVersion`/
   `manifest`/etc. disappear on uninstall. `deleteAddon` strips every installed-state field but keeps
@@ -201,12 +256,14 @@ persistence/repair state machine — it's long and not worth duplicating here. T
   against the live note tree — duplicate `#TAMFILEID`s, a declared dependency that isn't actually
   installed, the stored `manifest.root`/`manifest.settingsNote` still resolving, persisted notes
   still existing, `AddonData:` relations still pointing where the database says — read-only,
-  returning a flat list of issues rather than fixing anything.
-- **`libTAMjs.repairAddon()`** (wired to a per-addon "Repair" button) is the fix-it counterpart —
-  but purely offline, working only from the addon's own *locally stored* manifest (never a network
-  fetch), fixing structure (parent branches, labels, relations) but never touching content and never
-  recreating a fully-deleted note (nothing stored locally to rebuild it with — that's reported as an
-  issue instead, fixable only by an actual sync/update).
+  returning a flat list of issues rather than fixing anything. **There is no offline "repair" path
+  anymore** — an addon `validateDatabase` flags an issue for should just be reinstalled/updated
+  instead (`syncAddon` already idempotently reconciles everything fresh via `#TAMFILEID`), rather than
+  reconciled from a locally stored snapshot that might itself be stale or wrong. The old
+  `repairAddon()`/"Repair" button (offline-only, working purely from the locally stored manifest) was
+  removed for exactly this reason — it solved a problem (reconciling structure without a network
+  fetch) that stopped being worth the complexity once every addon's own `manifestSourceUrl` makes a
+  real fetch-and-reconcile just as cheap.
 
 ### `api.currentNote` vs `api.startNote` vs the active-note-context
 

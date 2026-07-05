@@ -10,10 +10,10 @@ Browse the addon catalog: **https://beatlink.github.io/trilium-scripts/**
 
 ## Installation
 
-Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this repository to TAM:
+Install addons using [Trilium Addon Manager](./addons/trilium-addon-manager@beatlink/) by adding this catalog to TAM:
 
 ```
-BeatLink/trilium-scripts
+https://beatlink.github.io/trilium-scripts/catalog.json
 ```
 
 Or download individual `.zip` files from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest) and import manually via **Trilium → Import**.
@@ -29,8 +29,7 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 nix-shell        # enter dev shell
 
 validate         # validate addon structure
-tam_to_manifest  # merge and zip addons
-ci               # run both in sequence
+ci               # validate then build every addon's ZIP
 
 zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
 tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP

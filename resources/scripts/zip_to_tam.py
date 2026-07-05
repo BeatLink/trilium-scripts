@@ -5,10 +5,60 @@ import argparse
 import json
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
+
+
+def _run_git(args, cwd):
+    try:
+        result = subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+GITHUB_REMOTE_RE = re.compile(r"^(?:git@github\.com:|https://github\.com/)(?P<path>.+?)(?:\.git)?$")
+
+
+def detect_manifest_source_url(out_dir):
+    """Best-effort: if out_dir is inside a git working copy with a github.com
+    origin remote, compute the raw.githubusercontent URL this manifest will
+    always be reachable at (tracking the current branch). Returns None if
+    detection isn't possible (no git repo, no/non-GitHub origin remote,
+    detached HEAD) — the caller should leave manifestSourceUrl unset and let
+    the author fill it in by hand in that case.
+    """
+    out_dir = out_dir.resolve()
+    repo_root = _run_git(["rev-parse", "--show-toplevel"], out_dir)
+    if not repo_root:
+        return None
+    repo_root = Path(repo_root)
+
+    remote_url = _run_git(["remote", "get-url", "origin"], repo_root)
+    if not remote_url:
+        return None
+
+    match = GITHUB_REMOTE_RE.match(remote_url)
+    if not match:
+        return None
+    owner_repo = match.group("path")
+
+    branch = _run_git(["symbolic-ref", "--short", "HEAD"], repo_root)
+    if not branch:
+        return None  # detached HEAD or other odd state
+
+    try:
+        relative_dir = out_dir.relative_to(repo_root)
+    except ValueError:
+        return None
+
+    manifest_path = "/".join((*relative_dir.parts, "_tam_manifest_.json"))
+    return f"https://raw.githubusercontent.com/{owner_repo}/refs/heads/{branch}/{manifest_path}"
 
 
 def slugify(title):
@@ -187,6 +237,8 @@ def main():
                     target_local_id = id_map.get(attr_value, attr_value)
                     relations.append({"from": local_id, "type": attr_name, "to": target_local_id})
 
+        manifest_source_url = detect_manifest_source_url(out_dir)
+
         manifest = {
             "id":            "FILL_IN",
             "name":          "FILL_IN",
@@ -197,6 +249,7 @@ def main():
             "latestVersion": "1.0.0",
             "type":          "widget",
             "readme":        "README.md",
+            **({"manifestSourceUrl": manifest_source_url} if manifest_source_url else {}),
             "manifest": {
                 "root":         root_local_id,
                 "dependencies": [],
@@ -215,6 +268,10 @@ def main():
     print(f"Written: {output_file}")
     print(f"  {len(notes)} notes, {len(children)} children, {len(relations)} relations, {len(labels)} labels")
     print("  Search for '\"FILL_IN\"' in _tam_manifest_.json and replace with real values")
+    if manifest_source_url:
+        print(f"  manifestSourceUrl auto-detected: {manifest_source_url}")
+    else:
+        print("  manifestSourceUrl NOT set (not inside a git repo with a github.com origin) — fill in by hand before publishing")
 
 
 if __name__ == "__main__":

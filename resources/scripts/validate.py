@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validates addon structure to catch errors before tam_to_manifest.py runs."""
+"""Validates addon structure before publishing."""
 
 import json
 import sys
@@ -51,18 +51,6 @@ for manifest_file in manifest_files:
         error(manifest_file, f"'id' contains spaces: \"{addon_id}\"")
         continue
 
-    # --- folder name must match id -------------------------------------------
-    folder_name = addon_dir.name
-    if folder_name != addon_id:
-        if fix_mode:
-            new_dir = addon_dir.parent / addon_id
-            addon_dir.rename(new_dir)
-            fix(f"renamed folder '{folder_name}' → '{addon_id}'")
-            addon_dir = new_dir
-            manifest_file = addon_dir / "_tam_manifest_.json"
-        else:
-            error(manifest_file, f"folder name '{folder_name}' does not match id '{addon_id}' (run --fix to rename)")
-
     # --- homepage URL must end with addons/{id} (only when URL contains /addons/) ---
     homepage = manifest.get("homepage", "")
     if homepage:
@@ -89,6 +77,10 @@ for manifest_file in manifest_files:
     readme_rel = manifest.get("readme")
     if readme_rel and not (addon_dir / readme_rel).exists():
         error(manifest_file, f"'readme' points to \"{readme_rel}\" but file not found")
+
+    # --- manifestSourceUrl (soft — a not-yet-published addon won't have one) ---
+    if not manifest.get("manifestSourceUrl"):
+        warn(manifest_file, "missing 'manifestSourceUrl' — addon can't be installed by TAM until this is set")
 
     m = manifest.get("manifest")
     if m is None:
@@ -161,12 +153,22 @@ for manifest_file in manifest_files:
         if nid and nid not in note_ids:
             error(manifest_file, f"labels: note '{nid}' not found in notes")
 
-    # --- dependencies must be a string array --------------------------------
+    # --- dependencies: each entry is a bare id string, or an explicit
+    # {"id": ..., "manifestSourceUrl": ...} object for a dependency that isn't
+    # expected to be resolvable through whatever source this addon itself
+    # came from --------------------------------------------------------------
     deps = m.get("dependencies", [])
     if not isinstance(deps, list):
         error(manifest_file, "manifest.dependencies must be an array")
-    elif not all(isinstance(d, str) for d in deps):
-        error(manifest_file, "manifest.dependencies must be an array of strings")
+    else:
+        for dep in deps:
+            if isinstance(dep, str):
+                continue
+            if isinstance(dep, dict) and isinstance(dep.get("id"), str):
+                if not dep.get("manifestSourceUrl"):
+                    error(manifest_file, f"dependencies: entry for '{dep['id']}' is missing 'manifestSourceUrl'")
+            else:
+                error(manifest_file, f"manifest.dependencies entries must be a string or a {{id, manifestSourceUrl}} object, got: {dep!r}")
 
 
 # --- Summary -----------------------------------------------------------------

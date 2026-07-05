@@ -8,6 +8,7 @@
     "latestVersion": "1.0.2",
     "type": "css",
     "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/margin-top@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "notes": [

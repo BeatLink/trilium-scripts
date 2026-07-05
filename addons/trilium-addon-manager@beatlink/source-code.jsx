@@ -26,6 +26,8 @@ const TYPE_COLORS = {
     template: "#be185d"
 }
 
+const TAM_ID = "trilium-addon-manager@beatlink"
+
 function typeColor(type) {
     return TYPE_COLORS[type] || "#6b7280"
 }
@@ -55,30 +57,27 @@ function Spinner() {
     return <div className="TAM-spinner" />
 }
 
-function computeStats(repositories) {
-    let repoCount = 0, installedCount = 0, persistedCount = 0, updateCount = 0
-    for (const repoData of Object.values(repositories)) {
-        repoCount++
-        for (const addonData of Object.values(repoData.addons ?? {})) {
-            if (!addonData.installedVersion) continue
-            installedCount++
-            if (addonData.updateAvailable) updateCount++
-            const persistence = addonData.persistence
-            const hasPersisted = persistence && (
-                persistence.rootNote ||
-                (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
-            )
-            if (hasPersisted) persistedCount++
-        }
+function computeStats(addons, catalogs) {
+    let installedCount = 0, persistedCount = 0, updateCount = 0
+    for (const addonData of Object.values(addons)) {
+        if (!addonData.installedVersion) continue
+        installedCount++
+        if (addonData.updateAvailable) updateCount++
+        const persistence = addonData.persistence
+        const hasPersisted = persistence && (
+            persistence.rootNote ||
+            (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
+        )
+        if (hasPersisted) persistedCount++
     }
-    return { repoCount, installedCount, persistedCount, updateCount }
+    return { catalogCount: catalogs.length, installedCount, persistedCount, updateCount }
 }
 
 
 // List View -------------------------------------------------------------------
-function AddonCard({ repoId, addonId, addonData, onOpen, onInstall }) {
+function AddonCard({ addonData, onOpen, onInstall }) {
     return (
-        <div className="TAM-card" onClick={() => onOpen(repoId, addonId)}>
+        <div className="TAM-card" onClick={() => onOpen(addonData.id)}>
             <div className="TAM-card-top">
                 <Badge type={addonData.type} />
                 {addonData.installedVersion && addonData.updateAvailable && (
@@ -91,14 +90,14 @@ function AddonCard({ repoId, addonId, addonData, onOpen, onInstall }) {
             <h3 className="TAM-card-title">{addonData.name}</h3>
             <p className="TAM-card-meta">by {addonData.author} · v{addonData.installedVersion ?? addonData.latestVersion}</p>
             <p className="TAM-card-desc">{addonData.description}</p>
-            {!addonData.installedVersion && (
+            {!addonData.installedVersion && onInstall && (
                 <div className="TAM-card-install">
                     <TamButton
                         icon="bx bx-download"
                         text="Install"
                         onClick={e => {
                             e.stopPropagation()
-                            onInstall(repoId, addonId)
+                            onInstall(addonData)
                         }}
                     />
                 </div>
@@ -107,27 +106,21 @@ function AddonCard({ repoId, addonId, addonData, onOpen, onInstall }) {
     )
 }
 
-function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings }) {
+function ListView({ addons, catalogs, onOpenAddon, onOpenSettings, onBrowseCatalog }) {
     const [search, setSearch] = useState("")
     const [typeFilter, setTypeFilter] = useState(null)
 
-    const allAddons = []
-    for (const [repoId, repoData] of Object.entries(repositories)) {
-        for (const [addonId, addonData] of Object.entries(repoData.addons ?? {})) {
-            // Libraries are an implementation detail of whatever addon depends
-            // on them — TAM installs/updates/uninstalls them automatically via
-            // the dependency graph, so there's nothing for the user to do with
-            // one directly.
-            if (addonData.type === "library") continue
-            allAddons.push({ repoId, addonId, addonData })
-        }
-    }
-    allAddons.sort((a, b) => (a.addonData.name || "").localeCompare(b.addonData.name || ""))
+    // Libraries are an implementation detail of whatever addon depends on
+    // them — TAM installs/updates/uninstalls them automatically via the
+    // dependency graph, so there's nothing for the user to do with one
+    // directly.
+    const allAddons = Object.values(addons).filter(a => a.type !== "library")
+    allAddons.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
-    const availableTypes = [...new Set(allAddons.map(a => a.addonData.type))].sort()
+    const availableTypes = [...new Set(allAddons.map(a => a.type))].sort()
 
     const searchLower = search.trim().toLowerCase()
-    const visible = allAddons.filter(({ addonData }) => {
+    const visible = allAddons.filter(addonData => {
         if (typeFilter && addonData.type !== typeFilter) return false
         if (!searchLower) return true
         return [addonData.name, addonData.description, addonData.author]
@@ -136,6 +129,17 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
 
     return (
         <div>
+            {catalogs.length > 0 && (
+                <div className="TAM-toolbar">
+                    <div className="TAM-filters">
+                        {catalogs.map(url => (
+                            <button key={url} className="TAM-filter-pill" onClick={() => onBrowseCatalog(url)}>
+                                Browse: {url.replace(/^https?:\/\//, "")}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div className="TAM-toolbar">
                 <input
                     type="text"
@@ -168,8 +172,8 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
 
             {allAddons.length === 0 ? (
                 <div className="TAM-empty-state">
-                    <p>No repositories added yet.</p>
-                    <TamButton icon="bx bx-cog" text="Go to Settings to add a repository" onClick={onOpenSettings} />
+                    <p>No addons installed yet.</p>
+                    <TamButton icon="bx bx-cog" text="Go to Settings to add a catalog" onClick={onOpenSettings} />
                 </div>
             ) : visible.length === 0 ? (
                 <div className="TAM-empty-state">
@@ -177,15 +181,36 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
                 </div>
             ) : (
                 <div className="TAM-grid">
-                    {visible.map(({ repoId, addonId, addonData }) => (
-                        <AddonCard
-                            key={`${repoId}::${addonId}`}
-                            repoId={repoId}
-                            addonId={addonId}
-                            addonData={addonData}
-                            onOpen={onOpenAddon}
-                            onInstall={onInstallAddon}
-                        />
+                    {visible.map(addonData => (
+                        <AddonCard key={addonData.id} addonData={addonData} onOpen={onOpenAddon} />
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
+// Catalog Browse View -----------------------------------------------------------
+function CatalogBrowseView({ catalogUrl, entries, loading, installedIds, onBack, onOpenAddon, onInstall }) {
+    return (
+        <div>
+            <BackLink onClick={onBack} text="Back to Addons" />
+            <h2>Browsing: {catalogUrl}</h2>
+            {loading ? (
+                <Spinner />
+            ) : entries.length === 0 ? (
+                <div className="TAM-empty-state">
+                    <p>No addons found at this catalog (or it couldn't be fetched).</p>
+                </div>
+            ) : (
+                <div className="TAM-grid">
+                    {entries.map(addonData => (
+                        installedIds.has(addonData.id) ? (
+                            <AddonCard key={addonData.id} addonData={{ ...addonData, installedVersion: "installed" }} onOpen={() => onOpenAddon(addonData.id)} />
+                        ) : (
+                            <AddonCard key={addonData.id} addonData={addonData} onOpen={() => {}} onInstall={onInstall} />
+                        )
                     ))}
                 </div>
             )}
@@ -195,7 +220,7 @@ function ListView({ repositories, onOpenAddon, onInstallAddon, onOpenSettings })
 
 
 // Addon Detail View -------------------------------------------------------------
-function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, onDelete, onUpdate, onRepair, onEnable }) {
+function AddonDetail({ addonData, isSelf, onBack, onInstall, onDelete, onUpdate, onEnable }) {
     const [readmeHtml, setReadmeHtml] = useState(null)
     const [readmeLoading, setReadmeLoading] = useState(false)
 
@@ -204,11 +229,11 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
         const readmeLocalId = addonData.manifest?.readmeNote
         if (!addonData.installedVersion || !readmeLocalId) return
         setReadmeLoading(true)
-        libTAMjs.fetchReadmeHtml(addonId, readmeLocalId).then(html => {
+        libTAMjs.fetchReadmeHtml(addonData.id, readmeLocalId).then(html => {
             setReadmeHtml(html)
             setReadmeLoading(false)
         })
-    }, [addonId, addonData.installedVersion, addonData.manifest?.readmeNote])
+    }, [addonData.id, addonData.installedVersion, addonData.manifest?.readmeNote])
 
     return (
         <div className="TAM-addon-layout">
@@ -221,32 +246,28 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
                         <tr><td>Author</td><td>{addonData.author}</td></tr>
                         <tr><td>Version</td><td>{addonData.installedVersion ?? addonData.latestVersion}</td></tr>
                         <tr><td>License</td><td>{addonData.license}</td></tr>
-                        <tr><td>Repository</td><td>{repoId}</td></tr>
                     </tbody>
                 </table>
                 <div className="TAM-addon-actions">
                     <TamButton icon="bx bx-globe" text="Home Page" onClick={() => window.open(addonData.homepage, "_blank")} />
                     {!addonData.installedVersion && (
-                        <TamButton icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonId)} />
+                        <TamButton icon="bx bx-download" text="Install Addon" onClick={() => onInstall(addonData)} />
                     )}
                     {addonData.installedVersion && !isSelf && (
-                        <TamButton icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonId)} />
+                        <TamButton icon="bx bx-trash" text="Delete Addon" onClick={() => onDelete(addonData.id)} />
                     )}
                     {addonData.installedVersion && (
                         <TamButton
                             icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
                             text={addonData.enabled ? "Disable Addon" : "Enable Addon"}
-                            onClick={() => onEnable(addonId, !addonData.enabled)}
+                            onClick={() => onEnable(addonData.id, !addonData.enabled)}
                         />
                     )}
                     {addonData.installedVersion && addonData.settingsNoteId && (
                         <TamButton icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
                     )}
-                    {addonData.installedVersion && (
-                        <TamButton icon="bx bx-wrench" text="Repair" onClick={() => onRepair(addonId)} />
-                    )}
                     {addonData.updateAvailable && (
-                        <TamButton icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonId)} />
+                        <TamButton icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonData.id)} />
                     )}
                 </div>
             </div>
@@ -273,33 +294,43 @@ function AddonDetail({ repoId, addonId, addonData, isSelf, onBack, onInstall, on
 
 
 // Settings View -----------------------------------------------------------------
-function NewRepo({ onSave }) {
-    const [repoId, setRepoId] = useState("")
+function NewCatalog({ onSave }) {
+    const [url, setUrl] = useState("")
     return (
         <div className="TAM-new-repository-div">
             <input
                 type="text"
-                placeholder="owner/repo"
-                value={repoId}
-                onChange={e => setRepoId(e.target.value)}
+                placeholder="https://.../catalog.json"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
                 className="TAM-new-repository-text"
             />
-            <TamButton
-                icon="bx bx-plus"
-                text="Add Repository"
-                onClick={e => {
-                    onSave(repoId)
-                }}
+            <TamButton icon="bx bx-plus" text="Add Catalog" onClick={() => onSave(url)} />
+        </div>
+    )
+}
+
+function NewAddonByUrl({ onSave }) {
+    const [url, setUrl] = useState("")
+    return (
+        <div className="TAM-new-repository-div">
+            <input
+                type="text"
+                placeholder="https://.../_tam_manifest_.json"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                className="TAM-new-repository-text"
             />
+            <TamButton icon="bx bx-plus" text="Install by URL" onClick={() => onSave(url)} />
         </div>
     )
 }
 
 function SettingsView({
-    repositories, onBack, onAddRepo, onDeleteRepo, onUpdateRepos, onUpdateAll,
-    onValidate, onCleanup, onBackfillIds, onBackfillManifests, anyUpdateAvailable
+    addons, catalogs, onBack, onAddCatalog, onDeleteCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
+    onValidate, onCleanup, anyUpdateAvailable
 }) {
-    const stats = computeStats(repositories)
+    const stats = computeStats(addons, catalogs)
     return (
         <div className="TAM-settings">
             <BackLink onClick={onBack} />
@@ -308,8 +339,8 @@ function SettingsView({
                 <h3>Statistics</h3>
                 <div className="TAM-stats-grid">
                     <div className="TAM-stat-card">
-                        <span className="TAM-stat-value">{stats.repoCount}</span>
-                        <span className="TAM-stat-label">Repositories</span>
+                        <span className="TAM-stat-value">{stats.catalogCount}</span>
+                        <span className="TAM-stat-label">Catalogs</span>
                     </div>
                     <div className="TAM-stat-card">
                         <span className="TAM-stat-value">{stats.installedCount}</span>
@@ -327,38 +358,29 @@ function SettingsView({
             </div>
 
             <div>
-                <h3>Repositories</h3>
+                <h3>Catalogs</h3>
                 <div className="TAM-repo-list">
-                    {Object.keys(repositories).map(repoId => (
-                        <div key={repoId} className="TAM-repo-row">
-                            <span>{repoId}</span>
-                            <TamButton
-                                icon="bx bx-trash"
-                                text="Delete"
-                                onClick={() => {
-                                    const hasInstalled = Object.values(repositories[repoId].addons ?? {}).some(a => a.installedVersion)
-                                    if (hasInstalled) {
-                                        api.showMessage("Cannot delete repository: some addons are still installed. Uninstall them first.")
-                                        return
-                                    }
-                                    onDeleteRepo(repoId)
-                                }}
-                            />
+                    {catalogs.map(url => (
+                        <div key={url} className="TAM-repo-row">
+                            <span>{url}</span>
+                            <TamButton icon="bx bx-trash" text="Delete" onClick={() => onDeleteCatalog(url)} />
                         </div>
                     ))}
-                    <NewRepo onSave={onAddRepo} />
+                    <NewCatalog onSave={onAddCatalog} />
+                </div>
+                <h3>Install a single addon by URL</h3>
+                <div className="TAM-repo-list">
+                    <NewAddonByUrl onSave={onInstallByUrl} />
                 </div>
             </div>
 
             <div>
                 <h3>Maintenance</h3>
                 <div className="TAM-maintenance-actions">
-                    <TamButton icon="bx bx-sync" text="Update Repositories" onClick={onUpdateRepos} />
+                    <TamButton icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
                     <TamButton icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
-                    <TamButton icon="bx bx-tag" text="Backfill Note IDs" onClick={onBackfillIds} />
-                    <TamButton icon="bx bx-archive" text="Backfill Installed Manifests" onClick={onBackfillManifests} />
                 </div>
             </div>
         </div>
@@ -407,13 +429,20 @@ function PromptReview({ prompts, onResolve }) {
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
     const [command, setCommand] = useState(null)
-    const [repositories, setRepositories] = useState(null)
+    const [addons, setAddons] = useState(null)
+    const [catalogs, setCatalogs] = useState([])
+    const [catalogBrowse, setCatalogBrowse] = useState(null) // { url, entries, loading }
     const [pendingPrompts, setPendingPrompts] = useState([])
-    const [promptContext, setPromptContext] = useState(null)
+    const [promptAddonId, setPromptAddonId] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
     const [validationIssues, setValidationIssues] = useState(null)
     const [validationTitle, setValidationTitle] = useState("Database Validation")
     const [view, setView] = useState({ type: "list" })
+
+    async function reload() {
+        setAddons(await libTAMjs.getAllAddons())
+        setCatalogs(await libTAMjs.getCatalogs())
+    }
 
     // Main Command Handler
     useEffect(() => {
@@ -421,130 +450,134 @@ export default function RepoManager() {
         async function commandHandler(){
             const displayNote = await currentNote.getRelationValue("displayNote")
             switch (command["command"]) {
-                case "load-repository": {
-                    setRepositories((await libTAMjs.getAllRepositories()))
+                case "load-addons": {
+                    await reload()
                     setCommand(null)
                     break
                 }
-                case "add-repository": {
-                    await libTAMjs.addRepository(command["repository"])
-                    setCommand({command: "load-repository"})
-                    await activateNote(displayNote)
+                case "add-catalog": {
+                    await libTAMjs.addCatalog(command["url"])
+                    await reload()
+                    setCommand(null)
                     break
                 }
-                case "update-repositories": {
-                    await libTAMjs.updateRepositories()
-                    setCommand({command: "load-repository"})
-                    await activateNote(displayNote)
+                case "delete-catalog": {
+                    await libTAMjs.deleteCatalog(command["url"])
+                    await reload()
+                    setCommand(null)
                     break
                 }
-                case "delete-repository": {
-                    await libTAMjs.deleteRepository(command["repository"])
-                    setCommand({command: "load-repository"})
-                    await activateNote(displayNote)
+                case "browse-catalog": {
+                    setCatalogBrowse({ url: command["url"], entries: [], loading: true })
+                    const entries = await libTAMjs.fetchCatalogAddons(command["url"])
+                    setCatalogBrowse({ url: command["url"], entries, loading: false })
+                    setCommand(null)
                     break
                 }
                 case "install-addon": {
-                    await libTAMjs.syncAddon(command["repository"], command["addon"])
-                    setCommand({command: "load-repository"})
+                    await libTAMjs.syncAddon(command["addon"], {
+                        manifestSourceUrl: command["manifestSourceUrl"],
+                        catalogContext: command["catalogContext"]
+                    })
+                    await reload()
+                    await activateNote(displayNote)
+                    window.location.reload();
+                    break
+                }
+                case "install-by-url": {
+                    await libTAMjs.installByUrl(command["url"])
+                    await reload()
                     await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
                 case "delete-addon": {
-                    await libTAMjs.uninstallAddon(command["repository"], command["addon"])
-                    setCommand({command: "load-repository"})
+                    await libTAMjs.uninstallAddon(command["addon"])
+                    await reload()
                     setView({ type: "list" })
                     await activateNote(displayNote)
                     window.location.reload();
                     break
                 }
                 case "update-addon": {
-                    await libTAMjs.syncAddon(command["repository"], command["addon"])
-                    const prompts = await libTAMjs.getPendingPrompts(command["repository"], command["addon"])
+                    await libTAMjs.syncAddon(command["addon"])
+                    const prompts = await libTAMjs.getPendingPrompts(command["addon"])
                     if (prompts.length > 0) {
                         setPendingPrompts(prompts)
-                        setPromptContext({ repoId: command["repository"], addonId: command["addon"] })
+                        setPromptAddonId(command["addon"])
                         setCommand(null)
                     } else {
-                        setCommand({command: "load-repository"})
+                        await reload()
                         await activateNote(displayNote)
                         window.location.reload()
                     }
                     break
                 }
                 case "resolve-prompts": {
-                    const { repoId, addonId, decisions } = command
+                    const { addonId, decisions } = command
                     for (const [noteLocalId, useNew] of Object.entries(decisions)) {
-                        await libTAMjs.resolvePrompt(repoId, addonId, noteLocalId, useNew)
+                        await libTAMjs.resolvePrompt(addonId, noteLocalId, useNew)
                     }
-                    await libTAMjs.clearPendingPrompts(repoId, addonId)
+                    await libTAMjs.clearPendingPrompts(addonId)
 
                     if (promptQueue.length > 0) {
                         const [next, ...rest] = promptQueue
-                        const prompts = await libTAMjs.getPendingPrompts(next.repoId, next.addonId)
+                        const prompts = await libTAMjs.getPendingPrompts(next)
                         setPendingPrompts(prompts)
-                        setPromptContext(next)
+                        setPromptAddonId(next)
                         setPromptQueue(rest)
                         setCommand(null)
                     } else {
                         setPendingPrompts([])
-                        setPromptContext(null)
-                        setCommand({command: "load-repository"})
+                        setPromptAddonId(null)
+                        await reload()
                         await activateNote(displayNote)
                         window.location.reload()
                     }
                     break
                 }
                 case "update-all": {
-                    const targets = []
-                    for (const [repoId, repoData] of Object.entries(repositories)) {
-                        for (const [addonId, addonData] of Object.entries(repoData.addons ?? {})) {
-                            // Libraries are hidden and update themselves as a
-                            // side effect of updating whatever depends on them
-                            // (their updateAvailable flag is already
-                            // propagated up to those dependents) — updating
-                            // them here too would just be redundant work.
-                            if (addonData.type === "library") continue
-                            if (addonData.installedVersion && addonData.updateAvailable) {
-                                targets.push({ repoId, addonId })
-                            }
-                        }
-                    }
+                    const targets = Object.values(addons)
+                        // Libraries are hidden and update themselves as a side
+                        // effect of updating whatever depends on them (their
+                        // updateAvailable flag is already propagated up to
+                        // those dependents) — updating them here too would
+                        // just be redundant work.
+                        .filter(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
+                        .map(a => a.id)
 
                     const queue = []
-                    for (const { repoId, addonId } of targets) {
-                        await libTAMjs.syncAddon(repoId, addonId)
-                        const prompts = await libTAMjs.getPendingPrompts(repoId, addonId)
-                        if (prompts.length > 0) queue.push({ repoId, addonId })
+                    for (const addonId of targets) {
+                        await libTAMjs.syncAddon(addonId)
+                        const prompts = await libTAMjs.getPendingPrompts(addonId)
+                        if (prompts.length > 0) queue.push(addonId)
                     }
 
                     if (queue.length > 0) {
                         const [next, ...rest] = queue
-                        const prompts = await libTAMjs.getPendingPrompts(next.repoId, next.addonId)
+                        const prompts = await libTAMjs.getPendingPrompts(next)
                         setPendingPrompts(prompts)
-                        setPromptContext(next)
+                        setPromptAddonId(next)
                         setPromptQueue(rest)
                         setCommand(null)
                     } else {
-                        setCommand({command: "load-repository"})
+                        await reload()
                         await activateNote(displayNote)
                         window.location.reload()
                     }
                     break
                 }
-                case "repair-addon": {
-                    const issues = await libTAMjs.repairAddon(command["repository"], command["addon"])
-                    setValidationTitle(`Repair: ${command["addon"]}`)
-                    setValidationIssues(issues)
-                    setCommand(null)
-                    break
-                }
                 case "enable-addon": {
-                    await libTAMjs.enableAddon(command["repository"], command["addon"], command["enabled"])
-                    setCommand({command: "load-repository"})
+                    await libTAMjs.enableAddon(command["addon"], command["enabled"])
+                    await reload()
                     await activateNote(displayNote)
                     window.location.reload();
+                    break
+                }
+                case "check-updates": {
+                    await libTAMjs.checkForAddonUpdates()
+                    await reload()
+                    setCommand(null)
                     break
                 }
                 case "validate-database": {
@@ -555,17 +588,8 @@ export default function RepoManager() {
                 }
                 case "cleanup-persistence": {
                     await libTAMjs.cleanupEmptyPersistenceRoots()
-                    setCommand({command: "load-repository"})
-                    break
-                }
-                case "backfill-tamfileids": {
-                    await libTAMjs.backfillTamFileIds()
-                    setCommand({command: "load-repository"})
-                    break
-                }
-                case "backfill-manifests": {
-                    await libTAMjs.backfillInstalledManifests()
-                    setCommand({command: "load-repository"})
+                    await reload()
+                    setCommand(null)
                     break
                 }
             }
@@ -573,17 +597,17 @@ export default function RepoManager() {
         commandHandler()
     }, [command])
 
-    // Trigger Loading of Repository on Page load
+    // Trigger Loading of Addons on Page load
     useEffect(() => {
         if (!note) return;
-        setCommand({command: "load-repository"})
+        setCommand({command: "load-addons"})
     }, [note])
 
-    if (!repositories) {
-        return <div>Loading repositories...</div>;
+    if (!addons) {
+        return <div>Loading addons...</div>;
     }
 
-    if (pendingPrompts.length > 0 && promptContext) {
+    if (pendingPrompts.length > 0 && promptAddonId) {
         return (
             <div className="TAM-body">
                 <div className="TAM-header">
@@ -593,14 +617,13 @@ export default function RepoManager() {
                     </div>
                 </div>
                 {promptQueue.length > 0 && (
-                    <p>{promptContext.addonId} — {promptQueue.length} more addon(s) to review after this</p>
+                    <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
                 )}
                 <PromptReview
                     prompts={pendingPrompts}
                     onResolve={(decisions) => setCommand({
                         command: "resolve-prompts",
-                        repoId: promptContext.repoId,
-                        addonId: promptContext.addonId,
+                        addonId: promptAddonId,
                         decisions
                     })}
                 />
@@ -608,54 +631,81 @@ export default function RepoManager() {
         )
     }
 
-    const anyUpdateAvailable = Object.values(repositories).some(repoData =>
-        Object.values(repoData.addons ?? {}).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
-    )
+    const anyUpdateAvailable = Object.values(addons).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
 
     let bodyContent
     if (view.type === "settings") {
         bodyContent = (
             <SettingsView
-                repositories={repositories}
+                addons={addons}
+                catalogs={catalogs}
                 anyUpdateAvailable={anyUpdateAvailable}
                 onBack={() => setView({ type: "list" })}
-                onAddRepo={value => setCommand({ command: "add-repository", repository: value })}
-                onDeleteRepo={repoId => setCommand({ command: "delete-repository", repository: repoId })}
-                onUpdateRepos={() => setCommand({ command: "update-repositories" })}
+                onAddCatalog={url => setCommand({ command: "add-catalog", url })}
+                onDeleteCatalog={url => setCommand({ command: "delete-catalog", url })}
+                onInstallByUrl={url => setCommand({ command: "install-by-url", url })}
+                onCheckUpdates={() => setCommand({ command: "check-updates" })}
                 onUpdateAll={() => setCommand({ command: "update-all" })}
                 onValidate={() => setCommand({ command: "validate-database" })}
                 onCleanup={() => setCommand({ command: "cleanup-persistence" })}
-                onBackfillIds={() => setCommand({ command: "backfill-tamfileids" })}
-                onBackfillManifests={() => setCommand({ command: "backfill-manifests" })}
+            />
+        )
+    } else if (view.type === "catalog") {
+        const installedIds = new Set(Object.keys(addons))
+        bodyContent = (
+            <CatalogBrowseView
+                catalogUrl={catalogBrowse?.url ?? view.url}
+                entries={catalogBrowse?.entries ?? []}
+                loading={catalogBrowse?.loading ?? true}
+                installedIds={installedIds}
+                onBack={() => setView({ type: "list" })}
+                onOpenAddon={addonId => setView({ type: "detail", addonId })}
+                onInstall={entryData => {
+                    const catalogContext = Object.fromEntries(
+                        (catalogBrowse?.entries ?? []).map(e => [e.id, e.manifestSourceUrl])
+                    )
+                    setCommand({
+                        command: "install-addon",
+                        addon: entryData.id,
+                        manifestSourceUrl: entryData.manifestSourceUrl,
+                        catalogContext
+                    })
+                }}
             />
         )
     } else if (view.type === "detail") {
-        const addonData = repositories[view.repoId]?.addons?.[view.addonId]
+        const addonData = addons[view.addonId]
         if (!addonData) {
             bodyContent = <p>Addon not found. <BackLink onClick={() => setView({ type: "list" })} /></p>
         } else {
             bodyContent = (
                 <AddonDetail
-                    repoId={view.repoId}
-                    addonId={view.addonId}
                     addonData={addonData}
-                    isSelf={view.addonId === "trilium-addon-manager@beatlink"}
+                    isSelf={view.addonId === TAM_ID}
                     onBack={() => setView({ type: "list" })}
-                    onInstall={addonId => setCommand({ command: "install-addon", repository: view.repoId, addon: addonId })}
-                    onDelete={addonId => setCommand({ command: "delete-addon", repository: view.repoId, addon: addonId })}
-                    onUpdate={addonId => setCommand({ command: "update-addon", repository: view.repoId, addon: addonId })}
-                    onRepair={addonId => setCommand({ command: "repair-addon", repository: view.repoId, addon: addonId })}
-                    onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", repository: view.repoId, addon: addonId, enabled })}
+                    onInstall={entryData => setCommand({
+                        command: "install-addon",
+                        addon: entryData.id,
+                        manifestSourceUrl: entryData.manifestSourceUrl
+                    })}
+                    onDelete={addonId => setCommand({ command: "delete-addon", addon: addonId })}
+                    onUpdate={addonId => setCommand({ command: "update-addon", addon: addonId })}
+                    onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", addon: addonId, enabled })}
                 />
             )
         }
     } else {
         bodyContent = (
             <ListView
-                repositories={repositories}
-                onOpenAddon={(repoId, addonId) => setView({ type: "detail", repoId, addonId })}
-                onInstallAddon={(repoId, addonId) => setCommand({ command: "install-addon", repository: repoId, addon: addonId })}
+                addons={addons}
+                catalogs={catalogs}
+                onOpenAddon={addonId => setView({ type: "detail", addonId })}
                 onOpenSettings={() => setView({ type: "settings" })}
+                onBrowseCatalog={url => {
+                    setCatalogBrowse({ url, entries: [], loading: true })
+                    setView({ type: "catalog", url })
+                    setCommand({ command: "browse-catalog", url })
+                }}
             />
         )
     }
@@ -682,9 +732,12 @@ export default function RepoManager() {
                             : `${validationIssues.length} issue(s) found`}
                     </h4>
                     {validationIssues.length > 0 && (
-                        <pre className="TAM-validation-content">
-                            {validationIssues.map(issue => `${issue.repoId} / ${issue.addonId}: ${issue.message}`).join("\n")}
-                        </pre>
+                        <>
+                            <p className="TAM-muted">There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these.</p>
+                            <pre className="TAM-validation-content">
+                                {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
+                            </pre>
+                        </>
                     )}
                     <div className="TAM-validation-buttons">
                         {validationIssues.length > 0 && <TamButton
@@ -692,7 +745,7 @@ export default function RepoManager() {
                             text="Copy to Clipboard"
                             onClick={e => {
                                 const text = validationIssues
-                                    .map(issue => `${issue.repoId} / ${issue.addonId}: ${issue.message}`)
+                                    .map(issue => `${issue.addonId}: ${issue.message}`)
                                     .join("\n")
                                 navigator.clipboard.writeText(text)
                             }}

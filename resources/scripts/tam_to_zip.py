@@ -306,9 +306,18 @@ def build_zip(manifest_path, out_path, addons_dir_arg):
         # static-resource-only vendor library referenced by a fixed URL
         # string rather than a note id) — manifest.dependencies is the
         # source of truth for "must be installed", independent of cloning.
-        for dep_id in mf.get("dependencies", []):
-            ids.add(dep_id)
+        # An entry is either a bare id string, or an explicit
+        # {"id": ..., "manifestSourceUrl": ...} object for a dependency from
+        # an unrelated source — either way, only the id matters for local
+        # sibling-folder resolution (a URL-only dep can't be bundled into an
+        # offline ZIP built from this repo alone; see the explicit_dep_ids
+        # check below for the warning that covers that case).
+        for dep in mf.get("dependencies", []):
+            ids.add(dep["id"] if isinstance(dep, dict) else dep)
         return ids
+
+    def explicit_dep_ids(mf):
+        return {dep["id"] for dep in mf.get("dependencies", []) if isinstance(dep, dict)}
 
     all_warnings = []
 
@@ -316,6 +325,7 @@ def build_zip(manifest_path, out_path, addons_dir_arg):
     # just the main manifest's direct deps — a dep's own cross-addon children
     # need resolving too (e.g. libagendatask -> librecurrence -> librrule).
     dep_manifests = {}
+    all_explicit_dep_ids = set(explicit_dep_ids(m))
     to_visit = list(direct_deps(m))
     visited = set()
     while to_visit:
@@ -327,7 +337,10 @@ def build_zip(manifest_path, out_path, addons_dir_arg):
         dep_dir   = addons_dir / dep_id
         dep_mpath = dep_dir / "_tam_manifest_.json"
         if not dep_mpath.exists():
-            all_warnings.append(f"dep '{dep_id}': manifest not found at {dep_mpath} — skipped")
+            if dep_id in all_explicit_dep_ids:
+                all_warnings.append(f"dep '{dep_id}': declared with an explicit manifestSourceUrl, no local sibling folder — cannot be bundled into an offline ZIP, skipped")
+            else:
+                all_warnings.append(f"dep '{dep_id}': manifest not found at {dep_mpath} — skipped")
             continue
         dep_full = json.loads(dep_mpath.read_text())
         dep_m    = dep_full.get("manifest") or {}
@@ -336,6 +349,7 @@ def build_zip(manifest_path, out_path, addons_dir_arg):
             continue
 
         dep_manifests[dep_id] = (dep_dir, dep_full, dep_m)
+        all_explicit_dep_ids.update(explicit_dep_ids(dep_m))
         to_visit.extend(direct_deps(dep_m) - visited)
 
     # Process deps in dependency order (a dep's own deps must already be in

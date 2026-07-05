@@ -38,4 +38,4 @@ The `7. Area` template additionally has `#viewType=list` to default new area not
 
 ## Installation
 
-Install via [Trilium Addon Manager](https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager%40beatlink) by adding `BeatLink/trilium-scripts` as a repository, or import the ZIP from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest).
+Install via [Trilium Addon Manager](https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager%40beatlink) by adding `https://beatlink.github.io/trilium-scripts/catalog.json` as a catalog, or import the ZIP from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest).

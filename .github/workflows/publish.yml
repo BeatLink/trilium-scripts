@@ -20,13 +20,10 @@ jobs:
       - name: Validate
         run: python resources/scripts/validate.py
 
-      - name: Build distribution files
-        run: python resources/scripts/tam_to_manifest.py
-
       - name: Build addon ZIPs
         run: python resources/scripts/tam_to_zip.py --all
 
-      - name: Publish to latest release
+      - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python resources/scripts/publish_release.py

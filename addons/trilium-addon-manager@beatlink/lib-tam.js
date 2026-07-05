@@ -3,10 +3,14 @@ const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
-const githubURL = "https://github.com"
-const releasesPath = "releases/latest/download"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "3.4.0"
+const TAM_VERSION = "4.0.0"
+// TAM can't discover its own update-check URL from a catalog (it isn't
+// necessarily a member of one), so its own manifestSourceUrl is hardcoded
+// here, same spirit as TAM_ID/TAM_VERSION above — used as a fallback
+// whenever a TAM install has no recorded manifestSourceUrl yet (e.g. a
+// fresh manual-ZIP-import that's never gone through syncAddon).
+const TAM_MANIFEST_URL = "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -48,28 +52,8 @@ async function loadDatabase() {
     const database = await api.runOnBackend((databaseId) => {
         return JSON.parse(api.getNote(databaseId).getContent())
     }, [databaseId])
-    if (!database.repositories)    database.repositories    = {}
+    if (!database.catalogs)        database.catalogs        = []
     if (!database.installedAddons) database.installedAddons = {}
-
-    // One-time migration: persistence used to live in its own top-level tree,
-    // parallel to installedAddons, duplicating every repoId/addonId lookup
-    // (and requiring separate checks to keep it alive across an uninstall).
-    // Fold each entry into that addon's own record instead. Idempotent and
-    // safe to run on every load — whichever save happens next naturally
-    // drops the stale top-level key once the merged shape is written back.
-    if (database.persistence) {
-        for (const [repoId, addons] of Object.entries(database.persistence)) {
-            for (const [addonId, persistence] of Object.entries(addons || {})) {
-                if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
-                if (!database.installedAddons[repoId][addonId]) database.installedAddons[repoId][addonId] = {}
-                if (!database.installedAddons[repoId][addonId].persistence) {
-                    database.installedAddons[repoId][addonId].persistence = persistence
-                }
-            }
-        }
-        delete database.persistence
-    }
-
     return database
 }
 
@@ -81,151 +65,65 @@ async function saveDatabase(database) {
 }
 
 
-// Repository Management -------------------------------------------------------
+// Catalog Management ------------------------------------------------------------
+// A "catalog" is just a URL serving {"tam-addons": [manifestSourceUrl, ...]} —
+// a flat list of addon manifest locations, no cached summary data. Unlike the
+// old repository model, an installed addon is never nested under a catalog —
+// installedAddons is keyed by addonId alone, so deleting a catalog from the
+// browse list never touches anything already installed.
 
-async function addRepository(repoId) {
-    if (!repoId.trim()) return
+async function addCatalog(catalogUrl) {
+    catalogUrl = catalogUrl.trim()
+    if (!catalogUrl) return
     let database = await loadDatabase()
-    if (!database.repositories[repoId])            { database.repositories[repoId]            = {} }
-    if (!database.repositories[repoId].addons)     { database.repositories[repoId].addons     = {} }
-    if (!database.installedAddons[repoId])         { database.installedAddons[repoId]         = {} }
-    await saveDatabase(database)
-    await updateRepositories()
-}
-
-async function getAllRepositories() {
-    let database = await loadDatabase()
-
-    // rootNoteId/settingsNoteId are no longer cached — the UI still needs
-    // concrete ids (Settings button, etc.), so resolve them live via
-    // TAMFILEID, batched into one backend round trip for every installed
-    // addon rather than one query per addon.
-    const lookups = []
-    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
-        for (const [addonId, addon] of Object.entries(addons || {})) {
-            if (!addon.installedVersion || !addon.manifest) continue
-            lookups.push({
-                key: `${repoId}::${addonId}`,
-                addonId,
-                rootLocalId: addon.manifest.root,
-                settingsLocalId: addon.manifest.settingsNote
-            })
-        }
-    }
-    const resolved = await api.runOnBackend((tamFileIdLabel, lookups) => {
-        const result = {}
-        for (const { key, addonId, rootLocalId, settingsLocalId } of lookups) {
-            function resolveLocal(localId) {
-                if (!localId) return null
-                const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
-                return (note && !note.isDeleted) ? note.noteId : null
-            }
-            result[key] = {
-                rootNoteId: resolveLocal(rootLocalId),
-                settingsNoteId: resolveLocal(settingsLocalId)
-            }
-        }
-        return result
-    }, [tamFileIdLabel, lookups])
-
-    for (const [repoId, repoData] of Object.entries(database.repositories)) {
-        const installedAddons = database.installedAddons[repoId] || {}
-        for (const [addonId, addonData] of Object.entries(repoData.addons || {})) {
-            if (installedAddons[addonId]?.installedVersion) {
-                Object.assign(addonData, installedAddons[addonId])
-                const ids = resolved[`${repoId}::${addonId}`]
-                if (ids) Object.assign(addonData, ids)
-            } else if (addonId === TAM_ID) {
-                addonData.installedVersion = TAM_VERSION
-                addonData.updateAvailable = addonData.latestVersion !== TAM_VERSION
-                addonData.enabled = true
-            }
-        }
-    }
-    return database.repositories
-}
-
-async function fetchMetadata(repoId) {
-    const fullURL = `${githubURL}/${repoId}/${releasesPath}/metadata.json`
-    return await api.runAsyncOnBackendWithManualTransactionHandling(async (fullURL) => {
-        const response = await fetch(fullURL)
-        return await response.json()
-    }, [fullURL])
-}
-
-async function updateRepositories() {
-    let database = await loadDatabase()
-    for (let [repoId] of Object.entries(database.repositories)) {
-        database.repositories[repoId] = await fetchMetadata(repoId)
-    }
-    await saveDatabase(database)
-    await checkForAddonUpdates()
-    await cleanupEmptyPersistenceRoots()
-    await backfillTamFileIds()
-    await backfillInstalledManifests()
-}
-
-async function checkForAddonUpdates() {
-    let database = await loadDatabase()
-    for (const [remoteRepoId, remoteRepo] of Object.entries(database.repositories || {})) {
-        const installedRepo = database.installedAddons[remoteRepoId]
-        if (remoteRepo.addons && installedRepo) {
-            for (const [remoteAddonId, remoteAddon] of Object.entries(remoteRepo.addons)) {
-                const installedAddon = installedRepo[remoteAddonId]
-                if (installedAddon?.installedVersion && remoteAddon?.latestVersion) {
-                    installedAddon.updateAvailable = versionCompare(
-                        remoteAddon.latestVersion,
-                        installedAddon.installedVersion
-                    ) > 0
-                }
-            }
-
-            // Libraries are hidden from the UI, so an update sitting on one
-            // would otherwise be invisible. Surface it on whatever depends on
-            // it (directly or transitively) instead. Fixed-point loop since
-            // updateAvailable only ever flips false->true here, so it always
-            // terminates and is insensitive to iteration order (a diamond
-            // dependency can otherwise get visited before its own upstream
-            // flag has propagated).
-            let changed = true
-            while (changed) {
-                changed = false
-                for (const addonId of Object.keys(installedRepo)) {
-                    const addon = installedRepo[addonId]
-                    if (!addon.updateAvailable) continue
-                    for (const dependentId of getDependents(database, remoteRepoId, addonId)) {
-                        const dependent = installedRepo[dependentId]
-                        if (dependent && !dependent.updateAvailable) {
-                            dependent.updateAvailable = true
-                            changed = true
-                        }
-                    }
-                }
-            }
-        }
-    }
-    await saveDatabase(database)
-}
-
-async function deleteRepository(repoId) {
-    if (!repoId.trim()) return
-    let database = await loadDatabase()
-    if (!database.installedAddons[repoId] || Object.keys(database.installedAddons[repoId]).length === 0) {
-        delete database.installedAddons[repoId]
-        delete database.repositories[repoId]
+    if (!database.catalogs.includes(catalogUrl)) {
+        database.catalogs.push(catalogUrl)
         await saveDatabase(database)
     }
+}
+
+async function deleteCatalog(catalogUrl) {
+    let database = await loadDatabase()
+    database.catalogs = database.catalogs.filter(u => u !== catalogUrl)
+    await saveDatabase(database)
+}
+
+async function getCatalogs() {
+    const database = await loadDatabase()
+    return database.catalogs
+}
+
+// Fetches a catalog's addon list fresh, every time — nothing here is cached,
+// since a catalog entry is nothing more than a URL. Individual entry
+// fetch failures (a dead link, a malformed manifest) are skipped rather than
+// failing the whole browse view.
+async function fetchCatalogAddons(catalogUrl) {
+    const catalog = await api.runAsyncOnBackendWithManualTransactionHandling(async (catalogUrl) => {
+        const response = await fetch(catalogUrl)
+        return await response.json()
+    }, [catalogUrl])
+
+    const urls = catalog["tam-addons"] || []
+    const results = await Promise.all(urls.map(async (manifestSourceUrl) => {
+        try {
+            const manifest = await fetchManifest(manifestSourceUrl)
+            return { ...manifest, manifestSourceUrl }
+        } catch (e) {
+            console.error(`TAM: failed to fetch catalog entry ${manifestSourceUrl}`, e)
+            return null
+        }
+    }))
+    return results.filter(Boolean)
 }
 
 
 // Addon Management ------------------------------------------------------------
 
-async function fetchManifest(repoId, addonId) {
-    const fullURL = `${githubURL}/${repoId}/${releasesPath}/${addonId}.json`
-    return await api.runAsyncOnBackendWithManualTransactionHandling(async (fullURL) => {
-        const response = await fetch(fullURL)
+async function fetchManifest(manifestSourceUrl) {
+    return await api.runAsyncOnBackendWithManualTransactionHandling(async (manifestSourceUrl) => {
+        const response = await fetch(manifestSourceUrl)
         return await response.json()
-    }, [fullURL])
+    }, [manifestSourceUrl])
 }
 
 async function getAddonRootNoteId() {
@@ -251,11 +149,11 @@ function topologicalSort(noteIds, parentMap) {
 // The database record for an installed addon stores its own manifest
 // structure — everything needed to recreate/reconcile it (notes, children,
 // relations, labels, dependencies, exports) — minus `sourceUrl`/`content`.
-// This is deliberately NOT the same as "just re-fetch the manifest": GitHub
-// Releases here only ever serves the *latest* version, so once a newer one
-// is published there is no other way to know what structure is actually
-// installed. It also means the exact same shape describes both "what a
-// repository offers" and "what's currently installed," so the same
+// This is deliberately NOT the same as "just re-fetch the manifest": a
+// manifestSourceUrl only ever serves the *current* version, so once a newer
+// one is published there is no other way to know what structure is actually
+// installed. It also means the exact same shape describes both "what's
+// currently offered" and "what's currently installed," so the same
 // resolve/apply functions work on either one — and an upstream manifest
 // change never silently affects an addon that hasn't been explicitly synced
 // to it yet.
@@ -281,16 +179,39 @@ function stripManifestForStorage(m) {
     }
 }
 
+// A dependencies[] entry is either a bare id string (resolved against
+// whatever's already installed, or against catalogContext — see
+// resolveDependencyUrl) or an explicit {id, manifestSourceUrl} object for a
+// dependency from an unrelated source. This is the one helper used
+// everywhere an id needs pulling out of either shape.
+function dependencyId(depEntry) {
+    return typeof depEntry === "string" ? depEntry : depEntry.id
+}
+
 // "Who depends on this addon" is the reverse of `dependencies`, which is
 // already stored (as part of `manifest`) on every OTHER installed addon's own
 // record — there is nothing here that needs separately pushing/maintaining
 // as its own field, and nothing that can drift out of sync, since it's
 // recomputed fresh every time from data that's already there.
-function getDependents(database, repoId, addonId) {
-    const addons = database.installedAddons[repoId] || {}
+function getDependents(database, addonId) {
+    const addons = database.installedAddons || {}
     return Object.entries(addons)
-        .filter(([depId, addon]) => depId !== addonId && (addon.manifest?.dependencies || []).includes(addonId))
+        .filter(([depId, addon]) => depId !== addonId && (addon.manifest?.dependencies || []).some(d => dependencyId(d) === addonId))
         .map(([depId]) => depId)
+}
+
+// Resolves the manifestSourceUrl to use for a dependency that isn't
+// installed yet: an explicit {id, manifestSourceUrl} object always wins; a
+// bare id string falls back to catalogContext, a plain {id: manifestSourceUrl}
+// map the caller supplies when installing from a specific catalog's browse
+// results, so sibling same-catalog dependencies resolve without a fresh
+// full catalog search. Returns null if neither source has it — the caller
+// then reports the dependency as unresolvable rather than guessing.
+function resolveDependencyUrl(depEntry, catalogContext) {
+    if (typeof depEntry === "object" && depEntry.manifestSourceUrl) return depEntry.manifestSourceUrl
+    const depId = dependencyId(depEntry)
+    if (catalogContext && catalogContext[depId]) return catalogContext[depId]
+    return null
 }
 
 // Resolves a single real note id live, by TAMFILEID, for whichever local id
@@ -327,11 +248,19 @@ async function fetchReadmeHtml(addonId, readmeLocalId) {
 // install after a partial failure, a note that survived from a previous
 // install) finds and reconciles the existing note instead of creating a
 // duplicate. Content/type/mime are only overwritten on a found note if
-// `skipOnUpdate`/`promptOnUpdate` don't say otherwise — `createNotes` never
-// used to hit an existing note at all (always a fresh create), so this
-// gating is new: without it, a found note could silently clobber user data
-// it wasn't expecting to still be there.
-async function resolveNotes(m, addonId, addonRootNoteId, options = {}) {
+// `skipOnUpdate`/`promptOnUpdate` don't say otherwise.
+//
+// Content itself is no longer read from a pre-inlined `content` field —
+// each note's `sourceUrl` (relative paths resolved against this manifest's
+// own manifestBaseUrl, exactly like an HTML <base href>; absolute URLs used
+// as-is) is fetched fresh, backend-side, combined into the same call that
+// creates/updates the note so file content never has to travel between
+// frontend and backend twice. A literal `content` field on the note def
+// still wins if present (an escape hatch for hand-authored notes). A single
+// note's fetch failure is logged and that note is skipped rather than
+// aborting the whole sync; any of its children are skipped too, since their
+// parent never resolved.
+async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, options = {}) {
     const { rootExternallyParented = false } = options
     // A local note can be listed as a child of more than one parent within
     // the same manifest (a same-addon clone, e.g. a shared settings note
@@ -375,7 +304,11 @@ async function resolveNotes(m, addonId, addonRootNoteId, options = {}) {
 
         const parentLocalId = primaryParent[localId]
         const parentRealId = parentLocalId ? noteMap[parentLocalId] : addonRootNoteId
-        const content   = noteDef.content  ?? ""
+        if (parentLocalId && !parentRealId) {
+            console.error(`TAM: skipping note '${localId}' of ${addonId} — its parent '${parentLocalId}' failed to resolve`)
+            continue
+        }
+
         const noteType  = noteDef.type     ?? "text"
         const mime      = noteDef.mime     ?? "text/html"
         const isBinary  = noteDef.binary   ?? false
@@ -387,38 +320,68 @@ async function resolveNotes(m, addonId, addonRootNoteId, options = {}) {
         // is the only branch this ever hits for it — see syncAddon).
         const skipParenting = localId === m.root && rootExternallyParented
 
-        const realNoteId = await api.runOnBackend(
-            (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, content, isBinary, skipOnUpdate, promptOnUpdate, isPersisted, skipParenting) => {
-                let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
-                if (existing && existing.isDeleted) existing = null
+        let absoluteSourceUrl = null
+        if (noteDef.sourceUrl) {
+            try {
+                absoluteSourceUrl = new URL(noteDef.sourceUrl, manifestBaseUrl).href
+            } catch (e) {
+                console.error(`TAM: note '${localId}' of ${addonId} has an unresolvable sourceUrl '${noteDef.sourceUrl}'`, e)
+            }
+        }
 
-                if (existing) {
-                    if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
-                    if (!skipOnUpdate && !promptOnUpdate && !isPersisted) {
-                        if (noteType !== "text" || mime !== "text/html") {
-                            existing.type = noteType
-                            existing.mime = mime
-                            existing.save()
+        let realNoteId
+        try {
+            realNoteId = await api.runAsyncOnBackendWithManualTransactionHandling(
+                async (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, isPersisted, skipParenting) => {
+                    let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+                    if (existing && existing.isDeleted) existing = null
+
+                    const willWriteContent = !existing || !(skipOnUpdate || promptOnUpdate || isPersisted)
+
+                    let finalContent = null
+                    if (willWriteContent) {
+                        if (explicitContent !== null) {
+                            finalContent = isBinary ? Buffer.from(explicitContent, "base64") : explicitContent
+                        } else if (sourceUrl) {
+                            const response = await fetch(sourceUrl)
+                            if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${sourceUrl}`)
+                            finalContent = isBinary ? Buffer.from(await response.arrayBuffer()) : await response.text()
+                        } else {
+                            finalContent = ""
                         }
-                        existing.setContent(isBinary ? Buffer.from(content, "base64") : content)
                     }
-                    return existing.noteId
-                }
 
-                const result = api.createTextNote(parentRealId, title, "")
-                const note = result.note
-                if (noteType !== "text" || mime !== "text/html") {
-                    note.type = noteType
-                    note.mime = mime
-                    note.save()
-                }
-                note.setContent(isBinary ? Buffer.from(content, "base64") : content)
-                note.setLabel(tamFileIdLabel, tamFileId)
-                return note.noteId
-            },
-            [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, noteType, mime, content, isBinary,
-                !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, isPersisted, skipParenting]
-        )
+                    if (existing) {
+                        if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
+                        if (willWriteContent) {
+                            if (noteType !== "text" || mime !== "text/html") {
+                                existing.type = noteType
+                                existing.mime = mime
+                                existing.save()
+                            }
+                            existing.setContent(finalContent)
+                        }
+                        return existing.noteId
+                    }
+
+                    const result = api.createTextNote(parentRealId, title, "")
+                    const note = result.note
+                    if (noteType !== "text" || mime !== "text/html") {
+                        note.type = noteType
+                        note.mime = mime
+                        note.save()
+                    }
+                    note.setContent(finalContent)
+                    note.setLabel(tamFileIdLabel, tamFileId)
+                    return note.noteId
+                },
+                [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, noteType, mime, absoluteSourceUrl, noteDef.content ?? null, isBinary,
+                    !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, isPersisted, skipParenting]
+            )
+        } catch (e) {
+            console.error(`TAM: failed to resolve note '${localId}' of ${addonId}`, e)
+            continue
+        }
         noteMap[localId] = realNoteId
     }
 
@@ -435,9 +398,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, options = {}) {
 // only ever detach a branch this same addon's own manifest created, via the
 // stale parent's own #TAMFILEID prefix, so this can never rip out a clone
 // another addon's applyDepChildren placed there, or one a user made by
-// hand). Shared by resolveNotes (right after resolving/creating each note,
-// during a real sync) and repairAddon (structure-only reconciliation against
-// the locally stored manifest, no content, no creation).
+// hand).
 async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented) {
     const primaryParent = {}
     const extraParents = {}
@@ -646,28 +607,32 @@ async function tagUntaggedSelfNotes(m, addonId) {
 // The one entry point for getting an addon's notes to match its manifest,
 // whether that's a genuine first install, a version update, or TAM's own
 // self-sync (no delete/reinstall capability, externally-rooted note tree).
-// All three used to be separate functions (installAddon/updateAddon/
-// selfUpdateAddon) differing only because note resolution used to require
-// deleting everything first to guarantee a clean slate — find-or-create by
-// #TAMFILEID removes that requirement, so they're now one idempotent path.
-async function syncAddon(repoId, addonId, options = {}) {
-    const { manual = true, updating = new Set() } = options
-    if (!repoId.trim() || !addonId.trim()) return
+// `manifestSourceUrl` is required for a fresh install (nothing stored yet to
+// fall back to) and optional for an update (falls back to whatever's
+// already recorded). `catalogContext` is an optional {id: manifestSourceUrl}
+// map the caller supplies when installing from a specific catalog's browse
+// results, letting bare-id dependencies from that same catalog resolve
+// without a fresh full catalog search.
+async function syncAddon(addonId, options = {}) {
+    const { manifestSourceUrl = null, manual = true, updating = new Set(), catalogContext = null } = options
+    if (!addonId.trim()) return
 
     // Re-entrancy guard: syncing a dependency can legitimately re-encounter
     // the same addon more than once (diamond dependencies, or a dependent
     // being the very addon whose own sync triggered the dependency sync).
-    const key = `${repoId}::${addonId}`
-    if (updating.has(key)) return
-    updating.add(key)
+    if (updating.has(addonId)) return
+    updating.add(addonId)
 
     const isSelf = addonId === TAM_ID
 
     let database = await loadDatabase()
-    const existing = (database.installedAddons[repoId] || {})[addonId]
+    const existing = database.installedAddons[addonId]
     const wasInstalled = !!existing?.installedVersion
 
-    const manifest = await fetchManifest(repoId, addonId)
+    const fetchUrl = manifestSourceUrl || existing?.manifestSourceUrl || (isSelf ? TAM_MANIFEST_URL : null)
+    if (!fetchUrl) throw new Error(`TAM: no manifestSourceUrl available to sync '${addonId}' (not installed yet, and none provided)`)
+
+    const manifest = await fetchManifest(fetchUrl)
 
     // Normalize manifest: TAM-next sub-dict or flat top-level
     const m = manifest.manifest ?? {
@@ -685,14 +650,11 @@ async function syncAddon(repoId, addonId, options = {}) {
     // Snapshot promptOnUpdate diffs against current persisted content first.
     // Cheap no-op when there's nothing persisted yet (a fresh install, or an
     // addon with no AddonData: notes).
-    const pendingPrompts = await collectPendingPrompts(repoId, addonId, m)
+    const pendingPrompts = await collectPendingPrompts(addonId, m)
     if (pendingPrompts.length > 0) {
-        if (!database.installedAddons[repoId])          database.installedAddons[repoId]          = {}
-        if (!database.installedAddons[repoId][addonId]) database.installedAddons[repoId][addonId] = {}
-        if (!database.installedAddons[repoId][addonId].persistence) {
-            database.installedAddons[repoId][addonId].persistence = {}
-        }
-        database.installedAddons[repoId][addonId].persistence.pendingPrompts = pendingPrompts
+        if (!database.installedAddons[addonId]) database.installedAddons[addonId] = {}
+        if (!database.installedAddons[addonId].persistence) database.installedAddons[addonId].persistence = {}
+        database.installedAddons[addonId].persistence.pendingPrompts = pendingPrompts
         await saveDatabase(database)
     }
 
@@ -703,27 +665,39 @@ async function syncAddon(repoId, addonId, options = {}) {
     // all, since it's computed on demand from every addon's own stored
     // `manifest.dependencies` (see getDependents).
     const depExportsMap = new Map()
-    for (const depAddonId of (m.dependencies || [])) {
-        const installedDep = (database.installedAddons[repoId] || {})[depAddonId]
+    for (const depEntry of (m.dependencies || [])) {
+        const depId = dependencyId(depEntry)
+        const installedDep = database.installedAddons[depId]
+
         if (!installedDep?.installedVersion) {
-            await syncAddon(repoId, depAddonId, { manual: false, updating })
+            const depUrl = resolveDependencyUrl(depEntry, catalogContext)
+            if (!depUrl) {
+                console.error(`TAM: dependency '${depId}' could not be resolved (not installed, and no manifestSourceUrl available) — skipping`)
+                depExportsMap.set(depId, {})
+                continue
+            }
+            await syncAddon(depId, { manifestSourceUrl: depUrl, manual: false, updating, catalogContext })
             database = await loadDatabase()
-        } else {
-            const depManifestFetched = await fetchManifest(repoId, depAddonId)
-            if (depManifestFetched.latestVersion &&
-                versionCompare(depManifestFetched.latestVersion, installedDep.installedVersion) > 0) {
-                await syncAddon(repoId, depAddonId, { manual: false, updating })
-                database = await loadDatabase()
+        } else if (installedDep.manifestSourceUrl) {
+            try {
+                const depManifestFetched = await fetchManifest(installedDep.manifestSourceUrl)
+                if (depManifestFetched.latestVersion &&
+                    versionCompare(depManifestFetched.latestVersion, installedDep.installedVersion) > 0) {
+                    await syncAddon(depId, { manifestSourceUrl: installedDep.manifestSourceUrl, manual: false, updating, catalogContext })
+                    database = await loadDatabase()
+                }
+            } catch (e) {
+                // Best-effort staleness check — keep using whatever's installed.
             }
         }
-        const dep = (database.installedAddons[repoId] || {})[depAddonId]
-        depExportsMap.set(depAddonId, dep?.manifest?.exports || {})
+        const dep = database.installedAddons[depId]
+        depExportsMap.set(depId, dep?.manifest?.exports || {})
     }
 
     if (isSelf) await tagUntaggedSelfNotes(m, addonId)
 
     const addonRootNoteId = await getAddonRootNoteId()
-    const noteMap = await resolveNotes(m, addonId, addonRootNoteId, { rootExternallyParented: isSelf })
+    const noteMap = await resolveNotes(m, addonId, addonRootNoteId, fetchUrl, { rootExternallyParented: isSelf })
     if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
     await applyDepChildren(m, noteMap, depExportsMap)
@@ -732,24 +706,35 @@ async function syncAddon(repoId, addonId, options = {}) {
     await pruneRemovedNotes(m, addonId)
 
     const storedManifest = stripManifestForStorage(m)
+    const meta = {
+        name:        manifest.name,
+        description: manifest.description,
+        author:      manifest.author,
+        license:     manifest.license,
+        type:        manifest.type,
+        homepage:    manifest.homepage
+    }
 
-    if (!database.installedAddons[repoId]) database.installedAddons[repoId] = {}
     if (!wasInstalled) {
         // Preserve any persistence data surviving from a previous install of
         // this same addonId (e.g. it was uninstalled but had persisted
         // notes) — everything else here is meant to start fresh.
-        const priorPersistence = database.installedAddons[repoId][addonId]?.persistence
-        database.installedAddons[repoId][addonId] = {
+        const priorPersistence = database.installedAddons[addonId]?.persistence
+        database.installedAddons[addonId] = {
             installedVersion: manifest.latestVersion,
+            manifestSourceUrl: fetchUrl,
             manuallyInstalled: manual || isSelf,
             enabled: isSelf,
+            meta,
             manifest: storedManifest,
             ...(priorPersistence ? { persistence: priorPersistence } : {})
         }
     } else {
         // Merge in place — never resets manuallyInstalled/enabled/persistence.
-        const rec = database.installedAddons[repoId][addonId]
+        const rec = database.installedAddons[addonId]
         rec.installedVersion = manifest.latestVersion
+        rec.manifestSourceUrl = fetchUrl
+        rec.meta = meta
         rec.manifest = storedManifest
         // Must be explicit: this used to be an implicit side effect of
         // installAddon replacing the whole record object on every reinstall.
@@ -758,74 +743,28 @@ async function syncAddon(repoId, addonId, options = {}) {
     }
     await saveDatabase(database)
 
-    if (!wasInstalled && !isSelf) await enableAddon(repoId, addonId, false)
-    await connectAddonPersistence(repoId, addonId)
+    if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
+    await connectAddonPersistence(addonId)
 }
 
-// Offline structural repair: reconciles an already-installed addon's notes
-// against its own *locally stored* manifest snapshot — never a network
-// fetch. Fixes missing/stale parent-child branches, labels, and relations;
-// never touches note content, and never creates a note that's been fully
-// deleted (there's no content stored locally to rebuild it with — that gets
-// reported as an issue instead, fixable only via an actual sync). Distinct
-// from syncAddon: sync reconciles against whatever's newly available
-// upstream and can create notes from scratch; repair only ever restores what
-// should already be there, using nothing but what's already in the Database.
-// Returns the same { repoId, addonId, message } issue shape as
-// validateDatabase for whatever it couldn't fix.
-async function repairAddon(repoId, addonId) {
-    if (!repoId.trim() || !addonId.trim()) return []
-
-    const database = await loadDatabase()
-    const addon = (database.installedAddons[repoId] || {})[addonId]
-    if (!addon?.manifest) {
-        return [{ repoId, addonId, message: "no locally stored manifest to repair from — sync this addon first" }]
-    }
-
-    const m = addon.manifest
-    const isSelf = addonId === TAM_ID
-    const issues = []
-
-    const noteMap = {}
-    for (const noteDef of m.notes) {
-        const realNoteId = await resolveStoredNoteId(addonId, noteDef.id)
-        if (realNoteId) {
-            noteMap[noteDef.id] = realNoteId
-        } else {
-            issues.push({ repoId, addonId, message: `note '${noteDef.id}' is missing and can't be repaired offline — use Update instead` })
-        }
-    }
-    if (!noteMap[m.root]) return issues
-
-    const addonRootNoteId = isSelf ? null : await getAddonRootNoteId()
-    await reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, isSelf)
-
-    const depExportsMap = new Map()
-    for (const depAddonId of (m.dependencies || [])) {
-        const dep = (database.installedAddons[repoId] || {})[depAddonId]
-        if (!dep?.manifest) {
-            issues.push({ repoId, addonId, message: `dependency '${depAddonId}' is not installed — some cross-addon links may be unrepaired` })
-            continue
-        }
-        depExportsMap.set(depAddonId, dep.manifest.exports || {})
-    }
-
-    await applyDepChildren(m, noteMap, depExportsMap)
-    await applyLabels(m.labels || [], noteMap)
-    await applyRelations(m.relations || [], noteMap, depExportsMap)
-
-    return issues
+// Convenience wrapper for "install an addon directly by its
+// manifestSourceUrl" (the UI's "add addon by URL" action) — the caller
+// doesn't need to already know the addon's id, unlike syncAddon itself.
+async function installByUrl(manifestSourceUrl, options = {}) {
+    const manifest = await fetchManifest(manifestSourceUrl)
+    if (!manifest.id) throw new Error("TAM: manifest has no 'id' field")
+    await syncAddon(manifest.id, { ...options, manifestSourceUrl })
 }
 
 async function getPersistenceNoteId() {
     return await api.currentNote.getRelationValue(addonPersistenceLabel)
 }
 
-async function connectAddonPersistence(repoId, addonId) {
+async function connectAddonPersistence(addonId) {
     const persistenceRoot = await getPersistenceNoteId()
     let database = await loadDatabase()
 
-    const addonRecord = database.installedAddons[repoId][addonId]
+    const addonRecord = database.installedAddons[addonId]
     if (!addonRecord.persistence) addonRecord.persistence = {}
     if (!addonRecord.persistence.persistenceNotes) addonRecord.persistence.persistenceNotes = {}
 
@@ -906,37 +845,34 @@ async function connectAddonPersistence(repoId, addonId) {
 // Retroactive sweep for addons whose persistence folder was created before
 // it was made just-in-time (or whose persisted notes all disappeared some
 // other way) — removes any recorded persistence root that's now empty and
-// clears the stale reference. Run opportunistically from
-// `updateRepositories` rather than needing its own UI trigger.
+// clears the stale reference. Run alongside checkForAddonUpdates.
 async function cleanupEmptyPersistenceRoots() {
     let database = await loadDatabase()
     let changed = false
 
-    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
-        for (const [addonId, addonRecord] of Object.entries(addons || {})) {
-            const persistence = addonRecord.persistence
-            const rootNoteId = persistence?.rootNote
-            if (!rootNoteId) continue
+    for (const [addonId, addonRecord] of Object.entries(database.installedAddons || {})) {
+        const persistence = addonRecord.persistence
+        const rootNoteId = persistence?.rootNote
+        if (!rootNoteId) continue
 
-            const isEmpty = await api.runOnBackend((rootNoteId) => {
-                const note = api.getNote(rootNoteId)
-                if (!note) return true
-                if (note.getChildNotes().length > 0) return false
-                note.deleteNote()
-                return true
-            }, [rootNoteId])
+        const isEmpty = await api.runOnBackend((rootNoteId) => {
+            const note = api.getNote(rootNoteId)
+            if (!note) return true
+            if (note.getChildNotes().length > 0) return false
+            note.deleteNote()
+            return true
+        }, [rootNoteId])
 
-            if (isEmpty) {
-                delete persistence.rootNote
-                changed = true
+        if (isEmpty) {
+            delete persistence.rootNote
+            changed = true
 
-                // Nothing installed and nothing left worth keeping — drop the
-                // whole record rather than leaving an empty husk behind.
-                const hasPersistedNotes = persistence.persistenceNotes &&
-                    Object.keys(persistence.persistenceNotes).length > 0
-                if (!addonRecord.installedVersion && !hasPersistedNotes && !persistence.pendingPrompts) {
-                    delete database.installedAddons[repoId][addonId]
-                }
+            // Nothing installed and nothing left worth keeping — drop the
+            // whole record rather than leaving an empty husk behind.
+            const hasPersistedNotes = persistence.persistenceNotes &&
+                Object.keys(persistence.persistenceNotes).length > 0
+            if (!addonRecord.installedVersion && !hasPersistedNotes && !persistence.pendingPrompts) {
+                delete database.installedAddons[addonId]
             }
         }
     }
@@ -944,79 +880,10 @@ async function cleanupEmptyPersistenceRoots() {
     if (changed) await saveDatabase(database)
 }
 
-// One-time-per-note backfill for addons installed before #TAMFILEID existed:
-// tags every note already recorded in an addon's (now otherwise-unused)
-// `noteMap` leftover from a previous install, so live TAMFILEID lookups work
-// immediately without needing every addon reinstalled first. Only ever adds
-// a label to a note that already exists — never creates, deletes, or moves
-// anything, and never touches persistence data. Idempotent per note (skips
-// anything already tagged), so an interrupted run just resumes correctly
-// next time rather than being skipped wholesale. Run opportunistically from
-// `updateRepositories`, same spot as `cleanupEmptyPersistenceRoots`.
-async function backfillTamFileIds() {
-    const database = await loadDatabase()
-
-    for (const [, addons] of Object.entries(database.installedAddons || {})) {
-        for (const [addonId, addonRecord] of Object.entries(addons || {})) {
-            if (!addonRecord.installedVersion || !addonRecord.noteMap) continue
-
-            const entries = Object.entries(addonRecord.noteMap).map(
-                ([localId, realId]) => [realId, `${addonId}/${localId}`]
-            )
-            await api.runOnBackend((tamFileIdLabel, entries) => {
-                for (const [noteId, tamFileId] of entries) {
-                    const note = api.getNote(noteId)
-                    if (!note || note.isDeleted) continue
-                    if (note.hasLabel(tamFileIdLabel)) continue
-                    note.setLabel(tamFileIdLabel, tamFileId)
-                }
-            }, [tamFileIdLabel, entries])
-        }
-    }
-}
-
-// Migration bridge: addons installed before this session's "store the
-// manifest itself" redesign have their old flat fields (rootNoteId,
-// settingsNoteId, dependencies, dependents) but no `.manifest` snapshot at
-// all — there was nowhere to get one from until now. Best-effort backfill:
-// fetch each such addon's current manifest (the only way to get one, since
-// the old schema never stored one) and store its stripped structure. If the
-// upstream manifest has changed since that addon was actually installed,
-// this backfill reflects the newer structure rather than exactly what's
-// installed — an unavoidable one-time approximation for pre-existing
-// installs. From this point on the stored manifest is authoritative and
-// immune to future upstream changes, same as everything synced from here on.
-// Run opportunistically from updateRepositories, alongside the other
-// migrations — naturally a no-op once every installed addon has been synced
-// at least once under the new schema.
-async function backfillInstalledManifests() {
+async function deleteAddon(addonId) {
+    if (!addonId.trim()) return
     let database = await loadDatabase()
-    let changed = false
-
-    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
-        for (const [addonId, addon] of Object.entries(addons || {})) {
-            if (!addon.installedVersion || addon.manifest) continue
-            try {
-                const manifest = await fetchManifest(repoId, addonId)
-                const m = manifest.manifest ?? {
-                    notes: [], children: [], relations: [], labels: [], root: null, dependencies: [], exports: {}
-                }
-                if (!m.root) continue
-                addon.manifest = stripManifestForStorage(m)
-                changed = true
-            } catch (e) {
-                // Best-effort — leave it for the next attempt.
-            }
-        }
-    }
-
-    if (changed) await saveDatabase(database)
-}
-
-async function deleteAddon(repoId, addonId) {
-    if (!repoId.trim() || !addonId.trim()) return
-    let database = await loadDatabase()
-    const addonRecord = database.installedAddons[repoId][addonId]
+    const addonRecord = database.installedAddons[addonId]
     const rootNoteId = await resolveStoredNoteId(addonId, addonRecord.manifest?.root)
     if (rootNoteId) {
         await api.runOnBackend((noteId) => {
@@ -1033,12 +900,9 @@ async function deleteAddon(repoId, addonId) {
     if (hasPersistedData) {
         // Drop everything describing the now-deleted installed state, but
         // keep the persisted user data around — it must survive uninstall.
-        database.installedAddons[repoId][addonId] = { persistence }
+        database.installedAddons[addonId] = { persistence }
     } else {
-        delete database.installedAddons[repoId][addonId]
-        if (Object.keys(database.installedAddons[repoId]).length === 0) {
-            delete database.installedAddons[repoId]
-        }
+        delete database.installedAddons[addonId]
     }
     await saveDatabase(database)
 }
@@ -1048,34 +912,35 @@ async function deleteAddon(repoId, addonId) {
 // uninstalls any of its own dependencies that are now unused (getDependents
 // finds nothing else still depending on them, now that addonId's own record
 // is gone) and weren't installed directly by the user.
-async function uninstallAddon(repoId, addonId) {
-    if (!repoId.trim() || !addonId.trim()) return
+async function uninstallAddon(addonId) {
+    if (!addonId.trim()) return
     let database = await loadDatabase()
-    const installed = (database.installedAddons[repoId] || {})[addonId]
+    const installed = database.installedAddons[addonId]
     if (!installed?.installedVersion) return
 
     const dependencies = installed.manifest?.dependencies || []
 
-    await deleteAddon(repoId, addonId)
+    await deleteAddon(addonId)
 
-    for (const depAddonId of dependencies) {
+    for (const depEntry of dependencies) {
+        const depId = dependencyId(depEntry)
         database = await loadDatabase()
-        const dep = (database.installedAddons[repoId] || {})[depAddonId]
+        const dep = database.installedAddons[depId]
         if (!dep) continue
 
         // dependents is never stored — recompute now that addonId's own
         // record is already gone, so it naturally no longer counts.
-        const stillNeeded = getDependents(database, repoId, depAddonId).length > 0
+        const stillNeeded = getDependents(database, depId).length > 0
         const depIsManual = dep.manuallyInstalled ?? true
         if (!depIsManual && !stillNeeded) {
-            await uninstallAddon(repoId, depAddonId)
+            await uninstallAddon(depId)
         }
     }
 }
 
-async function collectPendingPrompts(repoId, addonId, m) {
+async function collectPendingPrompts(addonId, m) {
     let database = await loadDatabase()
-    const persistenceNotes = database.installedAddons?.[repoId]?.[addonId]?.persistence?.persistenceNotes || {}
+    const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes || {}
 
     const prompts = []
     for (const noteDef of (m.notes || [])) {
@@ -1111,15 +976,15 @@ async function collectPendingPrompts(repoId, addonId, m) {
     return prompts
 }
 
-async function getPendingPrompts(repoId, addonId) {
+async function getPendingPrompts(addonId) {
     const database = await loadDatabase()
-    return database.installedAddons?.[repoId]?.[addonId]?.persistence?.pendingPrompts || []
+    return database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
 }
 
-async function resolvePrompt(repoId, addonId, noteLocalId, useNew) {
+async function resolvePrompt(addonId, noteLocalId, useNew) {
     if (!useNew) return
     const database = await loadDatabase()
-    const prompts = database.installedAddons?.[repoId]?.[addonId]?.persistence?.pendingPrompts || []
+    const prompts = database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
     const prompt = prompts.find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
     await api.runOnBackend((noteId, content) => {
@@ -1127,19 +992,19 @@ async function resolvePrompt(repoId, addonId, noteLocalId, useNew) {
     }, [prompt.persistedNoteId, prompt.newContent])
 }
 
-async function clearPendingPrompts(repoId, addonId) {
+async function clearPendingPrompts(addonId) {
     let database = await loadDatabase()
-    if (database.installedAddons?.[repoId]?.[addonId]?.persistence) {
-        delete database.installedAddons[repoId][addonId].persistence.pendingPrompts
+    if (database.installedAddons?.[addonId]?.persistence) {
+        delete database.installedAddons[addonId].persistence.pendingPrompts
     }
     await saveDatabase(database)
 }
 
 
-async function enableAddon(repoId, addonId, enabled) {
-    if (!repoId.trim() || !addonId.trim()) return
+async function enableAddon(addonId, enabled) {
+    if (!addonId.trim()) return
     let database = await loadDatabase()
-    const addon = database.installedAddons[repoId][addonId]
+    const addon = database.installedAddons[addonId]
     const rootNoteId = await resolveStoredNoteId(addonId, addon.manifest?.root)
     if (!rootNoteId) return
     await api.runOnBackend((noteId, enabled, addonLabels) => {
@@ -1172,8 +1037,103 @@ async function enableAddon(repoId, addonId, enabled) {
             }
         }
     }, [rootNoteId, enabled, addonLabels])
-    database.installedAddons[repoId][addonId].enabled = enabled
+    database.installedAddons[addonId].enabled = enabled
     await saveDatabase(database)
+}
+
+
+// Returns every installed addon merged with its own stored display fields
+// (meta/installedVersion/manifestSourceUrl/etc.) plus live-resolved
+// rootNoteId/settingsNoteId — the data the main list/detail views render.
+// Unlike the old per-repository model, this never touches the network:
+// browsing what's available from a catalog is a separate, on-demand action
+// (fetchCatalogAddons), since a catalog is now just a flat list of URLs with
+// no cached summary data.
+async function getAllAddons() {
+    let database = await loadDatabase()
+
+    const lookups = []
+    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+        if (!addon.installedVersion || !addon.manifest) continue
+        lookups.push({ addonId, rootLocalId: addon.manifest.root, settingsLocalId: addon.manifest.settingsNote })
+    }
+    const resolved = await api.runOnBackend((tamFileIdLabel, lookups) => {
+        const result = {}
+        for (const { addonId, rootLocalId, settingsLocalId } of lookups) {
+            function resolveLocal(localId) {
+                if (!localId) return null
+                const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
+                return (note && !note.isDeleted) ? note.noteId : null
+            }
+            result[addonId] = { rootNoteId: resolveLocal(rootLocalId), settingsNoteId: resolveLocal(settingsLocalId) }
+        }
+        return result
+    }, [tamFileIdLabel, lookups])
+
+    const addons = {}
+    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+        if (!addon.installedVersion) continue
+        addons[addonId] = {
+            id: addonId,
+            ...(addon.meta || {}),
+            latestVersion: addon.installedVersion,
+            ...addon,
+            ...(resolved[addonId] || {})
+        }
+    }
+    if (!addons[TAM_ID]) {
+        addons[TAM_ID] = { id: TAM_ID, name: "Trilium Addon Manager", installedVersion: TAM_VERSION, enabled: true, type: "widget" }
+    }
+    return addons
+}
+
+// Fetches every installed addon's own manifestSourceUrl directly and
+// compares latestVersion against installedVersion — there's no longer a
+// per-catalog cached registry to diff against, since catalogs cache
+// nothing. Best-effort per addon: a fetch failure just leaves whatever
+// updateAvailable state was already there.
+async function checkForAddonUpdates() {
+    let database = await loadDatabase()
+    const installed = database.installedAddons || {}
+
+    await Promise.all(Object.entries(installed).map(async ([addonId, addon]) => {
+        if (!addon.installedVersion) return
+        const url = addon.manifestSourceUrl || (addonId === TAM_ID ? TAM_MANIFEST_URL : null)
+        if (!url) return
+        try {
+            const manifest = await fetchManifest(url)
+            if (manifest.latestVersion) {
+                addon.updateAvailable = versionCompare(manifest.latestVersion, addon.installedVersion) > 0
+            }
+        } catch (e) {
+            // Best-effort — leave whatever updateAvailable state was there.
+        }
+    }))
+
+    // Libraries are hidden from the UI, so an update sitting on one would
+    // otherwise be invisible. Surface it on whatever depends on it (directly
+    // or transitively) instead. Fixed-point loop since updateAvailable only
+    // ever flips false->true here, so it always terminates and is
+    // insensitive to iteration order (a diamond dependency can otherwise get
+    // visited before its own upstream flag has propagated).
+    let changed = true
+    while (changed) {
+        changed = false
+        for (const addonId of Object.keys(installed)) {
+            const addon = installed[addonId]
+            if (!addon.updateAvailable) continue
+            for (const dependentId of getDependents(database, addonId)) {
+                const dependent = installed[dependentId]
+                if (dependent && !dependent.updateAvailable) {
+                    dependent.updateAvailable = true
+                    changed = true
+                }
+            }
+        }
+    }
+
+    await saveDatabase(database)
+    await cleanupEmptyPersistenceRoots()
 }
 
 
@@ -1185,8 +1145,13 @@ async function enableAddon(repoId, addonId, enabled) {
 // separate cached id that could drift), and every live AddonData: relation
 // in an addon's subtree still points at the persisted copy TAM thinks it
 // does. There's no dependent-symmetry check — dependents is computed on
-// demand (getDependents), never stored, so it can't go out of sync. Returns
-// a flat list of { repoId, addonId, message } issues (empty if everything
+// demand (getDependents), never stored, so it can't go out of sync.
+// Read-only: this never fixes anything itself. There's no offline "repair"
+// path anymore either — an addon with an issue here should just be
+// reinstalled/updated (syncAddon already idempotently reconciles everything
+// fresh via #TAMFILEID), rather than reconciled from a locally stored
+// snapshot that might itself be the thing that's wrong.
+// Returns a flat list of { addonId, message } issues (empty if everything
 // checks out).
 async function validateDatabase() {
     const database = await loadDatabase()
@@ -1205,92 +1170,88 @@ async function validateDatabase() {
 
     for (const [tamFileId, noteIds] of duplicateTamFileIds) {
         const dupAddonId = tamFileId.split("/")[0]
-        const dupRepoId = Object.entries(database.installedAddons || {})
-            .find(([, addons]) => dupAddonId in (addons || {}))?.[0] || "unknown"
         issues.push({
-            repoId: dupRepoId,
             addonId: dupAddonId,
             message: `TAMFILEID '${tamFileId}' is duplicated across notes ${noteIds.join(", ")}`
         })
     }
 
-    for (const [repoId, addons] of Object.entries(database.installedAddons || {})) {
-        for (const [addonId, addon] of Object.entries(addons || {})) {
-            const isInstalled = !!addon.installedVersion
-            const persistence = addon.persistence || {}
-            const manifest = addon.manifest || {}
+    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+        const isInstalled = !!addon.installedVersion
+        const persistence = addon.persistence || {}
+        const manifest = addon.manifest || {}
 
-            const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistence, isInstalled) => {
-                const found = []
+        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistence, isInstalled) => {
+            const found = []
 
-                function noteExists(noteId) {
-                    if (!noteId) return false
+            function noteExists(noteId) {
+                if (!noteId) return false
+                const note = api.getNote(noteId)
+                return !!(note && !note.isDeleted)
+            }
+            function resolveLocal(localId) {
+                if (!localId) return null
+                const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
+                return (note && !note.isDeleted) ? note.noteId : null
+            }
+
+            let rootNoteId = null
+            if (isInstalled) {
+                rootNoteId = resolveLocal(manifest.root)
+                if (!rootNoteId) {
+                    found.push(`root note ('${manifest.root}') is missing`)
+                }
+
+                if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
+                    found.push(`settings note ('${manifest.settingsNote}') is missing`)
+                }
+            }
+
+            if (persistence.rootNote && !noteExists(persistence.rootNote)) {
+                found.push(`persistence root note (${persistence.rootNote}) is missing`)
+            }
+
+            for (const [key, realId] of Object.entries(persistence.persistenceNotes || {})) {
+                if (!noteExists(realId)) {
+                    found.push(`persisted note '${key}' (${realId}) is missing`)
+                }
+            }
+
+            if (isInstalled && rootNoteId) {
+                for (const noteId of api.getNote(rootNoteId).getSubtreeNoteIds()) {
                     const note = api.getNote(noteId)
-                    return !!(note && !note.isDeleted)
-                }
-                function resolveLocal(localId) {
-                    if (!localId) return null
-                    const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
-                    return (note && !note.isDeleted) ? note.noteId : null
-                }
-
-                let rootNoteId = null
-                if (isInstalled) {
-                    rootNoteId = resolveLocal(manifest.root)
-                    if (!rootNoteId) {
-                        found.push(`root note ('${manifest.root}') is missing`)
-                    }
-
-                    if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
-                        found.push(`settings note ('${manifest.settingsNote}') is missing`)
-                    }
-                }
-
-                if (persistence.rootNote && !noteExists(persistence.rootNote)) {
-                    found.push(`persistence root note (${persistence.rootNote}) is missing`)
-                }
-
-                for (const [key, realId] of Object.entries(persistence.persistenceNotes || {})) {
-                    if (!noteExists(realId)) {
-                        found.push(`persisted note '${key}' (${realId}) is missing`)
-                    }
-                }
-
-                if (isInstalled && rootNoteId) {
-                    for (const noteId of api.getNote(rootNoteId).getSubtreeNoteIds()) {
-                        const note = api.getNote(noteId)
-                        if (!note) continue
-                        for (const relation of note.getRelations()) {
-                            if (!relation.name.includes("AddonData:")) continue
-                            const key = relation.name.split("AddonData:")[1]
-                            const expected = (persistence.persistenceNotes || {})[key]
-                            if (!expected) {
-                                found.push(`relation '${relation.name}' on note ${noteId} has no matching persistence record for key '${key}'`)
-                            } else if (relation.value !== expected) {
-                                found.push(`relation '${relation.name}' on note ${noteId} points at ${relation.value}, expected persisted note ${expected}`)
-                            }
+                    if (!note) continue
+                    for (const relation of note.getRelations()) {
+                        if (!relation.name.includes("AddonData:")) continue
+                        const key = relation.name.split("AddonData:")[1]
+                        const expected = (persistence.persistenceNotes || {})[key]
+                        if (!expected) {
+                            found.push(`relation '${relation.name}' on note ${noteId} has no matching persistence record for key '${key}'`)
+                        } else if (relation.value !== expected) {
+                            found.push(`relation '${relation.name}' on note ${noteId} points at ${relation.value}, expected persisted note ${expected}`)
                         }
                     }
                 }
-
-                return found
-            }, [tamFileIdLabel, addonId, manifest, persistence, isInstalled])
-
-            for (const message of backendIssues) {
-                issues.push({ repoId, addonId, message })
             }
 
-            if (!isInstalled) continue
+            return found
+        }, [tamFileIdLabel, addonId, manifest, persistence, isInstalled])
 
-            // Symmetry checks no longer apply — dependents is computed on
-            // demand (getDependents), never stored, so there's nothing to
-            // drift out of sync. Only a genuinely missing dependency is
-            // worth reporting.
-            for (const depAddonId of (manifest.dependencies || [])) {
-                const dep = addons[depAddonId]
-                if (!dep?.installedVersion) {
-                    issues.push({ repoId, addonId, message: `depends on '${depAddonId}', which is not installed` })
-                }
+        for (const message of backendIssues) {
+            issues.push({ addonId, message })
+        }
+
+        if (!isInstalled) continue
+
+        // Symmetry checks no longer apply — dependents is computed on
+        // demand (getDependents), never stored, so there's nothing to
+        // drift out of sync. Only a genuinely missing dependency is
+        // worth reporting.
+        for (const depEntry of (manifest.dependencies || [])) {
+            const depId = dependencyId(depEntry)
+            const dep = database.installedAddons[depId]
+            if (!dep?.installedVersion) {
+                issues.push({ addonId, message: `depends on '${depId}', which is not installed` })
             }
         }
     }
@@ -1300,20 +1261,20 @@ async function validateDatabase() {
 
 
 // Exports ---------------------------------------------------------------------
-module.exports.addRepository      = addRepository
-module.exports.getAllRepositories  = getAllRepositories
-module.exports.updateRepositories  = updateRepositories
-module.exports.deleteRepository   = deleteRepository
-module.exports.syncAddon          = syncAddon
-module.exports.repairAddon        = repairAddon
-module.exports.deleteAddon        = deleteAddon
-module.exports.uninstallAddon     = uninstallAddon
-module.exports.enableAddon        = enableAddon
-module.exports.getPendingPrompts  = getPendingPrompts
-module.exports.resolvePrompt      = resolvePrompt
+module.exports.addCatalog          = addCatalog
+module.exports.deleteCatalog       = deleteCatalog
+module.exports.getCatalogs         = getCatalogs
+module.exports.fetchCatalogAddons  = fetchCatalogAddons
+module.exports.getAllAddons        = getAllAddons
+module.exports.checkForAddonUpdates = checkForAddonUpdates
+module.exports.syncAddon           = syncAddon
+module.exports.installByUrl        = installByUrl
+module.exports.deleteAddon         = deleteAddon
+module.exports.uninstallAddon      = uninstallAddon
+module.exports.enableAddon         = enableAddon
+module.exports.getPendingPrompts   = getPendingPrompts
+module.exports.resolvePrompt       = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase    = validateDatabase
 module.exports.fetchReadmeHtml     = fetchReadmeHtml
-module.exports.cleanupEmptyPersistenceRoots  = cleanupEmptyPersistenceRoots
-module.exports.backfillTamFileIds            = backfillTamFileIds
-module.exports.backfillInstalledManifests    = backfillInstalledManifests
+module.exports.cleanupEmptyPersistenceRoots = cleanupEmptyPersistenceRoots
