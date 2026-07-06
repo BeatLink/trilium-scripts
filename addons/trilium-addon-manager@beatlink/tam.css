@@ -584,10 +584,6 @@ div:has(.TAM-body) {
         flex-shrink: 0 !important;
     }
 
-    & .TAM-catalog-row {
-        margin-bottom: 24px !important;
-    }
-
     & .TAM-pill {
         display: inline-block !important;
         font-size: 10px !important;

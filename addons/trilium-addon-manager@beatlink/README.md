@@ -56,15 +56,17 @@ manifest) — everything below is built directly against `trilium:preact`'s buil
 than a shared library like `libsettings@beatlink`, since a dependency failure in the addon manager
 itself would risk taking down the one thing that could otherwise fix it.
 
-- **List view** (default) — a searchable, filterable card grid of every *installed* addon (libraries
-  excluded — see [Hidden libraries](#hidden-libraries-and-update-propagation)), sourced entirely from
-  the local Database (no network needed to render it). If any catalogs have been added, a row of
-  **Browse: {catalog}** buttons above the grid jumps into that catalog's live-fetched addon list.
-  Clicking an installed card opens its detail view.
+- **List view** (default) — a searchable, filterable card grid of every installed addon (libraries
+  excluded — see [Hidden libraries](#hidden-libraries-and-update-propagation)) merged with every
+  not-yet-installed addon from every added catalog (fetched live and deduped by id against what's
+  already installed), so it shows everything available across every added catalog plus anything
+  manually installed by URL, not just what's already on disk. Clicking an installed card opens its
+  detail view; clicking a not-yet-installed one shows an **Install** button.
 - **Catalog browse view** — fetches a specific catalog's `tam-addons[]` list and every manifest it
   points at, fresh, every time (nothing about a catalog's contents is ever cached — see
   [The Database Record](#the-database-record)). Not-yet-installed entries show an **Install** button;
-  already-installed ones open the normal detail view instead.
+  already-installed ones open the normal detail view instead. Reached via the **Browse** button on
+  that catalog's row in the Settings view, not from the main list.
 - **Addon detail view** — one page per addon (mirroring `docs/{addon-id}/index.html`): a sticky
   sidebar with the addon's metadata table and full action set (Home Page, Install/Delete,
   Enable/Disable, Settings, Update), and a main panel with the description and — for
@@ -72,9 +74,10 @@ itself would risk taking down the one thing that could otherwise fix it.
   installed note (see [`readmeNote`](#readmenote-optional)), no network fetch required.
 - **Settings view** — TAM's own housekeeping page, built manually (no `libsettings@beatlink`
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
-  data, addons with an update available), catalog management (add/delete), a single-addon "install by
-  URL" action, and maintenance triggers (Check for Updates, Update All Addons, Validate Database,
-  Clean Up Empty Persistence Roots).
+  data, addons with an update available), catalog management (each catalog's row has **Browse**,
+  **Visit Website**, and **Delete** actions, plus adding a new catalog by URL), a single-addon
+  "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons, Validate
+  Database, Clean Up Empty Persistence Roots).
 
 ---
 

@@ -533,6 +533,7 @@ export default function RepoManager() {
             switch (command["command"]) {
                 case "load-addons": {
                     const freshAddons = await reload()
+                    await loadCatalogAddons(await libTAMjs.getCatalogs())
                     // TAM's own Database record starts out seeded with just a
                     // manifestSourceUrl (see database.json) — not a full
                     // record, since there's nowhere to derive one from before
@@ -553,12 +554,14 @@ export default function RepoManager() {
                 case "add-catalog": {
                     await libTAMjs.addCatalog(command["url"])
                     await reload()
+                    await loadCatalogAddons(await libTAMjs.getCatalogs())
                     setCommand(null)
                     break
                 }
                 case "delete-catalog": {
                     await libTAMjs.deleteCatalog(command["url"])
                     await reload()
+                    await loadCatalogAddons(await libTAMjs.getCatalogs())
                     setCommand(null)
                     break
                 }
@@ -739,6 +742,17 @@ export default function RepoManager() {
 
     const anyUpdateAvailable = Object.values(addons).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
 
+    // Dependency resolution during install needs to look up bare-id deps
+    // against whatever catalogs are known — built once from the merged
+    // catalogAddons map so it covers every added catalog, not just one.
+    const catalogContext = Object.fromEntries(Object.values(catalogAddons).map(e => [e.id, e.manifestSourceUrl]))
+    const handleInstall = entryData => setCommand({
+        command: "install-addon",
+        addon: entryData.id,
+        manifestSourceUrl: entryData.manifestSourceUrl,
+        catalogContext
+    })
+
     let bodyContent
     if (view.type === "settings") {
         bodyContent = (
@@ -749,6 +763,11 @@ export default function RepoManager() {
                 onAddCatalog={url => setCommand({ command: "add-catalog", url })}
                 onDeleteCatalog={url => setCommand({ command: "delete-catalog", url })}
                 onVisitCatalogWebsite={url => setCommand({ command: "visit-catalog-website", url })}
+                onBrowseCatalog={url => {
+                    setCatalogBrowse({ url, entries: [], loading: true })
+                    setView({ type: "catalog", url })
+                    setCommand({ command: "browse-catalog", url })
+                }}
                 onInstallByUrl={url => setCommand({ command: "install-by-url", url })}
                 onCheckUpdates={() => setCommand({ command: "check-updates" })}
                 onUpdateAll={() => setCommand({ command: "update-all" })}
@@ -766,21 +785,11 @@ export default function RepoManager() {
                 loading={catalogBrowse?.loading ?? true}
                 installedIds={installedIds}
                 onOpenAddon={addonId => setView({ type: "detail", addonId })}
-                onInstall={entryData => {
-                    const catalogContext = Object.fromEntries(
-                        (catalogBrowse?.entries ?? []).map(e => [e.id, e.manifestSourceUrl])
-                    )
-                    setCommand({
-                        command: "install-addon",
-                        addon: entryData.id,
-                        manifestSourceUrl: entryData.manifestSourceUrl,
-                        catalogContext
-                    })
-                }}
+                onInstall={handleInstall}
             />
         )
     } else if (view.type === "detail") {
-        const addonData = addons[view.addonId]
+        const addonData = addons[view.addonId] || catalogAddons[view.addonId]
         if (!addonData) {
             bodyContent = <p>Addon not found.</p>
         } else {
@@ -788,11 +797,7 @@ export default function RepoManager() {
                 <AddonDetail
                     addonData={addonData}
                     isSelf={view.addonId === TAM_ID}
-                    onInstall={entryData => setCommand({
-                        command: "install-addon",
-                        addon: entryData.id,
-                        manifestSourceUrl: entryData.manifestSourceUrl
-                    })}
+                    onInstall={handleInstall}
                     onDelete={addonId => setCommand({ command: "delete-addon", addon: addonId })}
                     onUpdate={addonId => setCommand({ command: "update-addon", addon: addonId })}
                     onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", addon: addonId, enabled })}
@@ -803,14 +808,10 @@ export default function RepoManager() {
         bodyContent = (
             <ListView
                 addons={addons}
-                catalogs={catalogs}
+                catalogAddons={catalogAddons}
                 onOpenAddon={addonId => setView({ type: "detail", addonId })}
                 onOpenSettings={() => setView({ type: "settings" })}
-                onBrowseCatalog={url => {
-                    setCatalogBrowse({ url, entries: [], loading: true })
-                    setView({ type: "catalog", url })
-                    setCommand({ command: "browse-catalog", url })
-                }}
+                onInstall={handleInstall}
             />
         )
     }
@@ -832,8 +833,8 @@ export default function RepoManager() {
                 </div>
             </div>
         )
-    } else if (view.type === "detail" && addons[view.addonId]) {
-        const addonData = addons[view.addonId]
+    } else if (view.type === "detail" && (addons[view.addonId] || catalogAddons[view.addonId])) {
+        const addonData = addons[view.addonId] || catalogAddons[view.addonId]
         headerContent = (
             <div className="hdr">
                 <BackLink onClick={() => setView({ type: "list" })} />
