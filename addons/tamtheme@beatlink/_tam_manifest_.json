@@ -1,0 +1,53 @@
+{
+    "id": "tamtheme@beatlink",
+    "name": "TAMTheme",
+    "description": "A full Trilium theme carrying the Trilium Addon Manager's own white/slate/blue design language across the whole app, with a matching dark mode.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/tamtheme@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.1",
+    "type": "theme",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "tamtheme@beatlink",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "tamtheme@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "root",
+                "name": "appThemeBase",
+                "value": "next"
+            },
+            {
+                "note": "root",
+                "name": "appTheme",
+                "value": "TAMTheme"
+            }
+        ],
+        "dependencies": [],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}
