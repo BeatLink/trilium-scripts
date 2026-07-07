@@ -1,23 +1,23 @@
 {
-    "id": "libactionpicker@beatlink",
-    "name": "Action Picker",
-    "description": "Reusable Preact component rendering Complete/Start Today/Start Tomorrow buttons for a task-like note, on top of libagendatask@beatlink.",
+    "id": "libactionbar@beatlink",
+    "name": "Action Bar",
+    "description": "Reusable Preact component rendering a row of action buttons — each supplies its own icon, text, and onClick, so this has no idea what the actions actually do for any given consumer.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libactionpicker@beatlink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libactionbar@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.0",
     "type": "library",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libactionpicker@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libactionbar@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "lib",
         "notes": [
             {
                 "id": "lib",
-                "title": "ActionPicker.jsx",
+                "title": "ActionBar.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "ActionPicker.jsx"
+                "sourceUrl": "ActionBar.jsx"
             },
             {
                 "id": "readme",
@@ -30,19 +30,12 @@
         "children": [
             {
                 "parent": "lib",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "lib",
                 "child": "readme"
             }
         ],
         "relations": [],
         "labels": [],
-        "dependencies": [
-            "libagendatask@beatlink"
-        ],
+        "dependencies": [],
         "exports": {
             "lib": "lib"
         },
