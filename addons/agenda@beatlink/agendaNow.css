@@ -36,7 +36,7 @@ body.AgendaNowEnabled #root-widget {
     height: 100% !important;
 }
 
-body.AgendaNowEnabled div.scrolling-container:has(div.note-detail){
+body.AgendaNowEnabled div.scrolling-container:has(div.note-detail) {
     position: static;
     padding: 0 !important;
     border-bottom: 2px solid var(--accent) !important;
@@ -80,17 +80,17 @@ body.AgendaNowEnabled .agendaNowControls .timer {
     gap: 0.5rem;
 }
 
-body.AgendaNowEnabled .agendaNowControls .timer > span {
+body.AgendaNowEnabled .agendaNowControls .timer>span {
     background-color: var(--card-background-color);
     border-radius: 8px;
     padding: 0.5rem;
 }
 
-body.AgendaNowEnabled .agendaNowControls .timer > span.running {
+body.AgendaNowEnabled .agendaNowControls .timer>span.running {
     color: white;
 }
 
-body.AgendaNowEnabled .agendaNowControls .timer > * {
+body.AgendaNowEnabled .agendaNowControls .timer>* {
     width: fit-content !important;
     max-width: fit-content !important;
 }
@@ -100,7 +100,7 @@ body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul {
     max-height: 80vh;
     min-width: fit-content !important;
     width: fit-content !important;
-    padding: 0 !important
+    padding: 0 !important;
     font-size: large !important;
 }
 
@@ -109,6 +109,7 @@ body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul li {
     min-width: fit-content !important;
     padding: 0.125 rem !important;
 }
+
 body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul li span {
     width: 0;
     min-width: 0;
@@ -116,26 +117,29 @@ body.AgendaNowEnabled .agendaNowControls .timer .dropdown ul li span {
 }
 
 .flash-accent {
-  animation: blinker-accent 2s ease-in-out infinite;
+    animation: blinker-accent 2s ease-in-out infinite;
 }
 
 @keyframes blinker-accent {
-  25% {
-    background-color: var(--accent);
-  }  50% {
-    background-color: var(--accent);
-  }
+    25% {
+        background-color: var(--accent);
+    }
+
+    50% {
+        background-color: var(--accent);
+    }
+
     75% {
-    background-color: var(--accent);
-  }
+        background-color: var(--accent);
+    }
 }
 
 .flash-red {
-  animation: blinker-red 0.75s ease-in-out infinite;
+    animation: blinker-red 0.75s ease-in-out infinite;
 }
 
 @keyframes blinker-red {
-  50% {
-    background-color: red;
-  }
+    50% {
+        background-color: red;
+    }
 }
