@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.2.1"
+const TAM_VERSION = "4.3.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -344,6 +344,38 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
             }
         }
 
+        // "renderAsHTML": true lets a note's source stay authored as plain
+        // markdown (e.g. a README.md, hand-edited like any other) while
+        // installing as a rendered text/text-html note. The conversion runs
+        // out here, frontend-side, because `marked` is resolved via
+        // require() against this note's own children at module load — the
+        // backend callback below runs in a separate Node context with no
+        // note-tree access, so it can't reach it (see fetchReadmeHtml above
+        // for the same constraint). That forces one extra frontend fetch for
+        // renderAsHTML notes specifically, rather than reusing the backend
+        // fetch every other note relies on.
+        let effectiveType = noteType
+        let effectiveMime = mime
+        let explicitContent = noteDef.content ?? null
+        let sourceUrlForBackend = absoluteSourceUrl
+        if (noteDef.renderAsHTML) {
+            effectiveType = "text"
+            effectiveMime = "text/html"
+            let rawMarkdown = explicitContent
+            if (rawMarkdown === null && absoluteSourceUrl) {
+                try {
+                    const response = await fetch(absoluteSourceUrl)
+                    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${absoluteSourceUrl}`)
+                    rawMarkdown = await response.text()
+                } catch (e) {
+                    console.error(`TAM: skipping note '${localId}' of ${addonId} — failed to fetch markdown source '${absoluteSourceUrl}'`, e)
+                    continue
+                }
+            }
+            explicitContent = marked.parse(rawMarkdown ?? "")
+            sourceUrlForBackend = null
+        }
+
         let realNoteId
         try {
             realNoteId = await api.runAsyncOnBackendWithManualTransactionHandling(
@@ -390,7 +422,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
                     note.setLabel(tamFileIdLabel, tamFileId)
                     return note.noteId
                 },
-                [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, noteType, mime, absoluteSourceUrl, noteDef.content ?? null, isBinary,
+                [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, effectiveType, effectiveMime, sourceUrlForBackend, explicitContent, isBinary,
                     !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, isPersisted, skipParenting]
             )
         } catch (e) {

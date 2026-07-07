@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluenext@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.4",
+    "latestVersion": "0.0.5",
     "type": "theme",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/_tam_manifest_.json",
@@ -17,7 +17,8 @@
                 "title": "whitebluenext@beatlink",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             },
             {
                 "id": "theme",

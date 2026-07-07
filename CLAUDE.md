@@ -97,7 +97,16 @@ below. It declares a tree of Trilium notes rather than raw exported files:
   `type: "file"` note with mime `audio/wav`) — `resolveNotes` then fetches raw bytes into a `Buffer`
   directly (no base64 round-trip needed at all, unlike the old inlined-JSON approach) before
   `setContent()`. `zip_to_tam.py` sets this flag automatically for any `type: "file"` note found in a
-  Trilium export. See `libtimer@beatlink` for a real example (bundled `.wav` sound effects).
+  Trilium export. See `libtimer@beatlink` for a real example (bundled `.wav` sound effects). Add
+  `"renderAsHTML": true` on a note whose `sourceUrl`/`content` is plain markdown source (e.g. a
+  `README.md`) that should install as a rendered note rather than raw markdown text — `resolveNotes`
+  fetches it frontend-side (not backend-side like every other note, since `marked` is only reachable
+  where `require()` has note-tree access — see the comment above the flag's handling in
+  `resolveNotes`), runs it through the same `marked` parser TAM's own UI uses for `readmeNote`
+  rendering, and forces the note's installed `type`/`mime` to `text`/`text/html` regardless of what
+  the manifest declares — so the source file itself keeps living as ordinary markdown you can hand-
+  edit, while the installed note displays formatted when opened directly in Trilium. See
+  `whitebluenext@beatlink`'s `readme` note for a real example.
 - **Note identity: `#TAMFILEID`** — every note TAM creates or resolves carries a permanent,
   non-inheritable label `#TAMFILEID="{addonId}/{localId}"` (e.g.
   `#TAMFILEID="libical@kewisch/lib"`). This, not any id cached in TAM's Database, is the canonical
