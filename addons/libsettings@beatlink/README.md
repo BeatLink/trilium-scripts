@@ -28,7 +28,7 @@ library's — schema lives with the addon that defines it):
 
 | Field         | Required | Description                                              |
 |---------------|----------|------------------------------------------------------------|
-| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, or `list`  |
+| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, or `list` |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
 | `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`) |
@@ -129,8 +129,12 @@ export default function MySettings() {
 
 Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
 entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
-picker, `list` → repeatable group of the above), and owns its own Save button and save-status flash.
-Place it anywhere in your own widget — it doesn't dictate page layout, only the fields.
+picker, `color` → swatch picker, `list` → repeatable group of the above), and owns its own Save
+button and save-status flash. Place it anywhere in your own widget — it doesn't dictate page layout,
+only the fields.
+
+`color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
+dependency of this library, not something a consumer needs to declare directly.
 
 ### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
 

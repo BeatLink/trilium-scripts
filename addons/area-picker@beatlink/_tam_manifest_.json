@@ -5,17 +5,18 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.4",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/area-picker@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
+        "settingsNote": "root",
         "notes": [
             {
                 "id": "root",
                 "title": "area-picker@beatlink",
-                "type": "text",
+                "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
             },
@@ -34,11 +35,25 @@
                 "sourceUrl": "areaPickerPreact.css"
             },
             {
-                "id": "profile",
-                "title": "area.json",
+                "id": "schema",
+                "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "area.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config.json"
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "readme",
@@ -59,18 +74,56 @@
             },
             {
                 "parent": "root",
-                "child": "profile"
+                "child": "schema"
+            },
+            {
+                "parent": "root",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "settings"
             },
             {
                 "parent": "root",
                 "child": "readme"
+            },
+            {
+                "parent": "script",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
+                "parent": "settings",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
             }
         ],
         "relations": [
             {
+                "from": "settings",
+                "type": "AddonData:config",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
                 "from": "script",
-                "type": "AddonData:profile",
-                "to": "profile"
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "root",
+                "type": "renderNote",
+                "to": "settings"
             }
         ],
         "labels": [
@@ -85,7 +138,9 @@
                 "value": ""
             }
         ],
-        "dependencies": [],
+        "dependencies": [
+            "libsettings@beatlink"
+        ],
         "exports": {},
         "readmeNote": "readme"
     }

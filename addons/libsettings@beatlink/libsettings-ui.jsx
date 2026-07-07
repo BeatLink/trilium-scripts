@@ -7,6 +7,7 @@ import {
     FormDropdownList,
     NoteAutocomplete
 } from "trilium:preact"
+import { ColorPicker } from "ColorPicker.jsx"
 
 function mergeDefaults(schema, stored) {
     const values = {}
@@ -86,6 +87,8 @@ function Field({ def, value, onChange }) {
             )
         case "list":
             return <ListField itemSchema={def.itemSchema} items={value || []} onChange={onChange} />
+        case "color":
+            return <ColorPicker currentValue={value} onChange={onChange} />
         default:
             return <FormTextBox currentValue={value} onChange={onChange} />
     }

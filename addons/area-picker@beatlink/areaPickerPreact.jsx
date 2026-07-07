@@ -1,11 +1,14 @@
 /*
-    This is a custom widget that allows you to set the priority of a note. 
-    Add this to a JS Frontend file and set label of #widget. 
+    This is a custom widget that allows you to set the priority of a note.
+    Add this to a JS Frontend file and set label of #widget.
     Set a #priorityLabel= label for the label to store the priority of each note
 */
 
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote, log } from "trilium:api"
+import { loadSettings } from "libSettingsUI.jsx"
+
+const NONE_OPTION = { label: "none", title: "None" }
 
 export default defineWidget({
     parent: "right-pane",
@@ -14,39 +17,44 @@ export default defineWidget({
         let defaultDropdownOption = [{ noteId: "none", name: "No Area Found" }]
         const [visible, setVisible] = useState(false)
         const [existingAreas, setExistingAreas] = useState(defaultDropdownOption)
+        const [areaColors, setAreaColors] = useState({})
         const [dropdownValue, setDropdownValue] = useState("none")
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         useEffect(() => {
             (async () => {
-                let profileNote = await currentNote.getRelationTarget("AddonData:profile")
-                let profile = JSON.parse(await profileNote.getContent())['values']
+                const schemaNoteId = await currentNote.getRelationValue("schemaNote")
+                const settingsNoteId = await currentNote.getRelationValue("settingsNote")
+                const configNoteId = await api.runOnBackend((settingsNoteId) => {
+                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+                }, [settingsNoteId])
+                const { areas } = await loadSettings(schemaNoteId, configNoteId)
+
                 setVisible(
                     (await getActiveContextNote())
                         .getLabelValue("label:area") ? true : false
                 )
-                setExistingAreas(
-                    Object.entries(profile)
-                        .map(([key, value]) => ({ label: key, title: value.title }))
-                )
+                setExistingAreas([
+                    NONE_OPTION,
+                    ...areas.map(area => ({ label: area.key, title: area.title }))
+                ])
+                setAreaColors(Object.fromEntries(areas.map(area => [area.key, area.color])))
                 setDropdownValue(
                     (await getActiveContextNote())
                         .getLabelValue("area") ?? "none"
                 )
             })()
         }, [noteId])
-        const saveArea = (area) => {
-            api.runOnBackend((noteId, area) => {
-                let profileNote = api.currentNote.getRelationTarget("AddonData:profile")
-                let profile = JSON.parse(profileNote.getContent())['values']
+        const saveArea = (area, color) => {
+            api.runOnBackend((noteId, area, color) => {
                 if (area != "none") {
                     api.getNote(noteId).setLabel("area", area)
-                    api.getNote(noteId).setLabel("color", profile[area]['color'])
+                    api.getNote(noteId).setLabel("color", color)
                 } else {
                     api.getNote(noteId).removeLabel("area")
                     api.getNote(noteId).removeLabel("color")
                 }
-            }, [note.noteId, area])
+            }, [note.noteId, area, color])
             setDropdownValue(area)
         }
         return (
@@ -59,7 +67,7 @@ export default defineWidget({
                                 class="dropdown-component"
                                 values={existingAreas}
                                 currentValue={dropdownValue}
-                                onChange={value => { saveArea(value) }}
+                                onChange={value => { saveArea(value, areaColors[value]) }}
                                 keyProperty="label" titleProperty="title"
                                 class="form-control"
                             />
