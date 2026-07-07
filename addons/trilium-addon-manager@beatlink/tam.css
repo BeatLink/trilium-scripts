@@ -14,9 +14,9 @@
    copied rules above via the same palette/spacing/radii. */
 
 
-div:has(.TAM-body) {
+/*div:has(.TAM-body) {
     height: 100% !important;
-}
+}*/
 
 .TAM-body {
 
@@ -46,8 +46,9 @@ div:has(.TAM-body) {
     line-height: 1.6 !important;
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
-    overflow: hidden !important;
     height: 100% !important;
+    overflow: auto !important;
+    max-height: 100% !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */
@@ -168,8 +169,6 @@ div:has(.TAM-body) {
         margin: 0 auto !important;
         padding: 28px 24px !important;
         display: block !important;
-        overflow: auto !important;
-        max-height: 100% !important;
     }
 
     /* Card grid --------------------------------------------------------------- */

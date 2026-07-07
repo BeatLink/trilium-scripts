@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.8.0"
+const TAM_VERSION = "4.9.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -791,13 +791,24 @@ async function connectAddonPersistence(addonId) {
     // actually needs to be duplicated into it — most addons persist nothing, and shouldn't get an
     // empty folder under Addon Data for it. If nothing ends up living in it (nothing to persist, or
     // everything that was persisted got removed since), it's deleted again before returning.
-    const outcome = await api.runOnBackend((addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes) => {
+    const outcome = await api.runOnBackend((tamFileIdLabel, addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes) => {
         const result = {}
         const toDelete = []
         let persistRoot = existingPersistRoot
 
         for (const noteId of api.getNote(addonNoteId).getSubtreeNoteIds()) {
             const note = api.getNote(noteId)
+            // getSubtreeNoteIds() descends through every descendant — for
+            // most addons that's just their own notes, but TAM's own root
+            // has the "Addons" folder as a child, which is the parent every
+            // *other* installed addon's entire tree lives under. Without
+            // this guard, TAM's own self-sync would sweep up every other
+            // addon's AddonData: relations too, duplicate their target notes
+            // into TAM's own persistence folder, and record them under TAM's
+            // own persistenceNotes — corrupting both addons' bookkeeping on
+            // every single TAM self-update.
+            const ownTamFileId = note.getLabelValue(tamFileIdLabel)
+            if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
             for (const relation of note.getRelations()) {
                 if (!relation.name.includes("AddonData:")) continue
                 const key = relation.name.split("AddonData:")[1]
@@ -837,7 +848,7 @@ async function connectAddonPersistence(addonId) {
         }
 
         return { persistRoot, persistenceNotes: result }
-    }, [addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes])
+    }, [tamFileIdLabel, addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes])
 
     if (outcome.persistRoot) {
         addonRecord.persistence.rootNote = outcome.persistRoot
@@ -1056,10 +1067,16 @@ async function enableAddon(addonId, enabled) {
     const addon = database.installedAddons[addonId]
     const rootNoteId = await resolveStoredNoteId(addonId, addon.manifest?.root)
     if (!rootNoteId) return
-    await api.runOnBackend((noteId, enabled, addonLabels) => {
+    await api.runOnBackend((tamFileIdLabel, addonId, noteId, enabled, addonLabels) => {
         const ids = api.getNote(noteId).getSubtreeNoteIds()
         for (const id of ids) {
             const note = api.getNote(id)
+            // See the identical guard (and its comment) in connectAddonPersistence:
+            // getSubtreeNoteIds() on TAM's own root descends into "Addons", the
+            // parent every other installed addon's tree lives under — without
+            // this, disabling TAM would disable every other addon too.
+            const ownTamFileId = note.getLabelValue(tamFileIdLabel)
+            if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
             const attributes = note.getAttributes() || []
             for (const attribute of attributes) {
                 if (enabled === true) {
@@ -1085,7 +1102,7 @@ async function enableAddon(addonId, enabled) {
                 }
             }
         }
-    }, [rootNoteId, enabled, addonLabels])
+    }, [tamFileIdLabel, addonId, rootNoteId, enabled, addonLabels])
     database.installedAddons[addonId].enabled = enabled
     await saveDatabase(database)
 }
@@ -1270,6 +1287,12 @@ async function validateDatabase() {
                 for (const noteId of api.getNote(rootNoteId).getSubtreeNoteIds()) {
                     const note = api.getNote(noteId)
                     if (!note) continue
+                    // Same guard as connectAddonPersistence/enableAddon: TAM's own
+                    // root subtree descends into every other installed addon via
+                    // "Addons", so without this a scan of TAM's own tree would
+                    // misattribute other addons' AddonData: relations to TAM.
+                    const ownTamFileId = note.getLabelValue(tamFileIdLabel)
+                    if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
                     for (const relation of note.getRelations()) {
                         if (!relation.name.includes("AddonData:")) continue
                         const key = relation.name.split("AddonData:")[1]

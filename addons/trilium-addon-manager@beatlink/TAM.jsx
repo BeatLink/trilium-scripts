@@ -223,7 +223,7 @@ function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstal
                 addonData={addonData}
                 onOpen={onOpenAddon}
                 onInstall={!addonData.installedVersion ? onInstall : undefined}
-                onEnable={addonData.installedVersion ? onEnable : undefined}
+                onEnable={addonData.installedVersion && addonData.id !== TAM_ID ? onEnable : undefined}
                 onSettings={addonData.installedVersion ? onSettings : undefined}
             />
         )
