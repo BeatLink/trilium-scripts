@@ -1,0 +1,70 @@
+{
+    "id": "web-preview@beatlink",
+    "name": "Web Preview",
+    "description": "Browse-and-save toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "web-preview@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            },
+            {
+                "id": "widget",
+                "title": "webViewToolbarWidget.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "webViewToolbarWidget.js"
+            },
+            {
+                "id": "lib",
+                "title": "libWebPreview.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libWebPreview.js"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "root",
+                "child": "widget"
+            },
+            {
+                "parent": "widget",
+                "child": "lib"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "widget",
+                "name": "widget",
+                "value": ""
+            }
+        ],
+        "dependencies": [],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}
