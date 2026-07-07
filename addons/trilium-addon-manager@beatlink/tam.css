@@ -839,6 +839,31 @@ div:has(.TAM-body) {
         overflow-y: auto !important;
         color: #64748b !important;
     }
+
+    /* External reference warning */
+    & .TAM-external-ref-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+
+        & li {
+            background: #fff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+            font-size: 13px !important;
+            color: #0f172a !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            color: #64748b !important;
+        }
+    }
 }
 
 @keyframes TAM-spin {

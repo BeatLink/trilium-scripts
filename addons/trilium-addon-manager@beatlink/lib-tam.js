@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.3.0"
+const TAM_VERSION = "4.4.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -916,6 +916,46 @@ async function deleteAddon(addonId) {
     await saveDatabase(database)
 }
 
+// Pre-uninstall safety check: finds every relation pointing *into* an
+// addon's subtree from a note *outside* it — these would be left dangling
+// (pointing at a deleted note) once deleteAddon removes the subtree, since
+// deleteNote's cascade only follows relations owned by deleted notes, never
+// relations that merely target one. A manifest can opt out entirely via
+// "allowExternalReferences": true on its own manifest sub-object, for an
+// addon whose code re-establishes any such relation itself on every load
+// (e.g. expanded@beatlink sets a runOnBranchChange relation on Trilium's own
+// root note, pointing at its backend script note, every time it runs — so a
+// dangling copy left behind by uninstall is harmless and self-heals on
+// reinstall rather than needing a user warning).
+async function findExternalReferences(addonId) {
+    const database = await loadDatabase()
+    const addonRecord = database.installedAddons[addonId]
+    if (addonRecord?.manifest?.allowExternalReferences) return []
+
+    const rootNoteId = await resolveStoredNoteId(addonId, addonRecord?.manifest?.root)
+    if (!rootNoteId) return []
+
+    return await api.runOnBackend((rootNoteId) => {
+        const subtreeIds = new Set(api.getNote(rootNoteId).getSubtreeNoteIds())
+        const found = []
+        for (const noteId of subtreeIds) {
+            const note = api.getNote(noteId)
+            for (const rel of note.getTargetRelations()) {
+                if (subtreeIds.has(rel.noteId)) continue
+                const sourceNote = api.getNote(rel.noteId)
+                found.push({
+                    sourceNoteId: rel.noteId,
+                    sourceTitle: sourceNote ? sourceNote.title : "(unknown)",
+                    relationName: rel.name,
+                    targetNoteId: noteId,
+                    targetTitle: note.title
+                })
+            }
+        }
+        return found
+    }, [rootNoteId])
+}
+
 // The user-facing "uninstall" action. Unlike deleteAddon (the low-level
 // primitive — just remove this one addon's own notes), this also recursively
 // uninstalls any of its own dependencies that are now unused (getDependents
@@ -1281,6 +1321,7 @@ module.exports.syncAddon           = syncAddon
 module.exports.installByUrl        = installByUrl
 module.exports.deleteAddon         = deleteAddon
 module.exports.uninstallAddon      = uninstallAddon
+module.exports.findExternalReferences = findExternalReferences
 module.exports.enableAddon         = enableAddon
 module.exports.getPendingPrompts   = getPendingPrompts
 module.exports.resolvePrompt       = resolvePrompt

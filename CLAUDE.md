@@ -204,6 +204,16 @@ below. It declares a tree of Trilium notes rather than raw exported files:
   ever fetches each addon's full manifest — no README rendering happens pre-install — so an
   uninstalled addon's detail page links out to its GitHub homepage instead of trying to render one.
 
+- **`allowExternalReferences`** (optional, sibling of `root`, defaults to unset/false) — before
+  uninstalling, TAM's UI calls `findExternalReferences` to warn about any relation pointing *into*
+  the addon's subtree from a note outside it (that relation would otherwise dangle once the subtree
+  is deleted — `deleteNote`'s cascade only follows relations owned by the notes being deleted, never
+  ones that merely target them). Set this to `true` to skip that warning entirely, for an addon whose
+  own code re-establishes any such relation itself on every load — e.g. `expanded@beatlink` sets a
+  `runOnBranchChange` relation on Trilium's real root note, pointing at its own backend script note,
+  every time its widget runs, so a dangling copy left behind by uninstall is harmless and self-heals
+  on reinstall rather than needing a user-facing warning.
+
 - **`type`** — `widget`/`script`/`theme` are user-facing and always shown in TAM's addon list;
   `library` is TAM-managed only. TAM's UI hides `type: "library"` addons entirely — a user never
   installs or uninstalls one directly, TAM does it automatically via `dependencies[]`/`dependents`

@@ -486,6 +486,32 @@ function PromptReview({ prompts, onResolve }) {
 }
 
 
+function ExternalReferenceWarning({ addonId, references, onProceed, onCancel }) {
+    return (
+        <div className="TAM-prompt-review">
+            <h3>External References Found</h3>
+            <p>
+                The following note(s) outside of <strong>{addonId}</strong> reference note(s) that will
+                be deleted. Uninstalling anyway will leave those relations pointing at a note that no
+                longer exists.
+            </p>
+            <ul className="TAM-external-ref-list">
+                {references.map((ref, i) => (
+                    <li key={i}>
+                        <strong>{ref.sourceTitle}</strong> —{" "}
+                        <code>~{ref.relationName}</code> →{" "}
+                        <strong>{ref.targetTitle}</strong>
+                    </li>
+                ))}
+            </ul>
+            <div className="TAM-validation-buttons">
+                <TamButton className="btn-ghost" icon="bx bx-x" text="Cancel" onClick={onCancel} />
+                <TamButton icon="bx bx-trash" text="Uninstall Anyway" onClick={onProceed} />
+            </div>
+        </div>
+    )
+}
+
 // Widget ---------------------------------------------------------------------
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
@@ -500,6 +526,7 @@ export default function RepoManager() {
     const [validationIssues, setValidationIssues] = useState(null)
     const [validationTitle, setValidationTitle] = useState("Database Validation")
     const [view, setView] = useState({ type: "list" })
+    const [externalRefWarning, setExternalRefWarning] = useState(null) // { addonId, references }
 
     async function reload() {
         const freshAddons = await libTAMjs.getAllAddons()
@@ -597,6 +624,17 @@ export default function RepoManager() {
                     await reload()
                     await activateNote(displayNote)
                     window.location.reload();
+                    break
+                }
+                case "request-uninstall": {
+                    const addonId = command["addon"]
+                    const references = await libTAMjs.findExternalReferences(addonId)
+                    if (references.length > 0) {
+                        setExternalRefWarning({ addonId, references })
+                        setCommand(null)
+                    } else {
+                        setCommand({ command: "delete-addon", addon: addonId })
+                    }
                     break
                 }
                 case "delete-addon": {
@@ -715,6 +753,30 @@ export default function RepoManager() {
         return <div>Loading addons...</div>;
     }
 
+    if (externalRefWarning) {
+        return (
+            <div className="TAM-body">
+                <header>
+                    <div className="hdr">
+                        <h1>Trilium Addon Manager</h1>
+                    </div>
+                </header>
+                <main>
+                    <ExternalReferenceWarning
+                        addonId={externalRefWarning.addonId}
+                        references={externalRefWarning.references}
+                        onProceed={() => {
+                            const addonId = externalRefWarning.addonId
+                            setExternalRefWarning(null)
+                            setCommand({ command: "delete-addon", addon: addonId })
+                        }}
+                        onCancel={() => setExternalRefWarning(null)}
+                    />
+                </main>
+            </div>
+        )
+    }
+
     if (pendingPrompts.length > 0 && promptAddonId) {
         return (
             <div className="TAM-body">
@@ -798,7 +860,7 @@ export default function RepoManager() {
                     addonData={addonData}
                     isSelf={view.addonId === TAM_ID}
                     onInstall={handleInstall}
-                    onDelete={addonId => setCommand({ command: "delete-addon", addon: addonId })}
+                    onDelete={addonId => setCommand({ command: "request-uninstall", addon: addonId })}
                     onUpdate={addonId => setCommand({ command: "update-addon", addon: addonId })}
                     onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", addon: addonId, enabled })}
                 />
