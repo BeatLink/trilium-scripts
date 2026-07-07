@@ -609,6 +609,13 @@ div:has(.TAM-body) {
         align-self: flex-start !important;
     }
 
+    & .TAM-card-quick-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+        align-self: flex-start !important;
+    }
+
     & .TAM-empty-state {
         background: #fff !important;
         border: 1px dashed #e2e8f0 !important;

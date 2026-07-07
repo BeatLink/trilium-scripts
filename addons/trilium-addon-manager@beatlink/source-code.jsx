@@ -117,7 +117,7 @@ function SearchFilterToolbar({ search, onSearchChange, typeFilter, onTypeFilterC
 
 
 // List View -------------------------------------------------------------------
-function AddonCard({ addonData, onOpen, onInstall }) {
+function AddonCard({ addonData, onOpen, onInstall, onEnable, onSettings }) {
     return (
         <div className="card" onClick={() => onOpen(addonData.id)}>
             <div className="card-top">
@@ -157,11 +157,37 @@ function AddonCard({ addonData, onOpen, onInstall }) {
                     />
                 </div>
             )}
+            {addonData.installedVersion && (onEnable || (onSettings && addonData.settingsNoteId)) && (
+                <div className="TAM-card-quick-actions">
+                    {onEnable && (
+                        <TamButton
+                            className="btn-ghost"
+                            icon={addonData.enabled ? "bx bx-x-circle" : "bx bx-check-circle"}
+                            text={addonData.enabled ? "Disable" : "Enable"}
+                            onClick={e => {
+                                e.stopPropagation()
+                                onEnable(addonData.id, !addonData.enabled)
+                            }}
+                        />
+                    )}
+                    {onSettings && addonData.settingsNoteId && (
+                        <TamButton
+                            className="btn-ghost"
+                            icon="bx bx-cog"
+                            text="Settings"
+                            onClick={e => {
+                                e.stopPropagation()
+                                onSettings(addonData.settingsNoteId)
+                            }}
+                        />
+                    )}
+                </div>
+            )}
         </div>
     )
 }
 
-function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall }) {
+function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall, onEnable, onSettings }) {
     const [search, setSearch] = useState("")
     const [typeFilter, setTypeFilter] = useState(null)
 
@@ -215,6 +241,8 @@ function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstal
                             addonData={addonData}
                             onOpen={onOpenAddon}
                             onInstall={!addonData.installedVersion ? onInstall : undefined}
+                            onEnable={addonData.installedVersion ? onEnable : undefined}
+                            onSettings={addonData.installedVersion ? onSettings : undefined}
                         />
                     ))}
                 </div>
@@ -874,6 +902,8 @@ export default function RepoManager() {
                 onOpenAddon={addonId => setView({ type: "detail", addonId })}
                 onOpenSettings={() => setView({ type: "settings" })}
                 onInstall={handleInstall}
+                onEnable={(addonId, enabled) => setCommand({ command: "enable-addon", addon: addonId, enabled })}
+                onSettings={settingsNoteId => activateNote(settingsNoteId)}
             />
         )
     }
