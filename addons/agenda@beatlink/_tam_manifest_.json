@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.1",
+    "latestVersion": "1.2.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -91,13 +91,6 @@
                 "sourceUrl": "agendaCommon.css"
             },
             {
-                "id": "task-css",
-                "title": "agendaTask.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "agendaTask.css"
-            },
-            {
                 "id": "now-css",
                 "title": "agendaNow.css",
                 "type": "code",
@@ -180,10 +173,6 @@
             {
                 "parent": "root",
                 "child": "common-css"
-            },
-            {
-                "parent": "root",
-                "child": "task-css"
             },
             {
                 "parent": "root",
@@ -407,11 +396,6 @@
             },
             {
                 "note": "common-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "task-css",
                 "name": "appCss",
                 "value": ""
             },

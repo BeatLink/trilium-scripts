@@ -21,6 +21,10 @@ import { RecurrencePicker } from "RecurrencePicker.jsx"
 The component reads/writes the recurrence label on the currently active note
 (`useActiveNoteContext()`) directly — it doesn't take the note as a prop.
 
+Ships its own responsive styling (`RecurrencePicker.css`, installed as a global `appCss` note) —
+consumers don't need to style `.recurrence-picker`/`.interval-picker`/`.weekdays-picker`/
+`.month-picker`/`.stop-picker` themselves.
+
 ## Props
 
 | Prop            | Type     | Description                                                        |

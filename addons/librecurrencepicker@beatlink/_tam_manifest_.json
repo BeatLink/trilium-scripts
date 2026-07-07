@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librecurrencepicker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/librecurrencepicker@beatlink/_tam_manifest_.json",
@@ -18,6 +18,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "RecurrencePicker.jsx"
+            },
+            {
+                "id": "style",
+                "title": "RecurrencePicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "RecurrencePicker.css"
             },
             {
                 "id": "readme",
@@ -50,11 +57,21 @@
             },
             {
                 "parent": "lib",
+                "child": "style"
+            },
+            {
+                "parent": "lib",
                 "child": "readme"
             }
         ],
         "relations": [],
-        "labels": [],
+        "labels": [
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
         "dependencies": [
             "libformtogglebutton@beatlink",
             "libformnumber@beatlink",
