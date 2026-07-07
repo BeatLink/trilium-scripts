@@ -1,4 +1,5 @@
-#right-pane .body-wrapper:has(#x-template-picker-widget), #right-pane .card-body:has(#x-template-picker-widget) {
+#right-pane .body-wrapper:has(#x-template-picker-widget),
+#right-pane .card-body:has(#x-template-picker-widget) {
     contain: none !important;
     overflow: visible !important;
 }
@@ -30,7 +31,7 @@
     position: fixed !important;
     position-anchor: --x-template-picker-anchor;
     width: anchor-size(width) !important;
-    
+
     /*left: 50% !important;
     transform: translate(-50%, 0) !important;*/
 }
