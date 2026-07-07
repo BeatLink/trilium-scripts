@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/librecurrence/libcalendar/libtimer/libform*/libcollapsible libraries with settings-driven constants and a single-profile configuration.",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a single-profile configuration.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.3",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -119,34 +119,6 @@
                 "sourceUrl": "agendaTask.jsx"
             },
             {
-                "id": "dates-duration-picker",
-                "title": "DatesDurationPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "DatesDurationPicker.jsx"
-            },
-            {
-                "id": "recurrence-picker",
-                "title": "RecurrencePicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "RecurrencePicker.jsx"
-            },
-            {
-                "id": "action-picker",
-                "title": "ActionPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "ActionPicker.jsx"
-            },
-            {
-                "id": "rank-picker",
-                "title": "RankPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "RankPicker.jsx"
-            },
-            {
                 "id": "now-launcher",
                 "title": "agendaNowLauncher.jsx",
                 "type": "code",
@@ -235,19 +207,23 @@
             },
             {
                 "parent": "task",
-                "child": "dates-duration-picker"
+                "addon": "libdatesdurationpicker@beatlink",
+                "child": "lib"
             },
             {
                 "parent": "task",
-                "child": "recurrence-picker"
+                "addon": "librecurrencepicker@beatlink",
+                "child": "lib"
             },
             {
                 "parent": "task",
-                "child": "action-picker"
+                "addon": "libactionpicker@beatlink",
+                "child": "lib"
             },
             {
                 "parent": "task",
-                "child": "rank-picker"
+                "addon": "librankpicker@beatlink",
+                "child": "lib"
             },
             {
                 "parent": "agenda-settings",
@@ -283,62 +259,7 @@
                 "child": "agenda-settings"
             },
             {
-                "parent": "dates-duration-picker",
-                "addon": "libformdatetime@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "dates-duration-picker",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "dates-duration-picker",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "recurrence-picker",
-                "addon": "libformtogglebutton@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "recurrence-picker",
-                "addon": "libformnumber@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "recurrence-picker",
-                "addon": "libformdatetime@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "recurrence-picker",
-                "addon": "librecurrence@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "recurrence-picker",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "action-picker",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "action-picker",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "rank-picker",
-                "addon": "libformnumber@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "rank-picker",
+                "parent": "task",
                 "addon": "libagendaoverview@beatlink",
                 "child": "lib"
             },
@@ -514,14 +435,14 @@
             "libagendaoverview@beatlink",
             "libagendatask@beatlink",
             "libagendanow@beatlink",
-            "librecurrence@beatlink",
             "libtimer@beatlink",
             "libcollapsible@beatlink",
             "libformcheckboxgroup@beatlink",
-            "libformtogglebutton@beatlink",
-            "libformnumber@beatlink",
-            "libformdatetime@beatlink",
-            "libsettings@beatlink"
+            "libsettings@beatlink",
+            "libdatesdurationpicker@beatlink",
+            "librecurrencepicker@beatlink",
+            "libactionpicker@beatlink",
+            "librankpicker@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"

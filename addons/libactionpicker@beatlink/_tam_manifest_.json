@@ -1,0 +1,51 @@
+{
+    "id": "libactionpicker@beatlink",
+    "name": "Action Picker",
+    "description": "Reusable Preact component rendering Complete/Start Today/Start Tomorrow buttons for a task-like note, on top of libagendatask@beatlink.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libactionpicker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libactionpicker@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {
+                "id": "lib",
+                "title": "ActionPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ActionPicker.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "lib",
+                "addon": "libagendatask@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [],
+        "dependencies": [
+            "libagendatask@beatlink"
+        ],
+        "exports": {
+            "lib": "lib"
+        },
+        "readmeNote": "readme"
+    }
+}

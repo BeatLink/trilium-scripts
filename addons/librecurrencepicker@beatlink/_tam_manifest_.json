@@ -1,0 +1,69 @@
+{
+    "id": "librecurrencepicker@beatlink",
+    "name": "Recurrence Picker",
+    "description": "Reusable Preact component rendering a full RRULE recurrence-editing form (interval, weekdays, day-of-month, stop condition) for TriliumNext widget UIs.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librecurrencepicker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/librecurrencepicker@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {
+                "id": "lib",
+                "title": "RecurrencePicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "RecurrencePicker.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "lib",
+                "addon": "libformtogglebutton@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "libformnumber@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "libformdatetime@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "addon": "librecurrence@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [],
+        "dependencies": [
+            "libformtogglebutton@beatlink",
+            "libformnumber@beatlink",
+            "libformdatetime@beatlink",
+            "librecurrence@beatlink"
+        ],
+        "exports": {
+            "lib": "lib"
+        },
+        "readmeNote": "readme"
+    }
+}

@@ -16,6 +16,8 @@ import { ActionPicker } from "ActionPicker.jsx"
 import { RankPicker } from "RankPicker.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
+const { updateTaskLists } = require("libAgendaOverview.js")
+
 // Main Widget ---------------------------------------------------------------------------
 function MainWidget(){
     const { note } = useActiveNoteContext();
@@ -36,24 +38,33 @@ function MainWidget(){
     if (agendaTaskWidget !== '') {return null;}
     if (!ids) return null
 
+    // Every picker below mutates a task-related label — each needs the
+    // overview lists (and ical export) refreshed afterward. Owned here,
+    // once, rather than each picker requiring libAgendaOverview.js itself,
+    // so this widget is the only thing that knows the four pickers are
+    // being used in an Agenda-task context at all.
+    async function afterChange() {
+        await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
+    }
+
     return (
         <RightPanelWidget title="Task">
             <div className="agenda-widget">
                 <div>
                     <label>Dates and Duration</label>
-                    <DatesDurationPicker constants={ids.constants} ids={ids}/>
+                    <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </div>
                 <div>
                     <label>Recurrence</label>
-                    <RecurrencePicker constants={ids.constants} ids={ids}/>
+                    <RecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
                 </div>
                 <div>
                     <label>Actions</label>
-                    <ActionPicker constants={ids.constants} ids={ids}/>
+                    <ActionPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </div>
                 <div>
                     <label>Rank</label>
-                    <RankPicker constants={ids.constants} ids={ids}/>
+                    <RankPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </div>
             </div>
         </RightPanelWidget>

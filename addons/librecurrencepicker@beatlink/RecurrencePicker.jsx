@@ -4,7 +4,6 @@ import { FormNumber } from "FormNumber.jsx"
 import { FormDatetime } from "FormDatetime.jsx"
 
 const { RRuleToObj, ObjToRRule } = require("libRecurrence.js")
-const { updateTaskLists } = require("libAgendaOverview.js")
 
 const intervalOptions = [
     { key: "MINUTELY", name: "Minute" },
@@ -40,7 +39,7 @@ const stopOptions = [
     { key: "date", name: "After Date" }
 ]
 
-export function RecurrencePicker({ constants, ids }){
+export function RecurrencePicker({ constants, onAfterChange }){
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
     const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
@@ -52,7 +51,7 @@ export function RecurrencePicker({ constants, ids }){
 
     function updateRecurrence(newRecurrence) {
         setRecurrence(ObjToRRule(newRecurrence))
-        updateTaskLists(ids.profileNoteIds, constants, ids.icalNoteId)
+        onAfterChange()
     }
 
     return (

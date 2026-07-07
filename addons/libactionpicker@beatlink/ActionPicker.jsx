@@ -5,15 +5,10 @@ import {
 } from "trilium:preact";
 
 const { complete, rescheduleByDays } = require("libAgendaTask.js")
-const { updateTaskLists } = require("libAgendaOverview.js")
 
-export function ActionPicker({ constants, ids }) {
+export function ActionPicker({ constants, onAfterChange }) {
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
-
-    async function afterChange() {
-        await updateTaskLists(ids.profileNoteIds, constants, ids.icalNoteId)
-    }
 
     return (
         <div>
@@ -22,7 +17,7 @@ export function ActionPicker({ constants, ids }) {
                 text="Complete Task"
                 onClick={async e => {
                     await complete(noteId, constants)
-                    await afterChange()
+                    await onAfterChange()
                 }}
             />
             <Button
@@ -30,7 +25,7 @@ export function ActionPicker({ constants, ids }) {
                 text="Start Today"
                 onClick={async e => {
                     await rescheduleByDays(noteId, constants, 0)
-                    await afterChange()
+                    await onAfterChange()
                 }}
             />
             <Button
@@ -38,7 +33,7 @@ export function ActionPicker({ constants, ids }) {
                 text="Start Tomorrow"
                 onClick={async e => {
                     await rescheduleByDays(noteId, constants, 1)
-                    await afterChange()
+                    await onAfterChange()
                 }}
             />
         </div>
