@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/_tam_manifest_.json",
@@ -15,9 +15,9 @@
             {
                 "id": "root",
                 "title": "expanded@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
             },
             {
                 "id": "widget",
@@ -32,20 +32,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=backend",
                 "sourceUrl": "updateExpanded.js"
-            },
-            {
-                "id": "setup",
-                "title": "setup.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "setup.js"
-            },
-            {
-                "id": "readme",
-                "title": "README.md",
-                "type": "code",
-                "mime": "text/markdown",
-                "sourceUrl": "README.md"
             }
         ],
         "children": [
@@ -56,24 +42,11 @@
             {
                 "parent": "root",
                 "child": "updateExpanded"
-            },
-            {
-                "parent": "root",
-                "child": "setup"
-            },
-            {
-                "parent": "root",
-                "child": "readme"
             }
         ],
         "relations": [
             {
                 "from": "widget",
-                "type": "scriptNote",
-                "to": "updateExpanded"
-            },
-            {
-                "from": "setup",
                 "type": "scriptNote",
                 "to": "updateExpanded"
             }
@@ -83,11 +56,6 @@
                 "note": "widget",
                 "name": "widget",
                 "value": ""
-            },
-            {
-                "note": "setup",
-                "name": "run",
-                "value": "frontendStartup"
             }
         ],
         "dependencies": [],

@@ -1,44 +1,33 @@
 // Imports -----------------------------------------------------------------------------------
-import { 
+import {
     RightPanelWidget,
     defineWidget,
     FormCheckbox,
     useActiveNoteContext,
-    useNoteProperty,
-    useNoteLabel,
-    useState,
-    useEffect
-} from "trilium:preact";
+    useNoteLabelBoolean,
+    useNoteRelationTarget,
+} from "trilium:preact"
 
 import {
     startNote
 } from "trilium:api"
 
 // Main Widget ---------------------------------------------------------------------------
-function MainWidget(){
-    const { note } = useActiveNoteContext();
-    const noteId = useNoteProperty(note, "noteId");
-    const [expanded, setExpanded] = useNoteLabel(note, "alwaysExpanded")
-    const [scriptNote, setScriptNote] = useState(null)
+function MainWidget() {
+    const { note } = useActiveNoteContext()
+    const [expanded, setExpanded] = useNoteLabelBoolean(note, "alwaysExpanded")
+    const [scriptNote] = useNoteRelationTarget(startNote, "scriptNote")
 
-    useEffect(() => {
-        async function fetchData() {
-            const scriptNote = await startNote.getRelationTarget('scriptNote');
-            setScriptNote(scriptNote)
-        }
-        fetchData();
-  }, []);
-    
     return (
         <RightPanelWidget title="Task">
             <div className="agenda-widget">
                 <FormCheckbox
                     label="Always Expanded"
-                    currentValue={expanded !== null ? true : false}
+                    currentValue={!!expanded}
                     onChange={value => {
-                        setExpanded(value ? "" : null)
-                        scriptNote.executeScript()
-                    }} 
+                        setExpanded(value ? true : null)
+                        if (scriptNote) { scriptNote.executeScript() }
+                    }}
                 />
             </div>
         </RightPanelWidget>
@@ -46,7 +35,7 @@ function MainWidget(){
 }
 
 export default defineWidget({
-    parent: "right-pane",    
+    parent: "right-pane",
     position: 5,
     render: MainWidget
 })
