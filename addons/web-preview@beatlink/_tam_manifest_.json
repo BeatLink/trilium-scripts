@@ -28,10 +28,10 @@
             },
             {
                 "id": "widget",
-                "title": "webViewToolbarWidget.js",
+                "title": "webViewToolbarWidget.jsx",
                 "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "webViewToolbarWidget.js"
+                "mime": "text/jsx",
+                "sourceUrl": "webViewToolbarWidget.jsx"
             },
             {
                 "id": "lib",
