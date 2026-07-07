@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.7.1"
+const TAM_VERSION = "4.8.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -54,7 +54,7 @@ async function loadDatabase() {
     const database = await api.runOnBackend((databaseId) => {
         return JSON.parse(api.getNote(databaseId).getContent())
     }, [databaseId])
-    if (!database.catalogs)        database.catalogs        = []
+    if (!database.catalogs) database.catalogs = []
     if (!database.installedAddons) database.installedAddons = {}
     return database
 }
@@ -324,9 +324,9 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
             continue
         }
 
-        const noteType  = noteDef.type     ?? "text"
-        const mime      = noteDef.mime     ?? "text/html"
-        const isBinary  = noteDef.binary   ?? false
+        const noteType = noteDef.type ?? "text"
+        const mime = noteDef.mime ?? "text/html"
+        const isBinary = noteDef.binary ?? false
         const tamFileId = `${addonId}/${localId}`
         const isPersisted = persistedLocalIds.has(localId)
         // TAM's own root note lives wherever the user manually ZIP-imported
@@ -647,13 +647,13 @@ async function syncAddon(addonId, options = {}) {
 
     // Normalize manifest: TAM-next sub-dict or flat top-level
     const m = manifest.manifest ?? {
-        notes:        manifest.notes     ?? [],
-        children:     [],
-        relations:    manifest.relations ?? [],
-        labels:       manifest.labels    ?? [],
-        root:         null,
+        notes: manifest.notes ?? [],
+        children: [],
+        relations: manifest.relations ?? [],
+        labels: manifest.labels ?? [],
+        root: null,
         dependencies: [],
-        exports:      {}
+        exports: {}
     }
 
     if (!m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
@@ -716,12 +716,12 @@ async function syncAddon(addonId, options = {}) {
 
     const storedManifest = stripManifestForStorage(m)
     const meta = {
-        name:        manifest.name,
+        name: manifest.name,
         description: manifest.description,
-        author:      manifest.author,
-        license:     manifest.license,
-        type:        manifest.type,
-        homepage:    manifest.homepage
+        author: manifest.author,
+        license: manifest.license,
+        type: manifest.type,
+        homepage: manifest.homepage
     }
 
     if (!wasInstalled) {
@@ -1016,7 +1016,7 @@ async function collectPendingPrompts(addonId, m) {
 
         prompts.push({
             noteLocalId: noteDef.id,
-            title:       noteDef.title,
+            title: noteDef.title,
             persistedNoteId,
             newContent,
             currentContent
@@ -1310,22 +1310,22 @@ async function validateDatabase() {
 
 
 // Exports ---------------------------------------------------------------------
-module.exports.addCatalog          = addCatalog
-module.exports.deleteCatalog       = deleteCatalog
-module.exports.getCatalogs         = getCatalogs
-module.exports.fetchCatalogAddons  = fetchCatalogAddons
-module.exports.fetchCatalogMeta    = fetchCatalogMeta
-module.exports.getAllAddons        = getAllAddons
+module.exports.addCatalog = addCatalog
+module.exports.deleteCatalog = deleteCatalog
+module.exports.getCatalogs = getCatalogs
+module.exports.fetchCatalogAddons = fetchCatalogAddons
+module.exports.fetchCatalogMeta = fetchCatalogMeta
+module.exports.getAllAddons = getAllAddons
 module.exports.checkForAddonUpdates = checkForAddonUpdates
-module.exports.syncAddon           = syncAddon
-module.exports.installByUrl        = installByUrl
-module.exports.deleteAddon         = deleteAddon
-module.exports.uninstallAddon      = uninstallAddon
+module.exports.syncAddon = syncAddon
+module.exports.installByUrl = installByUrl
+module.exports.deleteAddon = deleteAddon
+module.exports.uninstallAddon = uninstallAddon
 module.exports.findExternalReferences = findExternalReferences
-module.exports.enableAddon         = enableAddon
-module.exports.getPendingPrompts   = getPendingPrompts
-module.exports.resolvePrompt       = resolvePrompt
+module.exports.enableAddon = enableAddon
+module.exports.getPendingPrompts = getPendingPrompts
+module.exports.resolvePrompt = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
-module.exports.validateDatabase    = validateDatabase
-module.exports.fetchReadmeHtml     = fetchReadmeHtml
+module.exports.validateDatabase = validateDatabase
+module.exports.fetchReadmeHtml = fetchReadmeHtml
 module.exports.cleanupEmptyPersistenceRoots = cleanupEmptyPersistenceRoots

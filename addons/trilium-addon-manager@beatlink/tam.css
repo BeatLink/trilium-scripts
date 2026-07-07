@@ -173,6 +173,18 @@ div:has(.TAM-body) {
     }
 
     /* Card grid --------------------------------------------------------------- */
+    & .TAM-addon-section {
+        margin-bottom: 24px !important;
+
+        & h3 {
+            font-size: 14px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            color: #64748b !important;
+            margin: 0 0 10px 0 !important;
+        }
+    }
+
     & .grid {
         display: grid !important;
         grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;

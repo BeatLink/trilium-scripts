@@ -213,6 +213,21 @@ function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstal
         return [addonData.name, addonData.description, addonData.author]
             .some(field => (field || "").toLowerCase().includes(searchLower))
     })
+    const visibleInstalled = visible.filter(a => a.installedVersion)
+    const visibleCatalogOnly = visible.filter(a => !a.installedVersion)
+
+    function renderCard(addonData) {
+        return (
+            <AddonCard
+                key={addonData.id}
+                addonData={addonData}
+                onOpen={onOpenAddon}
+                onInstall={!addonData.installedVersion ? onInstall : undefined}
+                onEnable={addonData.installedVersion ? onEnable : undefined}
+                onSettings={addonData.installedVersion ? onSettings : undefined}
+            />
+        )
+    }
 
     return (
         <div>
@@ -234,18 +249,24 @@ function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstal
                     <p>No addons match your search.</p>
                 </div>
             ) : (
-                <div className="grid">
-                    {visible.map(addonData => (
-                        <AddonCard
-                            key={addonData.id}
-                            addonData={addonData}
-                            onOpen={onOpenAddon}
-                            onInstall={!addonData.installedVersion ? onInstall : undefined}
-                            onEnable={addonData.installedVersion ? onEnable : undefined}
-                            onSettings={addonData.installedVersion ? onSettings : undefined}
-                        />
-                    ))}
-                </div>
+                <>
+                    {visibleInstalled.length > 0 && (
+                        <div className="TAM-addon-section">
+                            <h3>Installed</h3>
+                            <div className="grid">
+                                {visibleInstalled.map(renderCard)}
+                            </div>
+                        </div>
+                    )}
+                    {visibleCatalogOnly.length > 0 && (
+                        <div className="TAM-addon-section">
+                            <h3>Available in Catalogs</h3>
+                            <div className="grid">
+                                {visibleCatalogOnly.map(renderCard)}
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )
