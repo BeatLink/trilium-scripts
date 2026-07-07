@@ -83,25 +83,17 @@ async function complete(noteId, constants){
     const startDatetime = note.getLabelValue(constants.START_DATETIME_LABEL)
     const recurrence = note.getLabelValue(constants.RECURRENCE_LABEL)
     if (startDatetime && recurrence) {
-        const start =  api.dayjs(startDatetime).utc().toDate()
-        var options = libRecurrence.rrule.RRule.parseString(recurrence)
-        options.dtstart = start
-        var rrule = new libRecurrence.rrule.RRule(options)
-        const nextDate = rrule.after(start, false)
-        if (nextDate){
-            let updatedOptions = libRecurrence.rrule.RRule.parseString(recurrence)
-            if (updatedOptions.count){ updatedOptions.count -= 1 }
-            const newRecurrence = libRecurrence.cleanRRuleString(
-                libRecurrence.rrule.RRule.optionsToString(updatedOptions)
-            )
-            const newStartDatetime = api.dayjs(nextDate).local().format("YYYY-MM-DDTHH:mm")
+        const start = api.dayjs(startDatetime).utc().toDate()
+        const next = libRecurrence.nextOccurrence(recurrence, start)
+        if (next){
+            const newStartDatetime = api.dayjs(next.nextDate).local().format("YYYY-MM-DDTHH:mm")
             await api.runOnBackend(
                 (noteId, recurrence, startDatetime, constants) => {
                     const note = api.getNote(noteId)
                     note.setLabel(constants.START_DATETIME_LABEL, startDatetime)
                     note.setLabel(constants.RECURRENCE_LABEL, recurrence)
                 },
-                [noteId, newRecurrence, newStartDatetime, constants]
+                [noteId, next.recurrence, newStartDatetime, constants]
             )
             await markUndone(noteId)
         } else {

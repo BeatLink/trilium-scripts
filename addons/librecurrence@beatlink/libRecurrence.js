@@ -91,9 +91,28 @@ function ObjToRRule(state){
     return string ? string : null
 }
 
+// Given an RRULE string and the date it's currently anchored to, returns the
+// next occurrence plus the recurrence string to store afterward (COUNT
+// decremented by one, if the rule has one) — or null if the recurrence is
+// exhausted (a COUNT/UNTIL-bounded rule with nothing left after `start`).
+function nextOccurrence(recurrenceString, start) {
+    const options = libRRule.RRule.parseString(recurrenceString)
+    options.dtstart = start
+    const rule = new libRRule.RRule(options)
+    const nextDate = rule.after(start, false)
+    if (!nextDate) return null
+
+    const updatedOptions = libRRule.RRule.parseString(recurrenceString)
+    if (updatedOptions.count) updatedOptions.count -= 1
+    const recurrence = cleanRRuleString(libRRule.RRule.optionsToString(updatedOptions))
+
+    return { nextDate, recurrence }
+}
+
 module.exports = {
     cleanRRuleString,
     RRuleToObj,
     ObjToRRule,
+    nextOccurrence,
     rrule: libRRule
 }

@@ -11,7 +11,7 @@ Install as a dependency and clone the `libRecurrence.js` note as a child of the 
 it:
 
 ```js
-const { RRuleToObj, ObjToRRule, cleanRRuleString, rrule } = require("libRecurrence.js")
+const { RRuleToObj, ObjToRRule, cleanRRuleString, nextOccurrence, rrule } = require("libRecurrence.js")
 
 const recurrenceObj = RRuleToObj(note.getLabelValue("recurrence"))
 const rruleString = ObjToRRule(recurrenceObj)
@@ -44,7 +44,17 @@ The inverse of `RRuleToObj` — returns an RRULE string, or `null` when `enabled
 
 Strips the `RRULE:` prefix and a trailing semicolon from a raw rrule.js-generated string.
 
+### `nextOccurrence(rruleString, start)`
+
+Given an RRULE string and the date it's currently anchored to, returns
+`{ nextDate, recurrence }` — the next occurrence, and the recurrence string to store afterward
+(`COUNT` decremented by one, if the rule has one) — or `null` if the recurrence is exhausted (a
+`COUNT`/`UNTIL`-bounded rule with nothing left after `start`). This is the building block for a
+"mark done, advance to next occurrence" action; see
+[`libagendatask@beatlink`](../libagendatask@beatlink/)'s `complete()` and
+[`recurrence@beatlink`](../recurrence@beatlink/)'s `markDone.js` for two independent consumers.
+
 ### `rrule`
 
 The underlying [rrule.js](../librrule@jkbrzt/) module (`RRule`, `RRuleSet`, `rrulestr`, etc), for
-callers that need the raw library directly (e.g. computing the next occurrence of a recurring task).
+callers that need the raw library directly for something `nextOccurrence` doesn't cover.

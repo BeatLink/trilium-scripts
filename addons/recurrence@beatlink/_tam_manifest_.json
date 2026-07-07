@@ -116,6 +116,11 @@
             },
             {
                 "parent": "mark-done",
+                "addon": "libagendatask@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "mark-done",
                 "addon": "libsettings@beatlink",
                 "child": "ui"
             },
@@ -182,6 +187,7 @@
         "dependencies": [
             "librecurrence@beatlink",
             "librecurrencepicker@beatlink",
+            "libagendatask@beatlink",
             "libsettings@beatlink"
         ],
         "exports": {},

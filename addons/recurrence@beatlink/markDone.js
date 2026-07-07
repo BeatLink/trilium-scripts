@@ -5,6 +5,7 @@
     exhausted.
 */
 const libRecurrence = require("libRecurrence.js")
+const { markDone, markUndone } = require("libAgendaTask.js")
 const { loadSettings } = require("libSettingsUI.jsx")
 
 function formatDate(date) {
@@ -25,43 +26,19 @@ async function run_script() {
     const recurrence = note.getLabelValue(recurrenceLabel)
 
     if (startDatetime && recurrence) {
-        const start = new Date(startDatetime)
-        const options = libRecurrence.rrule.RRule.parseString(recurrence)
-        options.dtstart = start
-        const rule = new libRecurrence.rrule.RRule(options)
-        // Guards the exhausted-recurrence case (a COUNT/UNTIL-bounded rule
-        // with nothing left after `start`) — rrule.after() returns null
-        // there, which the original version of this script didn't check for.
-        const nextDate = rule.after(start, false)
-
-        if (nextDate) {
-            let updatedOptions = libRecurrence.rrule.RRule.parseString(recurrence)
-            if (updatedOptions.count) updatedOptions.count -= 1
-            const newRecurrence = libRecurrence.cleanRRuleString(
-                libRecurrence.rrule.RRule.optionsToString(updatedOptions)
-            )
-            const newStartDatetime = formatDate(nextDate)
+        const next = libRecurrence.nextOccurrence(recurrence, new Date(startDatetime))
+        if (next) {
             await api.runOnBackend((noteId, dateLabel, newStartDatetime, recurrenceLabel, newRecurrence) => {
                 const note = api.getNote(noteId)
-                note.setContent(note.getContent().replaceAll('checked="checked"', ""), { forceSave: true })
                 note.setLabel(dateLabel, newStartDatetime)
                 note.setLabel(recurrenceLabel, newRecurrence)
-                note.removeLabel("archived")
-                function unarchiveChildren(childNote) {
-                    childNote.removeLabel("archived")
-                    for (const child of childNote.getChildNotes()) unarchiveChildren(child)
-                }
-                unarchiveChildren(note)
-            }, [note.noteId, dateLabel, newStartDatetime, recurrenceLabel, newRecurrence])
+            }, [note.noteId, dateLabel, formatDate(next.nextDate), recurrenceLabel, next.recurrence])
+            await markUndone(note.noteId)
         } else {
-            await api.runOnBackend((noteId) => {
-                api.getNote(noteId).setLabel("archived")
-            }, [note.noteId])
+            await markDone(note.noteId)
         }
     } else {
-        await api.runOnBackend((noteId) => {
-            api.getNote(noteId).setLabel("archived")
-        }, [note.noteId])
+        await markDone(note.noteId)
     }
     api.refreshIncludedNote(note)
 }
