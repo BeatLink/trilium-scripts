@@ -920,6 +920,10 @@ export default function RepoManager() {
                 </div>
                 <div className="hdr-right">
                     <div className="hdr-links">
+                        <a onClick={() => setCommand({ command: "check-updates" })}>Check for Updates</a>
+                        {anyUpdateAvailable && (
+                            <a onClick={() => setCommand({ command: "update-all" })}>Apply All Updates</a>
+                        )}
                         <a onClick={() => setView({ type: "settings" })}>Settings</a>
                     </div>
                 </div>
