@@ -24,8 +24,8 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --gray: #eee;
     --accent: #00ACFF;
     --tree-item-light-theme-max-color-lightness: 100 !important;
-     --tree-item-dark-theme-min-color-lightness: 100 !important;
-    
+    --tree-item-dark-theme-min-color-lightness: 100 !important;
+
     --main-font-family: 'Noto Sans' !important;
     --main-font-size: normal;
     --detail-text-font-family: 'Noto Sans' !important;
@@ -35,13 +35,13 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --detail-font-size: normal;
     --tree-font-family: inherit;
     --tree-font-size: normal;
-     
+
     --main-background-color: var(--white);
     --main-text-color: var(--black);
     --main-border-color: var(--accent) !important;
     --accented-background-color: var(--white) !important;
     --more-accented-background-color: var(--lightgray) !important;
-    
+
     --gutter-color: var(--lightgray) !important;
     --gutter-hover-color: var(--accent) !important;
 
@@ -68,7 +68,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --launcher-pane-vert-background-color: var(--white) !important;
     --launcher-pane-vert-button-hover-background: var(--accent) !important;
     --launcher-pane-vert-button-hover-color: var(--white) !important;
-    
+
     --quick-search-background: var(--white) !important;
     --quick-search-color: var(--black) !important;
     --quick-search-hover-background: var(--lightgray) !important;
@@ -96,22 +96,22 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 
     --radio-checkbox-indicator-color: var(--accent) !important;
     --radio-checkbox-background: var(--white) !important;
-    
+
     --ck-color-button-action-hover-background: var(--accent) !important;
-    
+
     --primary-button-background-color: var(--white) !important;
     --primary-button-text-color: var(--accent) !important;
     --primary-button-border-color: var(--white) !important;
-        
+
     --cmd-button-text-color: var(--accent) !important;
     --cmd-button-background-color: var(--white) !important;
     --cmd-button-shadow-color: transparent !important;
-    
+
     --input-text-color: var(--accent) !important;
     --input-background-color: var(--white) !important;
     --input-hover-color: var(--accent) !important;
     --input-hover-background: var(--lightgray) !important;
-    
+
     --hover-item-text-color: white !important;
     --hover-item-background-color: var(--accent) !important;
     --hover-item-border-color: transparent !important;
@@ -119,7 +119,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     --active-item-border-color: var(--accent) !important;
     --active-item-background-color: var(--white) !important;
     --active-item-text-color: var(--black) !important;
-    
+
     --menu-text-color: var(--black) !important;
     --menu-background-color: var(--lightgray) !important;
 
@@ -127,7 +127,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
 
     --modal-background-color: var(--white) !important;
     --modal-backdrop-color: var(--white) !important;
-    
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -146,16 +146,21 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/src/public/stylesheet
     background-color: var(--cmd-button-hover-background-color);
     color: var(--cmd-button-hover-text-color);
     border-color: #00000000;
-    
+
 }
 
-.btn-check+.btn:hover, .btn-check:checked+.btn:hover {
+.btn-check+.btn:hover,
+.btn-check:checked+.btn:hover {
     background-color: var(--accent) !important;
     color: var(--white) !important;
     border-color: var(--white) !important;
 }
 
-.note-detail h1, .note-detail h2, .note-detail h3, .note-detail h4, .note-detail h5 {
+.note-detail h1,
+.note-detail h2,
+.note-detail h3,
+.note-detail h4,
+.note-detail h5 {
     color: var(--accent);
 }
 
@@ -171,18 +176,18 @@ html .note-detail-editable-text :not(figure, .include-note) li:first-child {
     margin: 0.75em 0 !important;
 }
 
-
-.note-detail-editable-text .note-detail-editable-text-editor li, .note-detail-editable-text .note-detail-editable-text-editor li:first-child {
+.note-detail-editable-text .note-detail-editable-text-editor li,
+.note-detail-editable-text .note-detail-editable-text-editor li:first-child {
     margin: 0.75em 0 !important;
 }
-
 
 span.fancytree-title {
     color: var(--black) !important;
 }
 
-span.fancytree-node:not(.fancytree-active):hover .fancytree-title, span.fancytree-node:hover {
-	color: var(--black) !important;
+span.fancytree-node:not(.fancytree-active):hover .fancytree-title,
+span.fancytree-node:hover {
+    color: var(--black) !important;
 }
 
 #left-pane span.fancytree-node .tree-item-button:hover {
@@ -190,5 +195,5 @@ span.fancytree-node:not(.fancytree-active):hover .fancytree-title, span.fancytre
 }
 
 #right-pane .card-header {
-	border-top: 2px solid var(--accent) !important;
+    border-top: 2px solid var(--accent) !important;
 }
