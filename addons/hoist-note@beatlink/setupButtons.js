@@ -16,9 +16,9 @@ async function setupButton() {
                 type: "script",
                 isVisible: true,
                 scriptNoteId: hoistNote
-            });
-        }, 
-        [hoistNote]);
+            })
+        },
+        [hoistNote])
 }
 
 setupButton()
