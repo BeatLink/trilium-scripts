@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.9.0"
+const TAM_VERSION = "4.10.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -998,6 +998,22 @@ async function uninstallAddon(addonId) {
     }
 }
 
+// Recovery tool: uninstalls every addon except TAM itself (which can't
+// uninstall itself mid-operation, and is needed afterward to reinstall
+// anything from a catalog), leaving `database.catalogs` untouched — nothing
+// here ever touches that field, so added catalogs survive the reset.
+// A snapshot of the current ids is taken up front since uninstalling a
+// manually-installed addon can cascade-uninstall its own now-unused
+// dependencies too; uninstallAddon is already a safe no-op for anything a
+// prior iteration's cascade already removed.
+async function reinitializeDatabase() {
+    const database = await loadDatabase()
+    const addonIds = Object.keys(database.installedAddons || {}).filter(id => id !== TAM_ID)
+    for (const addonId of addonIds) {
+        await uninstallAddon(addonId)
+    }
+}
+
 async function collectPendingPrompts(addonId, m) {
     let database = await loadDatabase()
     const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes || {}
@@ -1344,6 +1360,7 @@ module.exports.syncAddon = syncAddon
 module.exports.installByUrl = installByUrl
 module.exports.deleteAddon = deleteAddon
 module.exports.uninstallAddon = uninstallAddon
+module.exports.reinitializeDatabase = reinitializeDatabase
 module.exports.findExternalReferences = findExternalReferences
 module.exports.enableAddon = enableAddon
 module.exports.getPendingPrompts = getPendingPrompts

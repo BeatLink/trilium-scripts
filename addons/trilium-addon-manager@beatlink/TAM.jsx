@@ -436,7 +436,7 @@ function NewAddonByUrl({ onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onCleanup, anyUpdateAvailable
+    onValidate, onCleanup, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -491,6 +491,20 @@ function SettingsView({
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
+                    <TamButton
+                        className="btn-ghost"
+                        icon="bx bx-trash"
+                        text="Reinitialize Database"
+                        onClick={() => {
+                            if (window.confirm(
+                                "This uninstalls every addon (deleting their notes) except TAM itself. " +
+                                "Your added catalogs are kept, so you can reinstall from them afterward. " +
+                                "This cannot be undone. Continue?"
+                            )) {
+                                onReinitialize()
+                            }
+                        }}
+                    />
                 </div>
             </div>
         </div>
@@ -787,6 +801,13 @@ export default function RepoManager() {
                     setCommand(null)
                     break
                 }
+                case "reinitialize-database": {
+                    await libTAMjs.reinitializeDatabase()
+                    await reload()
+                    await activateNote(displayNote)
+                    window.location.reload();
+                    break
+                }
             }
         }
         commandHandler()
@@ -884,6 +905,7 @@ export default function RepoManager() {
                 onUpdateAll={() => setCommand({ command: "update-all" })}
                 onValidate={() => setCommand({ command: "validate-database" })}
                 onCleanup={() => setCommand({ command: "cleanup-persistence" })}
+                onReinitialize={() => setCommand({ command: "reinitialize-database" })}
             />
         )
     } else if (view.type === "catalog") {
