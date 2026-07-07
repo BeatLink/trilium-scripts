@@ -1,0 +1,51 @@
+{
+    "id": "librankpicker@beatlink",
+    "name": "Rank Picker",
+    "description": "Reusable Preact component rendering a numeric rank editor for a note, for TriliumNext widget UIs that need a manual sort order.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librankpicker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/librankpicker@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {
+                "id": "lib",
+                "title": "RankPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "RankPicker.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "lib",
+                "addon": "libformnumber@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [],
+        "dependencies": [
+            "libformnumber@beatlink"
+        ],
+        "exports": {
+            "lib": "lib"
+        },
+        "readmeNote": "readme"
+    }
+}
