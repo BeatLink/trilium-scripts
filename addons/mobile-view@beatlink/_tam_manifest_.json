@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.3",
+    "latestVersion": "0.0.4",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/_tam_manifest_.json",
@@ -21,10 +21,10 @@
             },
             {
                 "id": "mobileView",
-                "title": "Mobile View.js",
+                "title": "MobileView.jsx",
                 "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "Mobile View.js"
+                "mime": "text/jsx",
+                "sourceUrl": "MobileView.jsx"
             },
             {
                 "id": "setupButtons",
