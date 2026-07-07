@@ -32,8 +32,8 @@ trilium-addon-manager@beatlink  (render note)
 
 | From | Relation | To |
 |------|----------|----|
-| `trilium-addon-manager@beatlink` | `renderNote` | `Source Code` |
-| `Source Code` | `displayNote` | `trilium-addon-manager@beatlink` |
+| `trilium-addon-manager@beatlink` | `renderNote` | `TAM.jsx` |
+| `TAM.jsx` | `displayNote` | `trilium-addon-manager@beatlink` |
 | `libTAM.js` | `database` | `Database` |
 | `libTAM.js` | `addonRoot` | `Addons` |
 | `libTAM.js` | `addonPersistence` | `Addon Data` |
@@ -44,11 +44,15 @@ trilium-addon-manager@beatlink  (render note)
 - **Addons** — the parent note under which all installed addons are placed as children.
 - **Addon Data** — the parent note under which persistence copies of addon data notes are stored (see [Persistence](#persistence)).
 - **libTAM.js** — the frontend library that does all the heavy lifting. It runs in the browser but uses `api.runOnBackend` and `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access (fetching URLs, creating notes, modifying note content).
-- **Source Code** — the Preact/JSX render widget. It calls functions from `libTAM.js` (available globally as `libTAMjs`) and manages UI state.
+- **Source Code** — a plain empty parent note, existing only to group the actual widget code and its
+  own children under a clearly-labeled branch of the tree (same shape as any addon's `root` wrapping
+  multiple env variants — see CLAUDE.md's "JS/JSX code note mime" section).
+- **TAM.jsx** — the Preact/JSX render widget, nested under **Source Code**. It calls functions from
+  `libTAM.js` (available globally as `libTAMjs`) and manages UI state.
 
 ### The UI
 
-TAM's own widget is a self-contained Preact app (`source-code.jsx`), styled to match the
+TAM's own widget is a self-contained Preact app (`TAM.jsx`), styled to match the
 GitHub Pages catalog (`docs/`) — same card grid, type badges, search/filter toolbar, and sidebar
 detail layout — while still adapting to Trilium's light/dark theme via its own CSS custom properties
 for surfaces and text. It has **no addon dependencies of its own** (`dependencies: []` in its own
@@ -248,7 +252,7 @@ Defines Trilium relations (typed links between notes).
 
 **Local relation** — both notes are in this manifest:
 ```json
-{"from": "root", "type": "renderNote", "to": "source-code"}
+{"from": "root", "type": "renderNote", "to": "tam-jsx"}
 ```
 
 **Cross-addon relation** — the target is a note exported by a dependency:

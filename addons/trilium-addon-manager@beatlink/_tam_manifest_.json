@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "4.6.0",
+    "latestVersion": "4.7.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -49,9 +49,16 @@
             {
                 "id": "source-code",
                 "title": "Source Code",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "tam-jsx",
+                "title": "TAM.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "source-code.jsx"
+                "sourceUrl": "TAM.jsx"
             },
             {
                 "id": "lib-tam",
@@ -101,6 +108,10 @@
             },
             {
                 "parent": "source-code",
+                "child": "tam-jsx"
+            },
+            {
+                "parent": "tam-jsx",
                 "child": "lib-tam"
             },
             {
@@ -108,7 +119,7 @@
                 "child": "marked"
             },
             {
-                "parent": "source-code",
+                "parent": "tam-jsx",
                 "child": "tam-css"
             },
             {
@@ -120,10 +131,10 @@
             {
                 "from": "root",
                 "type": "renderNote",
-                "to": "source-code"
+                "to": "tam-jsx"
             },
             {
-                "from": "source-code",
+                "from": "tam-jsx",
                 "type": "displayNote",
                 "to": "root"
             },
@@ -166,6 +177,11 @@
             },
             {
                 "note": "source-code",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "tam-jsx",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             },
