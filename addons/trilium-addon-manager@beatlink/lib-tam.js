@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.10.0"
+const TAM_VERSION = "4.11.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -40,6 +40,26 @@ const addonLabels = [
 
 function versionCompare(remote, local) {
     return remote.localeCompare(local, undefined, { numeric: true, sensitivity: 'base' })
+}
+
+// A single addon's manifest can list dozens of notes (agenda@beatlink alone
+// is past 30) — resolveNotes fetches each one's sourceUrl individually and
+// sequentially, and a big-enough addon (or its dependency chain, synced one
+// dependency at a time) can still burst enough raw.githubusercontent.com
+// requests in a short window to trip GitHub's rate limiting (HTTP 429).
+// Retries with backoff, honoring Retry-After when GitHub sends one, else
+// exponential backoff — used by every fetch() in this file so a transient
+// 429 fails a single request's timing, not the whole install.
+async function fetchWithRetry(url, maxRetries = 5) {
+    for (let attempt = 0; ; attempt++) {
+        const response = await fetch(url)
+        if (response.status !== 429 || attempt >= maxRetries) return response
+        const retryAfter = Number(response.headers.get("retry-after"))
+        const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+            ? retryAfter * 1000
+            : Math.min(1000 * 2 ** attempt, 15000)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
 }
 
 
@@ -97,7 +117,20 @@ async function getCatalogs() {
 
 async function fetchCatalogJson(catalogUrl) {
     return await api.runAsyncOnBackendWithManualTransactionHandling(async (catalogUrl) => {
-        const response = await fetch(catalogUrl)
+        // Duplicated rather than shared with the module-level fetchWithRetry —
+        // see the identical comment in resolveNotes' content-fetch callback.
+        async function fetchWithRetry(url, maxRetries = 5) {
+            for (let attempt = 0; ; attempt++) {
+                const response = await fetch(url)
+                if (response.status !== 429 || attempt >= maxRetries) return response
+                const retryAfter = Number(response.headers.get("retry-after"))
+                const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+                    ? retryAfter * 1000
+                    : Math.min(1000 * 2 ** attempt, 15000)
+                await new Promise(resolve => setTimeout(resolve, delayMs))
+            }
+        }
+        const response = await fetchWithRetry(catalogUrl)
         return await response.json()
     }, [catalogUrl])
 }
@@ -136,7 +169,20 @@ async function fetchCatalogAddons(catalogUrl) {
 
 async function fetchManifest(manifestSourceUrl) {
     return await api.runAsyncOnBackendWithManualTransactionHandling(async (manifestSourceUrl) => {
-        const response = await fetch(manifestSourceUrl)
+        // Duplicated rather than shared with the module-level fetchWithRetry —
+        // see the identical comment in resolveNotes' content-fetch callback.
+        async function fetchWithRetry(url, maxRetries = 5) {
+            for (let attempt = 0; ; attempt++) {
+                const response = await fetch(url)
+                if (response.status !== 429 || attempt >= maxRetries) return response
+                const retryAfter = Number(response.headers.get("retry-after"))
+                const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+                    ? retryAfter * 1000
+                    : Math.min(1000 * 2 ** attempt, 15000)
+                await new Promise(resolve => setTimeout(resolve, delayMs))
+            }
+        }
+        const response = await fetchWithRetry(manifestSourceUrl)
         return await response.json()
     }, [manifestSourceUrl])
 }
@@ -364,7 +410,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
             let rawMarkdown = explicitContent
             if (rawMarkdown === null && absoluteSourceUrl) {
                 try {
-                    const response = await fetch(absoluteSourceUrl)
+                    const response = await fetchWithRetry(absoluteSourceUrl)
                     if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${absoluteSourceUrl}`)
                     rawMarkdown = await response.text()
                 } catch (e) {
@@ -380,6 +426,22 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
         try {
             realNoteId = await api.runAsyncOnBackendWithManualTransactionHandling(
                 async (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, isPersisted, skipParenting) => {
+                    // Duplicated rather than shared with the module-level fetchWithRetry —
+                    // this whole function is serialized and executed on the backend,
+                    // a separate context that can't close over frontend-scope helpers
+                    // (see this file's top comment re: require() inside runOnBackend).
+                    async function fetchWithRetry(url, maxRetries = 5) {
+                        for (let attempt = 0; ; attempt++) {
+                            const response = await fetch(url)
+                            if (response.status !== 429 || attempt >= maxRetries) return response
+                            const retryAfter = Number(response.headers.get("retry-after"))
+                            const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+                                ? retryAfter * 1000
+                                : Math.min(1000 * 2 ** attempt, 15000)
+                            await new Promise(resolve => setTimeout(resolve, delayMs))
+                        }
+                    }
+
                     let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
                     if (existing && existing.isDeleted) existing = null
 
@@ -390,7 +452,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
                         if (explicitContent !== null) {
                             finalContent = isBinary ? Buffer.from(explicitContent, "base64") : explicitContent
                         } else if (sourceUrl) {
-                            const response = await fetch(sourceUrl)
+                            const response = await fetchWithRetry(sourceUrl)
                             if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${sourceUrl}`)
                             finalContent = isBinary ? Buffer.from(await response.arrayBuffer()) : await response.text()
                         } else {
