@@ -62,9 +62,33 @@ requires the addon's directory name to match its `id` — addon identity comes f
 `id` field, not filesystem position, now that nothing resolves an addon by where it happens to sit in
 this repo's tree.
 
-There is no separate build or test framework — CI (`.github/workflows/publish.yml`) just runs
-`validate` then `tam_to_zip --all` then `publish_release`, and
-`.github/workflows/pages.yml` runs `generate_pages`.
+There is no build framework, and `validate` is purely static (manifest shape, not runtime behavior).
+CI (`.github/workflows/publish.yml`) just runs `validate` then `tam_to_zip --all` then
+`publish_release`, and `.github/workflows/pages.yml` runs `generate_pages`. For actually running an
+addon inside a real Trilium instance, see the next section — that layer isn't wired into CI, it's a
+local/dev-time tool.
+
+## Testing against a real Trilium instance
+
+`resources/testing/` (see its own `README.md`) is a standalone harness — no manually-cloned Trilium
+checkout required, everything is fetched/built by this repo's own `flake.nix` (Trilium's repo as a
+flake input). `nix develop` builds a headless `trilium-server` binary and puts it on `PATH` alongside
+the existing `nix-shell` tools above (`shell.nix` itself is untouched and still works standalone).
+
+```bash
+nix develop            # once per shell session
+trilium_seed           # once — builds resources/testing/data/document.db with TAM installed
+trilium_server start   # boots that snapshot in-memory on http://127.0.0.1:8090 — never corrupts it
+trilium_server stop
+```
+
+Once running, `resources/testing/trilium_client.py` gives a stdlib HTTP client — `exec_script(...)`
+runs arbitrary backend JS via Trilium's own `/api/script/exec` (enough to call `libTAMjs.syncAddon`
+directly, inspect the Database note, etc.), `import_zip(...)` imports a `tam_to_zip.py`-built addon
+zip, `get_note`/`search_notes` read state back via ETAPI. The seed database has
+`noAuthentication=true` set, so none of this needs a token or login step. This is a headless layer
+only (note-tree/database-state verification, not rendered-widget verification) — see the harness's
+own README for why and what a browser-driven layer on top would look like.
 
 ## Manifest-driven addon architecture
 

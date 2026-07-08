@@ -1,3 +1,6 @@
 docs/
 *.zip
+resources/testing/data/
+resources/testing/.server.pid
+resources/testing/server.log
  
