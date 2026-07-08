@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "5.0.0"
+const TAM_VERSION = "5.0.1"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -373,7 +373,19 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
         const noteDef = m.notes.find(n => n.id === localId)
         if (!noteDef) continue
 
-        const parentLocalId = primaryParent[localId]
+        // entryLocalId's *real* parent within the full (unscoped) manifest —
+        // e.g. a dependency export's own root wrapper — is deliberately
+        // outside a closure resolve's scope and must never be chased: it's
+        // never part of scopeLocalIds, so noteMap[parentLocalId] would always
+        // be undefined and the note would be wrongly skipped as unresolvable
+        // (this is exactly what broke area-picker@beatlink installing
+        // libsettings@beatlink's "ui" export — "ui"'s real parent is "root",
+        // which is correctly never part of the "ui" export's own closure).
+        // entryLocalId always uses fallbackParentNoteId instead, same as
+        // m.root already did in an ordinary unscoped resolve (m.root simply
+        // never has a primaryParent entry at all, so this case never came up
+        // before entryLocalId could be anything other than m.root).
+        const parentLocalId = localId === entryLocalId ? null : primaryParent[localId]
         const parentRealId = parentLocalId ? noteMap[parentLocalId] : fallbackParentNoteId
         if (parentLocalId && !parentRealId) {
             console.error(`TAM: skipping note '${localId}' of ${addonId} — its parent '${parentLocalId}' failed to resolve`)
