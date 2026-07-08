@@ -17,11 +17,6 @@ import without going through TAM's network install flow at all) on every push to
 Not every directory under `addons/` is TAM-managed — only directories named `name@author` with a
 `_tam_manifest_.json` participate in validate/publish/export. Directories without an `@author` suffix
 (`Archived/`) are legacy/pre-TAM addons kept for reference and are skipped by the scripts.
-`Recurrence`, `Reschedule`, and `Calendar` (also legacy/pre-TAM) were removed once
-`librecurrence@beatlink`/`libagendatask@beatlink` and `libcalendar@beatlink`/
-`libcalendarwidget@beatlink`/`simplecalendar@beatlink` fully subsumed them respectively — same
-feature scope plus real fixes (unhandled recurrence exhaustion, a hardcoded `127.0.0.1:PORT` URL,
-redundant triple-triggered ical regeneration) — with no functionality actually lost.
 
 ## Development commands
 
@@ -136,8 +131,7 @@ below. It declares a tree of Trilium notes rather than raw exported files:
   `#TAMFILEID="libical@kewisch/lib"`). This, not any id cached in TAM's Database, is the canonical
   way to find "which real note is local id X of addon Y" — `api.getNoteWithLabel("TAMFILEID",
   value)` looks it up directly against Trilium's own attribute index, so it can never silently drift
-  the way an external id map (the old `noteMap`/`exportedNotes` fields, removed in TAM 2.8.0) could.
-  Resolution is find-or-create: if a tagged note already exists (and isn't soft-deleted —
+  the way an external id map would. Resolution is find-or-create: if a tagged note already exists (and isn't soft-deleted —
   `note.deleteNote()` never immediately removes it), it's cloned into whatever new parent needs it
   and its content is reconciled (respecting `skipOnUpdate`/`promptOnUpdate`, and unconditionally
   protected if it's an `AddonData:`-relation target — see the persistence note below); otherwise a
@@ -174,15 +168,11 @@ below. It declares a tree of Trilium notes rather than raw exported files:
   (`{parent, addon, child}` where `child` resolves through the dependency's `exports` map). A local
   note **can** be listed under more than one parent within the same manifest (a same-addon clone —
   e.g. a shared settings-resolver note pulled in as a child of several widget notes so `require()`/
-  `import` can find it from each). `lib-tam.js`'s `resolveNotes` (renamed from `createNotes` in TAM
-  2.8.0, the fix itself landed earlier in 2.5.2) resolves the note once under whichever
-  `{parent, child}` entry appears first, then wires every later entry as a real clone via
-  `api.ensureNoteIsPresentInParent` — before the 2.5.2 fix this used a flat `child → parent` map,
-  which silently overwrote earlier entries and left the note attached only to whichever parent was
-  *last* in the array (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, and
-  `togglenotes@beatlink`, 2 separate cases, for real examples this broke). `tam_to_zip.py`'s
-  `process_manifest` has the same first-occurrence-is-real / later-occurrences-are-clones handling
-  for the same reason.
+  `import` can find it from each). `lib-tam.js`'s `resolveNotes` resolves the note once under
+  whichever `{parent, child}` entry appears first, then wires every later entry as a real clone via
+  `api.ensureNoteIsPresentInParent` (see `agenda@beatlink`'s `agenda-settings` note, 4 parents, for
+  a real example). `tam_to_zip.py`'s `process_manifest` has the same first-occurrence-is-real /
+  later-occurrences-are-clones handling for the same reason.
 - **`relations[]`** / **`labels[]`** — Trilium relations and labels applied after note creation, same
   local-vs-cross-addon shape.
 - **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link
@@ -251,14 +241,11 @@ TAM itself (the addon that interprets all of this inside Trilium) is `libTAM.js`
 `trilium-addon-manager@beatlink`'s render note; see that addon's `README.md` for the full sync/
 persistence state machine — it's long and not worth duplicating here. The short version:
 
-- **One entry point.** `syncAddon(addonId, options)` replaces what used to be three separate
-  functions (`installAddon`/`updateAddon`/`selfUpdateAddon`) — a fresh install, a version update, and
-  TAM updating *itself* are all the same call now that find-or-create-by-`#TAMFILEID` removes the
-  reason delete+reinstall ever existed. `options.manifestSourceUrl` is required for a fresh install
-  (nothing stored yet to fall back to) and optional for an update (falls back to whatever's already
-  recorded on the addon's own Database entry). Nothing is deleted-then-recreated on an ordinary sync
-  anymore, so there's no more cascade-to-dependents either (a dependent's clone of a dependency's
-  exported note points at a real id that never changes across an ordinary version bump).
+- **One entry point.** `syncAddon(addonId, options)` handles fresh install, version update, and TAM
+  updating *itself* through the same call — find-or-create-by-`#TAMFILEID` means nothing is ever
+  deleted-then-recreated. `options.manifestSourceUrl` is required for a fresh install (nothing stored
+  yet to fall back to) and optional for an update (falls back to whatever's already recorded on the
+  addon's own Database entry).
 - **`database.installedAddons` is a flat map keyed by `addonId` alone** — not nested under a
   repository/catalog key. An addon's identity is its own manifest `id`, independent of which catalog
   (if any) it happened to be discovered through; deleting a catalog from the browse list never
@@ -272,9 +259,8 @@ persistence state machine — it's long and not worth duplicating here. The shor
   `settingsNoteId` are resolved live from `manifest.root`/`manifest.settingsNote` whenever needed. It
   also stores a `meta` sub-object (`name`/`description`/`author`/`license`/`type`/`homepage`,
   snapshotted from the manifest's own top-level fields at sync time) purely for rendering the addon
-  list/detail views without needing a live catalog — this didn't exist under the old repository
-  model, where those fields always came from whatever repository object was already in memory. The
-  only genuinely irreducible per-install facts, stored alongside it, are `installedVersion` (a
+  list/detail views without needing a live catalog. The only genuinely irreducible per-install
+  facts, stored alongside it, are `installedVersion` (a
   manifest fetch always reflects latest, never what's installed), `manifestSourceUrl` (exactly which
   URL this install came from — read verbatim from the fetched manifest, never guessed by TAM itself;
   used to re-fetch for update checks), and `manuallyInstalled` (pure user intent); `enabled` is
@@ -303,14 +289,10 @@ persistence state machine — it's long and not worth duplicating here. The shor
   against the live note tree — duplicate `#TAMFILEID`s, a declared dependency that isn't actually
   installed, the stored `manifest.root`/`manifest.settingsNote` still resolving, persisted notes
   still existing, `AddonData:` relations still pointing where the database says — read-only,
-  returning a flat list of issues rather than fixing anything. **There is no offline "repair" path
-  anymore** — an addon `validateDatabase` flags an issue for should just be reinstalled/updated
-  instead (`syncAddon` already idempotently reconciles everything fresh via `#TAMFILEID`), rather than
-  reconciled from a locally stored snapshot that might itself be stale or wrong. The old
-  `repairAddon()`/"Repair" button (offline-only, working purely from the locally stored manifest) was
-  removed for exactly this reason — it solved a problem (reconciling structure without a network
-  fetch) that stopped being worth the complexity once every addon's own `manifestSourceUrl` makes a
-  real fetch-and-reconcile just as cheap.
+  returning a flat list of issues rather than fixing anything. **There is no offline "repair" path**
+  — an addon `validateDatabase` flags an issue for should just be reinstalled/updated instead
+  (`syncAddon` already idempotently reconciles everything fresh via `#TAMFILEID`), rather than
+  reconciled from a locally stored snapshot that might itself be stale or wrong.
 
 ### `api.currentNote` vs `api.startNote` vs the active-note-context
 
@@ -328,17 +310,11 @@ Three distinct notions of "which note", easy to conflate and a real source of bu
   in the main editor pane. Unrelated to either of the above; a persistent right-pane widget's own
   note stays fixed while this changes as the user navigates.
 
-The bug this caused: a shared helper (`getAgendaSettings()` in `agenda@beatlink/agendaSettings.jsx`)
-read `api.currentNote.getRelationValue("schemaNote")` to fetch relations that live on *whichever
-widget note imports it* (`task`/`overview`/`now-window`, each carrying its own `schemaNote`/
-`settingsNote`/etc. relations per the manifest) — but since that code physically lives in
-`agendaSettings.jsx`'s own note (which has zero attributes), `currentNote` resolved to itself, not
-the caller, and the relation lookups silently returned `null`. Fixed by switching to `startNote`,
-which correctly stays bound to whichever widget note started the bundle regardless of which shared
-module the code calling it lives in. Rule of thumb: any code reading relations that the *manifest*
-places on a specific note (not the note the function happens to be written in) should use
-`startNote`, never `currentNote` — `currentNote` only does what you want when the reading code and
-the relation-bearing note are guaranteed to be the same note.
+Rule of thumb: any code reading relations that the *manifest* places on a specific note (not the note
+the function happens to be written in) should use `startNote`, never `currentNote` —
+`currentNote` only does what you want when the reading code and the relation-bearing note are
+guaranteed to be the same note. See `agenda@beatlink/agendaSettings.jsx`'s `getAgendaSettings()` for
+a real example (it reads relations placed on whichever widget note imports it).
 
 ### Library note titles must be fully qualified
 
