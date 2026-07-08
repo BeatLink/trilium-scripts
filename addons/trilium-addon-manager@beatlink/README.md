@@ -322,64 +322,77 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
 ```
 
 `manifest` is the addon's own manifest structure — the *exact same shape* as `_tam_manifest_.json`'s
-`manifest` sub-object — minus per-note `sourceUrl`/`content` (see `stripManifestForStorage`).
-This is deliberately **not** "just re-fetch the manifest whenever you need it": a `manifestSourceUrl`
-only ever serves the *current* version, so once a newer one is published there is no other way to
-know what structure is actually installed. Storing it locally also means an upstream manifest change
-never silently affects an addon until it's actually synced to that new version, and — since the
-exact same shape describes both "what's currently offered" and "what's currently installed" — the
-same resolve/apply functions (`resolveNotes`, `applyDepChildren`, `applyLabels`, `applyRelations`)
-work identically on either one.
+`manifest` sub-object — minus per-note `sourceUrl`/`content` (see `stripManifestForStorage`). This is
+deliberately **not** "just re-fetch the manifest whenever you need it": a `manifestSourceUrl` only
+ever serves the *current* version, so once a newer one is published this is the only record of what's
+actually installed, and it means an upstream manifest change never silently affects an addon until
+it's actually synced to that new version.
 
-Only four facts are genuinely irreducible and can't be derived from the manifest or the live note
-tree:
+Only a handful of facts are genuinely irreducible and can't be derived from the manifest or the live
+note tree:
 - **`installedVersion`** — a manifest fetch always reflects the *latest* available version, never
   what's actually installed.
 - **`manifestSourceUrl`** — exactly which URL this install came from, read verbatim from the fetched
-  manifest at sync time (never computed/guessed by TAM). Used to re-fetch for update checks.
+  manifest at sync time. Used to re-fetch for update checks.
 - **`meta`** — a snapshot of the manifest's own top-level display fields (`name`/`description`/etc.)
-  at sync time, needed to render the addon list/detail views without a live catalog to pull them from
-  (unlike the old repository model, where those fields always came from an already-in-memory
-  repository object).
-- **`manuallyInstalled`** — `true` if the user explicitly installed this addon; `false` if it was
-  only ever pulled in as someone else's dependency. Pure user intent, not derivable from anything.
-  Installing an addon that's already installed only ever *promotes* this from `false` to `true` —
-  never demotes the other way, and a dependency-resolution call installing something for the first
-  time always passes `manual: false`.
+  at sync time, needed to render the addon list/detail views without a live catalog to pull them from.
+- **`manuallyInstalled`** — `true` if the user explicitly installed this addon; `false` if it was only
+  ever pulled in as someone else's dependency. Pure user intent. Only ever *promotes* `false` → `true`,
+  never the reverse.
 - **`enabled`** — technically derivable (scan the root subtree for `disabled:`-prefixed activation
   labels), but cached here anyway since it's read on every addon-list render.
 
-Everything else that used to be its own field is now either read straight from the stored
-`manifest` (`dependencies`, `exports` — see [`_tam_manifest_.json` Format](#the-_tam_manifest_json-format))
-or derived on demand:
-
-- **`rootNoteId`/`settingsNoteId`** — resolved via `#TAMFILEID` from `manifest.root`/`manifest.settingsNote`
-  whenever needed (`enableAddon`, `deleteAddon`; batched into one backend round trip for the whole
-  addon list in `getAllAddons`). No longer cached at all.
-- **`dependents`** (who depends on *this* addon) — the reverse of `dependencies`, which is already
-  stored on every *other* installed addon's own record. `getDependents(database, addonId)`
-  computes it by scanning `installedAddons` for whichever ones list `addonId` in their own
-  `manifest.dependencies` — nothing is pushed or maintained as edges are added/removed, so there is
-  nothing that can drift out of sync. Used by `checkForAddonUpdates`'s update-propagation and by
-  `uninstallAddon`'s cascade-uninstall-if-unused check.
+Everything else is read straight from the stored `manifest` (`dependencies`, `exports`) or derived on
+demand: **`rootNoteId`/`settingsNoteId`** resolve via `#TAMFILEID` from `manifest.root`/
+`manifest.settingsNote` whenever needed; **`dependents`** (who depends on *this* addon) is the reverse
+of `dependencies`, computed by `getDependents(database, addonId)` scanning every other installed
+addon's own record — nothing is pushed or maintained as edges change, so nothing can drift out of
+sync. Used by `checkForAddonUpdates`'s update-propagation and `uninstallAddon`'s
+cascade-uninstall-if-unused check.
 
 `persistence` is the one part of the record allowed to survive after `installedVersion`/`manifest`/
 etc. disappear on uninstall — see [Persistence](#persistence).
 
 ### Hidden libraries, resolved lazily and rootlessly
 
-Addons with `"type": "library"` are never shown in TAM's addon list — there's nothing for a user to do with one directly, since TAM installs, updates, and uninstalls them automatically as a side effect of managing whatever depends on them. Because a library is *never* installed on its own, `syncAddon` never independently resolves one's whole manifest at all: instead of "sync each dependency fully, up front, then clone whatever's exported," dependency resolution is entirely lazy and scoped, driven from whichever cross-addon `children[]`/`relations[]` entry actually references it —
+Addons with `"type": "library"` are never shown in TAM's addon list — TAM installs, updates, and
+uninstalls them automatically as a side effect of managing whatever depends on them. A library is
+*never* installed on its own, so `syncAddon` never resolves one's whole manifest up front; dependency
+resolution is entirely lazy and scoped, driven from whichever cross-addon `children[]`/`relations[]`
+entry actually references it:
 
-- **`ensureDependencyExport(depId, exportKey, parentRealId, ctx)`** is the whole mechanism. Given a specific export key a consumer references, it looks up that export's own local id in the dependency's manifest, then **`computeLocalClosure`** walks *outward* from it through the dependency's own same-addon `children[]` (require() only ever reaches a note's declared children) and local `relations[]` to find the transitive set of notes that export actually needs — nothing else in that dependency's manifest is even considered, let alone created. That closure is resolved (`resolveManifest`, the same pipeline a directly-installed addon's full manifest goes through, just scoped) with the *export* note parented directly wherever the consumer needs it — exactly like a clone always has been — and **no addon-external anchor note anywhere**, because nothing needs one: a dependency's own notes only ever exist as clones under whichever consumer(s) actually pulled them in.
-- A second consumer needing the same or an overlapping export finds whatever was already resolved via `#TAMFILEID` and simply clones it in (`ensureNoteIsPresentInParent`) — no "which addon owns the master copy" question, because there isn't one.
-- If a note within that closure itself has a cross-addon child/relation (a library depending on another library), `resolveManifest` recurses into `ensureDependencyExport` one level deeper, the same way, with cycle protection (`ctx.resolvingExports`) against a malformed or malicious dependency graph.
-- Each dependency still gets its own `database.installedAddons[depId]` entry (`recordDependencyMeta`) — `installedVersion`/`manifestSourceUrl`/`meta`/its full fetched manifest (not just the closure actually resolved; a `manifest.notes` entry for a note that was never actually created because no consumer needed it is harmless, every lookup already tolerates "not found") — so update-checking (`checkForAddonUpdates`) and dependent-tracking (`getDependents`) work exactly as they do for a directly-installed addon. `pruneRemovedNotes` still runs against the dependency's current manifest on every resolution, so a note a newer version stops declaring entirely still disappears. `installedVersion` is always refreshed straight from the freshest fetch (metadata-only, no note creation, cheap) rather than gated behind a staleness comparison — there's no separate "is this dependency stale" check to skip anymore, every resolution is against whatever's current.
-- `checkForAddonUpdates` still propagates `updateAvailable` up through the computed `dependents` graph, unchanged, so a library's own available update — otherwise invisible, since it's hidden from the list — surfaces on whatever visible addon(s) depend on it.
-- Known, deliberate simplification: `connectAddonPersistence` and the enable/disable label-toggling machinery are not wired into the lazy dependency path — both assume a single addon-owned root note whose subtree *is* the whole addon, which doesn't fit a partially-resolved, potentially-disjoint closure. No current library in this repo uses `AddonData:` persistence or needs independent enable/disable, so this is a real but currently-inert gap, not a hypothetical one avoided for no reason.
+- **`ensureDependencyExport(depId, exportKey, parentRealId, ctx)`** is the whole mechanism. It looks
+  up the export's local id in the dependency's manifest, then **`computeLocalClosure`** walks
+  *outward* through the dependency's own `children[]`/local `relations[]` to find the transitive set
+  of notes that export actually needs — nothing else in the dependency's manifest is touched. That
+  closure is resolved via `resolveManifest` (the same pipeline a full addon install uses, just scoped)
+  with the export note parented directly wherever the consumer needs it — **no addon-external anchor
+  note anywhere**, since a dependency's notes only ever exist as clones under whichever consumer(s)
+  pulled them in.
+- A second consumer needing the same or overlapping export finds what was already resolved via
+  `#TAMFILEID` and clones it in — there's no "which addon owns the master copy" question.
+- A cross-addon reference within that closure (a library depending on another library) recurses into
+  `ensureDependencyExport` one level deeper, with cycle protection (`ctx.resolvingExports`).
+- Each dependency still gets its own `database.installedAddons[depId]` entry (`recordDependencyMeta`)
+  with its full fetched manifest (not just the resolved closure — every lookup already tolerates "not
+  found"), so update-checking and dependent-tracking work exactly as for a directly-installed addon.
+  `pruneRemovedNotes` still runs on every resolution.
+- **Known, deliberate gap:** `connectAddonPersistence` and the enable/disable label-toggling machinery
+  aren't wired into the lazy dependency path — both assume a single addon-owned root note whose
+  subtree *is* the whole addon, which doesn't fit a partially-resolved closure. No current library in
+  this repo needs `AddonData:` persistence or independent enable/disable.
 
-`deleteAddon` is branch-scoped for the same underlying reason a dependency can end up cloned in more than one place: it never calls `note.deleteNote()` directly on an addon's root. Instead, `detachAddonOwnedBranches` walks every note in the addon's own stored manifest and, for each of its current parents, detaches the branch unless that parent is clearly tagged as belonging to a *different* addon (its own `#TAMFILEID` prefix says so) — an addon's own `Addons` anchor (directly-installed addons only — a dependency's notes are never parented there in the first place), its own same-addon multi-parent clones, and untagged/manual parents are all fair game to detach; another addon's clone of an exported note is not. A note only actually disappears once none of its parents are left. This doesn't rely on any assumption about how Trilium's own delete cascade treats a note with another live parent elsewhere — every note is checked and detached individually, so a dependency still depended on by another installed addon is provably safe to leave alone during uninstall, not just probably safe.
+`deleteAddon` is branch-scoped, not a direct `note.deleteNote()` on the root: `detachAddonOwnedBranches`
+walks every note in the addon's own stored manifest and detaches it from each current parent unless
+that parent is tagged as belonging to a *different* addon. A note only actually disappears once none
+of its parents are left — so a dependency still depended on by another installed addon is provably
+safe to leave alone, not just probably safe, and this never depends on assumptions about Trilium's own
+delete-cascade behavior toward a multi-parented note.
 
-**`sweepOrphanedNotes`** (the Settings screen's "Sweep Orphaned Notes" button) is a separate, explicitly-triggered maintenance action — never run automatically, matching `validateDatabase`'s own read-only-unless-asked convention — that finds any `#TAMFILEID`-tagged note with zero parents anywhere and deletes it outright. Nothing in normal operation should ever produce one (a directly-installed addon's root is always parented; a dependency's notes are only ever created as a clone under a consumer), so this exists purely as a safety net for a partial sync failure or similar, not a routine cleanup step.
+**`sweepOrphanedNotes`** (Settings' "Sweep Orphaned Notes" button) is a separate, user-triggered
+maintenance action — never run automatically — that deletes any `#TAMFILEID`-tagged note with zero
+parents anywhere. Nothing in normal operation should ever produce one; it's a safety net for a partial
+sync failure, not a routine cleanup step.
 
 ---
 
@@ -417,41 +430,57 @@ any catalog-sourced install.
 
 ## How Sync Works
 
-`syncAddon(addonId, options)` is the single entry point for getting an addon's notes to
-match its manifest — a genuine first install, a version update, and TAM updating *itself* are all
-the same call, differing only where they structurally must (see below). `options.manifestSourceUrl`
-is required for a fresh install (nothing stored yet to fall back to) and optional for an update
-(falls back to the addon's own stored record). This used to be three
-separate functions (`installAddon`/`updateAddon`/`selfUpdateAddon`) because note resolution used to
-require deleting everything first to guarantee a clean slate; find-or-create by `#TAMFILEID` removes
-that requirement, so nothing is ever deleted-then-recreated as part of an ordinary sync anymore.
+`syncAddon(addonId, options)` is the single entry point for getting an addon's notes to match its
+manifest — a first install, a version update, and TAM updating *itself* are all the same call.
+`options.manifestSourceUrl` is required for a fresh install and optional for an update (falls back to
+the stored record). This used to be three separate functions (`installAddon`/`updateAddon`/
+`selfUpdateAddon`) before find-or-create-by-`#TAMFILEID` removed the need to delete everything first
+for a clean slate.
 
-1. TAM fetches the addon's manifest from `manifestSourceUrl` (either the one just given, or the one already stored from a previous sync).
-2. `collectPendingPrompts` snapshots any `promptOnUpdate` content diffs against what's currently persisted, before anything else touches note content (see [`promptOnUpdate`](#promptonupdate)).
-3. `resolveManifest` resolves the addon's own notes (`resolveNotes`, in topological order) and then walks its own `children[]`/`relations[]`, recursing into `ensureDependencyExport` for every cross-addon reference — see [Hidden libraries, resolved lazily and rootlessly](#hidden-libraries-resolved-lazily-and-rootlessly) for the full lazy-dependency mechanism (`computeLocalClosure`, no addon-external anchor, cycle protection). For the addon's *own* notes: TAM looks up each one's `#TAMFILEID` — if found (and not soft-deleted — `note.deleteNote()` is a soft delete, and a deleted match is always treated as "not found," so a deleted note is never resurrected/cloned back in), the existing note is cloned into the correct parent and its content/type/mime overwritten *unless* `skipOnUpdate`/`promptOnUpdate` say otherwise, or it's the target of an `AddonData:` relation (see [Persistence](#persistence)); if not found, a fresh note is created and immediately tagged. Content itself is fetched fresh from the note's `sourceUrl` (resolved to an absolute URL against the manifest's own `manifestSourceUrl` if relative) — backend-side, combined into the same call that creates/updates the note so file content never travels between frontend and backend twice; binary notes get raw bytes wrapped directly in a `Buffer`, no base64 round-trip needed. Every fetch in this file (catalog/manifest JSON, note content, `renderAsHTML` markdown) goes through a small retry-with-backoff wrapper that specifically catches HTTP 429 — a large addon can otherwise burst enough sequential `raw.githubusercontent.com` requests to trip GitHub's rate limiting mid-install; the wrapper honors a `Retry-After` header when GitHub sends one, else backs off exponentially, so a transient 429 delays one request rather than failing the whole sync. A single note's fetch failure (after retries are exhausted) is logged and that note (and anything depending on it as a parent) is skipped rather than aborting the whole sync. A local note listed under more than one parent (a same-addon clone) only goes through this step once, under whichever `children[]` entry appears first — every later entry just clones the same resolved note into that additional parent. TAM's own root note is the one structurally unavoidable special case: it lives wherever the user manually ZIP-imported it (an *ancestor* of the Addons tree, not a sibling under it — it can never be "under the tree" the way other addons are, since its own Addons tree is a descendant of it), so `resolveNotes` never touches its parent for that one case. Otherwise TAM's own sync is completely ordinary: `tam_to_zip.py` bakes a real `#TAMFILEID` label into every note in the exported ZIP at build time, so every one of TAM's own notes is already correctly tagged from the moment of import — this step finds them by the same lookup as any other addon's notes, no separate bootstrap/tagging bridge needed.
-4. `reconcileNoteParenting` ensures every note is cloned into every parent its manifest currently declares, and detached from any parent it's no longer declared under — scoped to only ever detach a branch *this same addon's own* manifest created (checked via that stale parent's own `#TAMFILEID` prefix), so it can never rip out a clone another addon's `resolveManifest` placed there, or one a user made by hand. The same ownership check is what makes it safe to call repeatedly with a *different* fallback parent for a lazily-resolved dependency export shared by multiple consumers — each consumer's own parent is tagged with *that consumer's* prefix, never the dependency's own, so an earlier consumer's clone is never mistaken for a stale parent no matter how many different consumers pull the same export in over time.
-5. Labels/relations are (re)applied, scoped to whatever was just resolved (the whole manifest for a directly-installed addon, or just a dependency's closure). Both are disable-state aware: if the addon is currently disabled, its activation labels/relations live under a `disabled:` prefix, and reapplying writes there instead of creating a live-named duplicate that would silently re-enable just that one label/relation. (Confirmed non-hypothetical: TAM's own manifest declares `renderNote` as a relation, which is in the activation list.) A trailing `(inheritable)` suffix on a label name (e.g. `iconClass(inheritable)`) sets a real `isInheritable` attribute instead of literally creating one named that.
-6. `pruneRemovedNotes` deletes any live note tagged `#TAMFILEID` under this addon's prefix whose local id is no longer in the *current* manifest's note list — a note an author intentionally removed in a newer version actually disappears, rather than orphaning forever. Runs for the top-level addon after `resolveManifest` completes, and again for every dependency touched along the way (`recordDependencyMeta`).
-7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`/`persistence`) if the addon was already installed, or written fresh only for a genuine first-time install. `updateAvailable` is explicitly cleared on the merge path (there's no more full-object replacement to clear it as a side effect).
-8. Persistence is (re)connected — see [Persistence](#persistence). Runs unconditionally for the top-level addon, so a newly-added `AddonData:` relation in a later manifest version gets picked up on an already-installed addon's next sync. Not currently wired into the lazy dependency path (see the "known, deliberate simplification" note above).
-9. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is never touched.
+1. Fetch the addon's manifest from `manifestSourceUrl`.
+2. `collectPendingPrompts` snapshots any `promptOnUpdate` diffs against currently persisted content, before anything touches it (see [`promptOnUpdate`](#promptonupdate)).
+3. `resolveManifest` resolves the addon's own notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate`/`promptOnUpdate`/persisted say otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — it lives above the Addons tree (wherever it was manually ZIP-imported), so its own parent is never touched.
+4. `reconcileNoteParenting` clones every note into every parent its manifest currently declares and detaches it from any parent it's no longer declared under — scoped to only ever detach a branch *this addon's own* manifest created, so a lazily-resolved dependency export shared by multiple consumers is never mistaken as stale by another consumer's clone.
+5. Labels/relations are (re)applied, scoped to whatever was just resolved. Both are disable-state aware — if the addon is currently disabled, writes go to the `disabled:`-prefixed name instead of live-reactivating it. A trailing `(inheritable)` suffix on a label name sets a real `isInheritable` attribute.
+6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
+7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`/`persistence`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
+8. Persistence is (re)connected (see [Persistence](#persistence)) — runs unconditionally for the top-level addon, so a newly-added `AddonData:` relation on an existing addon is picked up on its next sync. Not wired into the lazy dependency path.
+9. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
 
-A re-entrancy guard (a `Set` of `addonId` keys threaded through the whole call graph) stops an addon from being synced twice in one top-level call — this comes up with diamond dependencies at the top level (e.g. "Update All Addons"); the separate `ctx.resolvingExports` guard inside the lazy dependency resolver protects against the analogous case one level down (a circular `depId::exportKey` reference). There is no cascade to a dependent when its dependency updates: since a dependency's own notes resolve in place (the real note id a dependent's clone points at never changes across an ordinary version bump), there's nothing for a dependent's existing clones to break, unlike the old delete+reinstall design. The one narrow, pre-existing gap this leaves: if a dependency *removes* a previously-exported note (via `pruneRemovedNotes`) while a dependent still holds a clone of it, that dependent isn't automatically resynced — `ensureDependencyExport` already just returns `null` for a vanished export today (logged and skipped), cascade or no cascade, so this isn't a new regression, just a limitation worth knowing about.
+There is no cascade to a dependent when its own dependency updates: a dependency's notes resolve in
+place (the real note id a dependent's clone points at never changes across a version bump), so there's
+nothing for existing clones to break. The one known gap: if a dependency *removes* a previously
+exported note while a dependent still holds a clone of it, that dependent isn't automatically
+resynced — `ensureDependencyExport` just returns `null` for a vanished export (logged and skipped).
 
-**Update All Addons:** the "Update All Addons" button (shown whenever at least one installed addon has an update available) calls `syncAddon` for every out-of-date addon in sequence — TAM itself included, no special-casing needed. If any of the synced addons have pending `promptOnUpdate` prompts, the Update Review screen is shown once per addon, one after another, until the queue is empty.
+**Update All Addons:** calls `syncAddon` for every out-of-date addon in sequence, TAM included. If any
+have pending `promptOnUpdate` prompts, the Update Review screen is shown once per addon until the
+queue is empty.
 
 ---
 
 ## Validating the Database
 
-The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits every installed addon against the live Trilium note tree and reports anything inconsistent — read-only, never fixes anything:
+The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits every installed
+addon against the live Trilium note tree — read-only, never fixes anything:
 
-- **Duplicate `#TAMFILEID`s** — no two live notes claim the same `{addonId}/{localId}` value. This is the one thing a live-lookup-based design can't self-correct (`getNoteWithLabel` just returns whichever match it finds first), so it's the one thing worth actively checking for — a bad migration run or a manually duplicated note are the realistic causes.
-- **Missing dependency** — a declared `manifest.dependencies` entry that isn't actually installed. (There's no dependent-symmetry check anymore — `dependents` is computed on demand, never stored, so it can't go out of sync with anything.)
-- **Note existence** — the stored `manifest.root`/`manifest.settingsNote` local ids still resolve to real, non-deleted notes, checked only for an addon that's both installed *and* `manuallyInstalled`. A lazily-resolved dependency is deliberately excluded from this check: its root is never forced into existence at all (see [Hidden libraries, resolved lazily and rootlessly](#hidden-libraries-resolved-lazily-and-rootlessly)) — only whichever export(s) some consumer actually needed — so a missing root there is the expected, correct state, not something worth flagging.
-- **Persistence integrity** — the record's `persistence.rootNote` and every `persistence.persistenceNotes` entry still exist, and (for addons that are actually installed) every live `AddonData:key` relation found while walking the addon's subtree still points at the persisted note TAM's database says it should. This check runs even for records with no currently-installed addon, since surviving persisted data should stay valid regardless.
+- **Duplicate `#TAMFILEID`s** — no two live notes claim the same `{addonId}/{localId}` value (the one
+  thing a live-lookup design can't self-correct, since `getNoteWithLabel` just returns whichever match
+  it finds first).
+- **Missing dependency** — a declared `manifest.dependencies` entry that isn't actually installed.
+- **Note existence** — the stored `manifest.root`/`manifest.settingsNote` local ids still resolve,
+  checked only for an addon that's both installed *and* `manuallyInstalled` — a lazily-resolved
+  dependency's root is never forced into existence at all (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)), so a missing one there is expected, not an issue.
+- **Persistence integrity** — `persistence.rootNote` and every `persistence.persistenceNotes` entry
+  still exist, and every live `AddonData:key` relation in an installed addon's subtree still points at
+  the persisted note TAM's database says it should.
 
-It returns a flat list of `{ addonId, message }` issues (empty if everything checks out), which the UI renders as a dismissible panel. **There is no offline "repair" action anymore** — an addon flagged here should just be reinstalled/updated instead: `syncAddon` already idempotently reconciles everything fresh via `#TAMFILEID` against a real network fetch, which is strictly more capable than the old purely-offline repair (which could fix structure but never recreate a fully-deleted note, and never touched content at all). That offline-only capability stopped being worth its own separate code path once every addon's own `manifestSourceUrl` makes a real fetch-and-reconcile just as cheap to run. Related but separate: **Sweep Orphaned Notes** (`sweepOrphanedNotes`) is the one action here that *does* fix something — it deletes any `#TAMFILEID`-tagged note with zero parents anywhere, a safety net for a partial sync failure rather than a routine step.
+Returns a flat list of `{ addonId, message }` issues, rendered as a dismissible panel. **There is no
+offline "repair" action** — an addon flagged here should just be reinstalled/updated, since `syncAddon`
+already idempotently reconciles everything fresh via `#TAMFILEID` against a real network fetch.
+Related but separate: **Sweep Orphaned Notes** (`sweepOrphanedNotes`) is the one action here that *does*
+fix something — it deletes any `#TAMFILEID`-tagged note with zero parents, a safety net for a partial
+sync failure.
 
 ---
 
@@ -471,24 +500,35 @@ TAM scans the entire subtree of the addon's root note, so activation labels on a
 
 ## Persistence
 
-Some addon notes are meant to hold user data (settings, cached data, user-customized content) that should survive addon updates *and* uninstalls. These notes are marked with an `AddonData:key` relation in the manifest.
+Some addon notes hold user data (settings, cached data, customized content) that should survive addon
+updates *and* uninstalls. These are marked with an `AddonData:key` relation in the manifest.
 
-Persistence data lives nested under the same `database.installedAddons[addonId]` record as everything else TAM tracks about that addon (`persistence: { rootNote, persistenceNotes, pendingPrompts }`) — there is no separate top-level tree to keep in sync with it. `installedVersion`/`manifest`/etc. describe the *currently installed* state and disappear on uninstall; `persistence` is the one part of the record that's allowed to outlive it.
+Persistence data lives nested under the same `database.installedAddons[addonId]` record as everything
+else TAM tracks about that addon (`persistence: { rootNote, persistenceNotes, pendingPrompts }`).
+`installedVersion`/`manifest`/etc. describe the *currently installed* state and disappear on uninstall;
+`persistence` is the one part of the record allowed to outlive it.
 
-**A persisted note's content is always protected from `resolveNotes`' content-overwrite, regardless of `skipOnUpdate`/`promptOnUpdate`.** `api.duplicateSubtree` (used below to create the persisted copy) copies every attribute from the original — including its `#TAMFILEID` label — so once the original is deleted, the persisted copy becomes the only note left carrying that tag. Without this protection, the next sync's TAMFILEID lookup would find the persisted copy, clone it back into the addon's tree, and overwrite its content with the manifest's shipped default, destroying the user's actual saved data. `resolveNotes` checks every manifest note against the set of `AddonData:`-relation targets and skips the content overwrite unconditionally for any match.
+**A persisted note's content is always protected from `resolveNotes`' content-overwrite**, regardless
+of `skipOnUpdate`/`promptOnUpdate`. `api.duplicateSubtree` (used to create the persisted copy) copies
+every attribute from the original, including its `#TAMFILEID` label — so once the original is deleted,
+the persisted copy becomes the only note left carrying that tag, and without this protection the next
+sync would find it, clone it back into the addon's tree, and overwrite it with the shipped default.
 
-When an addon is first installed:
-1. TAM scans the addon's note subtree for any `AddonData:key` relations.
-2. For each one found, TAM duplicates the target note into the **Addon Data** tree, under a per-addon folder — created **just in time**, the first time this addon actually has something to persist. An addon with no `AddonData:` relations at all never gets a folder under Addon Data, and its record carries no `persistence` field at all.
-3. The `AddonData:key` relation on the addon note is updated to point to the persisted copy instead of the original.
-4. The mapping `key → persistedNoteId` is saved into the addon's own `persistence.persistenceNotes`.
+**First install:** TAM scans the addon's subtree for `AddonData:key` relations; for each one found,
+duplicates the target note into a per-addon folder under **Addon Data** (created just-in-time, the
+first time an addon actually has something to persist), rewires the relation to point at the copy, and
+saves the `key → persistedNoteId` mapping.
 
-On reinstall after an update:
-1. TAM finds the existing persistence mapping already on the addon's record.
-2. Instead of duplicating again, the relation is rewired to point to the already-existing persisted note.
-3. User data is preserved unchanged.
+**Reinstall after an update:** the relation is rewired to the already-existing persisted note instead
+of duplicating again — user data is preserved unchanged.
 
-Notes in the persistence tree are never deleted by TAM (even if the addon is uninstalled), ensuring data is not accidentally lost — `deleteAddon` deletes the addon's own note tree and every *installed*-state field, but if the record has any surviving `persistence` data (a `rootNote` or a non-empty `persistenceNotes`), it keeps a reduced record containing just that `persistence` sub-object rather than removing the entry outright. A later reinstall of that same addonId picks the surviving data back up automatically (see [How Sync Works](#how-sync-works)). The one exception is the per-addon *folder* itself: if it ends up with zero children (nothing to persist, or everything that was persisted is gone), TAM deletes the empty folder and clears the `rootNote` reference — checked for the addon just installed/updated every time `connectAddonPersistence` runs, and swept across every installed addon by `cleanupEmptyPersistenceRoots` whenever "Check for Updates" is run (this is what retroactively cleans up addons that got an empty folder before persistence roots were made just-in-time). If that sweep empties out a record that also has no installed state and no pending prompts, the whole record is dropped.
+Persisted notes are never deleted by TAM, even on uninstall — `deleteAddon` keeps a reduced record
+containing just the `persistence` sub-object rather than removing the entry outright, and a later
+reinstall of that addonId picks it back up automatically. The one exception is the per-addon *folder*
+itself: if it ends up empty, TAM deletes it and clears `rootNote` — checked on every
+`connectAddonPersistence` run and swept across every installed addon by `cleanupEmptyPersistenceRoots`
+whenever "Check for Updates" runs. If that sweep empties a record with no installed state and no
+pending prompts, the whole record is dropped.
 
 ---
 
