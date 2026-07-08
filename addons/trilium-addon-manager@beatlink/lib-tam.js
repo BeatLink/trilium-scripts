@@ -1000,18 +1000,28 @@ async function uninstallAddon(addonId) {
 
 // Recovery tool: uninstalls every addon except TAM itself (which can't
 // uninstall itself mid-operation, and is needed afterward to reinstall
-// anything from a catalog), leaving `database.catalogs` untouched — nothing
-// here ever touches that field, so added catalogs survive the reset.
-// A snapshot of the current ids is taken up front since uninstalling a
-// manually-installed addon can cascade-uninstall its own now-unused
-// dependencies too; uninstallAddon is already a safe no-op for anything a
-// prior iteration's cascade already removed.
+// anything from a catalog) — a real cleanup, deleting each addon's actual
+// notes via the normal uninstallAddon path — then hard-resets the Database
+// note itself down to just its catalogs and a bare TAM entry (only
+// manifestSourceUrl; no installedVersion/meta/manifest/persistence), so
+// there's nothing left of the old bookkeeping to drift out of sync again.
+// TAM re-derives its own installed state next time it's synced.
 async function reinitializeDatabase() {
-    const database = await loadDatabase()
+    let database = await loadDatabase()
     const addonIds = Object.keys(database.installedAddons || {}).filter(id => id !== TAM_ID)
     for (const addonId of addonIds) {
         await uninstallAddon(addonId)
     }
+
+    database = await loadDatabase()
+    await saveDatabase({
+        catalogs: database.catalogs || [],
+        installedAddons: {
+            [TAM_ID]: {
+                manifestSourceUrl: database.installedAddons[TAM_ID]?.manifestSourceUrl
+            }
+        }
+    })
 }
 
 async function collectPendingPrompts(addonId, m) {

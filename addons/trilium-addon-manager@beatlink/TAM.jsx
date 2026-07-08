@@ -497,9 +497,9 @@ function SettingsView({
                         text="Reinitialize Database"
                         onClick={() => {
                             if (window.confirm(
-                                "This uninstalls every addon (deleting their notes) except TAM itself. " +
-                                "Your added catalogs are kept, so you can reinstall from them afterward. " +
-                                "This cannot be undone. Continue?"
+                                "This uninstalls every addon (deleting their notes) except TAM itself, then " +
+                                "clears TAM's own tracked install state too, prompting a fresh reinstall of TAM " +
+                                "next sync. Your added catalogs are kept. This cannot be undone. Continue?"
                             )) {
                                 onReinitialize()
                             }
