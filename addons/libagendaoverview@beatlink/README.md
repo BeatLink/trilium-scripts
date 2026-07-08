@@ -34,17 +34,34 @@ relations or import a shared constants module — the caller supplies:
 ```json
 {
     "searches": { "<elementId>": { "name": "Label", "rule": "<Trilium search query>" } },
+    "dateRules": {
+        "<elementId>": { "name": "Label", "rule": ["isBefore", "startOfToday"] }
+    },
     "filters": {
         "<elementId>": { "name": "Label", "type": "search", "rule": "<Trilium search query>" },
         "<dayjsElementId>": {
             "name": "Label", "type": "dayjs",
             "datetimeLabel": "startDateTime", "useNumberOfDays": false,
-            "rule": ["isBefore", "startOfToday"]
+            "dateRuleId": "<key into dateRules>"
         }
     },
     "sorts":    { "<elementId>": { "name": "Label", "rule": "priority:desc;startDateTime" } },
-    "prefixes": { "<elementId>": { "name": "Label", "type": "label"|"dayjs", "...": "..." } },
-    "colors":   { "<elementId>": { "name": "Label", "type": "label"|"dayjs", "...": "..." } },
+    "prefixes": {
+        "<elementId>": {
+            "name": "Label", "type": "label"|"dayjs",
+            "label": "<note label name>", "children": { "<labelValue>": "<prefix string>" },
+            "dateLabel": "<note label name>", "useNumberOfDays": false,
+            "intervals": { "<intervalKey>": { "dateRuleId": "<key into dateRules>", "formatString": "MMM D, HH:mm" } }
+        }
+    },
+    "colors": {
+        "<elementId>": {
+            "name": "Label", "type": "label"|"dayjs",
+            "label": "<note label name>", "children": { "<labelValue>": "<CSS color>" },
+            "dateLabel": "<note label name>", "useNumberOfDays": false,
+            "intervals": { "<intervalKey>": { "dateRuleId": "<key into dateRules>", "color": "<CSS color>" } }
+        }
+    },
     "profiles": {
         "<profileId>": {
             "name": "default",
@@ -76,13 +93,19 @@ relations or import a shared constants module — the caller supplies:
 Every `searchGroups` usage resolves (via `elementId`) to a `searches` element — a Trilium search
 query, OR'd within a group and AND'd across groups with everything in `filterGroups`. Each `filters`
 element carries its own `type` — `"search"` runs its own search query; `"dayjs"` tests a note's
-`datetimeLabel` against relative-date criteria (`isNull`, `isBefore`/`isAfter`/`isBetween`/`isSame`
-etc against named reference points: `now`, `startOfToday`, `endOfToday`, `endOfTomorrow`,
-`endOfThisWeek`, `endOfThisMonth`, `endOfThisYear`) — a filter element is self-contained precisely so
-it stays meaningful wherever it's referenced, independent of any specific profile's group. The
+`datetimeLabel` against a shared `dateRules` element's relative-date criteria (`isNull`,
+`isBefore`/`isAfter`/`isBetween`/`isSame` etc against named reference points: `now`, `startOfToday`,
+`endOfToday`, `endOfTomorrow`, `endOfThisWeek`, `endOfThisMonth`, `endOfThisYear`) — a filter element
+is self-contained precisely so it stays meaningful wherever it's referenced, independent of any
+specific profile's group. `dateRules` exists as its own registry (rather than each filter/interval
+embedding its own criteria tuple) because the exact same comparison — "overdue," "later today," etc
+— is typically needed by a filter *and* a prefix interval *and* a color interval simultaneously;
+referencing one shared `dateRuleId` means editing what "overdue" means updates all three at once. The
 selected `sorts` element's `rule` is a [libmultisort](../libmultisort@beatlink/) sort string. The
 selected `prefixes`/`colors` element maps either a note label's value (`type: "label"`) or a
-`matchesDayJsCriteria` match (`type: "dayjs"`) to a prefix string / CSS color name.
+`matchesDayJsCriteria` match against a referenced `dateRules` element (`type: "dayjs"`, each interval
+holding its own `dateRuleId`) to a prefix string / CSS color name — evaluated in `intervals`'
+insertion order, first match wins.
 
 Older installs' data note held exactly one profile's fields at the top level, with every
 search/filter rule inlined directly rather than referenced — `loadData` detects that shape (no

@@ -4,6 +4,7 @@ import { Collapsible } from "Collapsible.jsx"
 import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
 import { DayjsRulePicker } from "dayjsRulePicker.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
+import { ElementSelect, firstElementId } from "elementPicker.jsx"
 
 const { loadData, saveData } = require("libAgendaOverview.js")
 const { parseSortCriteria } = require("libMultisort.js")
@@ -37,11 +38,46 @@ function SearchesTab({ searches, onChange }) {
     )
 }
 
+// Date Rules -------------------------------------------------------------------
+// The actual `["isBefore","startOfToday"]`-style dayjs criteria tuple a
+// dayjs-type filter or a prefix/color interval tests against — pulled out
+// as its own shared element so "overdue" (or any other named comparison)
+// only ever gets defined once, then referenced by every filter/prefix/color
+// that means the same thing, rather than each retyping the same tuple.
+
+function newDateRule() {
+    return { name: "New Date Rule", rule: ["isNull"] }
+}
+
+function DateRuleElementRow({ element, onChange }) {
+    return (
+        <div className="pe-group">
+            <div>
+                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
+                <DayjsRulePicker value={element.rule} onChange={rule => onChange({ ...element, rule })} />
+            </div>
+        </div>
+    )
+}
+
+function DateRulesTab({ dateRules, onChange }) {
+    return (
+        <KeyedList
+            items={dateRules}
+            onChange={onChange}
+            newItemFactory={newDateRule}
+            addLabel="Add Date Rule"
+            renderItem={(key, element, update) => <DateRuleElementRow element={element} onChange={update} />}
+        />
+    )
+}
+
 // Filters --------------------------------------------------------------------
 // Unlike a search element (always a plain query string), a filter element
 // carries its own type/datetimeLabel/useNumberOfDays — a shared filter has
 // to be self-describing since it's no longer scoped inside a profile-local
-// group that used to hold that context.
+// group that used to hold that context. A dayjs-type filter references a
+// Date Rule element rather than embedding its own criteria tuple.
 
 const filterTypeOptions = [
     { key: "search", title: "Search Query" },
@@ -52,14 +88,14 @@ function newFilter() {
     return { name: "New Filter", type: "search", rule: "" }
 }
 
-function FilterElementRow({ element, onChange }) {
+function FilterElementRow({ element, dateRules, onChange }) {
     function setType(newType) {
         if (newType === element.type) return
         onChange({
             ...element,
             type: newType,
             ...(newType === "dayjs"
-                ? { datetimeLabel: element.datetimeLabel || "", useNumberOfDays: !!element.useNumberOfDays, rule: ["isNull"] }
+                ? { datetimeLabel: element.datetimeLabel || "", useNumberOfDays: !!element.useNumberOfDays, dateRuleId: firstElementId({ dateRules }, "dateRules") }
                 : { rule: "" })
         })
     }
@@ -85,7 +121,12 @@ function FilterElementRow({ element, onChange }) {
                             currentValue={!!element.useNumberOfDays}
                             onChange={v => onChange({ ...element, useNumberOfDays: v })}
                         />
-                        <DayjsRulePicker value={element.rule} onChange={rule => onChange({ ...element, rule })} />
+                        <ElementSelect
+                            category="dateRules"
+                            registry={{ dateRules }}
+                            value={element.dateRuleId}
+                            onChange={dateRuleId => onChange({ ...element, dateRuleId })}
+                        />
                     </>
                 ) : (
                     <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
@@ -95,14 +136,16 @@ function FilterElementRow({ element, onChange }) {
     )
 }
 
-function FiltersTab({ filters, onChange }) {
+function FiltersTab({ filters, dateRules, onChange }) {
     return (
         <KeyedList
             items={filters}
             onChange={onChange}
             newItemFactory={newFilter}
             addLabel="Add Filter"
-            renderItem={(key, element, update) => <FilterElementRow element={element} onChange={update} />}
+            renderItem={(key, element, update) => (
+                <FilterElementRow element={element} dateRules={dateRules} onChange={update} />
+            )}
         />
     )
 }
@@ -179,6 +222,8 @@ function SortsTab({ sorts, onChange }) {
 // Prefixes / Colors ------------------------------------------------------------
 // Structurally identical (a label-value map or a dayjs-interval list); only
 // the value editor (plain text vs. ColorPicker) and default value differ.
+// Each dayjs interval references a Date Rule element rather than embedding
+// its own criteria tuple, same as a dayjs-type filter.
 
 const variantTypeOptions = [
     { key: "label", title: "By Label Value" },
@@ -189,7 +234,7 @@ function newVariant(namePrefix) {
     return { name: `New ${namePrefix}`, type: "label", label: "", children: {} }
 }
 
-function VariantEditor({ variant, onChange, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
+function VariantEditor({ variant, dateRules, onChange, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
     function setType(newType) {
         if (newType === variant.type) return
         onChange({
@@ -202,7 +247,7 @@ function VariantEditor({ variant, onChange, valueField, defaultValue, ValueEdito
     }
 
     function newInterval() {
-        return { rule: ["isNull"], [valueField]: defaultValue }
+        return { dateRuleId: firstElementId({ dateRules }, "dateRules"), [valueField]: defaultValue }
     }
 
     return (
@@ -247,7 +292,12 @@ function VariantEditor({ variant, onChange, valueField, defaultValue, ValueEdito
                             addLabel="Add Interval"
                             renderItem={(key, interval, update) => (
                                 <div className="pe-field-row">
-                                    <DayjsRulePicker value={interval.rule} onChange={rule => update({ ...interval, rule })} />
+                                    <ElementSelect
+                                        category="dateRules"
+                                        registry={{ dateRules }}
+                                        value={interval.dateRuleId}
+                                        onChange={dateRuleId => update({ ...interval, dateRuleId })}
+                                    />
                                     <IntervalValueEditor
                                         value={interval[valueField]}
                                         onChange={v => update({ ...interval, [valueField]: v })}
@@ -270,7 +320,7 @@ function ColorValueEditor({ value, onChange }) {
     return <ColorPicker currentValue={value} onChange={onChange} />
 }
 
-function PrefixesTab({ prefixes, onChange }) {
+function PrefixesTab({ prefixes, dateRules, onChange }) {
     return (
         <KeyedList
             items={prefixes}
@@ -280,6 +330,7 @@ function PrefixesTab({ prefixes, onChange }) {
             renderItem={(key, variant, update) => (
                 <VariantEditor
                     variant={variant}
+                    dateRules={dateRules}
                     onChange={update}
                     valueField="formatString"
                     defaultValue=""
@@ -291,7 +342,7 @@ function PrefixesTab({ prefixes, onChange }) {
     )
 }
 
-function ColorsTab({ colors, onChange }) {
+function ColorsTab({ colors, dateRules, onChange }) {
     return (
         <KeyedList
             items={colors}
@@ -301,6 +352,7 @@ function ColorsTab({ colors, onChange }) {
             renderItem={(key, variant, update) => (
                 <VariantEditor
                     variant={variant}
+                    dateRules={dateRules}
                     onChange={update}
                     valueField="color"
                     defaultValue="gray"
@@ -354,18 +406,26 @@ export default function ElementLibrary() {
         <div className="profile-editor">
             <h2>Agenda Element Library</h2>
             <p>
-                Every search, filter, sort, prefix, and color a profile can use lives here —
-                edit one to change it everywhere it's referenced. Profiles only ever pick from
-                this list; if nothing here fits, add a new element instead of editing a profile
-                directly.
+                Every search, filter, date rule, sort, prefix, and color a profile can use lives
+                here — edit one to change it everywhere it's referenced. Profiles only ever pick
+                from this list; if nothing here fits, add a new element instead of editing a
+                profile directly.
             </p>
 
             <Section label="Searches">
                 <SearchesTab searches={data.searches} onChange={v => update("searches", v)} />
             </Section>
 
+            <Section label="Date Rules">
+                <DateRulesTab dateRules={data.dateRules} onChange={v => update("dateRules", v)} />
+            </Section>
+
             <Section label="Filters">
-                <FiltersTab filters={data.filters} onChange={v => update("filters", v)} />
+                <FiltersTab
+                    filters={data.filters}
+                    dateRules={data.dateRules}
+                    onChange={v => update("filters", v)}
+                />
             </Section>
 
             <Section label="Sorts">
@@ -373,11 +433,19 @@ export default function ElementLibrary() {
             </Section>
 
             <Section label="Prefixes">
-                <PrefixesTab prefixes={data.prefixes} onChange={v => update("prefixes", v)} />
+                <PrefixesTab
+                    prefixes={data.prefixes}
+                    dateRules={data.dateRules}
+                    onChange={v => update("prefixes", v)}
+                />
             </Section>
 
             <Section label="Colors">
-                <ColorsTab colors={data.colors} onChange={v => update("colors", v)} />
+                <ColorsTab
+                    colors={data.colors}
+                    dateRules={data.dateRules}
+                    onChange={v => update("colors", v)}
+                />
             </Section>
         </div>
     )

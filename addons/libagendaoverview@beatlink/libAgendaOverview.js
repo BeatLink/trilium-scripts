@@ -35,11 +35,16 @@ function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
 // Every search/filter/sort/prefix/color a profile can use is a named,
 // shared "element" living in one of the top-level registries below; a
 // profile only ever stores references (elementId + per-usage enabled flag)
-// into those registries, never a copy of the definition itself. All of it —
-// every registry plus every profile — lives in a single JSON note (see
-// agendaData.json), read/written as one document.
+// into those registries, never a copy of the definition itself. `dateRules`
+// is the same idea one level deeper: the actual `["isBefore","startOfToday"]`-
+// style dayjs criteria tuple a dayjs-type filter or a prefix/color interval
+// tests against is itself a named, shared element — a filter, a prefix
+// interval, and a color interval that all mean "overdue" reference the same
+// `dateRules` entry instead of each retyping the same tuple independently.
+// All of it — every registry plus every profile — lives in a single JSON
+// note (see agendaData.json), read/written as one document.
 
-const EMPTY_DATA = { searches: {}, filters: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
+const EMPTY_DATA = { searches: {}, filters: {}, dateRules: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
 
 // Older installs' data note held exactly one profile's fields at the
 // top level (name/parentNoteId/searchGroups/...), with every search/filter
@@ -103,10 +108,51 @@ function migrateLegacyData(raw) {
     return data
 }
 
+// Hoists every inline dayjs criteria tuple (a dayjs-type filter's own
+// `rule`, a prefix/color interval's own `rule`) out into the shared
+// `dateRules` registry, rewriting each in place to hold a `dateRuleId`
+// reference instead — same one-time, self-healing pattern as
+// migrateLegacyData (detected by the absence of a `dateRules` key at all),
+// and composes with it: an install migrating up from the single-profile
+// shape gets both migrations in one pass, since this runs after
+// migrateLegacyData has already produced inline-ruled filters/prefixes/colors.
+function migrateInlineDateRules(data) {
+    if (data.dateRules) return data
+
+    const dateRules = {}
+    let counter = 0
+    function hoist(rule, name) {
+        counter += 1
+        const id = `date-rule-${counter}`
+        dateRules[id] = { name: name || "Date Rule", rule }
+        return id
+    }
+
+    for (const filter of Object.values(data.filters || {})) {
+        if (filter.type === "dayjs" && filter.rule) {
+            filter.dateRuleId = hoist(filter.rule, filter.name)
+            delete filter.rule
+        }
+    }
+    for (const variant of [...Object.values(data.prefixes || {}), ...Object.values(data.colors || {})]) {
+        if (variant.type !== "dayjs") continue
+        for (const interval of Object.values(variant.intervals || {})) {
+            if (interval.rule) {
+                interval.dateRuleId = hoist(interval.rule, `${variant.name} interval`)
+                delete interval.rule
+            }
+        }
+    }
+
+    data.dateRules = dateRules
+    return data
+}
+
 async function loadData(dataNoteId) {
     const note = await api.getNote(dataNoteId)
     const raw = JSON.parse((await note.getContent()) || "{}")
-    const migrated = migrateLegacyData(raw)
+    let migrated = migrateLegacyData(raw)
+    migrated = migrateInlineDateRules(migrated)
     if (migrated !== raw) await saveData(dataNoteId, migrated)
     return { ...EMPTY_DATA, ...migrated }
 }
@@ -173,10 +219,13 @@ async function getFilteredNotes(data, filterGroupsChildren, notesList){
                     filterGroups[groupId] = filterGroups[groupId].concat(notes)
                 }
                 if (element.type == "dayjs"){
-                    for (let note of notesList){
-                        let noteDate = (await api.getNote(note)).getLabelValue(element.datetimeLabel)
-                        if (matchesDayJsCriteria(noteDate, element.rule, element.useNumberOfDays)){
-                            filterGroups[groupId].push(note)
+                    const dateRule = data.dateRules[element.dateRuleId]
+                    if (dateRule) {
+                        for (let note of notesList){
+                            let noteDate = (await api.getNote(note)).getLabelValue(element.datetimeLabel)
+                            if (matchesDayJsCriteria(noteDate, dateRule.rule, element.useNumberOfDays)){
+                                filterGroups[groupId].push(note)
+                            }
                         }
                     }
                 }
@@ -199,7 +248,7 @@ async function sortNoteIds(sortString, noteIds) {
     return sorted.map(note => note.noteId)
 }
 
-async function getPrefixes(prefixInfo, notesList) {
+async function getPrefixes(dateRules, prefixInfo, notesList) {
     let prefixDict = {}
     for (let note of notesList){
         if (!prefixInfo) {
@@ -208,7 +257,8 @@ async function getPrefixes(prefixInfo, notesList) {
             let date = (await api.getNote(note)).getLabelValue(prefixInfo.dateLabel)
             if (date) {
                 for (let interval of Object.values(prefixInfo.intervals)) {
-                    if (matchesDayJsCriteria(date, interval.rule, prefixInfo.useNumberOfDays)){
+                    const dateRule = dateRules[interval.dateRuleId]
+                    if (dateRule && matchesDayJsCriteria(date, dateRule.rule, prefixInfo.useNumberOfDays)){
                         prefixDict[note] = api.dayjs(date).format(interval.formatString)
                         break
                     }
@@ -226,7 +276,7 @@ async function getPrefixes(prefixInfo, notesList) {
     return prefixDict
 }
 
-async function getColors(colorInfo, notesList) {
+async function getColors(dateRules, colorInfo, notesList) {
     let colorDict = {}
     for (let note of notesList){
         if (!colorInfo) {
@@ -235,7 +285,8 @@ async function getColors(colorInfo, notesList) {
             let date = (await api.getNote(note)).getLabelValue(colorInfo.dateLabel)
             if (date) {
                 for (let interval of Object.values(colorInfo.intervals)) {
-                    if (matchesDayJsCriteria(date, interval.rule, colorInfo.useNumberOfDays)){
+                    const dateRule = dateRules[interval.dateRuleId]
+                    if (dateRule && matchesDayJsCriteria(date, dateRule.rule, colorInfo.useNumberOfDays)){
                         colorDict[note] = interval.color
                         break
                     }
@@ -296,8 +347,8 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
-        let prefixDict = await getPrefixes(data.prefixes[profile.prefixes.selected], sortedNotes)
-        let colorDict = await getColors(data.colors[profile.colors.selected], sortedNotes)
+        let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
+        let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
         await setCalendarEvents(profileContext, constants, icalNoteId)
     }

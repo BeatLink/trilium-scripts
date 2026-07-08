@@ -13,9 +13,12 @@ widgets plus two editor pages:
 4. **Profile Editor** (`profileEditor.jsx`, a `render`-type page reachable from the Overview widget
    or Settings) — build a profile's search/filter groups and pick its sort/prefix/color, by
    referencing elements from the Element Library rather than hand-editing JSON.
-5. **Element Library** (`elementLibrary.jsx`, same kind of page) — where every search, filter, sort,
-   prefix, and color actually gets defined. Profiles never embed a rule's definition; they only
-   reference an element here by id, so editing an element updates every profile using it.
+5. **Element Library** (`elementLibrary.jsx`, same kind of page) — where every search, date rule,
+   filter, sort, prefix, and color actually gets defined. Profiles never embed a rule's definition;
+   they only reference an element here by id, so editing an element updates every profile using it.
+   Date rules are one level deeper than the rest: a dayjs-type filter and a prefix/color interval
+   both reference a shared date rule (e.g. "Overdue") rather than each embedding their own copy of
+   the same `["isBefore","startOfToday"]`-style criteria tuple.
 
 ## Setup
 
