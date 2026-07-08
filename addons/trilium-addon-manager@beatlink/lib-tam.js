@@ -9,10 +9,11 @@ const marked = require("marked.min.js")
 // Constants -------------------------------------------------------------------
 const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
+const libraryRootLabel = "libraryRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.11.0"
+const TAM_VERSION = "4.12.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -191,6 +192,20 @@ async function getAddonRootNoteId() {
     return await api.currentNote.getRelationValue(addonRootLabel)
 }
 
+// type: "library" addons are never installed on their own (TAM's UI hides
+// them entirely — they only ever arrive transitively via some dependent's
+// `dependencies[]`), so unlike a user-facing addon there's no reason for one
+// to also sit as its own top-level entry under "Addons". They still need
+// *some* stable, addon-external parent to be created under during their own
+// independent resolveNotes pass, though — a dependency is fully resolved
+// once, up front, before the dependent's own cross-addon children[] step
+// clones anything from it, so there's no dependent to anchor to yet at
+// creation time. "Libraries" exists purely to be that anchor without
+// cluttering the addon list a user actually browses.
+async function getLibraryRootNoteId() {
+    return await api.currentNote.getRelationValue(libraryRootLabel)
+}
+
 function topologicalSort(noteIds, parentMap) {
     const result = []
     const visited = new Set()
@@ -322,7 +337,7 @@ async function fetchReadmeHtml(addonId, readmeLocalId) {
 // aborting the whole sync; any of its children are skipped too, since their
 // parent never resolved.
 async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, options = {}) {
-    const { rootExternallyParented = false } = options
+    const { rootExternallyParented = false, staleAnchorNoteId = null } = options
     // A local note can be listed as a child of more than one parent within
     // the same manifest (a same-addon clone, e.g. a shared settings note
     // pulled into several widgets) — only the first occurrence is where the
@@ -494,7 +509,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
         noteMap[localId] = realNoteId
     }
 
-    await reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented)
+    await reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented, staleAnchorNoteId)
 
     return noteMap
 }
@@ -508,7 +523,14 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
 // stale parent's own #TAMFILEID prefix, so this can never rip out a clone
 // another addon's applyDepChildren placed there, or one a user made by
 // hand).
-async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented) {
+//
+// staleAnchorNoteId is a narrow exception to that ownership rule: when a
+// library-type addon's root migrates from the old "Addons" anchor to the
+// new "Libraries" one (see getLibraryRootNoteId), the stale "Addons" branch
+// is owned by TAM itself, not this addon, so the #TAMFILEID-prefix check
+// alone would never detach it — an addon synced under the old code would be
+// stuck permanently parented under both anchors otherwise.
+async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented, staleAnchorNoteId = null) {
     const primaryParent = {}
     const extraParents = {}
     for (const c of (m.children || []).filter(c => !c.addon)) {
@@ -545,18 +567,24 @@ async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, root
         }
         if (desiredRealParents.length === 0) continue
 
-        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents) => {
+        const isRootMigratingAnchor = localId === m.root && staleAnchorNoteId && staleAnchorNoteId !== addonRootNoteId
+
+        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents, staleAnchorId) => {
             const note = api.getNote(noteId)
             const currentParentIds = note.getParentNotes().map(p => p.noteId)
             for (const parentId of currentParentIds) {
                 if (desiredRealParents.includes(parentId)) continue
+                if (parentId === staleAnchorId) {
+                    api.ensureNoteIsAbsentFromParent(noteId, parentId)
+                    continue
+                }
                 const parentNote = api.getNote(parentId)
                 const parentTamId = parentNote ? parentNote.getLabelValue(tamFileIdLabel) : null
                 if (parentTamId && parentTamId.startsWith(`${addonId}/`)) {
                     api.ensureNoteIsAbsentFromParent(noteId, parentId)
                 }
             }
-        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents])
+        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents, isRootMigratingAnchor ? staleAnchorNoteId : null])
     }
 }
 
@@ -767,8 +795,18 @@ async function syncAddon(addonId, options = {}) {
         depExportsMap.set(depId, dep?.manifest?.exports || {})
     }
 
-    const addonRootNoteId = await getAddonRootNoteId()
-    const noteMap = await resolveNotes(m, addonId, addonRootNoteId, fetchUrl, { rootExternallyParented: isSelf })
+    // A library-type addon roots under "Libraries" instead of flat under
+    // "Addons" — falls back to the ordinary addon root if the library anchor
+    // isn't resolvable for some reason (e.g. an old TAM install mid-update),
+    // rather than failing the sync outright. staleAnchorNoteId lets a library
+    // synced under an older TAM version (before "Libraries" existed, so its
+    // root ended up under "Addons") get migrated off that old anchor instead
+    // of permanently sitting under both.
+    const genericAddonRootNoteId = await getAddonRootNoteId()
+    const libraryRootNoteId = manifest.type === "library" ? await getLibraryRootNoteId() : null
+    const addonRootNoteId = libraryRootNoteId || genericAddonRootNoteId
+    const staleAnchorNoteId = (manifest.type === "library" && libraryRootNoteId) ? genericAddonRootNoteId : null
+    const noteMap = await resolveNotes(m, addonId, addonRootNoteId, fetchUrl, { rootExternallyParented: isSelf, staleAnchorNoteId })
     if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
     await applyDepChildren(m, noteMap, depExportsMap)
@@ -962,15 +1000,54 @@ async function cleanupEmptyPersistenceRoots() {
     if (changed) await saveDatabase(database)
 }
 
+// Removes only the branches this addon's own manifest actually owns, for
+// every note it declares — never a blanket note-level delete. A note is only
+// ever truly removed once none of its parents are left; a note that's also
+// cloned somewhere outside this addon's own subtree (an exported note a
+// dependent still holds, or — before a library's own #TAMFILEID-tagged
+// parents exist — its Addons/Libraries anchor branch) survives via that
+// other branch untouched. This intentionally doesn't rely on assumptions
+// about how Trilium's own deleteNote() cascade treats a descendant with
+// another live parent — every note in the manifest is checked and detached
+// individually, so correctness never depends on cascade behavior at all.
+async function detachAddonOwnedBranches(addonId, m) {
+    const addonRootNoteId = await getAddonRootNoteId()
+    const libraryRootNoteId = await getLibraryRootNoteId()
+    const anchorIds = [addonRootNoteId, libraryRootNoteId].filter(Boolean)
+
+    for (const noteDef of m.notes || []) {
+        const noteId = await resolveStoredNoteId(addonId, noteDef.id)
+        if (!noteId) continue
+        await api.runOnBackend((tamFileIdLabel, addonId, noteId, anchorIds) => {
+            const note = api.getNote(noteId)
+            if (!note || note.isDeleted) return
+            for (const parentNote of note.getParentNotes()) {
+                const isAnchor = anchorIds.includes(parentNote.noteId)
+                const parentTamId = parentNote.getLabelValue(tamFileIdLabel)
+                const ownedByThisAddon = parentTamId && parentTamId.startsWith(`${addonId}/`)
+                // Preserve any parent branch that's clearly owned by a
+                // *different* addon (its own #TAMFILEID prefix says so) —
+                // everything else (this addon's own parents, an anchor
+                // folder, an untagged/manual parent) is fair game to detach.
+                const ownedByAnotherAddon = parentTamId && !ownedByThisAddon && !isAnchor
+                if (!ownedByAnotherAddon) {
+                    api.ensureNoteIsAbsentFromParent(noteId, parentNote.noteId)
+                }
+            }
+            const stillLive = api.getNote(noteId)
+            if (stillLive && !stillLive.isDeleted && stillLive.getParentNotes().length === 0) {
+                stillLive.deleteNote()
+            }
+        }, [tamFileIdLabel, addonId, noteId, anchorIds])
+    }
+}
+
 async function deleteAddon(addonId) {
     if (!addonId.trim()) return
     let database = await loadDatabase()
     const addonRecord = database.installedAddons[addonId]
-    const rootNoteId = await resolveStoredNoteId(addonId, addonRecord.manifest?.root)
-    if (rootNoteId) {
-        await api.runOnBackend((noteId) => {
-            api.getNote(noteId).deleteNote()
-        }, [rootNoteId])
+    if (addonRecord?.manifest) {
+        await detachAddonOwnedBranches(addonId, addonRecord.manifest)
     }
 
     const persistence = addonRecord.persistence
