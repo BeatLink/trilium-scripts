@@ -15,7 +15,7 @@ resolving its own relations or reading a shared config note:
 
 - **`nowNoteId`** — the note id to show in the popup window / append tasks to.
 - **`windowConfig`** — a plain object: `{ width, height, windowGap, alwaysOnTop, hideTitlebar, hideMenubar }`.
-- **`profileNoteIds`** / **`constants`** — same as
+- **`profileContext`** / **`constants`** — same as
   [libagendaoverview@beatlink](../libagendaoverview@beatlink/README.md#dependency-injection).
 - **`widgetNoteId`** — the note id of the launcher widget to register.
 
@@ -29,7 +29,7 @@ const { launchAgendaNow, addTaskToAgendaNow, addDueTasksToAgendaNow, setupLaunch
 
 await launchAgendaNow(nowNoteId, windowConfig)
 await addTaskToAgendaNow(nowNoteId, noteId, true)
-await addDueTasksToAgendaNow(profileNoteIds, constants, nowNoteId)
+await addDueTasksToAgendaNow(profileContext, constants, nowNoteId)
 await setupLauncherWidget(widgetNoteId)
 ```
 
@@ -46,7 +46,7 @@ to the bottom-right corner of the primary display's work area.
 Appends a reference link to `noteId` onto `nowNoteId`'s content — as a disabled checkbox to-do if
 `todoEnabled`, otherwise a plain paragraph — unless a reference to it is already present.
 
-### `addDueTasksToAgendaNow(profileNoteIds, constants, nowNoteId)`
+### `addDueTasksToAgendaNow(profileContext, constants, nowNoteId)`
 
 Adds every task in `getTaskList` whose start datetime is exactly now onto `nowNoteId` as a to-do.
 

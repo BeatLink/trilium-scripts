@@ -1,0 +1,87 @@
+{
+    "searches": {
+        "all": { "name": "All Tasks", "rule": "#startDateTime", "builtin": true }
+    },
+    "filters": {
+        "noDate": { "name": "No Date", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isNull"], "builtin": true },
+        "overdue": { "name": "Overdue", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isBefore", "startOfToday"], "builtin": true },
+        "now": { "name": "Now", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isBetween", "startOfToday", "now", null, "[]"], "builtin": true },
+        "restOfDay": { "name": "Later Today", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isBetween", "now", "endOfToday", null, "[]"], "builtin": true },
+        "tomorrow": { "name": "Tomorrow", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isBetween", "endOfToday", "endOfTomorrow", null, "[]"], "builtin": true },
+        "thisWeek": { "name": "This Week", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isBetween", "endOfTomorrow", "endOfThisWeek", null, "[)"], "builtin": true },
+        "future": { "name": "Future", "type": "dayjs", "datetimeLabel": "startDateTime", "useNumberOfDays": false, "rule": ["isAfter", "endOfThisWeek"], "builtin": true }
+    },
+    "sorts": {
+        "startDate": { "name": "Start Date", "rule": "startDateTime", "builtin": true },
+        "title": { "name": "Title", "rule": "title:caseInsensitive", "builtin": true }
+    },
+    "prefixes": {
+        "interval": {
+            "name": "Interval",
+            "type": "dayjs",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "builtin": true,
+            "intervals": {
+                "overdue": { "rule": ["isBefore", "startOfToday"], "formatString": "MMM D, YYYY HH:mm" },
+                "now": { "rule": ["isBetween", "startOfToday", "now", null, "[]"], "formatString": "HH:mm" },
+                "restOfDay": { "rule": ["isBetween", "now", "endOfToday", null, "[]"], "formatString": "HH:mm" },
+                "future": { "rule": ["isAfter", "endOfToday"], "formatString": "MMM D, HH:mm" }
+            }
+        }
+    },
+    "colors": {
+        "interval": {
+            "name": "Interval",
+            "type": "dayjs",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "builtin": true,
+            "intervals": {
+                "overdue": { "rule": ["isBefore", "startOfToday"], "color": "red" },
+                "now": { "rule": ["isBetween", "startOfToday", "now", null, "[]"], "color": "lime" },
+                "restOfDay": { "rule": ["isBetween", "now", "endOfToday", null, "[]"], "color": "cyan" },
+                "future": { "rule": ["isAfter", "endOfToday"], "color": "lightgray" }
+            }
+        }
+    },
+    "profiles": {
+        "default": {
+            "name": "default",
+            "parentNoteId": "",
+            "searchGroups": {
+                "expanded": true,
+                "children": {
+                    "tasks": {
+                        "name": "Tasks",
+                        "expanded": true,
+                        "children": {
+                            "all": { "elementId": "all", "enabled": true }
+                        }
+                    }
+                }
+            },
+            "filterGroups": {
+                "expanded": true,
+                "children": {
+                    "date": {
+                        "name": "Date",
+                        "expanded": true,
+                        "children": {
+                            "noDate": { "elementId": "noDate", "enabled": false },
+                            "overdue": { "elementId": "overdue", "enabled": true },
+                            "now": { "elementId": "now", "enabled": true },
+                            "restOfDay": { "elementId": "restOfDay", "enabled": true },
+                            "tomorrow": { "elementId": "tomorrow", "enabled": true },
+                            "thisWeek": { "elementId": "thisWeek", "enabled": true },
+                            "future": { "elementId": "future", "enabled": false }
+                        }
+                    }
+                }
+            },
+            "sorts": { "selected": "startDate" },
+            "prefixes": { "selected": "interval" },
+            "colors": { "selected": "interval" }
+        }
+    }
+}

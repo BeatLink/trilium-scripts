@@ -15,13 +15,17 @@ import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, updateTaskLists, getMatchingProfile, rescheduleAllTasks } = require("libAgendaOverview.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, rescheduleAllTasks } = require("libAgendaOverview.js")
 
 // Preact Components ------------------------------------------------------
 
+// registryKey selects which of data.searches/data.filters a group's usages
+// (elementId + enabled) resolve display names against.
 function CheckboxSection({
     sectionPath,   // e.g. ["searchGroups"]
     title,
+    registryKey,
+    registry,
     profile,
     update
 }) {
@@ -47,10 +51,10 @@ function CheckboxSection({
                           .expanded = e.currentTarget.open
                     })}
                     items={Object.entries(group.children || {}).map(
-                        ([itemKey, item]) => ({
+                        ([itemKey, usage]) => ({
                             key: itemKey,
-                            label: item.name,
-                            currentValue: item.enabled,
+                            label: registry[registryKey][usage.elementId]?.name ?? "(missing element)",
+                            currentValue: usage.enabled,
                             onChange: checked =>
                                 update(p => {
                                     sectionPath
@@ -69,6 +73,8 @@ function CheckboxSection({
 function DropdownSection({
     sectionPath,
     title,
+    registryKey,
+    registry,
     profile,
     update
 }) {
@@ -77,14 +83,12 @@ function DropdownSection({
     return (
         <Collapsible
             label={title}
-            expanded={section.expanded}
-            onToggle={e => update(p => {
-                sectionPath.reduce((o,k)=>o[k], p).expanded = e.currentTarget.open
-            })}
+            expanded={true}
+            onToggle={() => {}}
             className="mainSection"
         >
             <FormDropdownList
-                values={Object.entries(section["children"])
+                values={Object.entries(registry[registryKey])
                     .map(([key, value]) => ({
                         key,
                         title: value.name
@@ -108,6 +112,7 @@ function AgendaOverviewWidgetJSX() {
     const { note } = useActiveNoteContext()
     const noteId = useNoteProperty(note, "noteId")
     const [profile, setProfile] = useState(null)
+    const [registry, setRegistry] = useState(null)
     const [unclaimed, setUnclaimed] = useState(false)
     const [ids, setIds] = useState(null)
 
@@ -115,9 +120,9 @@ function AgendaOverviewWidgetJSX() {
     // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
-            const { constants, profileNoteIds } = await getAgendaSettings()
+            const { constants, profileContext } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
-            setIds({ constants, profileNoteIds, icalNoteId })
+            setIds({ constants, profileContext, icalNoteId })
         })()
     }, [])
 
@@ -127,18 +132,20 @@ function AgendaOverviewWidgetJSX() {
         fn(newProfile)
         setProfile(newProfile)
         saveProfile(newProfile)
-        updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
+        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
     // Load Profile
     useEffect(() => {
         if (!ids || !noteId) return
         (async () => {
-            const profileData = await getMatchingProfile(ids.profileNoteIds, noteId)
+            const data = await loadData(ids.profileContext.dataNoteId)
+            setRegistry(data)
+            const profileData = await getMatchingProfile(ids.profileContext, noteId)
             if (profileData) {
                 setProfile(profileData)
                 setUnclaimed(false)
-                await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
+                await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
             } else {
                 setProfile(null)
                 setUnclaimed(true)
@@ -167,7 +174,7 @@ function AgendaOverviewWidgetJSX() {
         )
     }
 
-    if (!profile){
+    if (!profile || !registry){
         return null
     }
 
@@ -179,6 +186,8 @@ function AgendaOverviewWidgetJSX() {
                 <CheckboxSection
                     title="Searches"
                     sectionPath={["searchGroups"]}
+                    registryKey="searches"
+                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -187,6 +196,8 @@ function AgendaOverviewWidgetJSX() {
                 <CheckboxSection
                     title="Filters"
                     sectionPath={["filterGroups"]}
+                    registryKey="filters"
+                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -196,6 +207,8 @@ function AgendaOverviewWidgetJSX() {
                 <DropdownSection
                     title="Sort Order"
                     sectionPath={["sorts"]}
+                    registryKey="sorts"
+                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -204,6 +217,8 @@ function AgendaOverviewWidgetJSX() {
                 <DropdownSection
                     title="Prefix"
                     sectionPath={["prefixes"]}
+                    registryKey="prefixes"
+                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -213,6 +228,8 @@ function AgendaOverviewWidgetJSX() {
                 <DropdownSection
                     title="Color"
                     sectionPath={["colors"]}
+                    registryKey="colors"
+                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -222,7 +239,7 @@ function AgendaOverviewWidgetJSX() {
                         <Button
                             icon="bx bx-rocket"
                             text="Start All Tasks Today"
-                            onClick={e => { rescheduleAllTasks(ids.profileNoteIds, ids.constants, ids.icalNoteId) }}
+                            onClick={e => { rescheduleAllTasks(ids.profileContext, ids.constants, ids.icalNoteId) }}
                         />
                     </div>
                 </div>

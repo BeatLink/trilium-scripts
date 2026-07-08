@@ -88,8 +88,8 @@ async function addTaskToAgendaNow(nowNoteId, noteId, todoEnabled) {
 
 // Adds every task starting exactly now (per the overview's task list) onto
 // the "Now" note as a to-do
-async function addDueTasksToAgendaNow(profileNoteIds, constants, nowNoteId){
-    const taskList = await overview.getTaskList(profileNoteIds)
+async function addDueTasksToAgendaNow(profileContext, constants, nowNoteId){
+    const taskList = await overview.getTaskList(profileContext)
     for (const taskId of taskList){
         const task = await api.getNote(taskId)
         const startDate = task.getLabelValue(constants.START_DATETIME_LABEL)

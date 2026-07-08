@@ -1,8 +1,8 @@
 {
     "profileId": {
-        "type": "note",
-        "label": "Profile Note",
-        "description": "Which profile JSON note to use. Leave blank to use this addon's shipped default profile.",
+        "type": "string",
+        "label": "Profile ID",
+        "description": "Which profile (by id, in the Element Library) to use. Leave blank to use the shipped \"default\" profile.",
         "default": ""
     },
     "startDatetimeLabel": {

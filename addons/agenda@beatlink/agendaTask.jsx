@@ -30,9 +30,9 @@ function MainWidget(){
     // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
-            const { constants, profileNoteIds } = await getAgendaSettings()
+            const { constants, profileContext } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
-            setIds({ constants, profileNoteIds, icalNoteId })
+            setIds({ constants, profileContext, icalNoteId })
         })()
     }, [])
 
@@ -45,7 +45,7 @@ function MainWidget(){
     // so this widget is the only thing that knows the four pickers are
     // being used in an Agenda-task context at all.
     async function afterChange() {
-        await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
+        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
     const actions = [

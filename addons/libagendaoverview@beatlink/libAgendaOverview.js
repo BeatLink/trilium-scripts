@@ -30,22 +30,102 @@ function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
     }
 }
 
-// profileNoteIds is supplied by the caller (e.g. resolved from its own
-// "profile" relation(s)) rather than assumed by this library, so it stays
-// portable across installs
-async function getAllProfiles(profileNoteIds) {
-    let profiles = []
-    for (let noteId of profileNoteIds) {
-        let note = await api.getNote(noteId)
-        let profile = JSON.parse(await note.getContent())
-        profile["noteId"] = note.noteId
-        profiles.push(profile)
+// --- Consolidated data note ------------------------------------------------
+//
+// Every search/filter/sort/prefix/color a profile can use is a named,
+// shared "element" living in one of the top-level registries below; a
+// profile only ever stores references (elementId + per-usage enabled flag)
+// into those registries, never a copy of the definition itself. All of it —
+// every registry plus every profile — lives in a single JSON note (see
+// agendaData.json), read/written as one document.
+
+const EMPTY_DATA = { searches: {}, filters: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
+
+// Older installs' data note held exactly one profile's fields at the
+// top level (name/parentNoteId/searchGroups/...), with every search/filter
+// rule inlined directly into that one profile and sorts/prefixes/colors each
+// holding their own full list of named presets. Detected by the absence of
+// `profiles` (new shape's only top-level profile container) alongside the
+// presence of `searchGroups` (old shape's own top-level field). Promotes
+// every inlined leaf definition into the appropriate shared registry once,
+// rewriting the profile itself to hold only references — callers persist
+// the result via saveData so this only ever runs once per install.
+function migrateLegacyData(raw) {
+    if (!raw || raw.profiles || !raw.searchGroups) return raw
+
+    const data = { searches: {}, filters: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
+
+    function migrateLeafGroups(groupsSection, registry, extraFromGroup) {
+        const migratedGroups = {}
+        for (const [groupId, group] of Object.entries(groupsSection.children || {})) {
+            const children = {}
+            for (const [itemId, item] of Object.entries(group.children || {})) {
+                const elementId = `${groupId}-${itemId}`
+                registry[elementId] = {
+                    name: item.name,
+                    rule: item.rule,
+                    ...(extraFromGroup ? extraFromGroup(group) : {})
+                }
+                children[itemId] = { elementId, enabled: !!item.enabled }
+            }
+            migratedGroups[groupId] = { name: group.name, expanded: !!group.expanded, children }
+        }
+        return { expanded: !!groupsSection.expanded, children: migratedGroups }
     }
-    return profiles
+
+    const searchGroups = migrateLeafGroups(raw.searchGroups, data.searches)
+    const filterGroups = migrateLeafGroups(raw.filterGroups, data.filters, group => ({
+        type: group.type,
+        datetimeLabel: group.datetimeLabel,
+        useNumberOfDays: !!group.useNumberOfDays
+    }))
+
+    for (const [key, sort] of Object.entries(raw.sorts?.children || {})) {
+        data.sorts[key] = { name: sort.name, rule: sort.rule }
+    }
+    for (const [key, variant] of Object.entries(raw.prefixes?.children || {})) {
+        data.prefixes[key] = { ...variant }
+    }
+    for (const [key, variant] of Object.entries(raw.colors?.children || {})) {
+        data.colors[key] = { ...variant }
+    }
+
+    data.profiles.default = {
+        name: raw.name || "default",
+        parentNoteId: raw.parentNoteId || "",
+        searchGroups,
+        filterGroups,
+        sorts: { selected: raw.sorts?.selected },
+        prefixes: { selected: raw.prefixes?.selected },
+        colors: { selected: raw.colors?.selected }
+    }
+
+    return data
 }
 
-async function getMatchingProfile(profileNoteIds, overviewNoteId) {
-    for (let profile of await getAllProfiles(profileNoteIds)){
+async function loadData(dataNoteId) {
+    const note = await api.getNote(dataNoteId)
+    const raw = JSON.parse((await note.getContent()) || "{}")
+    const migrated = migrateLegacyData(raw)
+    if (migrated !== raw) await saveData(dataNoteId, migrated)
+    return { ...EMPTY_DATA, ...migrated }
+}
+
+async function saveData(dataNoteId, data){
+    await api.runOnBackend((dataNoteId, data) => {
+        api.getNote(dataNoteId).setJsonContent(data)
+    }, [dataNoteId, data]);
+}
+
+async function getAllProfiles({ dataNoteId, profileIds }) {
+    const data = await loadData(dataNoteId)
+    return profileIds
+        .filter(id => data.profiles[id])
+        .map(id => ({ id, dataNoteId, ...data.profiles[id] }))
+}
+
+async function getMatchingProfile({ dataNoteId, profileIds }, overviewNoteId) {
+    for (let profile of await getAllProfiles({ dataNoteId, profileIds })){
         if (profile["parentNoteId"] == overviewNoteId){
             return profile
         }
@@ -53,9 +133,10 @@ async function getMatchingProfile(profileNoteIds, overviewNoteId) {
 }
 
 async function saveProfile(profile){
-    api.runOnBackend((profile) => {
-        api.getNote(profile.noteId).setJsonContent(profile)
-    }, [profile]);
+    const data = await loadData(profile.dataNoteId)
+    const { id, dataNoteId, ...profileFields } = profile
+    data.profiles[id] = profileFields
+    await saveData(dataNoteId, data)
 }
 
 async function deleteChildBranches(parentNoteId){
@@ -66,12 +147,13 @@ async function deleteChildBranches(parentNoteId){
     }, [parentNoteId]);
 }
 
-async function getNotesForSearchGroups(searchData) {
+async function getNotesForSearchGroups(data, searchGroupsChildren) {
     let allNotes = []
-    for (const group of Object.values(searchData)){
-        for (const search of Object.values(group.children)){
-            if (search.enabled){
-                let noteIds = (await api.searchForNotes(search.rule)).map(note => note.noteId)
+    for (const group of Object.values(searchGroupsChildren)){
+        for (const usage of Object.values(group.children)){
+            const element = data.searches[usage.elementId]
+            if (usage.enabled && element){
+                let noteIds = (await api.searchForNotes(element.rule)).map(note => note.noteId)
                 allNotes = allNotes.concat(noteIds)
             }
         }
@@ -79,20 +161,21 @@ async function getNotesForSearchGroups(searchData) {
     return allNotes
 }
 
-async function getFilteredNotes(filterData, notesList){
+async function getFilteredNotes(data, filterGroupsChildren, notesList){
     let filterGroups = {}
-    for (const [groupId, group] of Object.entries(filterData)){
+    for (const [groupId, group] of Object.entries(filterGroupsChildren)){
         filterGroups[groupId] = []
-        for (const filter of Object.values(group.children)){
-            if (filter.enabled){
-                if (group.type == "search"){
-                    let notes = (await api.searchForNotes(filter.rule)).map(note => note.noteId)
+        for (const usage of Object.values(group.children)){
+            const element = data.filters[usage.elementId]
+            if (usage.enabled && element){
+                if (element.type == "search"){
+                    let notes = (await api.searchForNotes(element.rule)).map(note => note.noteId)
                     filterGroups[groupId] = filterGroups[groupId].concat(notes)
                 }
-                if (group.type == "dayjs"){
+                if (element.type == "dayjs"){
                     for (let note of notesList){
-                        let noteDate = (await api.getNote(note)).getLabelValue(group.datetimeLabel)
-                        if (matchesDayJsCriteria(noteDate, filter.rule, group.useNumberOfDays)){
+                        let noteDate = (await api.getNote(note)).getLabelValue(element.datetimeLabel)
+                        if (matchesDayJsCriteria(noteDate, element.rule, element.useNumberOfDays)){
                             filterGroups[groupId].push(note)
                         }
                     }
@@ -119,7 +202,9 @@ async function sortNoteIds(sortString, noteIds) {
 async function getPrefixes(prefixInfo, notesList) {
     let prefixDict = {}
     for (let note of notesList){
-        if (prefixInfo.type == "dayjs"){
+        if (!prefixInfo) {
+            prefixDict[note] = ""
+        } else if (prefixInfo.type == "dayjs"){
             let date = (await api.getNote(note)).getLabelValue(prefixInfo.dateLabel)
             if (date) {
                 for (let interval of Object.values(prefixInfo.intervals)) {
@@ -144,7 +229,9 @@ async function getPrefixes(prefixInfo, notesList) {
 async function getColors(colorInfo, notesList) {
     let colorDict = {}
     for (let note of notesList){
-        if (colorInfo.type == "dayjs"){
+        if (!colorInfo) {
+            colorDict[note] = ""
+        } else if (colorInfo.type == "dayjs"){
             let date = (await api.getNote(note)).getLabelValue(colorInfo.dateLabel)
             if (date) {
                 for (let interval of Object.values(colorInfo.intervals)) {
@@ -201,31 +288,34 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 
-async function updateTaskLists(profileNoteIds, constants, icalNoteId) {
-    let profiles = await getAllProfiles(profileNoteIds)
+async function updateTaskLists(profileContext, constants, icalNoteId) {
+    const data = await loadData(profileContext.dataNoteId)
+    let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
         //await deleteChildBranches(profile.parentNoteId)
-        let allNotes = await getNotesForSearchGroups(profile.searchGroups.children)
-        let filteredNotes = await getFilteredNotes(profile.filterGroups.children, allNotes)
-        let sortedNotes = await sortNoteIds(profile.sorts.children[profile.sorts.selected].rule, filteredNotes)
-        let prefixDict = await getPrefixes(profile.prefixes.children[profile.prefixes.selected], sortedNotes)
-        let colorDict = await getColors(profile.colors.children[profile.colors.selected], sortedNotes)
+        let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
+        let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
+        let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
+        let prefixDict = await getPrefixes(data.prefixes[profile.prefixes.selected], sortedNotes)
+        let colorDict = await getColors(data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
-        await setCalendarEvents(profileNoteIds, constants, icalNoteId)
+        await setCalendarEvents(profileContext, constants, icalNoteId)
     }
 }
 
-async function getTaskList(profileNoteIds) {
-    let profiles = await getAllProfiles(profileNoteIds)
+async function getTaskList(profileContext) {
+    const data = await loadData(profileContext.dataNoteId)
+    let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
-        let allNotes = await getNotesForSearchGroups(profile.searchGroups.children)
-        let filteredNotes = await getFilteredNotes(profile.filterGroups.children, allNotes)
+        let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
+        let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         return filteredNotes
     }
+    return []
 }
 
-async function sendNotificationForDueTasks(profileNoteIds, constants){
-    const taskList = await getTaskList(profileNoteIds)
+async function sendNotificationForDueTasks(profileContext, constants){
+    const taskList = await getTaskList(profileContext)
     for (const taskId of taskList){
         const task = await api.getNote(taskId)
         const startDate = task.getLabelValue(constants.START_DATETIME_LABEL)
@@ -237,16 +327,16 @@ async function sendNotificationForDueTasks(profileNoteIds, constants){
     }
 }
 
-async function rescheduleAllTasks(profileNoteIds, constants, icalNoteId, days = 0){
-    const taskList = await getTaskList(profileNoteIds)
+async function rescheduleAllTasks(profileContext, constants, icalNoteId, days = 0){
+    const taskList = await getTaskList(profileContext)
     for (const taskId of taskList){
         task.rescheduleByDays(taskId, constants, days)
     }
-    await updateTaskLists(profileNoteIds, constants, icalNoteId)
+    await updateTaskLists(profileContext, constants, icalNoteId)
 }
 
-async function setCalendarEvents(profileNoteIds, constants, icalNoteId) {
-    const taskList = await getTaskList(profileNoteIds)
+async function setCalendarEvents(profileContext, constants, icalNoteId) {
+    const taskList = await getTaskList(profileContext)
     const notes = await Promise.all(taskList.map(taskId => api.getNote(taskId)))
     const icalString = generateCalendar(notes, {
         startDateLabel: constants.START_DATETIME_LABEL,
@@ -261,10 +351,13 @@ async function setCalendarEvents(profileNoteIds, constants, icalNoteId) {
 
 
 module.exports = {
-    getMatchingProfile: getMatchingProfile,
-    saveProfile: saveProfile,
-    updateTaskLists: updateTaskLists,
-    getTaskList: getTaskList,
+    loadData,
+    saveData,
+    getMatchingProfile,
+    getAllProfiles,
+    saveProfile,
+    updateTaskLists,
+    getTaskList,
     sendNotificationForDueTasks,
     rescheduleAllTasks,
     setCalendarEvents

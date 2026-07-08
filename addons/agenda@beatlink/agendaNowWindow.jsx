@@ -46,11 +46,11 @@ function AgendaNow() {
     const [ids, setIds] = useState(null)
     useEffect(() => {
         (async () => {
-            const { constants, profileNoteIds } = await getAgendaSettings()
+            const { constants, profileContext } = await getAgendaSettings()
             const nowNoteId = await startNote.getRelationValue("nowNote")
             const widgetNoteId = await startNote.getRelationValue("LauncherWidget")
             const configNoteId = await startNote.getRelationValue("agendaNowConfig")
-            setIds({ constants, profileNoteIds, nowNoteId, widgetNoteId, configNoteId })
+            setIds({ constants, profileContext, nowNoteId, widgetNoteId, configNoteId })
         })()
     }, [])
 
@@ -77,7 +77,7 @@ function AgendaNow() {
         if (!ids) return
         if (database?.addTasksWhenDue) {
             const interval = setInterval(
-                async () => { await addDueTasksToAgendaNow(ids.profileNoteIds, ids.constants, ids.nowNoteId) },
+                async () => { await addDueTasksToAgendaNow(ids.profileContext, ids.constants, ids.nowNoteId) },
                 30000
             )
             return () => clearInterval(interval);
@@ -101,7 +101,7 @@ function AgendaNow() {
         if (!ids) return
         if (database?.sendDueNotifications) {
             const interval = setInterval(
-                () => { sendNotificationForDueTasks(ids.profileNoteIds, ids.constants) },
+                () => { sendNotificationForDueTasks(ids.profileContext, ids.constants) },
                 15000
             )
             return () => clearInterval(interval);
