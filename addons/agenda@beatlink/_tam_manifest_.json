@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.2",
+    "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -60,7 +60,8 @@
                 "title": "profile.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "profile.json"
+                "sourceUrl": "profile.json",
+                "promptOnUpdate": true
             },
             {
                 "id": "ical",
@@ -124,6 +125,76 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "agendaNowWindow.jsx"
+            },
+            {
+                "id": "profile-editor-page",
+                "title": "Profile Editor",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "profile-editor",
+                "title": "profileEditor.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditor.jsx"
+            },
+            {
+                "id": "profile-editor-groups",
+                "title": "profileEditorGroups.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorGroups.jsx"
+            },
+            {
+                "id": "profile-editor-search-groups",
+                "title": "profileEditorSearchGroups.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorSearchGroups.jsx"
+            },
+            {
+                "id": "profile-editor-filter-groups",
+                "title": "profileEditorFilterGroups.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorFilterGroups.jsx"
+            },
+            {
+                "id": "profile-editor-dayjs-rule",
+                "title": "dayjsRulePicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "dayjsRulePicker.jsx"
+            },
+            {
+                "id": "profile-editor-sorts",
+                "title": "profileEditorSorts.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorSorts.jsx"
+            },
+            {
+                "id": "profile-editor-prefixes",
+                "title": "profileEditorPrefixes.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorPrefixes.jsx"
+            },
+            {
+                "id": "profile-editor-colors",
+                "title": "profileEditorColors.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditorColors.jsx"
+            },
+            {
+                "id": "profile-editor-css",
+                "title": "profileEditor.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "profileEditor.css"
             },
             {
                 "id": "readme",
@@ -288,6 +359,114 @@
             },
             {
                 "parent": "root",
+                "child": "profile-editor-page"
+            },
+            {
+                "parent": "profile-editor-page",
+                "child": "profile-editor"
+            },
+            {
+                "parent": "root",
+                "child": "profile-editor-css"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "profile-editor",
+                "addon": "libagendaoverview@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-search-groups"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-filter-groups"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-sorts"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-prefixes"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-colors"
+            },
+            {
+                "parent": "profile-editor-search-groups",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor-search-groups",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-filter-groups",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor-filter-groups",
+                "child": "profile-editor-dayjs-rule"
+            },
+            {
+                "parent": "profile-editor-filter-groups",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-sorts",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor-sorts",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-sorts",
+                "addon": "libmultisort@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-prefixes",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor-prefixes",
+                "child": "profile-editor-dayjs-rule"
+            },
+            {
+                "parent": "profile-editor-prefixes",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-colors",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor-colors",
+                "child": "profile-editor-dayjs-rule"
+            },
+            {
+                "parent": "profile-editor-colors",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor-colors",
+                "addon": "libcolorpicker@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "root",
                 "child": "readme"
             }
         ],
@@ -386,6 +565,46 @@
                 "from": "now-window",
                 "type": "LauncherWidget",
                 "to": "now-launcher"
+            },
+            {
+                "from": "profile-editor-page",
+                "type": "renderNote",
+                "to": "profile-editor"
+            },
+            {
+                "from": "profile-editor",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "profile-editor",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "profile-editor",
+                "type": "defaultProfileNote",
+                "to": "profile"
+            },
+            {
+                "from": "profile-editor",
+                "type": "icalNote",
+                "to": "ical"
+            },
+            {
+                "from": "overview",
+                "type": "profileEditorNote",
+                "to": "profile-editor-page"
+            },
+            {
+                "from": "settings",
+                "type": "profileEditorNote",
+                "to": "profile-editor-page"
+            },
+            {
+                "from": "root",
+                "type": "AddonData:profile",
+                "to": "profile"
             }
         ],
         "labels": [
@@ -401,6 +620,11 @@
             },
             {
                 "note": "now-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "profile-editor-css",
                 "name": "appCss",
                 "value": ""
             },
@@ -431,7 +655,9 @@
             "libdatesdurationpicker@beatlink",
             "librecurrencepicker@beatlink",
             "libactionbar@beatlink",
-            "librankpicker@beatlink"
+            "librankpicker@beatlink",
+            "libcolorpicker@beatlink",
+            "libmultisort@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"

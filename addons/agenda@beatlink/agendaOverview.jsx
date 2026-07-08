@@ -9,7 +9,7 @@ import {
     useState
 } from "trilium:preact"
 
-import { startNote } from "trilium:api"
+import { startNote, activateNote } from "trilium:api"
 
 import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
@@ -146,19 +146,14 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [noteId, ids])
 
-    // The shipped default profile has no parentNoteId yet — it can't know
-    // the real id of whatever note you want it to file tasks into ahead of
-    // install time. This lets you pick that note explicitly instead of
-    // requiring a manual profile.json edit.
-    async function claimThisNote() {
-        const profileNoteId = ids.profileNoteIds[0]
-        const rawProfile = JSON.parse(await (await api.getNote(profileNoteId)).getContent())
-        rawProfile.noteId = profileNoteId
-        rawProfile.parentNoteId = noteId
-        await saveProfile(rawProfile)
-        setProfile(rawProfile)
-        setUnclaimed(false)
-        await updateTaskLists(ids.profileNoteIds, ids.constants, ids.icalNoteId)
+    // Filing tasks into a note requires a fully-built profile (search/filter/
+    // sort/prefix/color rules), not just picking a parent note — that's what
+    // the Profile Editor page is for. Resolved live via the profileEditorNote
+    // relation rather than hardcoded, same as every other cross-note jump in
+    // this addon.
+    async function openProfileEditor() {
+        const profileEditorNoteId = await startNote.getRelationValue("profileEditorNote")
+        if (profileEditorNoteId) await activateNote(profileEditorNoteId)
     }
 
     if (unclaimed) {
@@ -166,7 +161,7 @@ function AgendaOverviewWidgetJSX() {
             <RightPanelWidget title="Agenda">
                 <div className="agenda-widget">
                     <p>No agenda profile files tasks into this note yet.</p>
-                    <Button icon="bx bx-link" text="File Tasks Here" onClick={claimThisNote} />
+                    <Button icon="bx bx-edit" text="Open Profile Editor" onClick={openProfileEditor} />
                 </div>
             </RightPanelWidget>
         )
