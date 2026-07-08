@@ -375,7 +375,7 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnabl
                         <TamButton className="btn-ghost" icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
                     )}
                     {addonData.updateAvailable && (
-                        <TamButton icon="bx bx-sync" text={`Update (${addonData.latestVersion})`} onClick={() => onUpdate(addonData.id)} />
+                        <TamButton icon="bx bx-sync" text={`Update${addonData.availableVersion ? ` (${addonData.availableVersion})` : ""}`} onClick={() => onUpdate(addonData.id)} />
                     )}
                 </div>
             </aside>
@@ -621,6 +621,7 @@ export default function RepoManager() {
         if (!command) return;
         async function commandHandler(){
             const displayNote = await currentNote.getRelationValue("displayNote")
+            try {
             switch (command["command"]) {
                 case "load-addons": {
                     const freshAddons = await reload()
@@ -815,6 +816,11 @@ export default function RepoManager() {
                     break
                 }
             }
+            } catch (e) {
+                console.error("TAM: command failed", command, e)
+                api.showError(`TAM: ${e.message || e}`)
+                setCommand(null)
+            }
         }
         commandHandler()
     }, [command])
@@ -866,6 +872,7 @@ export default function RepoManager() {
                         <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
                     )}
                     <PromptReview
+                        key={promptAddonId}
                         prompts={pendingPrompts}
                         onResolve={(decisions) => setCommand({
                             command: "resolve-prompts",

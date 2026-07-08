@@ -12,7 +12,7 @@ const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "5.0.1"
+const TAM_VERSION = "5.0.2"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -448,7 +448,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
                     if (existing) {
                         if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
                         if (willWriteContent) {
-                            if (noteType !== "text" || mime !== "text/html") {
+                            if (existing.type !== noteType || existing.mime !== mime) {
                                 existing.type = noteType
                                 existing.mime = mime
                                 existing.save()
@@ -803,14 +803,8 @@ async function resolveManifest(m, addonId, parentRealId, manifestSourceUrl, ctx,
 // installing from, letting bare-id dependencies from that catalog resolve
 // without a fresh full catalog search.
 async function syncAddon(addonId, options = {}) {
-    const { manifestSourceUrl = null, manual = true, updating = new Set(), catalogContext = null } = options
+    const { manifestSourceUrl = null, manual = true, catalogContext = null } = options
     if (!addonId.trim()) return
-
-    // Re-entrancy guard: syncing a dependency can legitimately re-encounter
-    // the same addon more than once (diamond dependencies, or a dependent
-    // being the very addon whose own sync triggered the dependency sync).
-    if (updating.has(addonId)) return
-    updating.add(addonId)
 
     const isSelf = addonId === TAM_ID
 
@@ -1368,6 +1362,11 @@ async function checkForAddonUpdates() {
             const manifest = await fetchManifest(url)
             if (manifest.latestVersion) {
                 addon.updateAvailable = versionCompare(manifest.latestVersion, addon.installedVersion) > 0
+                if (addon.updateAvailable) {
+                    addon.availableVersion = manifest.latestVersion
+                } else {
+                    delete addon.availableVersion
+                }
             }
         } catch (e) {
             // Best-effort — leave whatever updateAvailable state was there.
