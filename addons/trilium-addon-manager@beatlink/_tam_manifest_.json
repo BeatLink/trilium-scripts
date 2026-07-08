@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "4.12.0",
+    "latestVersion": "5.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -33,14 +33,6 @@
             {
                 "id": "addons",
                 "title": "Addons",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null,
-                "skipOnUpdate": true
-            },
-            {
-                "id": "libraries",
-                "title": "Libraries",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null,
@@ -111,10 +103,6 @@
                 "child": "addons"
             },
             {
-                "parent": "addons",
-                "child": "libraries"
-            },
-            {
                 "parent": "root",
                 "child": "addon-data"
             },
@@ -159,11 +147,6 @@
                 "from": "lib-tam",
                 "type": "addonRoot",
                 "to": "addons"
-            },
-            {
-                "from": "lib-tam",
-                "type": "libraryRoot",
-                "to": "libraries"
             },
             {
                 "from": "lib-tam",

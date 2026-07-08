@@ -436,7 +436,7 @@ function NewAddonByUrl({ onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onCleanup, onReinitialize, anyUpdateAvailable
+    onValidate, onCleanup, onSweepOrphans, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -491,6 +491,7 @@ function SettingsView({
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
+                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
                     <TamButton
                         className="btn-ghost"
                         icon="bx bx-trash"
@@ -801,6 +802,17 @@ export default function RepoManager() {
                     setCommand(null)
                     break
                 }
+                case "sweep-orphans": {
+                    const removedTamFileIds = await libTAMjs.sweepOrphanedNotes()
+                    setValidationTitle("Orphaned Notes")
+                    setValidationIssues(removedTamFileIds.map(tamFileId => ({
+                        addonId: tamFileId.split("/")[0],
+                        message: `removed orphaned note '${tamFileId}'`
+                    })))
+                    await reload()
+                    setCommand(null)
+                    break
+                }
                 case "reinitialize-database": {
                     await libTAMjs.reinitializeDatabase()
                     await reload()
@@ -905,6 +917,7 @@ export default function RepoManager() {
                 onUpdateAll={() => setCommand({ command: "update-all" })}
                 onValidate={() => setCommand({ command: "validate-database" })}
                 onCleanup={() => setCommand({ command: "cleanup-persistence" })}
+                onSweepOrphans={() => setCommand({ command: "sweep-orphans" })}
                 onReinitialize={() => setCommand({ command: "reinitialize-database" })}
             />
         )
@@ -1008,7 +1021,11 @@ export default function RepoManager() {
                         </h4>
                         {validationIssues.length > 0 && (
                             <>
-                                <p className="no-readme">There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these.</p>
+                                <p className="no-readme">
+                                    {validationTitle === "Orphaned Notes"
+                                        ? "Already removed — nothing further to do."
+                                        : "There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these."}
+                                </p>
                                 <pre className="TAM-validation-content">
                                     {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
                                 </pre>

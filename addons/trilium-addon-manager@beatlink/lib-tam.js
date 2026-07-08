@@ -9,11 +9,10 @@ const marked = require("marked.min.js")
 // Constants -------------------------------------------------------------------
 const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
-const libraryRootLabel = "libraryRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
 const TAM_ID = "trilium-addon-manager@beatlink"
-const TAM_VERSION = "4.12.0"
+const TAM_VERSION = "5.0.0"
 const addonLabels = [
     "widget",
     "renderNote",
@@ -192,20 +191,6 @@ async function getAddonRootNoteId() {
     return await api.currentNote.getRelationValue(addonRootLabel)
 }
 
-// type: "library" addons are never installed on their own (TAM's UI hides
-// them entirely — they only ever arrive transitively via some dependent's
-// `dependencies[]`), so unlike a user-facing addon there's no reason for one
-// to also sit as its own top-level entry under "Addons". They still need
-// *some* stable, addon-external parent to be created under during their own
-// independent resolveNotes pass, though — a dependency is fully resolved
-// once, up front, before the dependent's own cross-addon children[] step
-// clones anything from it, so there's no dependent to anchor to yet at
-// creation time. "Libraries" exists purely to be that anchor without
-// cluttering the addon list a user actually browses.
-async function getLibraryRootNoteId() {
-    return await api.currentNote.getRelationValue(libraryRootLabel)
-}
-
 function topologicalSort(noteIds, parentMap) {
     const result = []
     const visited = new Set()
@@ -336,8 +321,18 @@ async function fetchReadmeHtml(addonId, readmeLocalId) {
 // note's fetch failure is logged and that note is skipped rather than
 // aborting the whole sync; any of its children are skipped too, since their
 // parent never resolved.
-async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, options = {}) {
-    const { rootExternallyParented = false, staleAnchorNoteId = null } = options
+// entryLocalId defaults to m.root (an ordinary full-manifest resolve, for a
+// directly-installed addon); a dependency pulled in lazily instead passes
+// its own export's local id as entryLocalId and a restricting scopeLocalIds
+// set (see computeLocalClosure) so only the notes that export actually needs
+// get touched — fallbackParentNoteId is then wherever the *consumer* needs
+// the export parented, not any addon-external system anchor, since nothing
+// in this design needs one: entryLocalId behaves exactly like m.root does
+// for a normal resolve (no parent within scope, falls back to whatever
+// parent the caller supplies), the mechanism just no longer assumes that
+// caller-supplied parent is always "the Addons folder".
+async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, options = {}) {
+    const { rootExternallyParented = false, entryLocalId = m.root, scopeLocalIds = null } = options
     // A local note can be listed as a child of more than one parent within
     // the same manifest (a same-addon clone, e.g. a shared settings note
     // pulled into several widgets) — only the first occurrence is where the
@@ -370,7 +365,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
             .map(r => r.to)
     )
 
-    const noteIds = m.notes.map(n => n.id)
+    const noteIds = (scopeLocalIds ? m.notes.filter(n => scopeLocalIds.has(n.id)) : m.notes).map(n => n.id)
     const sortedIds = topologicalSort(noteIds, primaryParent)
 
     const noteMap = {}
@@ -379,7 +374,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
         if (!noteDef) continue
 
         const parentLocalId = primaryParent[localId]
-        const parentRealId = parentLocalId ? noteMap[parentLocalId] : addonRootNoteId
+        const parentRealId = parentLocalId ? noteMap[parentLocalId] : fallbackParentNoteId
         if (parentLocalId && !parentRealId) {
             console.error(`TAM: skipping note '${localId}' of ${addonId} — its parent '${parentLocalId}' failed to resolve`)
             continue
@@ -394,7 +389,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
         // it — an ancestor of the Addons tree, not a sibling under it. Never
         // touch its parent when found already existing (which, in practice,
         // is the only branch this ever hits for it — see syncAddon).
-        const skipParenting = localId === m.root && rootExternallyParented
+        const skipParenting = localId === entryLocalId && rootExternallyParented
 
         let absoluteSourceUrl = null
         if (noteDef.sourceUrl) {
@@ -509,7 +504,7 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
         noteMap[localId] = realNoteId
     }
 
-    await reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented, staleAnchorNoteId)
+    await reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId, rootExternallyParented, entryLocalId)
 
     return noteMap
 }
@@ -521,16 +516,14 @@ async function resolveNotes(m, addonId, addonRootNoteId, manifestBaseUrl, option
 // under (a note whose declared parent *changed* between versions — scoped to
 // only ever detach a branch this same addon's own manifest created, via the
 // stale parent's own #TAMFILEID prefix, so this can never rip out a clone
-// another addon's applyDepChildren placed there, or one a user made by
-// hand).
-//
-// staleAnchorNoteId is a narrow exception to that ownership rule: when a
-// library-type addon's root migrates from the old "Addons" anchor to the
-// new "Libraries" one (see getLibraryRootNoteId), the stale "Addons" branch
-// is owned by TAM itself, not this addon, so the #TAMFILEID-prefix check
-// alone would never detach it — an addon synced under the old code would be
-// stuck permanently parented under both anchors otherwise.
-async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, rootExternallyParented, staleAnchorNoteId = null) {
+// another addon's resolveManifest placed there, or one a user made by
+// hand). This same ownership check is also why calling this repeatedly with
+// a *different* fallbackParentNoteId is safe for a lazily-resolved
+// dependency export shared by multiple consumers: each consumer's own parent
+// is tagged with *that consumer's* #TAMFILEID prefix, never this addon's, so
+// an earlier consumer's clone is never mistaken for a stale parent here no
+// matter how many different consumers pull the same export in over time.
+async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId, rootExternallyParented, entryLocalId = m.root) {
     const primaryParent = {}
     const extraParents = {}
     for (const c of (m.children || []).filter(c => !c.addon)) {
@@ -555,36 +548,30 @@ async function reconcileNoteParenting(m, addonId, noteMap, addonRootNoteId, root
     }
 
     for (const localId of Object.keys(noteMap)) {
-        if (localId === m.root && rootExternallyParented) continue
+        if (localId === entryLocalId && rootExternallyParented) continue
         const noteRealId = noteMap[localId]
         if (!noteRealId) continue
 
         const desiredRealParents = [primaryParent[localId], ...(extraParents[localId] || [])]
             .map(pid => noteMap[pid])
             .filter(Boolean)
-        if (localId === m.root && !rootExternallyParented && addonRootNoteId) {
-            desiredRealParents.push(addonRootNoteId)
+        if (localId === entryLocalId && !rootExternallyParented && fallbackParentNoteId) {
+            desiredRealParents.push(fallbackParentNoteId)
         }
         if (desiredRealParents.length === 0) continue
 
-        const isRootMigratingAnchor = localId === m.root && staleAnchorNoteId && staleAnchorNoteId !== addonRootNoteId
-
-        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents, staleAnchorId) => {
+        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents) => {
             const note = api.getNote(noteId)
             const currentParentIds = note.getParentNotes().map(p => p.noteId)
             for (const parentId of currentParentIds) {
                 if (desiredRealParents.includes(parentId)) continue
-                if (parentId === staleAnchorId) {
-                    api.ensureNoteIsAbsentFromParent(noteId, parentId)
-                    continue
-                }
                 const parentNote = api.getNote(parentId)
                 const parentTamId = parentNote ? parentNote.getLabelValue(tamFileIdLabel) : null
                 if (parentTamId && parentTamId.startsWith(`${addonId}/`)) {
                     api.ensureNoteIsAbsentFromParent(noteId, parentId)
                 }
             }
-        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents, isRootMigratingAnchor ? staleAnchorNoteId : null])
+        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents])
     }
 }
 
@@ -606,46 +593,6 @@ async function pruneRemovedNotes(m, addonId) {
             if (!currentSet.has(localId)) note.deleteNote()
         }
     }, [tamFileIdLabel, addonId, currentLocalIds])
-}
-
-// Resolves a dependency's exported note live, by TAMFILEID, instead of a
-// cached `exportedNotes` id map: `exports[localId]` (from the dependency's
-// own fetched manifest, passed in via `depExportsMap`) tells us the export
-// name -> local id, then `#TAMFILEID="{depAddonId}/{localId}"` finds the real
-// note. `exports{}` itself stays in the manifest as a real encapsulation
-// boundary (a dependency can rename its internal local ids across a version
-// bump without breaking consumers) — only the *resolution* is now live.
-async function resolveDepNoteId(depAddonId, exportName, depExportsMap) {
-    const depExports = depExportsMap.get(depAddonId)
-    const depLocalId = depExports?.[exportName]
-    if (!depLocalId) return null
-
-    const tamFileId = `${depAddonId}/${depLocalId}`
-    return await api.runOnBackend((tamFileIdLabel, tamFileId) => {
-        const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
-        return (note && !note.isDeleted) ? note.noteId : null
-    }, [tamFileIdLabel, tamFileId])
-}
-
-async function applyDepChildren(m, noteMap, depExportsMap) {
-    for (const c of (m.children || []).filter(c => c.addon)) {
-        const parentRealId = noteMap[c.parent]
-        if (!parentRealId) continue
-
-        if (!depExportsMap.has(c.addon)) {
-            console.error(`TAM: dependency ${c.addon} not installed, skipping clone`)
-            continue
-        }
-        const depNoteId = await resolveDepNoteId(c.addon, c.child, depExportsMap)
-        if (!depNoteId) {
-            console.error(`TAM: dependency ${c.addon} has no export '${c.child}' (or its note is missing), skipping`)
-            continue
-        }
-
-        await api.runOnBackend((sourceId, parentId) => {
-            api.ensureNoteIsPresentInParent(sourceId, parentId)
-        }, [depNoteId, parentRealId])
-    }
 }
 
 // Trilium attribute names support a trailing "(inheritable)" modifier — a
@@ -680,14 +627,210 @@ async function applyLabels(labels, noteMap) {
     }
 }
 
-async function applyRelations(relations, noteMap, depExportsMap) {
-    for (const rel of relations) {
+// Normalizes a fetched manifest document into the `m` sub-object shape used
+// throughout: the TAM-next `{manifest: {...}}` wrapper if present, else a
+// flat top-level manifest treated as having no children/dependencies/exports
+// (the shape a hand-authored, non-TAM-native manifest would have).
+function normalizeManifest(manifestFetched) {
+    return manifestFetched.manifest ?? {
+        notes: manifestFetched.notes ?? [],
+        children: [],
+        relations: manifestFetched.relations ?? [],
+        labels: manifestFetched.labels ?? [],
+        root: null,
+        dependencies: [],
+        exports: {}
+    }
+}
+
+// The transitive closure of local ids a given export actually needs: every
+// local note reachable *outward* from `startLocalId` by walking same-addon
+// children[] (require() only ever reaches a note's own declared children —
+// see this repo's CLAUDE.md on library note titles) and local (non-addon)
+// relations[] (e.g. a schemaNote relation to another note in the same
+// manifest). Never includes ancestors of startLocalId — an export is cloned
+// directly wherever a consumer needs it, the same way it always has been,
+// so the source manifest's own parent chain above the export is irrelevant.
+// This is what makes "pull in just the file that's needed" possible: a
+// dependency with a dozen unrelated notes only contributes however many of
+// them a given export's own closure actually reaches.
+function computeLocalClosure(m, startLocalId) {
+    const closure = new Set([startLocalId])
+    const localNoteIds = new Set((m.notes || []).map(n => n.id))
+    let changed = true
+    while (changed) {
+        changed = false
+        for (const c of (m.children || []).filter(c => !c.addon)) {
+            if (closure.has(c.parent) && !closure.has(c.child)) {
+                closure.add(c.child)
+                changed = true
+            }
+        }
+        for (const rel of (m.relations || [])) {
+            if (rel.addon || !localNoteIds.has(rel.to)) continue
+            if (closure.has(rel.from) && !closure.has(rel.to)) {
+                closure.add(rel.to)
+                changed = true
+            }
+        }
+    }
+    return closure
+}
+
+// Metadata-only fetch for a dependency — exports/children/relations/note
+// *definitions*, no note creation. Prefers the manifestSourceUrl already on
+// record for an already-known dependency so a repeat resolution never needs
+// catalogContext again; falls back to whatever `ctx.dependencyEntries`
+// picked up from the manifest(s) that reference this depId (see
+// resolveManifest). Cached per top-level sync via ctx.depMetaCache so a
+// dependency needed by several different exports/consumers within the same
+// sync is only ever fetched once.
+async function fetchDependencyMeta(depId, ctx) {
+    if (ctx.depMetaCache.has(depId)) return ctx.depMetaCache.get(depId)
+
+    const installedDep = ctx.database.installedAddons[depId]
+    const depEntry = ctx.dependencyEntries.get(depId) || depId
+    const depUrl = installedDep?.manifestSourceUrl || resolveDependencyUrl(depEntry, ctx.catalogContext)
+
+    let result = null
+    if (!depUrl) {
+        console.error(`TAM: dependency '${depId}' could not be resolved (not installed, and no manifestSourceUrl available)`)
+    } else {
+        try {
+            const manifestFetched = await fetchManifest(depUrl)
+            result = {
+                m: normalizeManifest(manifestFetched),
+                manifestSourceUrl: depUrl,
+                latestVersion: manifestFetched.latestVersion,
+                meta: {
+                    name: manifestFetched.name,
+                    description: manifestFetched.description,
+                    author: manifestFetched.author,
+                    license: manifestFetched.license,
+                    type: manifestFetched.type,
+                    homepage: manifestFetched.homepage
+                }
+            }
+        } catch (e) {
+            console.error(`TAM: failed to fetch dependency manifest for ${depId}`, e)
+        }
+    }
+    ctx.depMetaCache.set(depId, result)
+    return result
+}
+
+// Records/refreshes a dependency's own database entry after resolving (part
+// of) it — stores the dependency's *full* fetched manifest (not just the
+// closure just resolved) so update-checking (checkForAddonUpdates) and
+// targeted uninstall (detachAddonOwnedBranches) both have complete,
+// accurate metadata to work from, even though only a subset of its notes
+// may actually exist as real Trilium notes at any given point. Iterating a
+// manifest.notes entry whose note was never actually created is harmless —
+// resolveStoredNoteId simply finds nothing and callers already skip that.
+// Also prunes any note that *was* previously resolved but the dependency's
+// current manifest no longer declares at all (a real removal, not just
+// "not needed by this particular export").
+async function recordDependencyMeta(database, depId, depMeta) {
+    const existing = database.installedAddons[depId]
+    database.installedAddons[depId] = {
+        installedVersion: depMeta.latestVersion,
+        manifestSourceUrl: depMeta.manifestSourceUrl,
+        manuallyInstalled: existing?.manuallyInstalled || false,
+        enabled: true,
+        meta: depMeta.meta,
+        manifest: stripManifestForStorage(depMeta.m),
+        ...(existing?.persistence ? { persistence: existing.persistence } : {})
+    }
+    await pruneRemovedNotes(depMeta.m, depId)
+}
+
+// The lazy dependency resolver: pulls in only the transitive closure of
+// notes a specific export actually needs (computeLocalClosure), parented
+// directly wherever the caller needs it — never a separate "install the
+// whole dependency" step, and never any addon-external anchor note. A
+// second consumer needing the same or an overlapping export finds whatever
+// was already resolved via #TAMFILEID and simply clones it in.
+async function ensureDependencyExport(depId, exportKey, parentRealId, ctx) {
+    // A malformed or malicious dependency graph could otherwise recurse
+    // forever (A's export needing B's export needing A's export again) —
+    // resolveManifest recurses through ensureDependencyExport for every
+    // cross-addon reference it finds, with nothing else bounding the depth.
+    const resolutionKey = `${depId}::${exportKey}`
+    if (ctx.resolvingExports.has(resolutionKey)) {
+        console.error(`TAM: circular dependency detected resolving ${resolutionKey} — skipping`)
+        return null
+    }
+    ctx.resolvingExports.add(resolutionKey)
+
+    try {
+        const depMeta = await fetchDependencyMeta(depId, ctx)
+        if (!depMeta) return null
+
+        const exportLocalId = depMeta.m.exports?.[exportKey]
+        if (!exportLocalId) {
+            console.error(`TAM: dependency ${depId} has no export '${exportKey}', skipping`)
+            return null
+        }
+
+        const closure = computeLocalClosure(depMeta.m, exportLocalId)
+        const noteMap = await resolveManifest(depMeta.m, depId, parentRealId, depMeta.manifestSourceUrl, ctx, {
+            entryLocalId: exportLocalId,
+            scopeLocalIds: closure
+        })
+        const entryNoteId = noteMap[exportLocalId]
+        if (!entryNoteId) return null
+
+        await recordDependencyMeta(ctx.database, depId, depMeta)
+
+        return entryNoteId
+    } finally {
+        ctx.resolvingExports.delete(resolutionKey)
+    }
+}
+
+// Resolves `m`'s notes (the whole manifest for a directly-installed addon,
+// or just an export's closure for a lazily-pulled-in dependency — see
+// options.scopeLocalIds) and applies its own labels/relations, recursing
+// into any cross-addon child/relation reached within scope via
+// ensureDependencyExport. This is the single pipeline both a top-level
+// addon's own sync and a nested dependency resolution share, so a library
+// depending on another library recurses through exactly the same logic one
+// level deeper rather than needing a separate "sub-dependency" code path.
+async function resolveManifest(m, addonId, parentRealId, manifestSourceUrl, ctx, options = {}) {
+    const { entryLocalId = m.root, scopeLocalIds = null, rootExternallyParented = false } = options
+    const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
+
+    for (const depEntry of (m.dependencies || [])) {
+        const depId = dependencyId(depEntry)
+        if (!ctx.dependencyEntries.has(depId)) ctx.dependencyEntries.set(depId, depEntry)
+    }
+
+    const noteMap = await resolveNotes(m, addonId, parentRealId, manifestSourceUrl, {
+        entryLocalId, scopeLocalIds, rootExternallyParented
+    })
+
+    for (const c of (m.children || []).filter(c => c.addon && inScope(c.parent))) {
+        const childParentRealId = noteMap[c.parent]
+        if (!childParentRealId) continue
+        const depNoteId = await ensureDependencyExport(c.addon, c.child, childParentRealId, ctx)
+        if (!depNoteId) {
+            console.error(`TAM: dependency ${c.addon} has no export '${c.child}' (or it couldn't be resolved), skipping`)
+            continue
+        }
+        await api.runOnBackend((sourceId, parentId) => {
+            api.ensureNoteIsPresentInParent(sourceId, parentId)
+        }, [depNoteId, childParentRealId])
+    }
+
+    await applyLabels((m.labels || []).filter(l => inScope(l.note)), noteMap)
+
+    for (const rel of (m.relations || []).filter(r => inScope(r.from))) {
         const fromRealId = noteMap[rel.from]
         if (!fromRealId) continue
 
         let toRealId
         if (rel.addon) {
-            toRealId = await resolveDepNoteId(rel.addon, rel.to, depExportsMap)
+            toRealId = await ensureDependencyExport(rel.addon, rel.to, fromRealId, ctx)
         } else {
             toRealId = noteMap[rel.to] || rel.to
         }
@@ -703,6 +846,8 @@ async function applyRelations(relations, noteMap, depExportsMap) {
             note.setRelation(targetType, toId)
         }, [fromRealId, rel.type, toRealId])
     }
+
+    return noteMap
 }
 
 // The one entry point for getting an addon's notes to match its manifest,
@@ -734,17 +879,7 @@ async function syncAddon(addonId, options = {}) {
     if (!fetchUrl) throw new Error(`TAM: no manifestSourceUrl available to sync '${addonId}' (not installed yet, and none provided)`)
 
     const manifest = await fetchManifest(fetchUrl)
-
-    // Normalize manifest: TAM-next sub-dict or flat top-level
-    const m = manifest.manifest ?? {
-        notes: manifest.notes ?? [],
-        children: [],
-        relations: manifest.relations ?? [],
-        labels: manifest.labels ?? [],
-        root: null,
-        dependencies: [],
-        exports: {}
-    }
+    const m = normalizeManifest(manifest)
 
     if (!m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
 
@@ -759,59 +894,17 @@ async function syncAddon(addonId, options = {}) {
         await saveDatabase(database)
     }
 
-    // Sync dependencies first — only if missing or stale. Each already-
-    // installed dependency's `exports` map comes straight from its own
-    // locally-stored manifest (no network fetch needed unless it's actually
-    // being synced right now) — `dependents` needs nothing recorded here at
-    // all, since it's computed on demand from every addon's own stored
-    // `manifest.dependencies` (see getDependents).
-    const depExportsMap = new Map()
-    for (const depEntry of (m.dependencies || [])) {
-        const depId = dependencyId(depEntry)
-        const installedDep = database.installedAddons[depId]
-
-        if (!installedDep?.installedVersion) {
-            const depUrl = resolveDependencyUrl(depEntry, catalogContext)
-            if (!depUrl) {
-                console.error(`TAM: dependency '${depId}' could not be resolved (not installed, and no manifestSourceUrl available) — skipping`)
-                depExportsMap.set(depId, {})
-                continue
-            }
-            await syncAddon(depId, { manifestSourceUrl: depUrl, manual: false, updating, catalogContext })
-            database = await loadDatabase()
-        } else if (installedDep.manifestSourceUrl) {
-            try {
-                const depManifestFetched = await fetchManifest(installedDep.manifestSourceUrl)
-                if (depManifestFetched.latestVersion &&
-                    versionCompare(depManifestFetched.latestVersion, installedDep.installedVersion) > 0) {
-                    await syncAddon(depId, { manifestSourceUrl: installedDep.manifestSourceUrl, manual: false, updating, catalogContext })
-                    database = await loadDatabase()
-                }
-            } catch (e) {
-                // Best-effort staleness check — keep using whatever's installed.
-            }
-        }
-        const dep = database.installedAddons[depId]
-        depExportsMap.set(depId, dep?.manifest?.exports || {})
-    }
-
-    // A library-type addon roots under "Libraries" instead of flat under
-    // "Addons" — falls back to the ordinary addon root if the library anchor
-    // isn't resolvable for some reason (e.g. an old TAM install mid-update),
-    // rather than failing the sync outright. staleAnchorNoteId lets a library
-    // synced under an older TAM version (before "Libraries" existed, so its
-    // root ended up under "Addons") get migrated off that old anchor instead
-    // of permanently sitting under both.
-    const genericAddonRootNoteId = await getAddonRootNoteId()
-    const libraryRootNoteId = manifest.type === "library" ? await getLibraryRootNoteId() : null
-    const addonRootNoteId = libraryRootNoteId || genericAddonRootNoteId
-    const staleAnchorNoteId = (manifest.type === "library" && libraryRootNoteId) ? genericAddonRootNoteId : null
-    const noteMap = await resolveNotes(m, addonId, addonRootNoteId, fetchUrl, { rootExternallyParented: isSelf, staleAnchorNoteId })
+    // A directly-installed addon (this call) always resolves its *whole*
+    // manifest, unscoped, under the ordinary "Addons" anchor — only
+    // dependencies pulled in transitively via this addon's own cross-addon
+    // children[]/relations[] (inside resolveManifest, below) are resolved
+    // lazily/scoped, with no anchor of their own at all (see
+    // ensureDependencyExport).
+    const addonRootNoteId = await getAddonRootNoteId()
+    const ctx = { database, catalogContext, depMetaCache: new Map(), dependencyEntries: new Map(), resolvingExports: new Set() }
+    const noteMap = await resolveManifest(m, addonId, addonRootNoteId, fetchUrl, ctx, { rootExternallyParented: isSelf })
     if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
-    await applyDepChildren(m, noteMap, depExportsMap)
-    await applyLabels(m.labels || [], noteMap)
-    await applyRelations(m.relations || [], noteMap, depExportsMap)
     await pruneRemovedNotes(m, addonId)
 
     const storedManifest = stripManifestForStorage(m)
@@ -1000,20 +1093,46 @@ async function cleanupEmptyPersistenceRoots() {
     if (changed) await saveDatabase(database)
 }
 
+// Maintenance sweep, not run automatically (matches validateDatabase's own
+// read-only-unless-asked convention — this is the "asked" side of that):
+// any #TAMFILEID-tagged note with zero parents anywhere is unreachable in
+// the tree and, under this design, has no legitimate reason to be that way.
+// A directly-installed addon's own root is always parented (see syncAddon);
+// a dependency's notes are only ever created as a clone under whichever
+// consumer needed them (see ensureDependencyExport) — nothing in normal
+// operation leaves a #TAMFILEID-tagged note fully unparented. This exists
+// as a safety net for what does: a partial sync failure between creating a
+// note and parenting it, or a manifest edit that stopped declaring
+// something without the matching detach ever completing. Returns the list
+// of TAMFILEIDs removed.
+async function sweepOrphanedNotes() {
+    return await api.runOnBackend((tamFileIdLabel) => {
+        const removed = []
+        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+            if (note.isDeleted) continue
+            if (note.getParentNotes().length > 0) continue
+            removed.push(note.getLabelValue(tamFileIdLabel))
+            note.deleteNote()
+        }
+        return removed
+    }, [tamFileIdLabel])
+}
+
 // Removes only the branches this addon's own manifest actually owns, for
 // every note it declares — never a blanket note-level delete. A note is only
 // ever truly removed once none of its parents are left; a note that's also
 // cloned somewhere outside this addon's own subtree (an exported note a
-// dependent still holds, or — before a library's own #TAMFILEID-tagged
-// parents exist — its Addons/Libraries anchor branch) survives via that
-// other branch untouched. This intentionally doesn't rely on assumptions
-// about how Trilium's own deleteNote() cascade treats a descendant with
-// another live parent — every note in the manifest is checked and detached
-// individually, so correctness never depends on cascade behavior at all.
+// dependent still holds) survives via that other branch untouched. This
+// intentionally doesn't rely on assumptions about how Trilium's own
+// deleteNote() cascade treats a descendant with another live parent — every
+// note in the manifest is checked and detached individually, so correctness
+// never depends on cascade behavior at all. A dependency's own notes are
+// never directly parented under "Addons" in the first place (see
+// ensureDependencyExport) — the only addon this ever needs to detach a
+// top-level anchor branch for is a directly-installed one.
 async function detachAddonOwnedBranches(addonId, m) {
     const addonRootNoteId = await getAddonRootNoteId()
-    const libraryRootNoteId = await getLibraryRootNoteId()
-    const anchorIds = [addonRootNoteId, libraryRootNoteId].filter(Boolean)
+    const anchorIds = [addonRootNoteId].filter(Boolean)
 
     for (const noteDef of m.notes || []) {
         const noteId = await resolveStoredNoteId(addonId, noteDef.id)
@@ -1409,10 +1528,17 @@ async function validateDatabase() {
 
     for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
         const isInstalled = !!addon.installedVersion
+        // A dependency resolved lazily (see ensureDependencyExport) never
+        // forces its own root note into existence at all — only whichever
+        // export(s) some consumer actually needed, and their transitive
+        // closures. manuallyInstalled is false for exactly that case (it's
+        // only ever set true by a real top-level syncAddon call, which does
+        // force root), so a missing root there is expected, not an issue.
+        const requiresOwnRoot = isInstalled && !!addon.manuallyInstalled
         const persistence = addon.persistence || {}
         const manifest = addon.manifest || {}
 
-        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistence, isInstalled) => {
+        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot) => {
             const found = []
 
             function noteExists(noteId) {
@@ -1426,9 +1552,8 @@ async function validateDatabase() {
                 return (note && !note.isDeleted) ? note.noteId : null
             }
 
-            let rootNoteId = null
-            if (isInstalled) {
-                rootNoteId = resolveLocal(manifest.root)
+            let rootNoteId = resolveLocal(manifest.root)
+            if (requiresOwnRoot) {
                 if (!rootNoteId) {
                     found.push(`root note ('${manifest.root}') is missing`)
                 }
@@ -1472,7 +1597,7 @@ async function validateDatabase() {
             }
 
             return found
-        }, [tamFileIdLabel, addonId, manifest, persistence, isInstalled])
+        }, [tamFileIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot])
 
         for (const message of backendIssues) {
             issues.push({ addonId, message })
@@ -1518,3 +1643,4 @@ module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase = validateDatabase
 module.exports.fetchReadmeHtml = fetchReadmeHtml
 module.exports.cleanupEmptyPersistenceRoots = cleanupEmptyPersistenceRoots
+module.exports.sweepOrphanedNotes = sweepOrphanedNotes
