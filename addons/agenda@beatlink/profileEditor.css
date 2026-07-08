@@ -118,21 +118,26 @@
     align-items: center;
     gap: 0.25rem;
     flex: 0 0 auto;
+    width: fit-content;
 
-    & > button {
+    & .btn, & button {
         flex: 0 0 auto;
+        min-width: unset;
         width: 2rem;
         height: 2rem;
-        min-width: 0;
         padding: 0;
+        margin: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
     }
 }
 
+.pe-list > .btn,
 .pe-list > button {
     align-self: flex-start;
+    min-width: unset;
+    width: auto;
 }
 
 .pe-field-row {

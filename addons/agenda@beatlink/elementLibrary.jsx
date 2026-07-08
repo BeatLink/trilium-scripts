@@ -17,8 +17,10 @@ function newSearch() {
 function SearchElementRow({ element, onChange }) {
     return (
         <div className="pe-group">
-            <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
-            <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
+            <div>
+                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
+                <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
+            </div>
         </div>
     )
 }
@@ -64,29 +66,31 @@ function FilterElementRow({ element, onChange }) {
 
     return (
         <div className="pe-group">
-            <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
-            <FormDropdownList
-                values={filterTypeOptions}
-                currentValue={element.type}
-                onChange={setType}
-                keyProperty="key" titleProperty="title"
-            />
-            {element.type === "dayjs" ? (
-                <>
-                    <FormTextBox
-                        currentValue={element.datetimeLabel || ""}
-                        onChange={v => onChange({ ...element, datetimeLabel: v })}
-                    />
-                    <FormCheckbox
-                        label="Use Number of Days"
-                        currentValue={!!element.useNumberOfDays}
-                        onChange={v => onChange({ ...element, useNumberOfDays: v })}
-                    />
-                    <DayjsRulePicker value={element.rule} onChange={rule => onChange({ ...element, rule })} />
-                </>
-            ) : (
-                <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
-            )}
+            <div>
+                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
+                <FormDropdownList
+                    values={filterTypeOptions}
+                    currentValue={element.type}
+                    onChange={setType}
+                    keyProperty="key" titleProperty="title"
+                />
+                {element.type === "dayjs" ? (
+                    <>
+                        <FormTextBox
+                            currentValue={element.datetimeLabel || ""}
+                            onChange={v => onChange({ ...element, datetimeLabel: v })}
+                        />
+                        <FormCheckbox
+                            label="Use Number of Days"
+                            currentValue={!!element.useNumberOfDays}
+                            onChange={v => onChange({ ...element, useNumberOfDays: v })}
+                        />
+                        <DayjsRulePicker value={element.rule} onChange={rule => onChange({ ...element, rule })} />
+                    </>
+                ) : (
+                    <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
+                )}
+            </div>
         </div>
     )
 }
@@ -162,8 +166,10 @@ function SortsTab({ sorts, onChange }) {
             addLabel="Add Sort"
             renderItem={(key, sort, update) => (
                 <div className="pe-group">
-                    <FormTextBox currentValue={sort.name} onChange={v => update({ ...sort, name: v })} />
-                    <CriteriaEditor rule={sort.rule} onChange={rule => update({ ...sort, rule })} />
+                    <div>
+                        <FormTextBox currentValue={sort.name} onChange={v => update({ ...sort, name: v })} />
+                        <CriteriaEditor rule={sort.rule} onChange={rule => update({ ...sort, rule })} />
+                    </div>
                 </div>
             )}
         />
@@ -201,55 +207,57 @@ function VariantEditor({ variant, onChange, valueField, defaultValue, ValueEdito
 
     return (
         <div className="pe-group">
-            <FormTextBox currentValue={variant.name} onChange={v => onChange({ ...variant, name: v })} />
-            <FormDropdownList
-                values={variantTypeOptions}
-                currentValue={variant.type}
-                onChange={setType}
-                keyProperty="key" titleProperty="title"
-            />
-            {variant.type === "label" && (
-                <>
-                    <FormTextBox
-                        currentValue={variant.label || ""}
-                        onChange={v => onChange({ ...variant, label: v })}
-                    />
-                    <LabelValueMapEditor
-                        entries={variant.children || {}}
-                        onChange={children => onChange({ ...variant, children })}
-                        defaultValue={defaultValue}
-                        renderValue={(value, update) => <ValueEditor value={value} onChange={update} />}
-                    />
-                </>
-            )}
-            {variant.type === "dayjs" && (
-                <>
-                    <FormTextBox
-                        currentValue={variant.dateLabel || ""}
-                        onChange={v => onChange({ ...variant, dateLabel: v })}
-                    />
-                    <FormCheckbox
-                        label="Use Number of Days"
-                        currentValue={!!variant.useNumberOfDays}
-                        onChange={v => onChange({ ...variant, useNumberOfDays: v })}
-                    />
-                    <KeyedList
-                        items={variant.intervals || {}}
-                        onChange={intervals => onChange({ ...variant, intervals })}
-                        newItemFactory={newInterval}
-                        addLabel="Add Interval"
-                        renderItem={(key, interval, update) => (
-                            <div className="pe-field-row">
-                                <DayjsRulePicker value={interval.rule} onChange={rule => update({ ...interval, rule })} />
-                                <IntervalValueEditor
-                                    value={interval[valueField]}
-                                    onChange={v => update({ ...interval, [valueField]: v })}
-                                />
-                            </div>
-                        )}
-                    />
-                </>
-            )}
+            <div>
+                <FormTextBox currentValue={variant.name} onChange={v => onChange({ ...variant, name: v })} />
+                <FormDropdownList
+                    values={variantTypeOptions}
+                    currentValue={variant.type}
+                    onChange={setType}
+                    keyProperty="key" titleProperty="title"
+                />
+                {variant.type === "label" && (
+                    <>
+                        <FormTextBox
+                            currentValue={variant.label || ""}
+                            onChange={v => onChange({ ...variant, label: v })}
+                        />
+                        <LabelValueMapEditor
+                            entries={variant.children || {}}
+                            onChange={children => onChange({ ...variant, children })}
+                            defaultValue={defaultValue}
+                            renderValue={(value, update) => <ValueEditor value={value} onChange={update} />}
+                        />
+                    </>
+                )}
+                {variant.type === "dayjs" && (
+                    <>
+                        <FormTextBox
+                            currentValue={variant.dateLabel || ""}
+                            onChange={v => onChange({ ...variant, dateLabel: v })}
+                        />
+                        <FormCheckbox
+                            label="Use Number of Days"
+                            currentValue={!!variant.useNumberOfDays}
+                            onChange={v => onChange({ ...variant, useNumberOfDays: v })}
+                        />
+                        <KeyedList
+                            items={variant.intervals || {}}
+                            onChange={intervals => onChange({ ...variant, intervals })}
+                            newItemFactory={newInterval}
+                            addLabel="Add Interval"
+                            renderItem={(key, interval, update) => (
+                                <div className="pe-field-row">
+                                    <DayjsRulePicker value={interval.rule} onChange={rule => update({ ...interval, rule })} />
+                                    <IntervalValueEditor
+                                        value={interval[valueField]}
+                                        onChange={v => update({ ...interval, [valueField]: v })}
+                                    />
+                                </div>
+                            )}
+                        />
+                    </>
+                )}
+            </div>
         </div>
     )
 }
