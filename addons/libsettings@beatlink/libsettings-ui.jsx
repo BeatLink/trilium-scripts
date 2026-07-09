@@ -121,8 +121,12 @@ export async function loadSettings(schemaNoteId, configNoteId) {
 // every Field/ListTable/RegistryTree call so a `reference` field anywhere
 // (including inside a nested itemSchema) can resolve `def.registry` against
 // a sibling top-level `registry`/`list` field's current entries, regardless
-// of how deep it's nested.
-function Field({ def, value, onChange, registries }) {
+// of how deep it's nested. `schemas` is the equivalent top-level *schema*
+// object (needed only by an `inline` reference, to find the referenced
+// registry's own `itemSchema`) and `updateReferencedField` is the write-
+// through callback an `inline` reference uses to edit the referenced
+// entry's own fields in place — both threaded the same unchanging way.
+function Field({ def, value, onChange, registries, schemas, updateReferencedField }) {
     switch (def.type) {
         case "boolean":
             return <FormCheckbox label={def.label} currentValue={value} onChange={onChange} />
@@ -146,19 +150,58 @@ function Field({ def, value, onChange, registries }) {
                 />
             )
         case "list":
-            return <ListTable itemSchema={def.itemSchema} items={value || []} onChange={onChange} registries={registries} />
-        case "registry":
-            return <RegistryTree itemSchema={def.itemSchema} items={value || {}} onChange={onChange} registries={registries} />
-        case "reference": {
-            const entries = Object.entries(registries?.[def.registry] || {})
-            const options = entries.map(([id, item]) => ({ key: id, title: item?.name ?? id }))
             return (
+                <ListTable
+                    itemSchema={def.itemSchema} items={value || []} onChange={onChange}
+                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                />
+            )
+        case "registry":
+            return (
+                <RegistryTree
+                    itemSchema={def.itemSchema} items={value || {}} onChange={onChange}
+                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                />
+            )
+        case "reference": {
+            const targetRegistry = registries?.[def.registry] || {}
+            const options = Object.entries(targetRegistry).map(([id, item]) => ({ key: id, title: item?.name ?? id }))
+            const picker = (
                 <FormDropdownList
                     currentValue={value}
                     values={options}
                     keyProperty="key" titleProperty="title"
                     onChange={onChange}
                 />
+            )
+            // `inline` folds the referenced entry's own fields directly below
+            // the picker, editable in place — writing through `updateReferencedField`
+            // to the *other* registry, never to this field's own value. Falls back
+            // to the plain picker if there's nothing resolvable to fold in (no
+            // itemSchema for the target registry, or nothing currently selected).
+            if (!def.inline) return picker
+            const refItemSchema = schemas?.[def.registry]?.itemSchema
+            const refItem = targetRegistry[value]
+            if (!refItemSchema || !refItem) return picker
+            return (
+                <div class="lst-reference-inline">
+                    {picker}
+                    <div class="lst-tree-item-fields">
+                        {Object.entries(refItemSchema).map(([fieldKey, fieldDef]) => matchesShowWhen(fieldDef, refItem) && (
+                            <div class="lst-field-row" key={fieldKey} title={fieldDef.description || undefined}>
+                                <label>{fieldDef.label}</label>
+                                <Field
+                                    def={fieldDef}
+                                    value={refItem[fieldKey]}
+                                    onChange={v => updateReferencedField(def.registry, value, fieldKey, v)}
+                                    registries={registries}
+                                    schemas={schemas}
+                                    updateReferencedField={updateReferencedField}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )
         }
         case "color":
@@ -189,7 +232,7 @@ function matchesShowWhen(def, item) {
 // A column whose `showWhen` doesn't match a given row renders as a blank
 // cell rather than being omitted — the column (and its header) still exists
 // for every other row where it does apply.
-function ListTable({ itemSchema, items, onChange, registries }) {
+function ListTable({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
     const columns = Object.entries(itemSchema)
 
     function updateItem(index, key, value) {
@@ -231,7 +274,14 @@ function ListTable({ itemSchema, items, onChange, registries }) {
                         {columns.map(([key, def]) => (
                             <td key={key}>
                                 {matchesShowWhen(def, item) && (
-                                    <Field def={def} value={item[key]} onChange={v => updateItem(index, key, v)} registries={registries} />
+                                    <Field
+                                        def={def}
+                                        value={item[key]}
+                                        onChange={v => updateItem(index, key, v)}
+                                        registries={registries}
+                                        schemas={schemas}
+                                        updateReferencedField={updateReferencedField}
+                                    />
                                 )}
                             </td>
                         ))}
@@ -270,7 +320,7 @@ function generateRegistryId() {
 // its own dropdown); otherwise it falls back to the first field's value.
 // Expand/collapse state is local-only (not persisted) — a pure editing
 // convenience, not data every reader of the settings needs to agree on.
-function RegistryTree({ itemSchema, items, onChange, registries }) {
+function RegistryTree({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
     const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
@@ -352,6 +402,8 @@ function RegistryTree({ itemSchema, items, onChange, registries }) {
                                             value={item[fieldKey]}
                                             onChange={v => updateItem(key, { ...item, [fieldKey]: v })}
                                             registries={registries}
+                                            schemas={schemas}
+                                            updateReferencedField={updateReferencedField}
                                         />
                                     </div>
                                 ))}
@@ -391,6 +443,11 @@ function resolveTab(def) {
 // one page at a time — rather than every group stacked and expanded
 // together; a schema with only one group (the common case: just a handful of
 // scalar fields, or just one list/registry) renders directly with no tab bar.
+//
+// A field marked `autosave: true` persists on every edit instead of only on
+// Save — see `handleChange`/`updateReferencedField` below. The Save button
+// itself is only rendered if at least one field isn't `autosave`; a schema
+// that's entirely autosave fields has nothing left for it to do.
 export function SettingsForm({ schemaNoteId, configNoteId }) {
     const [schema, setSchema] = useState(null)
     const [values, setValues] = useState(null)
@@ -411,6 +468,36 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
         setTimeout(() => setSaveStatus(null), 2000)
     }
 
+    // A field marked `autosave: true` persists immediately on every edit
+    // instead of waiting on the Save button below — same full-document
+    // `persistValues` write either way (there's no such thing as writing
+    // "just one field" to config.json), just triggered right away instead of
+    // on click. Silent by design (no save-status flash): the explicit Save
+    // button's flash means "you have a pending edit, and it's now saved";
+    // an autosave field never has a pending edit to report on.
+    function persistNow(updatedValues) {
+        persistValues(schema, configNoteId, updatedValues)
+    }
+
+    // Write-through for an `inline` reference field: edits the *referenced*
+    // registry's entry directly (never this field's own value), regardless
+    // of how deep the reference itself is nested — every reference resolves
+    // and writes against these same top-level `values`. Autosaves if the
+    // *referenced* registry's own field is marked `autosave` (not the
+    // reference field itself, which has no persisted value of its own to
+    // gate on) — editing a search's name inline from an autosaving Filters
+    // tab shouldn't require a trip to the Searches tab's own Save button.
+    function updateReferencedField(registryKey, entryId, fieldKey, newFieldValue) {
+        const registry = values[registryKey] || {}
+        const entry = registry[entryId] || {}
+        const updated = {
+            ...values,
+            [registryKey]: { ...registry, [entryId]: { ...entry, [fieldKey]: newFieldValue } }
+        }
+        setValues(updated)
+        if (schema[registryKey]?.autosave) persistNow(updated)
+    }
+
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
 
     const entries = Object.entries(schema)
@@ -427,6 +514,10 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     const tabs = tabOrder.map(label => ({ key: label, label }))
     const useTabs = tabs.length > 1
     const activeKey = useTabs && tabs.some(t => t.key === activeTab) ? activeTab : tabs[0]?.key
+    // Nothing ever needs the explicit button if every field autosaves — the
+    // common case for a schema that's entirely element-library-shaped, no
+    // profile-identity-style fields that want a deliberate Save.
+    const needsSaveButton = entries.some(([, def]) => !def.autosave)
 
     // A field's own heading is redundant when the tab bar already shows the
     // same label right above it (the common case: a lone list/registry field
@@ -436,11 +527,25 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     function renderEntry([key, def], tabLabel) {
         const showHeading = !useTabs || def.label !== tabLabel
         const isGroup = def.type === "list" || def.type === "registry"
+
+        function handleChange(v) {
+            const updated = { ...values, [key]: v }
+            setValues(updated)
+            if (def.autosave) persistNow(updated)
+        }
+
         return (
             <div class={isGroup ? undefined : "lst-field"} key={key}>
                 {showHeading && <h4>{def.label}</h4>}
                 {def.description && <label class="lst-field-description">{def.description}</label>}
-                <Field def={def} value={values[key]} onChange={v => setValues({ ...values, [key]: v })} registries={values} />
+                <Field
+                    def={def}
+                    value={values[key]}
+                    onChange={handleChange}
+                    registries={values}
+                    schemas={schema}
+                    updateReferencedField={updateReferencedField}
+                />
             </div>
         )
     }
@@ -468,13 +573,15 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
             ) : (
                 entries.map(entry => renderEntry(entry, tabs[0]?.key))
             )}
-            <div class="lst-actions">
-                <Button
-                    icon={saveStatus === "saved" ? "bx-check" : "bx-save"}
-                    text={saveStatus === "saved" ? "Saved!" : "Save"}
-                    onClick={save}
-                />
-            </div>
+            {needsSaveButton && (
+                <div class="lst-actions">
+                    <Button
+                        icon={saveStatus === "saved" ? "bx-check" : "bx-save"}
+                        text={saveStatus === "saved" ? "Saved!" : "Save"}
+                        onClick={save}
+                    />
+                </div>
+            )}
         </div>
     )
 }

@@ -35,8 +35,10 @@ library's — schema lives with the addon that defines it):
 | `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
 | `itemSchema`  | `list`/`registry` only | A nested schema object (same shape as above) describing the fields of each entry |
 | `registry`    | `reference` only | The sibling top-level schema key (must be a `registry` field) this field picks an entry from |
+| `inline`      | `reference` only, default `false` | Fold the picked entry's own fields in below the picker, editable in place — see "Inline references" below |
 | `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
 | `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
+| `autosave`    | no, top-level fields only, default `false` | Persist this field's edits immediately instead of waiting on the Save button — see "Autosave fields" below |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
 first read, so there's nothing to duplicate between the two files.
@@ -190,6 +192,29 @@ copy — the motivating case this type exists for. `reference` doesn't validate 
 exists in the target registry (an entry can be deleted out from under a reference); a dangling
 reference just renders as an empty dropdown selection.
 
+#### `inline` — editing the referenced entry's own fields in place
+
+A plain `reference` only ever lets you *pick* an entry by name; add `"inline": true` and the picker
+also folds the picked entry's own fields directly beneath it, editable right there:
+
+```json
+{
+    "elementId": {
+        "type": "reference", "label": "Search", "registry": "searches", "default": "", "inline": true
+    }
+}
+```
+
+This is for the case where the reference is really a "usage" of something that's rarely meaningful on
+its own — a usage inside a group referencing a shared search, where you want to see and tweak that
+search's actual `name`/`rule` from inside the group without leaving it. The fields shown are the
+target registry's own `itemSchema` (so editing them is subject to the same `showWhen` rules as
+anywhere else); editing one writes through to *that* registry's entry via `updateReferencedField`
+(threaded the same unchanging way as `registries`), never to this reference field's own value — every
+other usage of the same entry, wherever it lives, sees the edit immediately, same as editing it from
+the target registry directly would. Omit `inline` (or leave it `false`) for the common case of just
+picking an existing entry by name without also surfacing its fields.
+
 ### Nesting — a `list`/`registry` entry containing its own `list`/`registry`
 
 `itemSchema` is a full schema in its own right, so an `itemSchema` field can itself be `type: "list"`
@@ -254,6 +279,33 @@ onto one named tab instead of each getting its own:
     "searchGroups": {"type": "registry", "label": "Search Groups", "default": {}, "itemSchema": {...}, "tab": "Searches"}
 }
 ```
+
+### Autosave fields
+
+By default every field waits on the Save button — nothing is written to `config.json` until it's
+clicked, same as before `autosave` existed. A top-level field marked `"autosave": true` instead
+persists immediately on every edit (still the same full-document `persistValues` write; there's no
+partial write of "just one field" to a JSON note). This is meant for the case where a schema mixes two
+kinds of field on purpose — an element-library-style `registry` you want to feel "live" (edit an
+entry, it's saved, no separate step) alongside a handful of fields that represent a deliberate choice
+worth confirming explicitly (a name, which note something files under, which preset is currently
+selected):
+
+```json
+{
+    "parentNoteId": {"type": "note", "label": "File Tasks Under", "default": ""},
+    "searches": {"type": "registry", "label": "Searches", "default": {}, "itemSchema": {...}, "autosave": true}
+}
+```
+
+Autosave is silent — no save-status flash — since the explicit Save button's flash means "you had a
+pending edit, and it's now saved," and an autosave field never has one. The Save button itself is only
+rendered at all if at least one top-level field *isn't* `autosave`; a schema that's entirely autosave
+fields has nothing left for it to do. An `inline` reference field's write-through
+(`updateReferencedField`) also autosaves, but based on the *referenced* registry's own `autosave`
+flag, not the reference field itself (which has no persisted value of its own to gate on) — editing a
+search's name inline from a `filters` registry shouldn't need a trip to wherever `searches` itself is
+rendered just to save it.
 
 ## Backend usage
 

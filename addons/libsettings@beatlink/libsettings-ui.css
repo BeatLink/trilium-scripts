@@ -253,3 +253,16 @@
         padding-inline-end: 0 !important;
     }
 }
+
+.lst-reference-inline {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+
+    & > .lst-tree-item-fields {
+        border-left: 2px solid var(--main-border-color) !important;
+        padding-left: 0.75rem !important;
+        margin-left: 0.25rem !important;
+    }
+}
