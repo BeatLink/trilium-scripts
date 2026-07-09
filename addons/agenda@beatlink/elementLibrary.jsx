@@ -1,7 +1,7 @@
 import { useState, useEffect, FormTextBox, FormCheckbox, FormDropdownList } from "trilium:preact"
 import { startNote } from "trilium:api"
 import { Collapsible } from "Collapsible.jsx"
-import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
+import { KeyedList, TabbedKeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
 import { DayjsRulePicker } from "dayjsRulePicker.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
@@ -28,7 +28,7 @@ function SearchElementRow({ element, onChange }) {
 
 function SearchesTab({ searches, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={searches}
             onChange={onChange}
             newItemFactory={newSearch}
@@ -62,7 +62,7 @@ function DateRuleElementRow({ element, onChange }) {
 
 function DateRulesTab({ dateRules, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={dateRules}
             onChange={onChange}
             newItemFactory={newDateRule}
@@ -138,7 +138,7 @@ function FilterElementRow({ element, dateRules, onChange }) {
 
 function FiltersTab({ filters, dateRules, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={filters}
             onChange={onChange}
             newItemFactory={newFilter}
@@ -202,7 +202,7 @@ function CriteriaEditor({ rule, onChange }) {
 
 function SortsTab({ sorts, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={sorts}
             onChange={onChange}
             newItemFactory={newSort}
@@ -322,7 +322,7 @@ function ColorValueEditor({ value, onChange }) {
 
 function PrefixesTab({ prefixes, dateRules, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={prefixes}
             onChange={onChange}
             newItemFactory={() => newVariant("Prefix")}
@@ -344,7 +344,7 @@ function PrefixesTab({ prefixes, dateRules, onChange }) {
 
 function ColorsTab({ colors, dateRules, onChange }) {
     return (
-        <KeyedList
+        <TabbedKeyedList
             items={colors}
             onChange={onChange}
             newItemFactory={() => newVariant("Color")}
