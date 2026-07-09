@@ -88,35 +88,68 @@ function reshapeVariant(variant) {
     return { name: variant.name, type: "dayjs", intervals: variant.intervals || {} }
 }
 
+// `searchGroups`/`filterGroups` are their own top-level registries in the
+// schema (shown on the Searches/Filters tabs respectively, alongside the
+// `searches`/`filters` library they reference — not nested inside `profiles`,
+// so a group's elements stay reachable from the same tab that defines them),
+// each entry carrying a `profileId` (`reference` → `profiles`) saying which
+// profile it belongs to. `groupsForProfile` filters down to just one
+// profile's own groups and reshapes each into the `{groupId: {name,
+// children}}` shape `getNotesForSearchGroups`/`getFilteredNotes` already
+// iterate — dropping `profileId` itself, since it's already implied by which
+// profile asked.
+function groupsForProfile(allGroups, profileId) {
+    return Object.fromEntries(
+        Object.entries(allGroups)
+            .filter(([, group]) => group.profileId === profileId)
+            .map(([id, group]) => [id, { name: group.name, children: group.children }])
+    )
+}
+
+// The inverse of `groupsForProfile`, for `saveProfile` writing an edited
+// profile's own groups back into a shared top-level registry: every other
+// profile's groups pass through untouched, this profile's own groups are
+// replaced wholesale (added/edited/removed) with `profileId` re-attached.
+function mergeProfileGroups(allGroups, profileId, ownGroups) {
+    const merged = {}
+    for (const [id, group] of Object.entries(allGroups)) {
+        if (group.profileId !== profileId) merged[id] = group
+    }
+    for (const [id, group] of Object.entries(ownGroups)) {
+        merged[id] = { name: group.name, profileId, children: group.children }
+    }
+    return merged
+}
+
 // A profile's `sortSelected`/`prefixSelected`/`colorSelected` (plain
 // `reference` fields in the schema) become the `{selected: ...}` shape
-// `updateTaskLists`/`getTaskList` read; `searchGroups`/`filterGroups` (each a
-// `registry` of groups, itemSchema `name`+nested `children` registry of
-// usages) become the `{children: ...}` shape `getNotesForSearchGroups`/
-// `getFilteredNotes` already iterate.
-function reshapeProfile(profile) {
+// `updateTaskLists`/`getTaskList` read; its own search/filter groups (found
+// via `groupsForProfile`) become the `{children: ...}` shape
+// `getNotesForSearchGroups`/`getFilteredNotes` already iterate.
+function reshapeProfile(profile, searchGroups, filterGroups, profileId) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
-        searchGroups: { children: profile.searchGroups || {} },
-        filterGroups: { children: profile.filterGroups || {} },
+        searchGroups: { children: groupsForProfile(searchGroups, profileId) },
+        filterGroups: { children: groupsForProfile(filterGroups, profileId) },
         sorts: { selected: profile.sortSelected },
         prefixes: { selected: profile.prefixSelected },
         colors: { selected: profile.colorSelected }
     }
 }
 
-// The inverse of `reshapeProfile`, for `saveProfile` writing an edited
-// (legacy-shaped) profile back into the schema's decomposed shape.
+// The inverse of `reshapeProfile`'s identity fields, for `saveProfile`
+// writing an edited (legacy-shaped) profile back into the schema's
+// decomposed shape — its groups are handled separately, via
+// `mergeProfileGroups`, since they now live in a different top-level
+// registry than the profile itself.
 function unshapeProfile(profile) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
         sortSelected: profile.sorts?.selected,
         prefixSelected: profile.prefixes?.selected,
-        colorSelected: profile.colors?.selected,
-        searchGroups: profile.searchGroups?.children || {},
-        filterGroups: profile.filterGroups?.children || {}
+        colorSelected: profile.colors?.selected
     }
 }
 
@@ -141,7 +174,11 @@ async function loadData(schemaNoteId, configNoteId) {
 
     const prefixes = Object.fromEntries(Object.entries(values.prefixes || {}).map(([id, v]) => [id, reshapeVariant(v)]))
     const colors = Object.fromEntries(Object.entries(values.colors || {}).map(([id, v]) => [id, reshapeVariant(v)]))
-    const profiles = Object.fromEntries(Object.entries(values.profiles || {}).map(([id, p]) => [id, reshapeProfile(p)]))
+    const profiles = Object.fromEntries(
+        Object.entries(values.profiles || {}).map(([id, p]) => [
+            id, reshapeProfile(p, values.searchGroups || {}, values.filterGroups || {}, id)
+        ])
+    )
 
     return {
         searches: values.searches || {},
@@ -154,6 +191,8 @@ async function saveProfile(profile) {
     const { id, schemaNoteId, configNoteId, ...profileFields } = profile
     const values = await loadSettings(schemaNoteId, configNoteId)
     values.profiles = { ...(values.profiles || {}), [id]: unshapeProfile(profileFields) }
+    values.searchGroups = mergeProfileGroups(values.searchGroups || {}, id, profileFields.searchGroups?.children || {})
+    values.filterGroups = mergeProfileGroups(values.filterGroups || {}, id, profileFields.filterGroups?.children || {})
     await saveSettings(schemaNoteId, configNoteId, values)
 }
 

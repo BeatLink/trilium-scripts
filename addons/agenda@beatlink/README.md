@@ -13,13 +13,15 @@ widgets plus a single schema-driven editor page:
 4. **Agenda Editor** (`profileEditor.jsx`, a `render`-type page reachable from TAM's **Settings**
    button or the Overview widget) — `libsettings@beatlink`'s `SettingsForm` dropped in as-is, rendering
    one tab per top-level `schema.json` field's `tab`: **Settings** (the label-name vocabulary),
-   **Profiles** (every profile — its identity, its sort/prefix/color pick, and its own Search Groups/
-   Filter Groups, each usage folded to the actual referenced search/filter's fields inline via a
-   `reference` field's `inline: true`), and a flat **Searches / Filters / Sorts / Prefixes / Colors /
-   Date Rules** element library, one tab each. A profile's Search Groups/Filter Groups reference
-   elements from those library tabs by id; editing an element on its own tab updates every profile
-   using it. Every registry tab (including Profiles) autosaves each edit immediately; only the
-   Settings tab's label-name fields wait on an explicit Save.
+   **Profiles** (every profile's identity and its sort/prefix/color pick), **Searches** (the shared
+   search element library *and* every profile's Search Groups, tagged with which profile they belong
+   to), **Filters** (same, for Filter Groups), and a flat **Sorts / Prefixes / Colors / Date Rules**
+   element library, one tab each. A group's usages reference elements from the Searches/Filters library
+   by id, each folded to the actual referenced search/filter's fields inline via a `reference` field's
+   `inline: true` — so a group and the elements it uses live on the same tab, nested, rather than a
+   group living under a separate Profiles tab pointing at elements elsewhere. Every registry tab
+   (including Profiles) autosaves each edit immediately; only the Settings tab's label-name fields wait
+   on an explicit Save.
 
 ## Setup
 
@@ -27,8 +29,9 @@ widgets plus a single schema-driven editor page:
    Agenda Editor. Its Settings tab lets you override any of the label names (`startDateTime`,
    `dueDateTime`, `duration`, `recurrence`, `rank`, etc — defaults match the original system).
 2. On the Agenda Editor's Profiles tab, point the shipped "default" profile's **File Tasks Under** at
-   whichever note you want tasks re-filed into, and enable/build out its search and filter groups
-   (referencing the built-in elements on the Searches/Filters tabs, or new ones you add there).
+   whichever note you want tasks re-filed into. On the Searches/Filters tabs, enable/build out that
+   profile's search and filter groups (referencing the built-in elements there, or new ones you add) —
+   each group you add picks which profile it belongs to.
 3. Open any note filed under that target — the Overview widget there lets you toggle individual
    searches/filters and change sort/prefix/color live, without leaving the note.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
@@ -47,11 +50,14 @@ This addon owns exactly two things every other `lib*@beatlink` piece explicitly 
 - **A `libsettings@beatlink` schema** (`schema.json`/`config.json`, rendered wholesale by the Agenda
   Editor) holding *everything* configurable about this addon: the label-name vocabulary
   (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`, `recurrenceLabel`, `rankLabel`, etc),
-  every shared `searches`/`filters`/`sorts`/`prefixes`/`colors`/`dateRules` `registry`, and a
-  `profiles` `registry` (each profile's own `searchGroups`/`filterGroups` nested inside it, each
-  usage a `reference` into `searches`/`filters` with `inline: true`) — see
-  [libsettings@beatlink's README](../libsettings@beatlink/README.md) for the full mechanics
-  (`registry`/`reference`/`showWhen`/nesting/`autosave`) this schema leans on. `agendaSettings.jsx`'s
+  every shared `searches`/`filters`/`sorts`/`prefixes`/`colors`/`dateRules` `registry`, a `profiles`
+  `registry` (identity + sort/prefix/color pick only), and `searchGroups`/`filterGroups` — each its
+  own top-level `registry` (not nested inside `profiles`, so a group stays on the same tab as the
+  elements it references), every entry carrying a `profileId` (a `reference` → `profiles`) saying
+  which profile it belongs to, and each usage a `reference` into `searches`/`filters` with
+  `inline: true` — see [libsettings@beatlink's README](../libsettings@beatlink/README.md) for the
+  full mechanics (`registry`/`reference`/`showWhen`/nesting/`autosave`) this schema leans on.
+  `agendaSettings.jsx`'s
   `getAgendaSettings()` loads this once per widget and reshapes it into the `constants` object
   (uppercase keys) and a `profileContext` (`{ schemaNoteId, configNoteId, profileIds }` — every id
   currently in the `profiles` registry, not a hardcoded single one) every `lib*@beatlink` function

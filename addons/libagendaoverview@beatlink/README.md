@@ -33,13 +33,13 @@ relations or import a shared constants module — the caller supplies:
 
 ## Schema shape this library expects
 
-This library doesn't own a schema — the caller's own `schema.json` declares six top-level
-`registry` fields (`searches`, `filters`, `sorts`, `prefixes`, `colors`, `dateRules`) and a `profiles`
-registry referencing them, using libsettings' `reference`/`showWhen`/nesting features (see
-[agenda@beatlink](../agenda@beatlink/)'s `schema.json` for the real, fully-worked example this was
-extracted from). A few fields are decomposed in the schema for editability and reassembled by this
-library's `loadData` before use, since the schema's job is to be a good editing surface, not to match
-what the matching/sorting logic below actually wants:
+This library doesn't own a schema — the caller's own `schema.json` declares eight top-level
+`registry` fields (`searches`, `searchGroups`, `filters`, `filterGroups`, `sorts`, `prefixes`,
+`colors`, `dateRules`) and a `profiles` registry, using libsettings' `reference`/`showWhen`/nesting
+features (see [agenda@beatlink](../agenda@beatlink/)'s `schema.json` for the real, fully-worked
+example this was extracted from). A few fields are decomposed in the schema for editability and
+reassembled by this library's `loadData` before use, since the schema's job is to be a good editing
+surface, not to match what the matching/sorting logic below actually wants:
 
 - **A Date Rule's comparison** — the schema stores `operator`/`moment1`/`moment2`/`bracket` (plain
   dropdowns, via `showWhen`) instead of a raw `["isBefore", "startOfToday"]`-style tuple.
@@ -51,11 +51,19 @@ what the matching/sorting logic below actually wants:
   (itemSchema `labelValue`+`display`, since a `registry`'s own key is opaque bookkeeping, never the
   meaningful label value) instead of a flat `{labelValue: display}` map. `getPrefixes`/`getColors`
   still only ever see the reassembled flat map.
-- **A profile's sort/prefix/color pick and its groups** — the schema stores `sortSelected`/
-  `prefixSelected`/`colorSelected` (plain `reference` fields) and `searchGroups`/`filterGroups` (each a
-  `registry` of groups, itemSchema `name` + nested `children` registry of usages) — reassembled into
-  the `{selected: ...}` / `{children: ...}` shape the matching logic already expected before this
-  library moved onto libsettings.
+- **A profile's sort/prefix/color pick** — the schema stores `sortSelected`/`prefixSelected`/
+  `colorSelected` (plain `reference` fields) on the profile itself — reassembled into the
+  `{selected: ...}` shape the matching logic already expected before this library moved onto
+  libsettings.
+- **A profile's search/filter groups** — `searchGroups`/`filterGroups` are *not* nested inside
+  `profiles` (each is its own top-level registry, shown on the Searches/Filters tab respectively,
+  right next to the `searches`/`filters` library it references — not buried inside a Profiles tab, so
+  a group's own elements stay reachable from the same tab that defines them). Each group entry
+  instead carries a `profileId` (a `reference` → `profiles`) saying which profile it belongs to.
+  `groupsForProfile` filters a registry down to one profile's own groups and reshapes into the
+  `{groupId: {name, children}}` shape `getNotesForSearchGroups`/`getFilteredNotes` already iterate;
+  `mergeProfileGroups` is the inverse, used by `saveProfile` to write a profile's edited groups back
+  without disturbing any other profile's groups in the same registry.
 
 `dateRules` exists as its own registry (rather than each filter/interval embedding its own criteria)
 because the exact same comparison — "overdue," "later today," etc — is typically needed by a filter
@@ -99,9 +107,11 @@ equals `overviewNoteId` — used by the overview widget to find its own profile 
 ### `saveProfile(profile)`
 
 Writes a (possibly edited) profile object — as returned by `getMatchingProfile`/`getAllProfiles`,
-carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema's `profiles` registry,
-reversing `loadData`'s reassembly (`{selected: ...}`/`{children: ...}` back into `sortSelected`-style
-reference fields and bare group/usage maps) before calling `libSettingsUI.jsx`'s `saveSettings`.
+carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: identity fields and
+`sortSelected`/`prefixSelected`/`colorSelected` land in the `profiles` registry, while
+`searchGroups`/`filterGroups` are merged back into their own top-level registries via
+`mergeProfileGroups` (preserving every other profile's groups untouched) before calling
+`libSettingsUI.jsx`'s `saveSettings`.
 
 ### `updateTaskLists(profileContext, constants, icalNoteId)`
 

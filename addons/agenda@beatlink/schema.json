@@ -63,41 +63,7 @@
             "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "" },
             "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
             "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
-            "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
-            "searchGroups": {
-                "type": "registry",
-                "label": "Search Groups",
-                "default": {},
-                "itemSchema": {
-                    "name": { "type": "string", "label": "Name", "default": "New Group" },
-                    "children": {
-                        "type": "registry",
-                        "label": "Searches",
-                        "default": {},
-                        "itemSchema": {
-                            "elementId": { "type": "reference", "label": "Search", "registry": "searches", "inline": true, "default": "" },
-                            "enabled": { "type": "boolean", "label": "Enabled", "default": true }
-                        }
-                    }
-                }
-            },
-            "filterGroups": {
-                "type": "registry",
-                "label": "Filter Groups",
-                "default": {},
-                "itemSchema": {
-                    "name": { "type": "string", "label": "Name", "default": "New Filter Group" },
-                    "children": {
-                        "type": "registry",
-                        "label": "Filters",
-                        "default": {},
-                        "itemSchema": {
-                            "elementId": { "type": "reference", "label": "Filter", "registry": "filters", "inline": true, "default": "" },
-                            "enabled": { "type": "boolean", "label": "Enabled", "default": true }
-                        }
-                    }
-                }
-            }
+            "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" }
         },
         "default": {
             "default": {
@@ -105,74 +71,37 @@
                 "parentNoteId": "",
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",
-                "colorSelected": "priority",
-                "searchGroups": {
-                    "type": {
-                        "name": "Note Type",
-                        "children": {
-                            "calendar": { "elementId": "calendar", "enabled": true },
-                            "routine": { "elementId": "routine", "enabled": true },
-                            "tasks": { "elementId": "tasks", "enabled": true },
-                            "future": { "elementId": "future", "enabled": true }
-                        }
-                    }
-                },
-                "filterGroups": {
-                    "priority": {
-                        "name": "Priority",
-                        "children": {
-                            "must": { "elementId": "must", "enabled": true },
-                            "should": { "elementId": "should", "enabled": true },
-                            "could": { "elementId": "could", "enabled": true },
-                            "want": { "elementId": "want", "enabled": true },
-                            "none": { "elementId": "none", "enabled": false }
-                        }
-                    },
-                    "date": {
-                        "name": "Date",
-                        "children": {
-                            "noDate": { "elementId": "noDate", "enabled": false },
-                            "overdue": { "elementId": "overdue", "enabled": true },
-                            "now": { "elementId": "now", "enabled": true },
-                            "restOfDay": { "elementId": "restOfDay", "enabled": true },
-                            "tomorrow": { "elementId": "tomorrow", "enabled": false },
-                            "thisWeek": { "elementId": "thisWeek", "enabled": false },
-                            "thisMonth": { "elementId": "thisMonth", "enabled": false },
-                            "thisYear": { "elementId": "thisYear", "enabled": false },
-                            "future": { "elementId": "future", "enabled": false }
-                        }
-                    },
-                    "recurrence": {
-                        "name": "Recurrence",
-                        "children": {
-                            "hourly": { "elementId": "hourly", "enabled": true },
-                            "daily": { "elementId": "daily", "enabled": true },
-                            "weekly": { "elementId": "weekly", "enabled": true },
-                            "monthly": { "elementId": "monthly", "enabled": true },
-                            "yearly": { "elementId": "yearly", "enabled": true },
-                            "noRecurrence": { "elementId": "noRecurrence", "enabled": true }
-                        }
-                    },
-                    "area": {
-                        "name": "Area",
-                        "children": {
-                            "1-career": { "elementId": "1-career", "enabled": true },
-                            "2-finances": { "elementId": "2-finances", "enabled": true },
-                            "3-home": { "elementId": "3-home", "enabled": true },
-                            "4-car": { "elementId": "4-car", "enabled": true },
-                            "5-fitness": { "elementId": "5-fitness", "enabled": true },
-                            "6-grooming": { "elementId": "6-grooming", "enabled": true },
-                            "7-sexual": { "elementId": "7-sexual", "enabled": true },
-                            "8-social": { "elementId": "8-social", "enabled": true },
-                            "9-health": { "elementId": "9-health", "enabled": true },
-                            "10-mental": { "elementId": "10-mental", "enabled": true },
-                            "11-identity": { "elementId": "11-identity", "enabled": true },
-                            "12-productivity": { "elementId": "12-productivity", "enabled": true },
-                            "13-tech": { "elementId": "13-tech", "enabled": true },
-                            "14-fun": { "elementId": "14-fun", "enabled": true },
-                            "15-none": { "elementId": "15-none", "enabled": true }
-                        }
-                    }
+                "colorSelected": "priority"
+            }
+        }
+    },
+    "searchGroups": {
+        "type": "registry",
+        "label": "Search Groups",
+        "tab": "Searches",
+        "autosave": true,
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Group" },
+            "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
+            "children": {
+                "type": "registry",
+                "label": "Searches",
+                "default": {},
+                "itemSchema": {
+                    "elementId": { "type": "reference", "label": "Search", "registry": "searches", "inline": true, "default": "" },
+                    "enabled": { "type": "boolean", "label": "Enabled", "default": true }
+                }
+            }
+        },
+        "default": {
+            "type": {
+                "name": "Note Type",
+                "profileId": "default",
+                "children": {
+                    "calendar": { "elementId": "calendar", "enabled": true },
+                    "routine": { "elementId": "routine", "enabled": true },
+                    "tasks": { "elementId": "tasks", "enabled": true },
+                    "future": { "elementId": "future", "enabled": true }
                 }
             }
         }
@@ -192,6 +121,86 @@
             "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine')" },
             "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND #dueDateTime" },
             "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')" }
+        }
+    },
+    "filterGroups": {
+        "type": "registry",
+        "label": "Filter Groups",
+        "tab": "Filters",
+        "autosave": true,
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Filter Group" },
+            "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
+            "children": {
+                "type": "registry",
+                "label": "Filters",
+                "default": {},
+                "itemSchema": {
+                    "elementId": { "type": "reference", "label": "Filter", "registry": "filters", "inline": true, "default": "" },
+                    "enabled": { "type": "boolean", "label": "Enabled", "default": true }
+                }
+            }
+        },
+        "default": {
+            "priority": {
+                "name": "Priority",
+                "profileId": "default",
+                "children": {
+                    "must": { "elementId": "must", "enabled": true },
+                    "should": { "elementId": "should", "enabled": true },
+                    "could": { "elementId": "could", "enabled": true },
+                    "want": { "elementId": "want", "enabled": true },
+                    "none": { "elementId": "none", "enabled": false }
+                }
+            },
+            "date": {
+                "name": "Date",
+                "profileId": "default",
+                "children": {
+                    "noDate": { "elementId": "noDate", "enabled": false },
+                    "overdue": { "elementId": "overdue", "enabled": true },
+                    "now": { "elementId": "now", "enabled": true },
+                    "restOfDay": { "elementId": "restOfDay", "enabled": true },
+                    "tomorrow": { "elementId": "tomorrow", "enabled": false },
+                    "thisWeek": { "elementId": "thisWeek", "enabled": false },
+                    "thisMonth": { "elementId": "thisMonth", "enabled": false },
+                    "thisYear": { "elementId": "thisYear", "enabled": false },
+                    "future": { "elementId": "future", "enabled": false }
+                }
+            },
+            "recurrence": {
+                "name": "Recurrence",
+                "profileId": "default",
+                "children": {
+                    "hourly": { "elementId": "hourly", "enabled": true },
+                    "daily": { "elementId": "daily", "enabled": true },
+                    "weekly": { "elementId": "weekly", "enabled": true },
+                    "monthly": { "elementId": "monthly", "enabled": true },
+                    "yearly": { "elementId": "yearly", "enabled": true },
+                    "noRecurrence": { "elementId": "noRecurrence", "enabled": true }
+                }
+            },
+            "area": {
+                "name": "Area",
+                "profileId": "default",
+                "children": {
+                    "1-career": { "elementId": "1-career", "enabled": true },
+                    "2-finances": { "elementId": "2-finances", "enabled": true },
+                    "3-home": { "elementId": "3-home", "enabled": true },
+                    "4-car": { "elementId": "4-car", "enabled": true },
+                    "5-fitness": { "elementId": "5-fitness", "enabled": true },
+                    "6-grooming": { "elementId": "6-grooming", "enabled": true },
+                    "7-sexual": { "elementId": "7-sexual", "enabled": true },
+                    "8-social": { "elementId": "8-social", "enabled": true },
+                    "9-health": { "elementId": "9-health", "enabled": true },
+                    "10-mental": { "elementId": "10-mental", "enabled": true },
+                    "11-identity": { "elementId": "11-identity", "enabled": true },
+                    "12-productivity": { "elementId": "12-productivity", "enabled": true },
+                    "13-tech": { "elementId": "13-tech", "enabled": true },
+                    "14-fun": { "elementId": "14-fun", "enabled": true },
+                    "15-none": { "elementId": "15-none", "enabled": true }
+                }
+            }
         }
     },
     "filters": {
