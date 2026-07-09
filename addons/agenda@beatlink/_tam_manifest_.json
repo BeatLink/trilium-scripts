@@ -404,6 +404,11 @@
                 "child": "profile-editor-groups"
             },
             {
+                "parent": "profile-editor-groups",
+                "addon": "libcollapsible@beatlink",
+                "child": "lib"
+            },
+            {
                 "parent": "profile-editor",
                 "child": "profile-editor-dayjs-rule"
             },
