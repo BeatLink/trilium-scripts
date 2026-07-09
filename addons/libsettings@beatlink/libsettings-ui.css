@@ -122,3 +122,20 @@
     flex-direction: row;
     gap: 0.25rem;
 }
+
+/* Trilium's own .btn-secondary (what a plain Button defaults to) sets
+   min-width: 120px and generous padding — fine for a labeled action button,
+   but these are icon-only reorder/remove controls, so they need to be
+   pinned to a small square instead. */
+.lst-table-actions .btn,
+.lst-table-actions button {
+    flex: 0 0 auto;
+    min-width: unset;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}

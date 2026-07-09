@@ -28,4 +28,12 @@ enough that bright colors like `gold` or `lime` render as dark olive/forest-gree
 the light-mode cap (and lowers the dark-mode floor a little) so note colors read much closer to
 their real hue.
 
+Buttons match TAM's own "normal" button (see `tam.css`'s `.btn-ghost`, used for every non-CTA
+action): transparent background, a border and text in the accent color, and hover is just a subtle
+opacity fade — never a background/text color swap. That also sidesteps a real bug: `forms.css` gives
+a button's icon glyph its own explicit color that's never redeclared on `:hover`, so a
+background-swap hover (the "next" theme's default) made the icon the same color as the new
+background and it visually vanished. The border and compact padding need real selectors, not just
+variables — `forms.css` sets a literal `border: unset` and a 120px min-width on every button.
+
 Add to a CSS note and set the following attributes: `#appThemeBase=next` `#appTheme=TAMTheme`

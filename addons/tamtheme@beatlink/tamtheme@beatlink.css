@@ -68,10 +68,19 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
 
     --button-text-color: var(--t-accent) !important;
 
-    --cmd-button-background-color: var(--t-surface-2) !important;
-    --cmd-button-text-color: var(--t-text) !important;
-    --cmd-button-hover-background-color: var(--t-accent) !important;
-    --cmd-button-hover-text-color: #fff !important;
+    /* TAM's own normal buttons (see tam.css's .btn-ghost, used for every
+       non-CTA action) are ghost-style: transparent background, a border
+       and text in the accent color, and hover is just a subtle opacity
+       fade — never a background/text color swap. Matching that here
+       (rather than the "next" theme's default background-swap-on-hover)
+       also sidesteps a real bug: the icon glyph inside a button
+       (span.tn-icon) is never given its own hover color by forms.css, so
+       a background-swap hover made icon and background the same color
+       and the icon vanished. */
+    --cmd-button-background-color: transparent !important;
+    --cmd-button-text-color: var(--t-accent) !important;
+    --cmd-button-hover-background-color: transparent !important;
+    --cmd-button-hover-text-color: var(--t-accent) !important;
     --cmd-button-shadow-color: transparent !important;
     --cmd-button-icon-color: var(--t-accent) !important;
     --cmd-button-keyboard-shortcut-background: var(--t-surface-2) !important;
@@ -349,6 +358,32 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
         --t-overlay: rgba(0, 0, 0, 0.6) !important;
         --t-dropdown-shadow-opacity: 0.5 !important;
     }
+}
+
+/* Command buttons (.btn-primary/.btn-secondary/.btn-sm/.btn-success — every
+   plain Button component ends up as one of these, "secondary" by default)
+   — same story as text inputs: the border is a literal `border: unset` in
+   forms.css and the 120px min-width/4px-16px padding are hardcoded, so
+   matching TAM's own compact bordered-ghost button shape needs real
+   selectors, not just variables. Hover is opacity-only (see the
+   --cmd-button-hover-* comment above) so this intentionally doesn't
+   redeclare background/color on :hover. */
+button.btn.btn-primary,
+button.btn.btn-secondary,
+button.btn.btn-sm:not(.select-button),
+button.btn.btn-success {
+    border: 1px solid var(--t-accent) !important;
+    min-width: unset !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+button.btn.btn-primary:hover,
+button.btn.btn-secondary:hover,
+button.btn.btn-sm:not(.select-button):hover,
+button.btn.btn-success:hover {
+    opacity: 0.85 !important;
 }
 
 /* Form controls — "next" renders text inputs/selects/textareas with no
