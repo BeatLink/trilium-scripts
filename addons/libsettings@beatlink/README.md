@@ -97,6 +97,45 @@ value, and its body is one labeled field row per `itemSchema` key. Reasonable to
 cases as `list` when entries get numerous/verbose enough that a wide table becomes hard to scan, or
 whenever you know something else needs to reference an entry by a stable id.
 
+### Shipped entries — `registry` fields the addon itself ships entries into
+
+A `registry`'s `default` isn't just "the value when the key is missing" (as for every other field
+type) — it's also the *shipped* entry set, reconciled against the user's own additions/edits/deletions
+on every read and write. This works because `schema.json` is a normal addon-shipped note (not tracked
+by `AddonData:`), so it gets fully overwritten on every TAM update — same mechanism as any other
+shipped note — meaning a new default entry you add to `default` in a later addon version reaches
+existing installs automatically, without a migration:
+
+```json
+{
+    "dateRules": {
+        "type": "registry",
+        "label": "Date Rules",
+        "default": {
+            "overdue": {"name": "Overdue", "days": -1},
+            "thisWeek": {"name": "This Week", "days": 7}
+        },
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Date Rule"},
+            "days": {"type": "number", "label": "Days", "default": 0}
+        }
+    }
+}
+```
+
+The runtime value (what `values.dateRules` holds, and what `RegistryTree` edits) is always the plain
+flat merged map — shipped entries the user hasn't removed, overlaid with anything the user added or
+edited (an edit shadows the shipped entry under the same id). What actually lands in `config.json` is
+different and normally invisible to a consumer: `{ "entries": {...}, "removedIds": [...] }` —
+`entries` holds only ids that are new or differ from their shipped version (an untouched shipped
+entry is never copied into `config.json`, so it keeps tracking future changes to its shipped default
+until the user actually edits it), and `removedIds` records which shipped ids the user deleted (so a
+future addon update doesn't resurrect something they removed). This is exactly the shipped-vs-
+persisted-delta split `agenda@beatlink`'s own hand-rolled `builtinElementsNoteId` system implements —
+generalized here as a property of the `registry` type itself, with no separate note needed. A
+`registry` with `default: {}` (no shipped entries) behaves exactly as before this existed — the split
+is a no-op when there's nothing shipped to reconcile against.
+
 ### Polymorphic items — a `list`/`registry` entry whose fields depend on its own type
 
 An `itemSchema` field can declare `showWhen` to say it only applies to an item whose sibling

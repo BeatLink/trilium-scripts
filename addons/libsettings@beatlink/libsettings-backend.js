@@ -5,6 +5,50 @@ function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value)
 }
 
+// A registry's `default` doubles as its *shipped* entries — schema.json is a
+// normal addon-shipped note (not `AddonData:`-tracked), so it gets fully
+// overwritten on every TAM update just like the rest of the addon, meaning a
+// newly-added shipped entry reaches existing installs for free. The
+// persisted (config.json) shape for a registry field is therefore not the
+// flat runtime map itself but `{ entries, removedIds }`: `entries` holds
+// only additions/edits that differ from the shipped version (keyed by the
+// same id to shadow a specific shipped entry), and `removedIds` records
+// which shipped ids the user deleted — an untouched shipped entry is never
+// duplicated into config.json, so it keeps tracking future shipped edits
+// until the user actually changes it. `mergeRegistryDefaults` reconstructs
+// the flat runtime map (shipped, minus removed, with entries overlaid) that
+// the rest of this module and the UI both work with; `filterRegistryBySchema`
+// is the inverse, run on save.
+function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
+    const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
+    const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
+    const merged = {}
+    for (const [id, item] of Object.entries(shipped)) {
+        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item)
+    }
+    for (const [id, item] of Object.entries(storedEntries)) {
+        merged[id] = mergeDefaults(itemSchema, item)
+    }
+    return merged
+}
+
+function filterRegistryBySchema(itemSchema, shipped, effective) {
+    const entries = {}
+    const removedIds = []
+    for (const [id, item] of Object.entries(effective)) {
+        const filteredItem = filterBySchema(itemSchema, item)
+        const shippedItem = shipped[id]
+        const shippedFiltered = shippedItem ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem)) : null
+        if (shippedFiltered === null || JSON.stringify(shippedFiltered) !== JSON.stringify(filteredItem)) {
+            entries[id] = filteredItem
+        }
+    }
+    for (const id of Object.keys(shipped)) {
+        if (!(id in effective)) removedIds.push(id)
+    }
+    return { entries, removedIds }
+}
+
 function mergeDefaults(schema, stored) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
@@ -12,10 +56,7 @@ function mergeDefaults(schema, stored) {
             const storedList = Array.isArray(stored?.[key]) ? stored[key] : (def.default ?? [])
             values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item))
         } else if (def.type === "registry") {
-            const storedRegistry = isPlainObject(stored?.[key]) ? stored[key] : (def.default ?? {})
-            values[key] = Object.fromEntries(
-                Object.entries(storedRegistry).map(([id, item]) => [id, mergeDefaults(def.itemSchema, item)])
-            )
+            values[key] = mergeRegistryDefaults(def.itemSchema, def.default || {}, stored?.[key])
         } else {
             values[key] = (stored && key in stored) ? stored[key] : def.default
         }
@@ -31,10 +72,8 @@ function filterBySchema(schema, values) {
             const list = Array.isArray(values?.[key]) ? values[key] : []
             filtered[key] = list.map(item => filterBySchema(def.itemSchema, item))
         } else if (def.type === "registry") {
-            const registry = isPlainObject(values?.[key]) ? values[key] : {}
-            filtered[key] = Object.fromEntries(
-                Object.entries(registry).map(([id, item]) => [id, filterBySchema(def.itemSchema, item)])
-            )
+            const effective = isPlainObject(values?.[key]) ? values[key] : {}
+            filtered[key] = filterRegistryBySchema(def.itemSchema, def.default || {}, effective)
         } else {
             filtered[key] = values[key]
         }
