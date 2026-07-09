@@ -21,4 +21,11 @@ governs that, it's a literal `unset` — so form controls otherwise show no visi
 focused. TAMTheme restores a persistent border (accent-colored on focus/hover), matching TAM's own
 widget inputs.
 
+A note's custom `#color` label isn't rendered as-is in the tree: Trilium converts it to Lab color
+space and clamps its lightness (`--tree-item-light-theme-max-color-lightness`, 60 by default on the
+"next" base theme) so it stays legible against the tree background. That default cap is aggressive
+enough that bright colors like `gold` or `lime` render as dark olive/forest-green. TAMTheme raises
+the light-mode cap (and lowers the dark-mode floor a little) so note colors read much closer to
+their real hue.
+
 Add to a CSS note and set the following attributes: `#appThemeBase=next` `#appTheme=TAMTheme`

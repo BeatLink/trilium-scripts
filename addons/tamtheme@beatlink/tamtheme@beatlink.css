@@ -160,6 +160,18 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     --quick-search-result-content-background: var(--t-surface-2) !important;
     --quick-search-result-highlight-color: var(--t-accent) !important;
 
+    /* A tree item's custom #color label isn't rendered as-is: Trilium
+       converts it to Lab and clamps its lightness (see
+       theme-next/base.css and content_renderer.js's adjustColorLightness)
+       so colors stay legible against the tree background. The "next" base
+       theme's own cap (60) is aggressive enough that bright named colors
+       like "gold" or "lime" render as dark olive/forest-green instead of
+       anywhere close to their real hue — raising the light-mode cap (and
+       lowering the dark-mode floor a little) lets those colors read much
+       closer to true while still keeping a legibility margin below 100. */
+    --tree-item-light-theme-max-color-lightness: 78 !important;
+    --tree-item-dark-theme-min-color-lightness: 58 !important;
+
     --left-pane-collapsed-border-color: var(--t-border) !important;
     --left-pane-background-color: var(--t-surface-2) !important;
     --left-pane-text-color: var(--t-text) !important;
