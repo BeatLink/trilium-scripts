@@ -116,6 +116,16 @@ export async function loadSettings(schemaNoteId, configNoteId) {
     return loadValues(schema, configNoteId)
 }
 
+// The write-side counterpart, for frontend code that needs to persist a
+// programmatic edit itself (e.g. a library function called from a widget,
+// not just `SettingsForm`'s own Save button/autosave) — mirrors
+// `libsettings-backend.js`'s `saveSettings` exactly, just backend-note-read
+// via `api.runOnBackend` like every other frontend function in this file.
+export async function saveSettings(schemaNoteId, configNoteId, values) {
+    const schema = await loadSchema(schemaNoteId)
+    await persistValues(schema, configNoteId, values)
+}
+
 // `registries` is the full top-level values object (every schema key's
 // current value, keyed the same as the schema) — threaded down through
 // every Field/ListTable/RegistryTree call so a `reference` field anywhere

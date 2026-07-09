@@ -1,7 +1,7 @@
 # Agenda
 
 A complete task/agenda system, wiring together every `lib*@beatlink` piece built for it into three
-widgets plus a single tabbed editor page:
+widgets plus a single schema-driven editor page:
 
 1. **Overview** (`agendaOverview.jsx`, right-pane) — toggle which searches/filters are active and
    pick the sort/prefix/color for whichever note your profile is filing tasks into; matching notes
@@ -11,31 +11,24 @@ widgets plus a single tabbed editor page:
 3. **Agenda Now** (`agendaNowLauncher.jsx` + `agendaNowWindow.jsx`, Electron-only) — an
    always-on-top focus window with a countdown timer, showing whichever tasks you've added to it.
 4. **Agenda Editor** (`profileEditor.jsx`, a `render`-type page reachable from TAM's **Settings**
-   button or the Overview widget) — a single tabbed page with seven tabs. Its **Settings** tab is
-   just `SettingsForm` (the `libsettings@beatlink` schema/config UI) dropped in as-is. Its
-   **Profile** tab holds the profile's identity (name, File Tasks Under) and picks its sort/prefix/
-   color. Its **Date Rules / Sorts / Prefixes / Colors** tabs are a flat Element Library, where every
-   such element gets defined; editing one updates every profile using it. Its **Searches**/
-   **Filters** tabs are different: rather than a flat library plus a separate usage tree, each
-   element's own definition is folded directly into the Search Groups/Filter Groups tree that uses
-   it — expand a group, then a usage inside it, and you're editing that search/filter's actual Name/
-   Rule (or Type/Search Rule/Date Rule for a filter), not just picking it by name. An element not
-   currently referenced by any group falls into an "Ungrouped Searches"/"Ungrouped Filters" bucket
-   instead, so it's still reachable/editable/removable and new elements can still be created there.
-   Date rules are one level deeper than the rest: a dayjs-type filter and a prefix/color interval both
-   reference a shared date rule (e.g. "Overdue") rather than each embedding their own copy of the same
-   `["isBefore","startOfToday"]`-style criteria tuple. The Settings tab and the Profile tab's
-   sort/prefix/color pick each save explicitly (their own Save button); everything else — every
-   element definition, plus the Search Groups/Filter Groups trees — autosaves each edit immediately.
+   button or the Overview widget) — `libsettings@beatlink`'s `SettingsForm` dropped in as-is, rendering
+   one tab per top-level `schema.json` field's `tab`: **Settings** (the label-name vocabulary),
+   **Profiles** (every profile — its identity, its sort/prefix/color pick, and its own Search Groups/
+   Filter Groups, each usage folded to the actual referenced search/filter's fields inline via a
+   `reference` field's `inline: true`), and a flat **Searches / Filters / Sorts / Prefixes / Colors /
+   Date Rules** element library, one tab each. A profile's Search Groups/Filter Groups reference
+   elements from those library tabs by id; editing an element on its own tab updates every profile
+   using it. Every registry tab (including Profiles) autosaves each edit immediately; only the
+   Settings tab's label-name fields wait on an explicit Save.
 
 ## Setup
 
 1. Use TAM's **Settings** button (or navigate to this addon's "Agenda Editor" note) to open the
    Agenda Editor. Its Settings tab lets you override any of the label names (`startDateTime`,
    `dueDateTime`, `duration`, `recurrence`, `rank`, etc — defaults match the original system).
-2. On the Agenda Editor's Profile tab, point the shipped "default" profile's **File Tasks Under** at
-   whichever note you want tasks re-filed into. On the Searches/Filters tabs, enable/build out its
-   search and filter groups (referencing the built-in elements, or new ones you add there).
+2. On the Agenda Editor's Profiles tab, point the shipped "default" profile's **File Tasks Under** at
+   whichever note you want tasks re-filed into, and enable/build out its search and filter groups
+   (referencing the built-in elements on the Searches/Filters tabs, or new ones you add there).
 3. Open any note filed under that target — the Overview widget there lets you toggle individual
    searches/filters and change sort/prefix/color live, without leaving the note.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
@@ -51,55 +44,55 @@ widgets plus a single tabbed editor page:
 
 This addon owns exactly two things every other `lib*@beatlink` piece explicitly does *not*:
 
-- **A `libsettings@beatlink` schema** (`schema.json`/`config.json`, rendered by the Agenda Editor's
-  Settings tab) holding the canonical label-name vocabulary (`startDatetimeLabel`, `dueDatetimeLabel`,
-  `durationLabel`, `recurrenceLabel`, `rankLabel`, etc) plus an optional `profileId` string override.
-  `agendaSettings.jsx`'s `getAgendaSettings()` loads this once per widget and reshapes it into the
-  `constants` object (uppercase keys) and a `profileContext` (`{ dataNoteId, builtinElementsNoteId,
-  profileIds }`) every `lib*@beatlink` function expects — those libraries never import settings
-  themselves, they take `constants`/`profileContext` as parameters, so this is the *one* place those
-  label names are defined, top-down, rather than each library depending on a shared constants module
-  bottom-up. `getAgendaSettings()` also hands back the raw `schemaNoteId`/`configNoteId` for the
-  Agenda Editor's own Settings tab to render `SettingsForm` with directly. If `profileId` is left
-  blank, the shipped `"default"` profile is used.
-- **`agendaData.json` / `builtinElements.json` / `agendaNowConfig.json`** — plain JSON notes (not
-  additional `libsettings@beatlink` schemas), edited through the Agenda Editor's tabs rather than by
-  hand. `agendaData.json` holds every user-added or user-edited search/filter/
-  sort/prefix/color element, a `removedBuiltinIds` set recording any built-in the user deleted, and
-  every profile that references them; `builtinElements.json` holds only the addon's own shipped
-  built-in elements. Its shape doesn't fit a flat schema, and this addon only supports a single active
-  profile at a time — see [libagendaoverview@beatlink's README](../libagendaoverview@beatlink/README.md)
-  for the exact shape, the built-in/user-data split, the single-profile caveat, and where a real
-  multi-profile design would go. `agendaNowConfig.json` could be moved to `libsettings@beatlink` later
-  (flattening its one nested `newWindowConfig` object, since `libsettings`' schema has no nested-group
-  field type yet) but wasn't, to keep this addon's scope to the actual widgets rather than also
-  building a second settings screen nobody asked for yet.
+- **A `libsettings@beatlink` schema** (`schema.json`/`config.json`, rendered wholesale by the Agenda
+  Editor) holding *everything* configurable about this addon: the label-name vocabulary
+  (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`, `recurrenceLabel`, `rankLabel`, etc),
+  every shared `searches`/`filters`/`sorts`/`prefixes`/`colors`/`dateRules` `registry`, and a
+  `profiles` `registry` (each profile's own `searchGroups`/`filterGroups` nested inside it, each
+  usage a `reference` into `searches`/`filters` with `inline: true`) — see
+  [libsettings@beatlink's README](../libsettings@beatlink/README.md) for the full mechanics
+  (`registry`/`reference`/`showWhen`/nesting/`autosave`) this schema leans on. `agendaSettings.jsx`'s
+  `getAgendaSettings()` loads this once per widget and reshapes it into the `constants` object
+  (uppercase keys) and a `profileContext` (`{ schemaNoteId, configNoteId, profileIds }` — every id
+  currently in the `profiles` registry, not a hardcoded single one) every `lib*@beatlink` function
+  expects — those libraries never import settings themselves, they take `constants`/`profileContext`
+  as parameters, so this is the *one* place those label names and profiles are defined, top-down,
+  rather than each library depending on a shared constants module bottom-up.
+- **`agendaNowConfig.json`** — a plain JSON note (not a `libsettings@beatlink` schema), edited as raw
+  JSON directly on its own note rather than through the Agenda Editor. It could be moved to
+  `libsettings@beatlink` later (flattening its one nested `newWindowConfig` object) but wasn't, to
+  keep this addon's scope to the actual widgets rather than also building a second settings screen
+  nobody asked for yet.
 
-`agendaData.json` is persisted across addon updates via an `AddonData:profile` relation owned by the
-`settings` note — a bare relation-anchor note (no code/UI of its own; every widget's `settingsNote`
-relation points at it) — mirroring `AddonData:config`'s existing pattern, and **not** a direct
-relation from every widget straight to the data note. Every widget instead resolves `settingsNote`
-first, then reads `AddonData:profile` off of *that* note, live, whenever it needs the data note's id.
-This
-indirection matters: TAM's persistence mechanism duplicates a note into permanent storage and rewires
-only the relation literally named `AddonData:<key>` to point at the copy — any other relation that
-had pointed straight at the original note would be left dangling once the original is deleted.
-`builtinElements.json`, by contrast, is **not** an `AddonData:` target — it's a plain
-`builtinElementsNote` relation, so TAM overwrites its content on every update like any other addon
-note. That's the whole point of splitting it out: shipping a new built-in search/filter/sort/prefix/
-color in a future `agenda@beatlink` version now reaches already-installed users automatically (merged
-in by `loadData`), instead of being silently dropped because the persisted data note is frozen. Every
-widget resolves its other relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`) once on mount and
-passes the resolved ids/constants down to whichever shared library functions it calls — none of those
-relations live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference
-notes with no way to know which addon is asking.
+A Date Rule's actual `[operator, ...args]` comparison tuple, a Sort's actual libmultisort DSL string,
+and a label-value prefix/color variant's actual flat `{labelValue: display}` map are all decomposed
+in the schema into more directly-editable shapes (dropdowns, row lists, `registry` entries) —
+[libagendaoverview@beatlink](../libagendaoverview@beatlink/README.md)'s `loadData` reassembles them
+back into the shapes the actual matching/sorting/prefix/color logic has always worked with, so that
+logic never had to change at all; only the schema/config layer feeding it did.
+
+Every widget resolves its own relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
+`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`) once on mount and passes the resolved
+ids/constants down to whichever shared library functions it calls — none of those relations live on
+the shared libraries themselves, since they're shared, stateless, cloned-by-reference notes with no
+way to know which addon is asking. `config.json` is persisted across addon updates via an
+`AddonData:config` relation owned by the `settings` note — a bare relation-anchor note (no code/UI of
+its own; every widget's `settingsNote` relation points at it). `schema.json` itself is **not** an
+`AddonData:` target — a normal shipped note, overwritten on every TAM update like any other addon
+note, which is what lets a new built-in search/filter/sort/prefix/color/date-rule/profile default
+ship in a future version and reach existing installs automatically (every `registry` field's
+`default` is reconciled against the user's own additions/edits/removals on every load, per
+libsettings' shipped-vs-persisted-delta mechanics), rather than being silently dropped because the
+persisted config is frozen.
 
 ## Known limitations
 
-- **Single profile only** (see above).
 - **`#agendaTaskWidget` is a fixed label name**, hardcoded in `agendaTask.jsx`/`agendaNowWindow.jsx`
   rather than sourced from the settings schema — it's a "which notes opt into this widget" gate, not
   a data label, so it wasn't included alongside the other label-name settings.
 - **`agendaNowConfig.json` has no dedicated settings UI** — it's edited as raw JSON directly on its
   note.
+- **No migration from pre-2.0 installs.** This version replaced the addon's entire bespoke
+  `agendaData.json`/`builtinElements.json` data model with a `libsettings@beatlink` schema — an
+  install upgrading from an earlier version resets to the shipped schema defaults rather than
+  carrying over its old customizations; the old notes are left in place, unused.

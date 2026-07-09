@@ -384,6 +384,13 @@ The same merge-with-defaults read as the backend function, but `async` and usabl
 context — not just a widget rendering `SettingsForm`. Useful for e.g. a note-context-aware widget
 that needs to check current settings without rendering the full form.
 
+### `saveSettings(schemaNoteId, configNoteId, values)` (also exported from `libsettings-ui.jsx`)
+
+The same diff-against-schema write as the backend function, `async` from any frontend context.
+Useful for frontend library code that needs to persist a programmatic edit itself — a widget calling
+into a shared library function that reads, patches, and writes settings, not just edits made through
+`SettingsForm` directly.
+
 ## See it in use
 
 [`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and

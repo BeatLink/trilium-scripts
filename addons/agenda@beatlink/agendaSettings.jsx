@@ -2,36 +2,25 @@ import { startNote } from "trilium:api"
 import { loadSettings } from "libSettingsUI.jsx"
 
 // Resolves this addon's settings into the shape every agenda library expects:
-// a `constants` label-name object and a `profileContext` ({ dataNoteId,
-// profileIds }) pointing at the single shared agendaData.json note, plus the
-// raw `schemaNoteId`/`configNoteId` for a caller that wants to render its own
-// `SettingsForm` (e.g. the Agenda Editor's Settings tab). Every widget that
-// needs any of these calls this once. Must read via `startNote` (the note
-// actually running the widget script), not `api.currentNote` (whichever note
-// the user currently has open) — the schemaNote/settingsNote relations live
-// on the widget's own note, not on whatever's being viewed.
+// a `constants` label-name object and a `profileContext` ({ schemaNoteId,
+// configNoteId, profileIds }) pointing at the addon's own unified
+// schema.json/config.json pair (every search/filter/sort/prefix/color/date-
+// rule registry and every profile all live there, schema-driven — see
+// libAgendaOverview.js's README for the full shape). Every widget that needs
+// any of these calls this once. Must read via `startNote` (the note actually
+// running the widget script), not `api.currentNote` (whichever note the user
+// currently has open) — the schemaNote/settingsNote relations live on the
+// widget's own note, not on whatever's being viewed.
 //
-// dataNoteId is resolved indirectly through the settings note's own
-// AddonData:profile relation (same pattern as configNoteId/AddonData:config)
-// rather than a direct relation from every widget straight to the data note —
-// a direct relation would go dangling the moment the data note is duplicated
-// into persisted storage on first sync, since only the relation literally
-// named AddonData:profile gets rewired to the persisted copy.
-//
-// builtinElementsNoteId points at builtinElements.json instead, a plain
-// (non-AddonData:) relation — that note is never duplicated/persisted, so it
-// gets overwritten like any other addon note on every TAM update. This is
-// what lets new built-in searches/filters/sorts/prefixes/colors ship to
-// existing installs: loadData/saveData in libAgendaOverview.js merge this
-// note's contents with the user's own additions/edits in the persisted data
-// note rather than baking built-ins into the persisted note itself.
+// profileIds is every id currently in the `profiles` registry (not a single
+// hardcoded id) — multiple profiles are supported, and it's up to
+// getMatchingProfile/getAllProfiles (in libAgendaOverview.js) to pick the
+// right one(s) for a given widget instance.
 export async function getAgendaSettings() {
     const schemaNoteId = await startNote.getRelationValue("schemaNote")
     const settingsNoteId = await startNote.getRelationValue("settingsNote")
     const settingsNote = await api.getNote(settingsNoteId)
     const configNoteId = settingsNote.getRelationValue("AddonData:config")
-    const dataNoteId = settingsNote.getRelationValue("AddonData:profile")
-    const builtinElementsNoteId = settingsNote.getRelationValue("builtinElementsNote")
 
     const settings = await loadSettings(schemaNoteId, configNoteId)
 
@@ -47,7 +36,7 @@ export async function getAgendaSettings() {
         RANK_LABEL: settings.rankLabel
     }
 
-    const profileContext = { dataNoteId, builtinElementsNoteId, profileIds: [settings.profileId || "default"] }
+    const profileContext = { schemaNoteId, configNoteId, profileIds: Object.keys(settings.profiles || {}) }
 
     return { constants, profileContext, schemaNoteId, configNoteId }
 }

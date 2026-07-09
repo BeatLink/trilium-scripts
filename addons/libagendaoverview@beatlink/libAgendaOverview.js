@@ -2,6 +2,7 @@ const notifications = require("libNotification.js")
 const task = require("libAgendaTask.js")
 const { generateCalendar } = require("libCalendar.js")
 const multisort = require("libMultisort.js")
+const { loadSettings, saveSettings } = require("libSettingsUI.jsx")
 
 
 function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
@@ -30,285 +31,145 @@ function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
     }
 }
 
-// --- Consolidated data note ------------------------------------------------
+// --- Schema-driven settings adapter -----------------------------------------
 //
-// Every search/filter/sort/prefix/color a profile can use is a named,
-// shared "element" living in one of the top-level registries below; a
-// profile only ever stores references (elementId + per-usage enabled flag)
-// into those registries, never a copy of the definition itself. `dateRules`
-// is the same idea one level deeper: the actual `["isBefore","startOfToday"]`-
-// style dayjs criteria tuple a dayjs-type filter or a prefix/color interval
-// tests against is itself a named, shared element — a filter, a prefix
-// interval, and a color interval that all mean "overdue" reference the same
-// `dateRules` entry instead of each retyping the same tuple independently.
+// Every search/filter/sort/prefix/color/date-rule/profile this addon uses is
+// declared as a `registry` field in agenda@beatlink's own schema.json (see
+// libsettings@beatlink's README for the `registry`/`reference`/`showWhen`
+// mechanics), edited directly via `SettingsForm` — this module never edits
+// that data itself, only reads/reshapes it for the matching/sorting/prefix/
+// color logic below, and writes back through the one `saveProfile` path a
+// widget (rather than the schema-driven editor) needs for in-place edits.
 //
-// The built-in registry entries the addon ships (`builtin: true`) live in a
-// separate, non-persisted note (builtinElementsNote) that TAM overwrites on
-// every update like any other addon note — this is what lets new built-ins
-// reach existing installs. The persisted data note (dataNoteId) holds only
-// the user's own deltas: added elements, edits to a built-in (keyed by the
-// same elementId, shadowing the shipped version), `removedBuiltinIds` for any
-// built-in the user deleted, and every profile. `loadData` merges the two;
-// `saveData` diffs the caller's edited view back down to just the delta
-// before persisting, so an untouched built-in never gets baked into the
-// persisted note and blocks future updates.
+// The schema stores a few things in a more decomposed shape than the actual
+// matching logic wants, since the schema's job is to be editable (dropdowns,
+// checkboxes) rather than to be the exact shape `matchesDayJsCriteria`/
+// libmultisort expect. `loadData` reshapes on the way in, `saveProfile`
+// reshapes on the way out; everything below `loadData` works in exactly the
+// same shapes it always has, unaware any of this migrated off a bespoke
+// data note onto libsettings.
 
-const CATEGORIES = ["searches", "dateRules", "filters", "sorts", "prefixes", "colors"]
-
-const EMPTY_DATA = {
-    searches: {}, filters: {}, dateRules: {}, sorts: {}, prefixes: {}, colors: {},
-    removedBuiltinIds: { searches: [], dateRules: [], filters: [], sorts: [], prefixes: [], colors: [] },
-    profiles: {}
+// A Date Rule's `rule` tuple (`[operator, ...args]`, what `matchesDayJsCriteria`
+// actually consumes) is decomposed in the schema into `operator`/`moment1`/
+// `moment2`/`bracket` fields (so it can be edited as plain dropdowns) —
+// this reassembles it, the inverse of the old `splitRule` UI helper.
+function buildDayjsRule(dateRule) {
+    const { operator, moment1, moment2, bracket } = dateRule
+    if (operator === "isNull") return ["isNull"]
+    if (operator === "isBetween") return [operator, moment1, moment2, null, bracket]
+    return [operator, moment1]
 }
 
-// Older installs' data note held exactly one profile's fields at the
-// top level (name/parentNoteId/searchGroups/...), with every search/filter
-// rule inlined directly into that one profile and sorts/prefixes/colors each
-// holding their own full list of named presets. Detected by the absence of
-// `profiles` (new shape's only top-level profile container) alongside the
-// presence of `searchGroups` (old shape's own top-level field). Promotes
-// every inlined leaf definition into the appropriate shared registry once,
-// rewriting the profile itself to hold only references — callers persist
-// the result via saveData so this only ever runs once per install.
-function migrateLegacyData(raw) {
-    if (!raw || raw.profiles || !raw.searchGroups) return raw
-
-    const data = { searches: {}, filters: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
-
-    function migrateLeafGroups(groupsSection, registry, extraFromGroup) {
-        const migratedGroups = {}
-        for (const [groupId, group] of Object.entries(groupsSection.children || {})) {
-            const children = {}
-            for (const [itemId, item] of Object.entries(group.children || {})) {
-                const elementId = `${groupId}-${itemId}`
-                registry[elementId] = {
-                    name: item.name,
-                    rule: item.rule,
-                    ...(extraFromGroup ? extraFromGroup(group) : {})
-                }
-                children[itemId] = { elementId, enabled: !!item.enabled }
-            }
-            migratedGroups[groupId] = { name: group.name, expanded: !!group.expanded, children }
-        }
-        return { expanded: !!groupsSection.expanded, children: migratedGroups }
-    }
-
-    const searchGroups = migrateLeafGroups(raw.searchGroups, data.searches)
-    const filterGroups = migrateLeafGroups(raw.filterGroups, data.filters, group => ({
-        type: group.type,
-        datetimeLabel: group.datetimeLabel,
-        useNumberOfDays: !!group.useNumberOfDays
-    }))
-
-    for (const [key, sort] of Object.entries(raw.sorts?.children || {})) {
-        data.sorts[key] = { name: sort.name, rule: sort.rule }
-    }
-    for (const [key, variant] of Object.entries(raw.prefixes?.children || {})) {
-        data.prefixes[key] = { ...variant }
-    }
-    for (const [key, variant] of Object.entries(raw.colors?.children || {})) {
-        data.colors[key] = { ...variant }
-    }
-
-    data.profiles.default = {
-        name: raw.name || "default",
-        parentNoteId: raw.parentNoteId || "",
-        searchGroups,
-        filterGroups,
-        sorts: { selected: raw.sorts?.selected },
-        prefixes: { selected: raw.prefixes?.selected },
-        colors: { selected: raw.colors?.selected }
-    }
-
-    return data
+// A Sort's `rule` (the libmultisort DSL string, `attribute[:desc][:caseInsensitive]`
+// joined by `;`) is decomposed in the schema into a `criteria` list (so it can
+// be edited as plain rows) — this reassembles it, the inverse of the old
+// `parseSortCriteria` UI helper.
+function criteriaToString(rows) {
+    return (rows || [])
+        .filter(r => r.attribute)
+        .map(r => [r.attribute, r.desc ? "desc" : null, r.caseInsensitive ? "caseInsensitive" : null]
+            .filter(Boolean).join(":"))
+        .join(";")
 }
 
-// Hoists every inline dayjs criteria tuple (a dayjs-type filter's own
-// `rule`, a prefix/color interval's own `rule`) out into the shared
-// `dateRules` registry, rewriting each in place to hold a `dateRuleId`
-// reference instead — same one-time, self-healing pattern as
-// migrateLegacyData (detected by the absence of a `dateRules` key at all),
-// and composes with it: an install migrating up from the single-profile
-// shape gets both migrations in one pass, since this runs after
-// migrateLegacyData has already produced inline-ruled filters/prefixes/colors.
-function migrateInlineDateRules(data) {
-    if (data.dateRules) return data
-
-    const dateRules = {}
-    let counter = 0
-    function hoist(rule, name) {
-        counter += 1
-        const id = `date-rule-${counter}`
-        dateRules[id] = { name: name || "Date Rule", rule }
-        return id
+// A label-value prefix/color variant's `children` is a `registry` in the
+// schema (itemSchema `labelValue`+`display`, since a `registry`'s key is
+// opaque bookkeeping, never the meaningful label value itself) rather than a
+// flat `{labelValue: display}` map — this reassembles the flat map
+// `getPrefixes`/`getColors` actually index into.
+function reshapeVariant(variant) {
+    if (!variant) return variant
+    if (variant.type === "label") {
+        const children = Object.fromEntries(
+            Object.values(variant.children || {}).map(entry => [entry.labelValue, entry.display])
+        )
+        return { name: variant.name, type: "label", label: variant.label, children }
     }
+    return { name: variant.name, type: "dayjs", intervals: variant.intervals || {} }
+}
 
-    for (const filter of Object.values(data.filters || {})) {
-        if (filter.type === "dayjs" && filter.rule) {
-            filter.dateRuleId = hoist(filter.rule, filter.name)
-            delete filter.rule
-        }
+// A profile's `sortSelected`/`prefixSelected`/`colorSelected` (plain
+// `reference` fields in the schema) become the `{selected: ...}` shape
+// `updateTaskLists`/`getTaskList` read; `searchGroups`/`filterGroups` (each a
+// `registry` of groups, itemSchema `name`+nested `children` registry of
+// usages) become the `{children: ...}` shape `getNotesForSearchGroups`/
+// `getFilteredNotes` already iterate.
+function reshapeProfile(profile) {
+    return {
+        name: profile.name,
+        parentNoteId: profile.parentNoteId,
+        searchGroups: { children: profile.searchGroups || {} },
+        filterGroups: { children: profile.filterGroups || {} },
+        sorts: { selected: profile.sortSelected },
+        prefixes: { selected: profile.prefixSelected },
+        colors: { selected: profile.colorSelected }
     }
-    for (const variant of [...Object.values(data.prefixes || {}), ...Object.values(data.colors || {})]) {
-        if (variant.type !== "dayjs") continue
-        for (const interval of Object.values(variant.intervals || {})) {
-            if (interval.rule) {
-                interval.dateRuleId = hoist(interval.rule, `${variant.name} interval`)
-                delete interval.rule
-            }
-        }
+}
+
+// The inverse of `reshapeProfile`, for `saveProfile` writing an edited
+// (legacy-shaped) profile back into the schema's decomposed shape.
+function unshapeProfile(profile) {
+    return {
+        name: profile.name,
+        parentNoteId: profile.parentNoteId,
+        sortSelected: profile.sorts?.selected,
+        prefixSelected: profile.prefixes?.selected,
+        colorSelected: profile.colors?.selected,
+        searchGroups: profile.searchGroups?.children || {},
+        filterGroups: profile.filterGroups?.children || {}
     }
-
-    data.dateRules = dateRules
-    return data
 }
 
-// Hoists a dayjs-type filter's own `datetimeLabel`/`useNumberOfDays`, or a
-// dayjs-type prefix/color variant's own `dateLabel`/`useNumberOfDays`, onto
-// the Date Rule element it references — same self-healing pattern as
-// migrateInlineDateRules, and it must run after that migration since it
-// needs every dayjs-type element to already hold a `dateRuleId`. The label
-// and granularity describe the comparison itself, not any one use of it, so
-// they belong on the shared Date Rule; first reference to a given Date Rule
-// wins if more than one used to disagree.
-function migrateDateRuleLabels(data) {
-    function applyLabel(dateRuleId, dateLabel, useNumberOfDays) {
-        const dateRule = data.dateRules && data.dateRules[dateRuleId]
-        if (dateRule && dateRule.dateLabel === undefined) {
-            dateRule.dateLabel = dateLabel || ""
-            dateRule.useNumberOfDays = !!useNumberOfDays
-        }
+async function loadData(schemaNoteId, configNoteId) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+
+    const dateRules = Object.fromEntries(
+        Object.entries(values.dateRules || {}).map(([id, dateRule]) => [id, {
+            name: dateRule.name,
+            dateLabel: dateRule.dateLabel,
+            useNumberOfDays: dateRule.useNumberOfDays,
+            rule: buildDayjsRule(dateRule)
+        }])
+    )
+
+    const sorts = Object.fromEntries(
+        Object.entries(values.sorts || {}).map(([id, sort]) => [id, {
+            name: sort.name,
+            rule: criteriaToString(sort.criteria)
+        }])
+    )
+
+    const prefixes = Object.fromEntries(Object.entries(values.prefixes || {}).map(([id, v]) => [id, reshapeVariant(v)]))
+    const colors = Object.fromEntries(Object.entries(values.colors || {}).map(([id, v]) => [id, reshapeVariant(v)]))
+    const profiles = Object.fromEntries(Object.entries(values.profiles || {}).map(([id, p]) => [id, reshapeProfile(p)]))
+
+    return {
+        searches: values.searches || {},
+        filters: values.filters || {},
+        dateRules, sorts, prefixes, colors, profiles
     }
-
-    for (const filter of Object.values(data.filters || {})) {
-        if (filter.type === "dayjs" && "datetimeLabel" in filter) {
-            applyLabel(filter.dateRuleId, filter.datetimeLabel, filter.useNumberOfDays)
-            delete filter.datetimeLabel
-            delete filter.useNumberOfDays
-        }
-    }
-    for (const variant of [...Object.values(data.prefixes || {}), ...Object.values(data.colors || {})]) {
-        if (variant.type !== "dayjs" || !("dateLabel" in variant)) continue
-        for (const interval of Object.values(variant.intervals || {})) {
-            applyLabel(interval.dateRuleId, variant.dateLabel, variant.useNumberOfDays)
-        }
-        delete variant.dateLabel
-        delete variant.useNumberOfDays
-    }
-
-    return data
 }
 
-async function loadBuiltinElements(builtinElementsNoteId) {
-    if (!builtinElementsNoteId) return {}
-    const note = await api.getNote(builtinElementsNoteId)
-    return JSON.parse((await note.getContent()) || "{}")
+async function saveProfile(profile) {
+    const { id, schemaNoteId, configNoteId, ...profileFields } = profile
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    values.profiles = { ...(values.profiles || {}), [id]: unshapeProfile(profileFields) }
+    await saveSettings(schemaNoteId, configNoteId, values)
 }
 
-// Splits an edited *effective* (shipped-merged-with-persisted) registry view
-// back down into: the delta worth persisting (anything absent from, or
-// different than, the shipped defaults — i.e. user additions and edits) and
-// the set of shipped built-in ids no longer present (i.e. the user deleted
-// them). Used both by saveData on every write and, once, by
-// migrateBuiltinSplit to carve up an old install's fully-inlined data.
-function diffFromBuiltins(shipped, effective) {
-    const persisted = {}
-    const removedBuiltinIds = {}
-    for (const category of CATEGORIES) {
-        persisted[category] = {}
-        removedBuiltinIds[category] = []
-        const shippedCategory = shipped[category] || {}
-        for (const [elementId, element] of Object.entries(effective[category] || {})) {
-            const shippedElement = shippedCategory[elementId]
-            if (!shippedElement || JSON.stringify(shippedElement) !== JSON.stringify(element)) {
-                persisted[category][elementId] = element
-            }
-        }
-        for (const elementId of Object.keys(shippedCategory)) {
-            if (!(elementId in (effective[category] || {}))) {
-                removedBuiltinIds[category].push(elementId)
-            }
-        }
-    }
-    return { persisted, removedBuiltinIds }
-}
-
-function mergeRegistries(shipped, persisted, removedBuiltinIds) {
-    const merged = {}
-    for (const category of CATEGORIES) {
-        merged[category] = {}
-        const removed = (removedBuiltinIds && removedBuiltinIds[category]) || []
-        for (const [elementId, element] of Object.entries(shipped[category] || {})) {
-            if (!removed.includes(elementId)) merged[category][elementId] = element
-        }
-        Object.assign(merged[category], persisted[category] || {})
-    }
-    return merged
-}
-
-// One-time migration for installs from before builtinElementsNote existed:
-// their persisted note holds every built-in inlined alongside user data.
-// Reuses diffFromBuiltins against the now-shipped defaults to strip anything
-// unchanged (it'll come back for free via the merge in loadData), keep any
-// user edits/additions as a delta, and record deletions.
-function migrateBuiltinSplit(data, shipped) {
-    if (data.removedBuiltinIds) return data
-    const { persisted, removedBuiltinIds } = diffFromBuiltins(shipped, { ...EMPTY_DATA, ...data })
-    return { ...persisted, profiles: data.profiles || {}, removedBuiltinIds }
-}
-
-async function loadRawData(dataNoteId) {
-    const note = await api.getNote(dataNoteId)
-    return JSON.parse((await note.getContent()) || "{}")
-}
-
-async function saveRawData(dataNoteId, data){
-    await api.runOnBackend((dataNoteId, data) => {
-        api.getNote(dataNoteId).setJsonContent(data)
-    }, [dataNoteId, data]);
-}
-
-async function loadData(dataNoteId, builtinElementsNoteId) {
-    const raw = await loadRawData(dataNoteId)
-    let migrated = migrateLegacyData(raw)
-    migrated = migrateInlineDateRules(migrated)
-    migrated = migrateDateRuleLabels(migrated)
-
-    const shipped = await loadBuiltinElements(builtinElementsNoteId)
-    migrated = migrateBuiltinSplit(migrated, shipped)
-
-    if (migrated !== raw) await saveRawData(dataNoteId, migrated)
-
-    const merged = mergeRegistries(shipped, migrated, migrated.removedBuiltinIds)
-    return { ...EMPTY_DATA, ...migrated, ...merged }
-}
-
-async function saveData(dataNoteId, builtinElementsNoteId, effectiveData){
-    const shipped = await loadBuiltinElements(builtinElementsNoteId)
-    const { persisted, removedBuiltinIds } = diffFromBuiltins(shipped, effectiveData)
-    await saveRawData(dataNoteId, { ...persisted, profiles: effectiveData.profiles || {}, removedBuiltinIds })
-}
-
-async function getAllProfiles({ dataNoteId, builtinElementsNoteId, profileIds }) {
-    const data = await loadData(dataNoteId, builtinElementsNoteId)
+async function getAllProfiles({ schemaNoteId, configNoteId, profileIds }) {
+    const data = await loadData(schemaNoteId, configNoteId)
     return profileIds
         .filter(id => data.profiles[id])
-        .map(id => ({ id, dataNoteId, builtinElementsNoteId, ...data.profiles[id] }))
+        .map(id => ({ id, schemaNoteId, configNoteId, ...data.profiles[id] }))
 }
 
-async function getMatchingProfile({ dataNoteId, builtinElementsNoteId, profileIds }, overviewNoteId) {
-    for (let profile of await getAllProfiles({ dataNoteId, builtinElementsNoteId, profileIds })){
+async function getMatchingProfile({ schemaNoteId, configNoteId, profileIds }, overviewNoteId) {
+    for (let profile of await getAllProfiles({ schemaNoteId, configNoteId, profileIds })){
         if (profile["parentNoteId"] == overviewNoteId){
             return profile
         }
     }
-}
-
-async function saveProfile(profile){
-    const { id, dataNoteId, builtinElementsNoteId, ...profileFields } = profile
-    const data = await loadData(dataNoteId, builtinElementsNoteId)
-    data.profiles[id] = profileFields
-    await saveData(dataNoteId, builtinElementsNoteId, data)
 }
 
 async function deleteChildBranches(parentNoteId){
@@ -464,7 +325,7 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 async function updateTaskLists(profileContext, constants, icalNoteId) {
-    const data = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
+    const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
         //await deleteChildBranches(profile.parentNoteId)
@@ -479,7 +340,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
 }
 
 async function getTaskList(profileContext) {
-    const data = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
+    const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
@@ -527,7 +388,6 @@ async function setCalendarEvents(profileContext, constants, icalNoteId) {
 
 module.exports = {
     loadData,
-    saveData,
     getMatchingProfile,
     getAllProfiles,
     saveProfile,

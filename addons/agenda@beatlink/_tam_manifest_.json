@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a single-profile configuration.",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.14.0",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -47,20 +47,6 @@
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
-            },
-            {
-                "id": "profile",
-                "title": "agendaData.json",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "agendaData.json"
-            },
-            {
-                "id": "builtin-elements",
-                "title": "builtinElements.json",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "builtinElements.json"
             },
             {
                 "id": "ical",
@@ -140,67 +126,11 @@
                 "sourceUrl": "profileEditor.jsx"
             },
             {
-                "id": "profile-editor-groups",
-                "title": "profileEditorGroups.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorGroups.jsx"
-            },
-            {
-                "id": "profile-editor-search-groups",
-                "title": "profileEditorSearchGroups.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorSearchGroups.jsx"
-            },
-            {
-                "id": "profile-editor-filter-groups",
-                "title": "profileEditorFilterGroups.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorFilterGroups.jsx"
-            },
-            {
-                "id": "profile-editor-dayjs-rule",
-                "title": "dayjsRule.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "dayjsRule.js"
-            },
-            {
-                "id": "profile-editor-sorts",
-                "title": "profileEditorSorts.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorSorts.jsx"
-            },
-            {
-                "id": "profile-editor-prefixes",
-                "title": "profileEditorPrefixes.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorPrefixes.jsx"
-            },
-            {
-                "id": "profile-editor-colors",
-                "title": "profileEditorColors.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "profileEditorColors.jsx"
-            },
-            {
                 "id": "profile-editor-css",
                 "title": "profileEditor.css",
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "profileEditor.css"
-            },
-            {
-                "id": "element-picker",
-                "title": "elementPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "elementPicker.jsx"
             },
             {
                 "id": "readme",
@@ -226,14 +156,6 @@
             {
                 "parent": "root",
                 "child": "settings"
-            },
-            {
-                "parent": "root",
-                "child": "profile"
-            },
-            {
-                "parent": "root",
-                "child": "builtin-elements"
             },
             {
                 "parent": "root",
@@ -376,98 +298,8 @@
             },
             {
                 "parent": "profile-editor",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-search-groups"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-filter-groups"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-sorts"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-prefixes"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-colors"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-groups"
-            },
-            {
-                "parent": "profile-editor-groups",
-                "addon": "libcollapsible@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "profile-editor-dayjs-rule"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "element-picker"
-            },
-            {
-                "parent": "profile-editor",
-                "addon": "libmultisort@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor",
-                "addon": "libcolorpicker@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor",
                 "addon": "libsettings@beatlink",
                 "child": "ui"
-            },
-            {
-                "parent": "profile-editor-search-groups",
-                "child": "profile-editor-groups"
-            },
-            {
-                "parent": "profile-editor-search-groups",
-                "addon": "libcollapsible@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor-search-groups",
-                "child": "element-picker"
-            },
-            {
-                "parent": "profile-editor-filter-groups",
-                "child": "profile-editor-groups"
-            },
-            {
-                "parent": "profile-editor-filter-groups",
-                "addon": "libcollapsible@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "profile-editor-filter-groups",
-                "child": "element-picker"
-            },
-            {
-                "parent": "profile-editor-sorts",
-                "child": "element-picker"
-            },
-            {
-                "parent": "profile-editor-prefixes",
-                "child": "element-picker"
-            },
-            {
-                "parent": "profile-editor-colors",
-                "child": "element-picker"
             },
             {
                 "parent": "root",
@@ -479,16 +311,6 @@
                 "from": "settings",
                 "type": "AddonData:config",
                 "to": "config"
-            },
-            {
-                "from": "settings",
-                "type": "AddonData:profile",
-                "to": "profile"
-            },
-            {
-                "from": "settings",
-                "type": "builtinElementsNote",
-                "to": "builtin-elements"
             },
             {
                 "from": "overview",
@@ -629,9 +451,7 @@
             "libdatesdurationpicker@beatlink",
             "librecurrencepicker@beatlink",
             "libactionbar@beatlink",
-            "librankpicker@beatlink",
-            "libcolorpicker@beatlink",
-            "libmultisort@beatlink"
+            "librankpicker@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"
