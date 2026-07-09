@@ -21,8 +21,7 @@ export default function AgendaSettings() {
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
     return (
-        <div>
-            <h3>Agenda Settings</h3>
+        <>
             {profileEditorNoteId && (
                 <Button
                     icon="bx bx-edit"
@@ -38,6 +37,6 @@ export default function AgendaSettings() {
                 />
             )}
             <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-        </div>
+        </>
     )
 }

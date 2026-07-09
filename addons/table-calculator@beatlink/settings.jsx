@@ -60,14 +60,13 @@ export default function TableCalculatorSettings() {
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
     return (
-        <div>
-            <h3>Table Calculator Settings</h3>
+        <>
             <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
             <Button
                 icon={recalcStatus === "done" ? "bx-check" : "bx-calculator"}
                 text={recalcStatus === "done" ? "Recalculated!" : "Recalculate All"}
                 onClick={recalculateAll}
             />
-        </div>
+        </>
     )
 }

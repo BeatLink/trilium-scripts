@@ -15,10 +15,5 @@ export default function AgendaSettings() {
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    return (
-        <div>
-            <h3>Cinnamon Applet Agenda Settings</h3>
-            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-        </div>
-    )
+    return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
 }

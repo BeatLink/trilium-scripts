@@ -15,10 +15,5 @@ export default function FirstChildSettings() {
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    return (
-        <div>
-            <h3>Cinnamon Applet First Child Settings</h3>
-            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-        </div>
-    )
+    return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
 }
