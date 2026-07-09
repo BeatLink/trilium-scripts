@@ -207,6 +207,13 @@
         align-items: center !important;
         justify-content: center !important;
     }
+
+    /* forms.css gives every button's icon glyph padding-inline-end: 0.35em
+       unconditionally — meant to space it from trailing text, but these
+       buttons have no text, so it just pushes the glyph left of center. */
+    & .btn .tn-icon, & button .tn-icon {
+        padding-inline-end: 0 !important;
+    }
 }
 
 .pe-list {

@@ -1,126 +1,144 @@
+/* Every declaration here carries !important — same reasoning as
+   agenda@beatlink's profileEditor.css and trilium-addon-manager@beatlink's
+   tam.css: Trilium's own note-content CSS (typography sizing, .btn skins,
+   table borders, etc.) otherwise bleeds into a rendered widget note and
+   silently wins ties like padding/heading-size that this file leaves
+   unenforced. */
+
 .lst-panel {
-    padding: 1rem;
+    box-sizing: border-box !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    padding: 1.5rem !important;
+
+    & *, & *::before, & *::after {
+        box-sizing: border-box !important;
+    }
 }
 
 .lst-field {
-    margin: 1rem 0;
+    margin: 1rem 0 !important;
 }
 
 .lst-field h4 {
-    margin: 0 0 0.25rem 0;
+    margin: 0 0 0.25rem 0 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
 }
 
 .lst-field-description {
-    display: block;
-    color: var(--muted-text-color);
-    font-size: 0.85rem;
-    margin-bottom: 0.5rem;
+    display: block !important;
+    color: var(--muted-text-color) !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
 }
 
 .lst-actions {
-    display: flex;
-    justify-content: flex-end;
-    padding: 1rem 0;
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding: 1rem 0 !important;
 }
 
 .lst-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    color: var(--muted-text-color);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2rem !important;
+    color: var(--muted-text-color) !important;
 }
 
 .lst-tabbed {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin: 1rem 0;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+    margin: 1rem 0 !important;
 }
 
 .lst-tabbed-tabs {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-    border-bottom: 1px solid var(--main-border-color);
-    padding-bottom: 0.35rem;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    border-bottom: 1px solid var(--main-border-color) !important;
+    padding-bottom: 0.35rem !important;
 }
 
 .lst-tab {
-    cursor: pointer;
-    border: 1px solid var(--main-border-color);
-    border-bottom: none;
-    border-radius: 0.375rem 0.375rem 0 0;
-    background-color: var(--accented-background-color);
-    color: var(--main-text-color);
-    padding: 0.35rem 0.75rem;
-    font-size: 0.9rem;
+    cursor: pointer !important;
+    border: 1px solid var(--main-border-color) !important;
+    border-bottom: none !important;
+    border-radius: 0.375rem 0.375rem 0 0 !important;
+    background-color: var(--accented-background-color) !important;
+    color: var(--main-text-color) !important;
+    padding: 0.35rem 0.75rem !important;
+    font-size: 0.9rem !important;
 }
 
 .lst-tab-active {
-    background-color: var(--main-background-color);
-    font-weight: 600;
+    background-color: var(--main-background-color) !important;
+    font-weight: 600 !important;
 }
 
 .lst-tabbed-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
 }
 
 .lst-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: var(--main-background-color);
-    border: 1px solid var(--main-border-color);
-    border-radius: 0.375rem;
-    margin: 1rem 0;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background-color: var(--main-background-color) !important;
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.375rem !important;
+    margin: 1rem 0 !important;
 }
 
 .lst-table th,
 .lst-table td {
-    padding: 0.5rem 0.6rem;
-    text-align: left;
-    vertical-align: top;
-    border-bottom: 1px solid var(--main-border-color);
+    padding: 0.5rem 0.6rem !important;
+    text-align: left !important;
+    vertical-align: top !important;
+    border-bottom: 1px solid var(--main-border-color) !important;
+    font-size: 0.9rem !important;
+    font-weight: normal !important;
 }
 
 .lst-table thead th {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--muted-text-color);
-    background-color: var(--accented-background-color);
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    color: var(--muted-text-color) !important;
+    background-color: var(--accented-background-color) !important;
 }
 
 .lst-table td > * {
-    width: 100%;
-    min-width: 0;
+    width: 100% !important;
+    min-width: 0 !important;
 }
 
 .lst-table tfoot td {
-    border-bottom: none;
-    padding-top: 0.6rem;
+    border-bottom: none !important;
+    padding-top: 0.6rem !important;
 }
 
 .lst-table-empty {
-    color: var(--muted-text-color);
-    font-style: italic;
-    text-align: center;
+    color: var(--muted-text-color) !important;
+    font-style: italic !important;
+    text-align: center !important;
 }
 
 .lst-table-actions-cell {
-    width: 1%;
-    white-space: nowrap;
+    width: 1% !important;
+    white-space: nowrap !important;
 }
 
 .lst-table-actions {
-    display: flex;
-    flex-direction: row;
-    gap: 0.25rem;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.25rem !important;
 }
 
 /* Trilium's own .btn-secondary (what a plain Button defaults to) sets
@@ -129,13 +147,21 @@
    pinned to a small square instead. */
 .lst-table-actions .btn,
 .lst-table-actions button {
-    flex: 0 0 auto;
-    min-width: unset;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    flex: 0 0 auto !important;
+    min-width: unset !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* forms.css gives every button's icon glyph padding-inline-end: 0.35em
+   unconditionally — meant to space it from trailing text, but these
+   buttons have no text, so it just pushes the glyph left of center. */
+.lst-table-actions .btn .tn-icon,
+.lst-table-actions button .tn-icon {
+    padding-inline-end: 0 !important;
 }
