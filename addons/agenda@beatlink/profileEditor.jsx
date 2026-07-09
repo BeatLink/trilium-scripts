@@ -7,12 +7,12 @@ import { SortsEditor } from "profileEditorSorts.jsx"
 import { PrefixesEditor } from "profileEditorPrefixes.jsx"
 import { ColorsEditor } from "profileEditorColors.jsx"
 import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
-import { operatorOptions, momentOptions, bracketOptions, defaultForOperator, splitRule } from "dayjsRule.js"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
 
 const { loadData, saveData, saveProfile, updateTaskLists } = require("libAgendaOverview.js")
 const { parseSortCriteria } = require("libMultisort.js")
+const { operatorOptions, momentOptions, bracketOptions, defaultForOperator, splitRule } = require("dayjsRule.js")
 
 // Element Library tabs -------------------------------------------------------
 // Every search, filter, date rule, sort, prefix, and color a profile can use

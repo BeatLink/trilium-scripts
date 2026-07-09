@@ -100,7 +100,12 @@ Every TAM addon is a `_tam_manifest_.json`, by convention at `addons/{id}/` (id 
   at `manifest.root`, so an independent top-level note would leak forever. `require()` matches the
   literal note title verbatim; the separate `sanitizeVariableName` mechanism in `script.ts` also
   exposes every child note as a bare pseudo-global (`highlight.min.js` → `highlightminjs`), in
-  addition to `require()`, not instead of it.
+  addition to `require()`, not instead of it. **Only `.jsx` notes get ES `export`/`import` syntax
+  (transpiled)** — a plain `.js` code note is executed as-is with no transpilation, so it must use
+  CommonJS `module.exports = {...}` and be pulled in via `const { x } = require("title.js")`, not
+  `export`/`import` (`export const x` throws `Unexpected token 'export'` at runtime). See
+  `libAgendaOverview.js`/`libMultisort.js` for the convention; a plain-JS helper note that's pure
+  logic with no JSX (e.g. `agenda@beatlink`'s `dayjsRule.js`) must follow it too.
 - **`children[]`** — parent/child tree, local (`{parent, child}`) or cross-addon
   (`{parent, addon, child}`, `child` resolved through the dependency's `exports` map). A local note
   can be listed under more than one parent in the same manifest (a same-addon clone, e.g. a shared
