@@ -233,11 +233,23 @@ function generateRegistryId() {
 function RegistryTree({ itemSchema, items, onChange, registries }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
-    const firstKey = Object.keys(itemSchema)[0]
+    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
 
+    // An item without its own `name` field falls back to its first field's
+    // value — but a nested registry whose entries are themselves usages of
+    // another registry (elementId+enabled, no `name` of their own) would
+    // otherwise show a raw reference id as the card label. Resolving through
+    // a first field that's itself a `reference` shows the referenced entry's
+    // own name instead, same as a `reference` field's own dropdown does.
     function labelFor(item) {
-        const name = "name" in itemSchema ? item.name : item[firstKey]
-        return name || "Untitled"
+        if ("name" in itemSchema) return item.name || "Untitled"
+        if (!firstKey) return "Untitled"
+        const rawValue = item[firstKey]
+        if (firstDef.type === "reference") {
+            const referenced = registries?.[firstDef.registry]?.[rawValue]
+            return referenced?.name || rawValue || "Untitled"
+        }
+        return rawValue || "Untitled"
     }
 
     function updateItem(key, newValue) {

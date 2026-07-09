@@ -151,6 +151,50 @@ copy — the motivating case this type exists for. `reference` doesn't validate 
 exists in the target registry (an entry can be deleted out from under a reference); a dangling
 reference just renders as an empty dropdown selection.
 
+### Nesting — a `list`/`registry` entry containing its own `list`/`registry`
+
+`itemSchema` is a full schema in its own right, so an `itemSchema` field can itself be `type: "list"`
+or `type: "registry"` — `Field`/`ListTable`/`RegistryTree` all dispatch and recurse the same way
+regardless of depth, and `registries` (every top-level registry's current entries, for resolving
+`reference` fields) is threaded down unchanged at every level, so a `reference` nested arbitrarily
+deep still resolves against the *top-level* registry it names, never a same-named field at some
+intermediate level. This is what lets a group-like registry hold its own nested collection of usages,
+each usage referencing an entry in a separate top-level registry:
+
+```json
+{
+    "searches": {
+        "type": "registry", "label": "Searches", "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Search"},
+            "rule": {"type": "string", "label": "Search Rule", "default": ""}
+        }
+    },
+    "searchGroups": {
+        "type": "registry", "label": "Search Groups", "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Group"},
+            "usages": {
+                "type": "registry", "label": "Usages", "default": {},
+                "itemSchema": {
+                    "elementId": {"type": "reference", "label": "Search", "registry": "searches", "default": ""},
+                    "enabled": {"type": "boolean", "label": "Enabled", "default": true}
+                }
+            }
+        }
+    }
+}
+```
+
+Each Search Group card contains its own nested `RegistryTree` of usages; each usage card's own label
+resolves through its first field the same way a bare item does — and since that first field
+(`elementId` above) is itself a `reference`, the label shown is the *referenced* search's `name`
+("Overdue"), not the raw reference id, matching what a `reference` field's own dropdown shows.
+Editing a usage here only ever touches `enabled`/`elementId`; to edit the referenced search's own
+`name`/`rule`, go to wherever `searches` itself renders (its own tab, or another registry/tab that
+also references it) — nesting and cross-registry references compose, but a nested item's fields are
+still only ever its own `itemSchema` fields, never a different registry's fields folded in inline.
+
 ### Tabs
 
 Every field lands on a tab: an explicit `"tab": "Some Label"` string on the field's own definition, if
