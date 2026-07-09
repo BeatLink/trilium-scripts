@@ -290,19 +290,6 @@
     }
 }
 
-.pe-dayjs-rule {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
-    flex: 1 1 260px !important;
-
-    & > * {
-        flex: 1 1 130px !important;
-        min-width: 0 !important;
-    }
-}
-
 .pe-actions {
     display: flex !important;
     justify-content: flex-end !important;

@@ -7,7 +7,7 @@ import { SortsEditor } from "profileEditorSorts.jsx"
 import { PrefixesEditor } from "profileEditorPrefixes.jsx"
 import { ColorsEditor } from "profileEditorColors.jsx"
 import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
-import { DayjsRulePicker } from "dayjsRulePicker.jsx"
+import { operatorOptions, momentOptions, bracketOptions, defaultForOperator, splitRule } from "dayjsRule.js"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
 
@@ -56,6 +56,9 @@ function newDateRule() {
     return { name: "New Date Rule", rule: ["isNull"] }
 }
 
+// One column per field of the `[operator, ...args]` tuple rather than a
+// single cell holding a compound picker — a row's irrelevant columns (e.g.
+// Moment 2/Bracket when the operator isn't isBetween) just render blank.
 function DateRulesTab({ dateRules, onChange }) {
     return (
         <KeyedList
@@ -67,9 +70,53 @@ function DateRulesTab({ dateRules, onChange }) {
                 { label: "Name", render: (element, update) => (
                     <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
                 ) },
-                { label: "Rule", render: (element, update) => (
-                    <DayjsRulePicker value={element.rule} onChange={rule => update({ ...element, rule })} />
-                ) }
+                { label: "Operator", render: (element, update) => {
+                    const { operator } = splitRule(element.rule)
+                    return (
+                        <FormDropdownList
+                            values={operatorOptions}
+                            currentValue={operator}
+                            onChange={newOp => update({ ...element, rule: defaultForOperator(newOp) })}
+                            keyProperty="key" titleProperty="title"
+                        />
+                    )
+                } },
+                { label: "Moment 1", render: (element, update) => {
+                    const { operator, args } = splitRule(element.rule)
+                    if (operator === "isNull") return null
+                    return (
+                        <FormDropdownList
+                            values={momentOptions}
+                            currentValue={args[0]}
+                            onChange={m => update({ ...element, rule: operator === "isBetween" ? [operator, m, args[1], null, args[3]] : [operator, m] })}
+                            keyProperty="key" titleProperty="title"
+                        />
+                    )
+                } },
+                { label: "Moment 2", render: (element, update) => {
+                    const { operator, args } = splitRule(element.rule)
+                    if (operator !== "isBetween") return null
+                    return (
+                        <FormDropdownList
+                            values={momentOptions}
+                            currentValue={args[1]}
+                            onChange={m => update({ ...element, rule: [operator, args[0], m, null, args[3]] })}
+                            keyProperty="key" titleProperty="title"
+                        />
+                    )
+                } },
+                { label: "Bracket", render: (element, update) => {
+                    const { operator, args } = splitRule(element.rule)
+                    if (operator !== "isBetween") return null
+                    return (
+                        <FormDropdownList
+                            values={bracketOptions}
+                            currentValue={args[3]}
+                            onChange={b => update({ ...element, rule: [operator, args[0], args[1], null, b] })}
+                            keyProperty="key" titleProperty="title"
+                        />
+                    )
+                } }
             ]}
         />
     )
@@ -91,30 +138,10 @@ function newFilter() {
     return { name: "New Filter", type: "search", rule: "" }
 }
 
-function FilterDetails({ element, dateRules, onChange }) {
-    return element.type === "dayjs" ? (
-        <div className="pe-field-row">
-            <FormTextBox
-                currentValue={element.datetimeLabel || ""}
-                onChange={v => onChange({ ...element, datetimeLabel: v })}
-            />
-            <FormCheckbox
-                label="Use Number of Days"
-                currentValue={!!element.useNumberOfDays}
-                onChange={v => onChange({ ...element, useNumberOfDays: v })}
-            />
-            <ElementSelect
-                category="dateRules"
-                registry={{ dateRules }}
-                value={element.dateRuleId}
-                onChange={dateRuleId => onChange({ ...element, dateRuleId })}
-            />
-        </div>
-    ) : (
-        <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
-    )
-}
-
+// One column per field rather than a single "Details" cell that swaps its
+// whole contents by type — a row's columns for the other type just render
+// blank (Search Rule for a dayjs-type row, or Datetime Label/Use Number of
+// Days/Date Rule for a search-type row).
 function FiltersTab({ filters, dateRules, onChange }) {
     function setType(element, update, newType) {
         if (newType === element.type) return
@@ -145,9 +172,29 @@ function FiltersTab({ filters, dateRules, onChange }) {
                         keyProperty="key" titleProperty="title"
                     />
                 ) },
-                { label: "Details", render: (element, update) => (
-                    <FilterDetails element={element} dateRules={dateRules} onChange={update} />
-                ) }
+                { label: "Search Rule", render: (element, update) => element.type === "search" ? (
+                    <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
+                ) : null },
+                { label: "Datetime Label", render: (element, update) => element.type === "dayjs" ? (
+                    <FormTextBox
+                        currentValue={element.datetimeLabel || ""}
+                        onChange={v => update({ ...element, datetimeLabel: v })}
+                    />
+                ) : null },
+                { label: "Use Number of Days", render: (element, update) => element.type === "dayjs" ? (
+                    <FormCheckbox
+                        currentValue={!!element.useNumberOfDays}
+                        onChange={v => update({ ...element, useNumberOfDays: v })}
+                    />
+                ) : null },
+                { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
+                    <ElementSelect
+                        category="dateRules"
+                        registry={{ dateRules }}
+                        value={element.dateRuleId}
+                        onChange={dateRuleId => update({ ...element, dateRuleId })}
+                    />
+                ) : null }
             ]}
         />
     )
@@ -237,61 +284,6 @@ function newVariant(namePrefix) {
     return { name: `New ${namePrefix}`, type: "label", label: "", children: {} }
 }
 
-function VariantDetails({ variant, dateRules, onChange, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
-    function newInterval() {
-        return { dateRuleId: firstElementId({ dateRules }, "dateRules"), [valueField]: defaultValue }
-    }
-
-    return variant.type === "label" ? (
-        <div className="pe-field-row">
-            <FormTextBox
-                currentValue={variant.label || ""}
-                onChange={v => onChange({ ...variant, label: v })}
-            />
-            <LabelValueMapEditor
-                entries={variant.children || {}}
-                onChange={children => onChange({ ...variant, children })}
-                defaultValue={defaultValue}
-                renderValue={(value, update) => <ValueEditor value={value} onChange={update} />}
-            />
-        </div>
-    ) : (
-        <div className="pe-field-row">
-            <FormTextBox
-                currentValue={variant.dateLabel || ""}
-                onChange={v => onChange({ ...variant, dateLabel: v })}
-            />
-            <FormCheckbox
-                label="Use Number of Days"
-                currentValue={!!variant.useNumberOfDays}
-                onChange={v => onChange({ ...variant, useNumberOfDays: v })}
-            />
-            <KeyedList
-                items={variant.intervals || {}}
-                onChange={intervals => onChange({ ...variant, intervals })}
-                newItemFactory={newInterval}
-                addLabel="Add Interval"
-                columns={[
-                    { label: "Date Rule", render: (interval, update) => (
-                        <ElementSelect
-                            category="dateRules"
-                            registry={{ dateRules }}
-                            value={interval.dateRuleId}
-                            onChange={dateRuleId => update({ ...interval, dateRuleId })}
-                        />
-                    ) },
-                    { label: "Value", render: (interval, update) => (
-                        <IntervalValueEditor
-                            value={interval[valueField]}
-                            onChange={v => update({ ...interval, [valueField]: v })}
-                        />
-                    ) }
-                ]}
-            />
-        </div>
-    )
-}
-
 function PrefixTextEditor({ value, onChange }) {
     return <FormTextBox currentValue={value || ""} onChange={onChange} />
 }
@@ -300,6 +292,10 @@ function ColorValueEditor({ value, onChange }) {
     return <ColorPicker currentValue={value} onChange={onChange} />
 }
 
+// One column per scalar field rather than a single "Details" cell that swaps
+// its whole contents by type. The one field that can't flatten into a fixed
+// column — the label-value map (label type) or interval list (dayjs type),
+// each of variable length — stays as its own nested-list column.
 function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
     function setType(variant, update, newType) {
         if (newType === variant.type) return
@@ -310,6 +306,10 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
                 ? { label: "", children: {} }
                 : { dateLabel: "", useNumberOfDays: false, intervals: {} })
         })
+    }
+
+    function newInterval() {
+        return { dateRuleId: firstElementId({ dateRules }, "dateRules"), [valueField]: defaultValue }
     }
 
     return [
@@ -324,15 +324,53 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
                 keyProperty="key" titleProperty="title"
             />
         ) },
-        { label: "Details", render: (variant, update) => (
-            <VariantDetails
-                variant={variant}
-                dateRules={dateRules}
-                onChange={update}
-                valueField={valueField}
+        { label: "Label", render: (variant, update) => variant.type === "label" ? (
+            <FormTextBox
+                currentValue={variant.label || ""}
+                onChange={v => update({ ...variant, label: v })}
+            />
+        ) : null },
+        { label: "Date Label", render: (variant, update) => variant.type === "dayjs" ? (
+            <FormTextBox
+                currentValue={variant.dateLabel || ""}
+                onChange={v => update({ ...variant, dateLabel: v })}
+            />
+        ) : null },
+        { label: "Use Number of Days", render: (variant, update) => variant.type === "dayjs" ? (
+            <FormCheckbox
+                currentValue={!!variant.useNumberOfDays}
+                onChange={v => update({ ...variant, useNumberOfDays: v })}
+            />
+        ) : null },
+        { label: "Values", render: (variant, update) => variant.type === "label" ? (
+            <LabelValueMapEditor
+                entries={variant.children || {}}
+                onChange={children => update({ ...variant, children })}
                 defaultValue={defaultValue}
-                ValueEditor={ValueEditor}
-                IntervalValueEditor={IntervalValueEditor}
+                renderValue={(value, onChangeValue) => <ValueEditor value={value} onChange={onChangeValue} />}
+            />
+        ) : (
+            <KeyedList
+                items={variant.intervals || {}}
+                onChange={intervals => update({ ...variant, intervals })}
+                newItemFactory={newInterval}
+                addLabel="Add Interval"
+                columns={[
+                    { label: "Date Rule", render: (interval, updateInterval) => (
+                        <ElementSelect
+                            category="dateRules"
+                            registry={{ dateRules }}
+                            value={interval.dateRuleId}
+                            onChange={dateRuleId => updateInterval({ ...interval, dateRuleId })}
+                        />
+                    ) },
+                    { label: "Value", render: (interval, updateInterval) => (
+                        <IntervalValueEditor
+                            value={interval[valueField]}
+                            onChange={v => updateInterval({ ...interval, [valueField]: v })}
+                        />
+                    ) }
+                ]}
             />
         ) }
     ]
