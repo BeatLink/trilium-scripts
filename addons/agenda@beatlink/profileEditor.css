@@ -17,16 +17,20 @@
         margin: 0 !important;
     }
 
-    & > .pe-field-row {
+    & .pe-field-row {
         flex-wrap: nowrap !important;
 
         & > label {
-            flex: 0 0 9rem !important;
+            flex: 0 0 11rem !important;
             min-width: 0 !important;
             text-align: left !important;
         }
 
-        & > :last-child {
+        /* Only the field immediately after the label grows to take the
+           freed-up width — a row with a trailing "Manage Elements" button
+           keeps that button at its own natural size instead of stretching
+           it to fill the row. */
+        & > label + * {
             flex: 1 1 auto !important;
         }
     }

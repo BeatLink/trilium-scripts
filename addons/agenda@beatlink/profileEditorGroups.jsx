@@ -161,7 +161,7 @@ export function TreeList({ items, onChange, newItemFactory, columns, getLabel, a
                         <div className="pe-table-actions">
                             <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
                             <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === keys.length - 1} />
-                            <Button icon="bx-x" text="Remove" onClick={() => removeItem(key)} />
+                            <Button icon="bx-x" onClick={() => removeItem(key)} />
                         </div>
                     </Collapsible>
                 )
