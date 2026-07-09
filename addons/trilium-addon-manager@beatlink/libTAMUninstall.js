@@ -20,44 +20,48 @@ async function sweepOrphanedNotes() {
     }, [tamFileIdLabel])
 }
 
-// Removes only the branches this addon's own manifest owns, never a blanket note-level delete —
-// a note only disappears once none of its parents are left, so a clone held by a dependent survives.
-async function detachAddonOwnedBranches(addonId, m) {
+// Removes every branch this addon owns, never a blanket note-level delete — a note only
+// disappears once none of its parents are left, so a clone held by a dependent survives.
+// Scans the live tree by #TAMFILEID prefix rather than walking a stored manifest's notes[]
+// list, so it's self-healing against manifest churn: a note whose local id was dropped from
+// a later manifest version (and so is absent from whatever manifest snapshot is on record)
+// still gets found and cleaned up here, since this never depends on any particular stored
+// manifest matching what's actually still in the tree.
+async function detachAddonOwnedBranches(addonId) {
     const anchorIds = [await getAddonRootNoteId()].filter(Boolean)
 
-    for (const noteDef of m.notes || []) {
-        const noteId = await resolveStoredNoteId(addonId, noteDef.id)
-        if (!noteId) continue
-        await api.runOnBackend((tamFileIdLabel, addonId, noteId, anchorIds) => {
-            const note = api.getNote(noteId)
-            if (!note || note.isDeleted) return
+    await api.runOnBackend((tamFileIdLabel, addonId, anchorIds) => {
+        const prefix = `${addonId}/`
+        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+            if (note.isDeleted) continue
+            const tamFileId = note.getLabelValue(tamFileIdLabel)
+            if (!tamFileId || !tamFileId.startsWith(prefix)) continue
+
             for (const parentNote of note.getParentNotes()) {
                 const isAnchor = anchorIds.includes(parentNote.noteId)
                 const parentTamId = parentNote.getLabelValue(tamFileIdLabel)
-                const ownedByThisAddon = parentTamId && parentTamId.startsWith(`${addonId}/`)
+                const ownedByThisAddon = parentTamId && parentTamId.startsWith(prefix)
                 // Preserve a parent branch clearly owned by a different addon; detach everything else.
                 const ownedByAnotherAddon = parentTamId && !ownedByThisAddon && !isAnchor
                 if (!ownedByAnotherAddon) {
-                    api.ensureNoteIsAbsentFromParent(noteId, parentNote.noteId)
+                    api.ensureNoteIsAbsentFromParent(note.noteId, parentNote.noteId)
                 }
             }
-            const stillLive = api.getNote(noteId)
+            const stillLive = api.getNote(note.noteId)
             if (stillLive && !stillLive.isDeleted && stillLive.getParentNotes().length === 0) {
                 stillLive.deleteNote()
             }
-        }, [tamFileIdLabel, addonId, noteId, anchorIds])
-    }
+        }
+    }, [tamFileIdLabel, addonId, anchorIds])
 }
 
 async function deleteAddon(addonId) {
     if (!addonId.trim()) return
     let database = await loadDatabase()
     const addonRecord = database.installedAddons[addonId]
-    if (addonRecord?.manifest) {
-        await detachAddonOwnedBranches(addonId, addonRecord.manifest)
-    }
+    await detachAddonOwnedBranches(addonId)
 
-    const persistence = addonRecord.persistence
+    const persistence = addonRecord?.persistence
     const hasPersistedData = persistence && (
         persistence.rootNote ||
         (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)

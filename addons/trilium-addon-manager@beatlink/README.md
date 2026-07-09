@@ -400,11 +400,15 @@ entry actually references it:
   this repo needs `AddonData:` persistence or independent enable/disable.
 
 `deleteAddon` is branch-scoped, not a direct `note.deleteNote()` on the root: `detachAddonOwnedBranches`
-walks every note in the addon's own stored manifest and detaches it from each current parent unless
-that parent is tagged as belonging to a *different* addon. A note only actually disappears once none
-of its parents are left — so a dependency still depended on by another installed addon is provably
-safe to leave alone, not just probably safe, and this never depends on assumptions about Trilium's own
-delete-cascade behavior toward a multi-parented note.
+scans every live `#TAMFILEID`-tagged note whose value starts with `{addonId}/` and detaches it from
+each current parent unless that parent is tagged as belonging to a *different* addon. A note only
+actually disappears once none of its parents are left — so a dependency still depended on by another
+installed addon is provably safe to leave alone, not just probably safe, and this never depends on
+assumptions about Trilium's own delete-cascade behavior toward a multi-parented note. Scanning the live
+tree by tag (rather than walking `addonRecord.manifest.notes`, a stored snapshot from the last sync) is
+what makes this self-healing: a note whose local id got removed from a later manifest version, but
+whose removal was never picked up by a `pruneRemovedNotes` run on an in-between update, still gets
+found here — cleanup no longer depends on the stored manifest matching what's actually in the tree.
 
 **`sweepOrphanedNotes`** (Settings' "Sweep Orphaned Notes" button) is a separate, user-triggered
 maintenance action — never run automatically — that deletes any `#TAMFILEID`-tagged note with zero
