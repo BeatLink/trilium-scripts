@@ -1,6 +1,7 @@
 .profile-editor {
     box-sizing: border-box !important;
-    max-width: 900px !important;
+    width: 100% !important;
+    max-width: 1400px !important;
     margin: 0 auto !important;
     padding: 1.5rem !important;
     display: flex !important;
@@ -154,6 +155,14 @@
         text-align: left !important;
         vertical-align: top !important;
         border-bottom: 1px solid var(--main-border-color, rgba(0, 0, 0, 0.06)) !important;
+    }
+
+    /* The Name column is always short text; without a cap it competes evenly
+       with far longer rule/criteria columns for width, squeezing those the
+       most whenever the table has more than two columns. */
+    & th:first-child, & td:first-child {
+        width: 12rem !important;
+        max-width: 12rem !important;
     }
 
     & thead th {
