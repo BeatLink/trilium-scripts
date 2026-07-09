@@ -3,7 +3,7 @@
 
 import { Badge, TamButton, Spinner, SearchFilterToolbar, useAddonFilter, TAM_ID } from "TAMShared.jsx"
 
-function AddonCard({ addonData, onOpen, onInstall, onEnable, onSettings }) {
+function AddonCard({ addonData, onOpen, onInstall, onUpdate, onEnable, onSettings }) {
     return (
         <div className="card" onClick={() => onOpen(addonData.id)}>
             <div className="card-top">
@@ -43,8 +43,18 @@ function AddonCard({ addonData, onOpen, onInstall, onEnable, onSettings }) {
                     />
                 </div>
             )}
-            {addonData.installedVersion && (onEnable || (onSettings && addonData.settingsNoteId)) && (
+            {addonData.installedVersion && (onUpdate && addonData.updateAvailable || onEnable || (onSettings && addonData.settingsNoteId)) && (
                 <div className="TAM-card-quick-actions">
+                    {onUpdate && addonData.updateAvailable && (
+                        <TamButton
+                            icon="bx bx-sync"
+                            text={`Update${addonData.availableVersion ? ` (${addonData.availableVersion})` : ""}`}
+                            onClick={e => {
+                                e.stopPropagation()
+                                onUpdate(addonData.id)
+                            }}
+                        />
+                    )}
                     {onEnable && (
                         <TamButton
                             className="btn-ghost"
@@ -73,7 +83,7 @@ function AddonCard({ addonData, onOpen, onInstall, onEnable, onSettings }) {
     )
 }
 
-function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall, onEnable, onSettings }) {
+function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall, onUpdate, onEnable, onSettings }) {
     // Libraries are an implementation detail of whatever addon depends on
     // them — TAM installs/updates/uninstalls them automatically via the
     // dependency graph, so there's nothing for the user to do with one
@@ -98,6 +108,7 @@ function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstal
                 addonData={addonData}
                 onOpen={onOpenAddon}
                 onInstall={!addonData.installedVersion ? onInstall : undefined}
+                onUpdate={addonData.installedVersion ? onUpdate : undefined}
                 onEnable={addonData.installedVersion && addonData.id !== TAM_ID ? onEnable : undefined}
                 onSettings={addonData.installedVersion ? onSettings : undefined}
             />

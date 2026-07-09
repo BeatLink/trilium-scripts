@@ -168,6 +168,7 @@ export default function RepoManager() {
                 onOpenAddon={addonId => setView({ type: "detail", addonId })}
                 onOpenSettings={() => setView({ type: "settings" })}
                 onInstall={handleInstall}
+                onUpdate={addonId => dispatch({ command: "update-addon", addon: addonId })}
                 onEnable={(addonId, enabled) => dispatch({ command: "enable-addon", addon: addonId, enabled })}
                 onSettings={settingsNoteId => activateNote(settingsNoteId)}
             />
@@ -187,11 +188,11 @@ export default function RepoManager() {
                 <div className="hdr-right">
                     <div className="hdr-links">
                         <a onClick={() => dispatch({ command: "check-updates" })}>Check for Updates</a>
-                        {anyUpdateAvailable && (
-                            <a onClick={() => dispatch({ command: "update-all" })}>Apply All Updates</a>
-                        )}
                         <a onClick={() => setView({ type: "settings" })}>Settings</a>
                     </div>
+                    {anyUpdateAvailable && (
+                        <TamButton icon="bx bx-sync" text="Update All" onClick={() => dispatch({ command: "update-all" })} />
+                    )}
                 </div>
             </div>
         )
