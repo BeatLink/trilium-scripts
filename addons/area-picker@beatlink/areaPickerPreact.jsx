@@ -34,22 +34,33 @@ export default defineWidget({
                     (await getActiveContextNote())
                         .getLabelValue("label:area") ? true : false
                 )
+
+                const currentArea = (await getActiveContextNote()).getLabelValue("area") ?? "none"
+                // The note's #area label can point at a key that no longer exists
+                // (the area was renamed/removed from settings since it was set) —
+                // surface that as its own dropdown option instead of silently
+                // coercing to "None", which would hide that the note's data is
+                // stale rather than actually unset.
+                const isInvalid = currentArea !== "none" && !areas.some(area => area.key === currentArea)
+
                 setExistingAreas([
                     NONE_OPTION,
-                    ...areas.map(area => ({ label: area.key, title: area.title }))
+                    ...areas.map(area => ({ label: area.key, title: area.title })),
+                    ...(isInvalid ? [{ label: currentArea, title: `⚠ Invalid: ${currentArea}` }] : [])
                 ])
                 setAreaColors(Object.fromEntries(areas.map(area => [area.key, area.color])))
-                setDropdownValue(
-                    (await getActiveContextNote())
-                        .getLabelValue("area") ?? "none"
-                )
+                setDropdownValue(currentArea)
             })()
         }, [noteId])
         const saveArea = (area, color) => {
             api.runOnBackend((noteId, area, color) => {
                 if (area != "none") {
                     api.getNote(noteId).setLabel("area", area)
-                    api.getNote(noteId).setLabel("color", color)
+                    if (color) {
+                        api.getNote(noteId).setLabel("color", color)
+                    } else {
+                        api.getNote(noteId).removeLabel("color")
+                    }
                 } else {
                     api.getNote(noteId).removeLabel("area")
                     api.getNote(noteId).removeLabel("color")

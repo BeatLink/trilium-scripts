@@ -12,8 +12,6 @@
     align-items: center;
     gap: 1rem;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
     padding: 0.5rem;
 }
 
