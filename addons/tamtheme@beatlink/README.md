@@ -36,4 +36,11 @@ background-swap hover (the "next" theme's default) made the icon the same color 
 background and it visually vanished. The border and compact padding need real selectors, not just
 variables — `forms.css` sets a literal `border: unset` and a 120px min-width on every button.
 
+Dropdowns (`<select>` and the combo-box-style dropdown-toggle button) get the same ghost treatment —
+transparent background, accent text, opacity-only hover — rather than the filled-surface look they'd
+otherwise share with plain text inputs via `--input-background-color`/`--input-text-color` (forms.css
+uses the same two variables for both, so ghost-ing them directly would also ghost every text input).
+The open dropdown's own option list stays a normal readable panel
+(`--select-dropdown-text-color`) — only the closed control reads as a button.
+
 Add to a CSS note and set the following attributes: `#appThemeBase=next` `#appTheme=TAMTheme`

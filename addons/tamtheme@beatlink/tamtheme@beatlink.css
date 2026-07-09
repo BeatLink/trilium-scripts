@@ -115,8 +115,15 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     --radio-checkbox-hover-background: var(--t-border) !important;
     --radio-checkbox-indicator-color: var(--t-accent) !important;
 
-    --select-focus-background: var(--t-surface) !important;
-    --select-focus-text-color: var(--t-text) !important;
+    /* The closed dropdown itself (not its open option list, which stays
+       readable via --select-dropdown-text-color below) reads as a ghost
+       button — transparent + accent text/border, opacity-only hover — see
+       the real-selector override further down; forms.css shares
+       --input-background-color/--input-text-color between selects and
+       plain text inputs, so this can't be done with variables alone
+       without also ghost-ing text inputs. */
+    --select-focus-background: transparent !important;
+    --select-focus-text-color: var(--t-accent) !important;
     --select-dropdown-text-color: var(--t-text) !important;
     --select-group-heading-text-color: var(--t-muted) !important;
 
@@ -453,6 +460,38 @@ select.form-select:focus,
 select.form-control:focus,
 .select-button.dropdown-toggle.btn:focus {
     border-color: var(--t-accent) !important;
+}
+
+/* Dropdowns read as ghost buttons (see the command-button block above):
+   transparent background, accent text, opacity-only hover — not the
+   filled surface look shared with plain text inputs via
+   --input-background-color/--input-text-color. background-color is a
+   longhand override on top of forms.css's `background: var(...)
+   var(--dropdown-arrow)` shorthand, so the arrow icon painted by that
+   shorthand's background-image is left untouched. */
+select,
+select.form-select,
+select.form-control,
+.select-button.dropdown-toggle.btn {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
+}
+
+select:hover,
+select.form-select:hover,
+select.form-control:hover,
+.select-button.dropdown-toggle.btn:hover {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
+    opacity: 0.85 !important;
+}
+
+select:focus,
+select.form-select:focus,
+select.form-control:focus,
+.select-button.dropdown-toggle.btn:focus {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
 }
 
 /* Extra polish — TAM's own headings (h1-h5) are always slate-900/slate-100,
