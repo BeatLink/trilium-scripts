@@ -10,25 +10,27 @@ widgets plus two editor pages:
    rank, and quick actions (complete, start today/tomorrow).
 3. **Agenda Now** (`agendaNowLauncher.jsx` + `agendaNowWindow.jsx`, Electron-only) — an
    always-on-top focus window with a countdown timer, showing whichever tasks you've added to it.
-4. **Profile Editor** (`profileEditor.jsx`, a `render`-type page reachable from the Overview widget
-   or Settings) — build a profile's search/filter groups and pick its sort/prefix/color, by
-   referencing elements from the Element Library rather than hand-editing JSON.
-5. **Element Library** (`elementLibrary.jsx`, same kind of page) — where every search, date rule,
-   filter, sort, prefix, and color actually gets defined. Profiles never embed a rule's definition;
-   they only reference an element here by id, so editing an element updates every profile using it.
-   Date rules are one level deeper than the rest: a dayjs-type filter and a prefix/color interval
-   both reference a shared date rule (e.g. "Overdue") rather than each embedding their own copy of
-   the same `["isBefore","startOfToday"]`-style criteria tuple.
+4. **Agenda Editor** (`profileEditor.jsx`, a `render`-type page reachable from the Overview widget
+   or Settings) — a single tabbed page. Its **Profile** tab builds a profile's search/filter groups
+   and picks its sort/prefix/color, by referencing elements from the other tabs rather than
+   hand-editing JSON. Its **Searches / Filters / Sorts / Prefixes / Colors / Date Rules** tabs are
+   the Element Library, where every such element actually gets defined. Profiles never embed a
+   rule's definition; they only reference an element by id, so editing an element on its tab
+   updates every profile using it. Date rules are one level deeper than the rest: a dayjs-type
+   filter and a prefix/color interval both reference a shared date rule (e.g. "Overdue") rather
+   than each embedding their own copy of the same `["isBefore","startOfToday"]`-style criteria
+   tuple. The Profile tab saves explicitly (Save button); every other tab autosaves each edit
+   immediately, same as before the tabs were merged into one page.
 
 ## Setup
 
 1. Use TAM's **Settings** button (or navigate to this addon's "Settings" note) to open the
    settings screen. There you can override any of the label names (`startDateTime`, `dueDateTime`,
    `duration`, `recurrence`, `rank`, etc — defaults match the original system) and, from there, jump
-   to the Profile Editor or Element Library.
-2. Open the Profile Editor, point the shipped "default" profile's **File Tasks Under** at whichever
-   note you want tasks re-filed into, and enable/build out its search and filter groups (referencing
-   the built-in elements, or new ones you add in the Element Library).
+   to the Agenda Editor.
+2. On the Agenda Editor's Profile tab, point the shipped "default" profile's **File Tasks Under** at
+   whichever note you want tasks re-filed into, and enable/build out its search and filter groups
+   (referencing the built-in elements, or new ones you add on the editor's other tabs).
 3. Open any note filed under that target — the Overview widget there lets you toggle individual
    searches/filters and change sort/prefix/color live, without leaving the note.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
@@ -54,8 +56,8 @@ This addon owns exactly two things every other `lib*@beatlink` piece explicitly 
   depending on a shared constants module bottom-up. If `profileId` is left blank, the shipped
   `"default"` profile is used.
 - **`agendaData.json` / `builtinElements.json` / `agendaNowConfig.json`** — plain JSON notes (not
-  additional `libsettings@beatlink` schemas), edited through the Profile Editor / Element Library
-  pages rather than by hand. `agendaData.json` holds every user-added or user-edited search/filter/
+  additional `libsettings@beatlink` schemas), edited through the Agenda Editor's tabs rather than by
+  hand. `agendaData.json` holds every user-added or user-edited search/filter/
   sort/prefix/color element, a `removedBuiltinIds` set recording any built-in the user deleted, and
   every profile that references them; `builtinElements.json` holds only the addon's own shipped
   built-in elements. Its shape doesn't fit a flat schema, and this addon only supports a single active
@@ -79,7 +81,7 @@ note. That's the whole point of splitting it out: shipping a new built-in search
 color in a future `agenda@beatlink` version now reaches already-installed users automatically (merged
 in by `loadData`), instead of being silently dropped because the persisted data note is frozen. Every
 widget resolves its other relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `elementLibraryNote`) once on mount and
+`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`) once on mount and
 passes the resolved ids/constants down to whichever shared library functions it calls — none of those
 relations live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference
 notes with no way to know which addon is asking.

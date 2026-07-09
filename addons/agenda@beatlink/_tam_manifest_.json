@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.6.0",
+    "latestVersion": "1.7.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -134,7 +134,7 @@
             },
             {
                 "id": "profile-editor-page",
-                "title": "Profile Editor",
+                "title": "Agenda Editor",
                 "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -208,20 +208,6 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "elementPicker.jsx"
-            },
-            {
-                "id": "element-library-page",
-                "title": "Element Library",
-                "type": "render",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "element-library",
-                "title": "elementLibrary.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "elementLibrary.jsx"
             },
             {
                 "id": "readme",
@@ -430,6 +416,28 @@
                 "child": "profile-editor-colors"
             },
             {
+                "parent": "profile-editor",
+                "child": "profile-editor-groups"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "profile-editor-dayjs-rule"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "element-picker"
+            },
+            {
+                "parent": "profile-editor",
+                "addon": "libmultisort@beatlink",
+                "child": "lib"
+            },
+            {
+                "parent": "profile-editor",
+                "addon": "libcolorpicker@beatlink",
+                "child": "lib"
+            },
+            {
                 "parent": "profile-editor-search-groups",
                 "child": "profile-editor-groups"
             },
@@ -466,41 +474,6 @@
             {
                 "parent": "profile-editor-colors",
                 "child": "element-picker"
-            },
-            {
-                "parent": "root",
-                "child": "element-library-page"
-            },
-            {
-                "parent": "element-library-page",
-                "child": "element-library"
-            },
-            {
-                "parent": "element-library",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "element-library",
-                "addon": "libmultisort@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "element-library",
-                "child": "profile-editor-groups"
-            },
-            {
-                "parent": "element-library",
-                "child": "element-picker"
-            },
-            {
-                "parent": "element-library",
-                "child": "profile-editor-dayjs-rule"
-            },
-            {
-                "parent": "element-library",
-                "addon": "libcolorpicker@beatlink",
-                "child": "lib"
             },
             {
                 "parent": "root",
@@ -627,26 +600,6 @@
                 "from": "settings",
                 "type": "profileEditorNote",
                 "to": "profile-editor-page"
-            },
-            {
-                "from": "element-library-page",
-                "type": "renderNote",
-                "to": "element-library"
-            },
-            {
-                "from": "element-library",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "profile-editor",
-                "type": "elementLibraryNote",
-                "to": "element-library-page"
-            },
-            {
-                "from": "settings",
-                "type": "elementLibraryNote",
-                "to": "element-library-page"
             }
         ],
         "labels": [
