@@ -54,7 +54,7 @@ function SearchesTab({ searches, onChange }) {
 // that means the same thing, rather than each retyping the same tuple.
 
 function newDateRule() {
-    return { name: "New Date Rule", rule: ["isNull"] }
+    return { name: "New Date Rule", rule: ["isNull"], dateLabel: "", useNumberOfDays: false }
 }
 
 // One column per field of the `[operator, ...args]` tuple rather than a
@@ -70,6 +70,18 @@ function DateRulesTab({ dateRules, onChange }) {
             columns={[
                 { label: "Name", render: (element, update) => (
                     <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                ) },
+                { label: "Date Label", render: (element, update) => (
+                    <FormTextBox
+                        currentValue={element.dateLabel || ""}
+                        onChange={v => update({ ...element, dateLabel: v })}
+                    />
+                ) },
+                { label: "Use Number of Days", render: (element, update) => (
+                    <FormCheckbox
+                        currentValue={!!element.useNumberOfDays}
+                        onChange={v => update({ ...element, useNumberOfDays: v })}
+                    />
                 ) },
                 { label: "Operator", render: (element, update) => {
                     const { operator } = splitRule(element.rule)
@@ -125,10 +137,12 @@ function DateRulesTab({ dateRules, onChange }) {
 
 // Filters --------------------------------------------------------------------
 // Unlike a search element (always a plain query string), a filter element
-// carries its own type/datetimeLabel/useNumberOfDays — a shared filter has
-// to be self-describing since it's no longer scoped inside a profile-local
-// group that used to hold that context. A dayjs-type filter references a
-// Date Rule element rather than embedding its own criteria tuple.
+// carries its own type — a shared filter has to be self-describing since
+// it's no longer scoped inside a profile-local group that used to hold that
+// context. A dayjs-type filter references a Date Rule element rather than
+// embedding its own criteria tuple; the label to test and whether to use
+// whole-day granularity live on that Date Rule, not on the filter, since
+// they describe the comparison itself rather than any one use of it.
 
 const filterTypeOptions = [
     { key: "search", title: "Search Query" },
@@ -141,8 +155,8 @@ function newFilter() {
 
 // One column per field rather than a single "Details" cell that swaps its
 // whole contents by type — a row's columns for the other type just render
-// blank (Search Rule for a dayjs-type row, or Datetime Label/Use Number of
-// Days/Date Rule for a search-type row).
+// blank (Search Rule for a dayjs-type row, or Date Rule for a search-type
+// row).
 function FiltersTab({ filters, dateRules, onChange }) {
     function setType(element, update, newType) {
         if (newType === element.type) return
@@ -150,7 +164,7 @@ function FiltersTab({ filters, dateRules, onChange }) {
             ...element,
             type: newType,
             ...(newType === "dayjs"
-                ? { datetimeLabel: element.datetimeLabel || "", useNumberOfDays: !!element.useNumberOfDays, dateRuleId: firstElementId({ dateRules }, "dateRules") }
+                ? { dateRuleId: firstElementId({ dateRules }, "dateRules") }
                 : { rule: "" })
         })
     }
@@ -175,18 +189,6 @@ function FiltersTab({ filters, dateRules, onChange }) {
                 ) },
                 { label: "Search Rule", render: (element, update) => element.type === "search" ? (
                     <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
-                ) : null },
-                { label: "Datetime Label", render: (element, update) => element.type === "dayjs" ? (
-                    <FormTextBox
-                        currentValue={element.datetimeLabel || ""}
-                        onChange={v => update({ ...element, datetimeLabel: v })}
-                    />
-                ) : null },
-                { label: "Use Number of Days", render: (element, update) => element.type === "dayjs" ? (
-                    <FormCheckbox
-                        currentValue={!!element.useNumberOfDays}
-                        onChange={v => update({ ...element, useNumberOfDays: v })}
-                    />
                 ) : null },
                 { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
                     <ElementSelect
@@ -274,7 +276,10 @@ function SortsTab({ sorts, onChange }) {
 // Structurally identical (a label-value map or a dayjs-interval list); only
 // the value editor (plain text vs. ColorPicker) and default value differ.
 // Each dayjs interval references a Date Rule element rather than embedding
-// its own criteria tuple, same as a dayjs-type filter.
+// its own criteria tuple, same as a dayjs-type filter — the label to test
+// and whether to use whole-day granularity live on that Date Rule, not on
+// the variant, since different intervals in the same variant can reference
+// Date Rules with different labels.
 
 const variantTypeOptions = [
     { key: "label", title: "By Label Value" },
@@ -305,7 +310,7 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
             type: newType,
             ...(newType === "label"
                 ? { label: "", children: {} }
-                : { dateLabel: "", useNumberOfDays: false, intervals: {} })
+                : { intervals: {} })
         })
     }
 
@@ -329,18 +334,6 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
             <FormTextBox
                 currentValue={variant.label || ""}
                 onChange={v => update({ ...variant, label: v })}
-            />
-        ) : null },
-        { label: "Date Label", render: (variant, update) => variant.type === "dayjs" ? (
-            <FormTextBox
-                currentValue={variant.dateLabel || ""}
-                onChange={v => update({ ...variant, dateLabel: v })}
-            />
-        ) : null },
-        { label: "Use Number of Days", render: (variant, update) => variant.type === "dayjs" ? (
-            <FormCheckbox
-                currentValue={!!variant.useNumberOfDays}
-                onChange={v => update({ ...variant, useNumberOfDays: v })}
             />
         ) : null },
         { label: "Values", render: (variant, update) => variant.type === "label" ? (

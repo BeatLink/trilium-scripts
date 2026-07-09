@@ -163,6 +163,42 @@ function migrateInlineDateRules(data) {
     return data
 }
 
+// Hoists a dayjs-type filter's own `datetimeLabel`/`useNumberOfDays`, or a
+// dayjs-type prefix/color variant's own `dateLabel`/`useNumberOfDays`, onto
+// the Date Rule element it references — same self-healing pattern as
+// migrateInlineDateRules, and it must run after that migration since it
+// needs every dayjs-type element to already hold a `dateRuleId`. The label
+// and granularity describe the comparison itself, not any one use of it, so
+// they belong on the shared Date Rule; first reference to a given Date Rule
+// wins if more than one used to disagree.
+function migrateDateRuleLabels(data) {
+    function applyLabel(dateRuleId, dateLabel, useNumberOfDays) {
+        const dateRule = data.dateRules && data.dateRules[dateRuleId]
+        if (dateRule && dateRule.dateLabel === undefined) {
+            dateRule.dateLabel = dateLabel || ""
+            dateRule.useNumberOfDays = !!useNumberOfDays
+        }
+    }
+
+    for (const filter of Object.values(data.filters || {})) {
+        if (filter.type === "dayjs" && "datetimeLabel" in filter) {
+            applyLabel(filter.dateRuleId, filter.datetimeLabel, filter.useNumberOfDays)
+            delete filter.datetimeLabel
+            delete filter.useNumberOfDays
+        }
+    }
+    for (const variant of [...Object.values(data.prefixes || {}), ...Object.values(data.colors || {})]) {
+        if (variant.type !== "dayjs" || !("dateLabel" in variant)) continue
+        for (const interval of Object.values(variant.intervals || {})) {
+            applyLabel(interval.dateRuleId, variant.dateLabel, variant.useNumberOfDays)
+        }
+        delete variant.dateLabel
+        delete variant.useNumberOfDays
+    }
+
+    return data
+}
+
 async function loadBuiltinElements(builtinElementsNoteId) {
     if (!builtinElementsNoteId) return {}
     const note = await api.getNote(builtinElementsNoteId)
@@ -236,6 +272,7 @@ async function loadData(dataNoteId, builtinElementsNoteId) {
     const raw = await loadRawData(dataNoteId)
     let migrated = migrateLegacyData(raw)
     migrated = migrateInlineDateRules(migrated)
+    migrated = migrateDateRuleLabels(migrated)
 
     const shipped = await loadBuiltinElements(builtinElementsNoteId)
     migrated = migrateBuiltinSplit(migrated, shipped)
@@ -311,8 +348,8 @@ async function getFilteredNotes(data, filterGroupsChildren, notesList){
                     const dateRule = data.dateRules[element.dateRuleId]
                     if (dateRule) {
                         for (let note of notesList){
-                            let noteDate = (await api.getNote(note)).getLabelValue(element.datetimeLabel)
-                            if (matchesDayJsCriteria(noteDate, dateRule.rule, element.useNumberOfDays)){
+                            let noteDate = (await api.getNote(note)).getLabelValue(dateRule.dateLabel)
+                            if (matchesDayJsCriteria(noteDate, dateRule.rule, dateRule.useNumberOfDays)){
                                 filterGroups[groupId].push(note)
                             }
                         }
@@ -343,18 +380,17 @@ async function getPrefixes(dateRules, prefixInfo, notesList) {
         if (!prefixInfo) {
             prefixDict[note] = ""
         } else if (prefixInfo.type == "dayjs"){
-            let date = (await api.getNote(note)).getLabelValue(prefixInfo.dateLabel)
-            if (date) {
-                for (let interval of Object.values(prefixInfo.intervals)) {
-                    const dateRule = dateRules[interval.dateRuleId]
-                    if (dateRule && matchesDayJsCriteria(date, dateRule.rule, prefixInfo.useNumberOfDays)){
-                        prefixDict[note] = api.dayjs(date).format(interval.formatString)
-                        break
-                    }
+            const noteObj = await api.getNote(note)
+            for (let interval of Object.values(prefixInfo.intervals)) {
+                const dateRule = dateRules[interval.dateRuleId]
+                if (!dateRule) continue
+                const date = noteObj.getLabelValue(dateRule.dateLabel)
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                    prefixDict[note] = api.dayjs(date).format(interval.formatString)
+                    break
                 }
-            } else {
-                prefixDict[note] = "No Date Set"
             }
+            if (!(note in prefixDict)) prefixDict[note] = "No Date Set"
         } else if (prefixInfo["type"] == "label"){
             let noteLabel = (await api.getNote(note)).getLabelValue(prefixInfo["label"])
             prefixDict[note] = prefixInfo.children ? prefixInfo.children[noteLabel] : noteLabel
@@ -371,18 +407,17 @@ async function getColors(dateRules, colorInfo, notesList) {
         if (!colorInfo) {
             colorDict[note] = ""
         } else if (colorInfo.type == "dayjs"){
-            let date = (await api.getNote(note)).getLabelValue(colorInfo.dateLabel)
-            if (date) {
-                for (let interval of Object.values(colorInfo.intervals)) {
-                    const dateRule = dateRules[interval.dateRuleId]
-                    if (dateRule && matchesDayJsCriteria(date, dateRule.rule, colorInfo.useNumberOfDays)){
-                        colorDict[note] = interval.color
-                        break
-                    }
+            const noteObj = await api.getNote(note)
+            for (let interval of Object.values(colorInfo.intervals)) {
+                const dateRule = dateRules[interval.dateRuleId]
+                if (!dateRule) continue
+                const date = noteObj.getLabelValue(dateRule.dateLabel)
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                    colorDict[note] = interval.color
+                    break
                 }
-            } else {
-                colorDict[note] = ""
             }
+            if (!(note in colorDict)) colorDict[note] = ""
         } else if (colorInfo["type"] == "label"){
             let noteLabel = (await api.getNote(note)).getLabelValue(colorInfo["label"])
             colorDict[note] = colorInfo.children ? colorInfo.children[noteLabel] : noteLabel

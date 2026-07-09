@@ -68,22 +68,20 @@ categories (minus `removedBuiltinIds` and `profiles`), just with only the shippe
 {
     "searches": { "<elementId>": { "name": "Label", "rule": "<Trilium search query>" } },
     "dateRules": {
-        "<elementId>": { "name": "Label", "rule": ["isBefore", "startOfToday"] }
+        "<elementId>": {
+            "name": "Label", "rule": ["isBefore", "startOfToday"],
+            "dateLabel": "startDateTime", "useNumberOfDays": false
+        }
     },
     "filters": {
         "<elementId>": { "name": "Label", "type": "search", "rule": "<Trilium search query>" },
-        "<dayjsElementId>": {
-            "name": "Label", "type": "dayjs",
-            "datetimeLabel": "startDateTime", "useNumberOfDays": false,
-            "dateRuleId": "<key into dateRules>"
-        }
+        "<dayjsElementId>": { "name": "Label", "type": "dayjs", "dateRuleId": "<key into dateRules>" }
     },
     "sorts":    { "<elementId>": { "name": "Label", "rule": "priority:desc;startDateTime" } },
     "prefixes": {
         "<elementId>": {
             "name": "Label", "type": "label"|"dayjs",
             "label": "<note label name>", "children": { "<labelValue>": "<prefix string>" },
-            "dateLabel": "<note label name>", "useNumberOfDays": false,
             "intervals": { "<intervalKey>": { "dateRuleId": "<key into dateRules>", "formatString": "MMM D, HH:mm" } }
         }
     },
@@ -91,7 +89,6 @@ categories (minus `removedBuiltinIds` and `profiles`), just with only the shippe
         "<elementId>": {
             "name": "Label", "type": "label"|"dayjs",
             "label": "<note label name>", "children": { "<labelValue>": "<CSS color>" },
-            "dateLabel": "<note label name>", "useNumberOfDays": false,
             "intervals": { "<intervalKey>": { "dateRuleId": "<key into dateRules>", "color": "<CSS color>" } }
         }
     },
@@ -128,27 +125,34 @@ categories (minus `removedBuiltinIds` and `profiles`), just with only the shippe
 
 Every `searchGroups` usage resolves (via `elementId`) to a `searches` element — a Trilium search
 query, OR'd within a group and AND'd across groups with everything in `filterGroups`. Each `filters`
-element carries its own `type` — `"search"` runs its own search query; `"dayjs"` tests a note's
-`datetimeLabel` against a shared `dateRules` element's relative-date criteria (`isNull`,
-`isBefore`/`isAfter`/`isBetween`/`isSame` etc against named reference points: `now`, `startOfToday`,
-`endOfToday`, `endOfTomorrow`, `endOfThisWeek`, `endOfThisMonth`, `endOfThisYear`) — a filter element
-is self-contained precisely so it stays meaningful wherever it's referenced, independent of any
-specific profile's group. `dateRules` exists as its own registry (rather than each filter/interval
-embedding its own criteria tuple) because the exact same comparison — "overdue," "later today," etc
-— is typically needed by a filter *and* a prefix interval *and* a color interval simultaneously;
-referencing one shared `dateRuleId` means editing what "overdue" means updates all three at once. The
-selected `sorts` element's `rule` is a [libmultisort](../libmultisort@beatlink/) sort string. The
-selected `prefixes`/`colors` element maps either a note label's value (`type: "label"`) or a
-`matchesDayJsCriteria` match against a referenced `dateRules` element (`type: "dayjs"`, each interval
-holding its own `dateRuleId`) to a prefix string / CSS color name — evaluated in `intervals`'
-insertion order, first match wins.
+element carries its own `type` — `"search"` runs its own search query; `"dayjs"` tests a note's date
+label (from the referenced `dateRules` element, see below) against that element's relative-date
+criteria (`isNull`, `isBefore`/`isAfter`/`isBetween`/`isSame` etc against named reference points:
+`now`, `startOfToday`, `endOfToday`, `endOfTomorrow`, `endOfThisWeek`, `endOfThisMonth`,
+`endOfThisYear`). `dateRules` exists as its own registry (rather than each filter/interval embedding
+its own criteria tuple) because the exact same comparison — "overdue," "later today," etc — is
+typically needed by a filter *and* a prefix interval *and* a color interval simultaneously;
+referencing one shared `dateRuleId` means editing what "overdue" means, which note-label it tests, and
+whether it uses whole-day (`useNumberOfDays`) granularity updates every filter/prefix/color that means
+the same thing at once — `dateLabel`/`useNumberOfDays` describe the comparison itself, not any one use
+of it, so they live on the Date Rule rather than being repeated on every filter/interval that
+references it. The selected `sorts` element's `rule` is a [libmultisort](../libmultisort@beatlink/)
+sort string. The selected `prefixes`/`colors` element maps either a note label's value
+(`type: "label"`) or a `matchesDayJsCriteria` match against a referenced `dateRules` element
+(`type: "dayjs"`, each interval holding its own `dateRuleId`) to a prefix string / CSS color name —
+evaluated in `intervals`' insertion order, first match wins.
 
 Older installs' data note held exactly one profile's fields at the top level, with every
 search/filter rule inlined directly rather than referenced — `loadData` detects that shape (no
 `profiles` key) and migrates it in place, promoting every inlined rule into the appropriate registry
 and rewriting the profile to hold references, the first time it's loaded after an update. A separate,
 later migration (no `removedBuiltinIds` key) splits an install's inlined built-ins out into the
-built-in/persisted-delta shape described above — see "Built-in vs. persisted data".
+built-in/persisted-delta shape described above — see "Built-in vs. persisted data". A third migration
+hoists any filter's own `datetimeLabel`/`useNumberOfDays`, or any dayjs-type prefix/color variant's
+own `dateLabel`/`useNumberOfDays`, onto the `dateRules` element it references (first reference wins),
+then deletes those fields from the filter/variant — this runs on every load and is self-healing rather
+than gated on a version flag, since its own absence of old fields on an element is the "already done"
+signal.
 
 **Only one profile per `parentNoteId` is supported** — `getMatchingProfile` returns the first profile
 whose `parentNoteId` matches, and `getTaskList` (and everything built on it — due notifications,
