@@ -86,87 +86,7 @@
     gap: 0.5rem !important;
 }
 
-.lst-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    background-color: var(--main-background-color) !important;
-    border: 1px solid var(--main-border-color) !important;
-    border-radius: 0.375rem !important;
-    margin: 1rem 0 !important;
-}
-
-.lst-table th,
-.lst-table td {
-    padding: 0.5rem 0.6rem !important;
-    text-align: left !important;
-    vertical-align: top !important;
-    border-bottom: 1px solid var(--main-border-color) !important;
-    font-size: 0.9rem !important;
-    font-weight: normal !important;
-}
-
-.lst-table thead th {
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.02em !important;
-    color: var(--muted-text-color) !important;
-    background-color: var(--accented-background-color) !important;
-}
-
-.lst-table td > * {
-    width: 100% !important;
-    min-width: 0 !important;
-}
-
-.lst-table tfoot td {
-    border-bottom: none !important;
-    padding-top: 0.6rem !important;
-}
-
-.lst-table-empty {
-    color: var(--muted-text-color) !important;
-    font-style: italic !important;
-    text-align: center !important;
-}
-
-.lst-table-actions-cell {
-    width: 1% !important;
-    white-space: nowrap !important;
-}
-
-.lst-table-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 0.25rem !important;
-}
-
-/* Trilium's own .btn-secondary (what a plain Button defaults to) sets
-   min-width: 120px and generous padding — fine for a labeled action button,
-   but these are icon-only reorder/remove controls, so they need to be
-   pinned to a small square instead. */
-.lst-table-actions .btn,
-.lst-table-actions button {
-    flex: 0 0 auto !important;
-    min-width: unset !important;
-    width: 2rem !important;
-    height: 2rem !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-/* forms.css gives every button's icon glyph padding-inline-end: 0.35em
-   unconditionally — meant to space it from trailing text, but these
-   buttons have no text, so it just pushes the glyph left of center. */
-.lst-table-actions .btn .tn-icon,
-.lst-table-actions button .tn-icon {
-    padding-inline-end: 0 !important;
-}
-
-.lst-tree {
+.lst-list {
     display: flex !important;
     flex-direction: column !important;
     gap: 0.6rem !important;
@@ -179,35 +99,24 @@
     }
 }
 
-.lst-tree-empty {
+.lst-list-empty {
     color: var(--muted-text-color) !important;
     font-style: italic !important;
     margin: 0 !important;
 }
 
-.lst-tree-item {
+.lst-item {
     border: 1px solid var(--main-border-color) !important;
     border-left: 3px solid var(--main-text-color, #888) !important;
     border-radius: 0.375rem !important;
     background-color: var(--main-background-color) !important;
-
-    & > summary {
-        cursor: pointer !important;
-        user-select: none !important;
-        padding: 0.5rem 0.75rem !important;
-        font-weight: 600 !important;
-        background-color: var(--accented-background-color) !important;
-    }
-}
-
-.lst-tree-item-body {
     padding: 0.75rem !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 0.75rem !important;
 }
 
-.lst-tree-item-fields {
+.lst-item-fields {
     display: flex !important;
     flex-direction: column !important;
     gap: 0.5rem !important;
@@ -232,11 +141,18 @@
     }
 }
 
-.lst-tree-item-actions {
+/* Reorder/remove controls sit at the top of each item (before its fields),
+   not the bottom — so acting on an entry never means scrolling past its
+   (possibly long) form first. */
+.lst-item-actions {
     display: flex !important;
     flex-direction: row !important;
     gap: 0.25rem !important;
 
+    /* Trilium's own .btn-secondary (what a plain Button defaults to) sets
+       min-width: 120px and generous padding — fine for a labeled action
+       button, but these are icon-only reorder/remove controls, so they need
+       to be pinned to a small square instead. */
     & .btn, & button {
         flex: 0 0 auto !important;
         min-width: unset !important;
@@ -249,6 +165,9 @@
         justify-content: center !important;
     }
 
+    /* forms.css gives every button's icon glyph padding-inline-end: 0.35em
+       unconditionally — meant to space it from trailing text, but these
+       buttons have no text, so it just pushes the glyph left of center. */
     & .btn .tn-icon, & button .tn-icon {
         padding-inline-end: 0 !important;
     }
@@ -260,7 +179,7 @@
     gap: 0.5rem !important;
     width: 100% !important;
 
-    & > .lst-tree-item-fields {
+    & > .lst-item-fields {
         border-left: 2px solid var(--main-border-color) !important;
         padding-left: 0.75rem !important;
         margin-left: 0.25rem !important;

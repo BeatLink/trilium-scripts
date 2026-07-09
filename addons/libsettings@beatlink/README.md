@@ -66,9 +66,10 @@ way at any depth `mergeDefaults`/`filterBySchema` are applied in both
 }
 ```
 
-In the generated form, `SettingsForm` renders this as a real `<table>` — one row per entry, one
-column per `itemSchema` field, plus a fixed actions column (move-up/move-down/remove) — with an
-"Add" button that seeds a new row from `itemSchema`'s defaults. See
+In the generated form, `SettingsForm` renders this as a stack of forms, one per entry — each entry's
+own move-up/move-down/remove controls sit at its top, followed by one labeled field row per
+`itemSchema` key, stacked vertically like any other form on the page (not a wide table with a column
+per field) — with an "Add" button below that seeds a new entry from `itemSchema`'s defaults. See
 [`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
 
 ### `registry` fields — id-keyed collections of settings
@@ -93,11 +94,11 @@ Validated/defaulted against `itemSchema` the same recursive way as `list`.
 }
 ```
 
-`SettingsForm` renders this as a stack of collapsible cards (one per entry) instead of a table row —
-each card's summary is its `name` field if `itemSchema` declares one, otherwise its first field's
-value, and its body is one labeled field row per `itemSchema` key. Reasonable to use for the same
-cases as `list` when entries get numerous/verbose enough that a wide table becomes hard to scan, or
-whenever you know something else needs to reference an entry by a stable id.
+`SettingsForm` renders this the same way as `list` — a stack of forms, one per entry, move-up/move-
+down/remove at the top followed by one labeled field row per `itemSchema` key — just keyed by id
+instead of position. Reasonable to use for the same cases as `list` when you know something else
+needs to reference an entry by a stable id (a `reference` field elsewhere pointing at "which entry of
+this registry" would break silently on reorder if entries were addressed by array position instead).
 
 ### Shipped entries — `registry` fields the addon itself ships entries into
 
@@ -125,7 +126,7 @@ existing installs automatically, without a migration:
 }
 ```
 
-The runtime value (what `values.dateRules` holds, and what `RegistryTree` edits) is always the plain
+The runtime value (what `values.dateRules` holds, and what `RegistryItems` edits) is always the plain
 flat merged map — shipped entries the user hasn't removed, overlaid with anything the user added or
 edited (an edit shadows the shipped entry under the same id). What actually lands in `config.json` is
 different and normally invisible to a consumer: `{ "entries": {...}, "removedIds": [...] }` —
@@ -168,9 +169,9 @@ needing a separate `list`/`registry` per shape:
 ```
 
 The discriminator (`type` above) is just a plain `select` field — nothing marks it as special; every
-other field in the same `itemSchema` that carries `showWhen` is simply hidden (not rendered at all in
-`RegistryTree`, rendered as a blank cell in `ListTable` so the table shape stays fixed) whenever the
-item's current values don't match. A hidden field's stored value is left alone rather than cleared —
+other field in the same `itemSchema` that carries `showWhen` is simply omitted — not rendered at all,
+whether the entry is a `list` or a `registry` — whenever the item's current values don't match. A
+hidden field's stored value is left alone rather than cleared —
 switching `type` back and forth doesn't lose whatever was typed into the other branch. `showWhen` is a
 purely presentational filter: `mergeDefaults`/`filterBySchema` don't evaluate it at all, since every
 `itemSchema` field always exists as a key on every item regardless of which branch currently applies.
@@ -181,8 +182,8 @@ purely presentational filter: `mergeDefaults`/`filterBySchema` don't evaluate it
 schema key* (elsewhere in the same schema, must itself be `type: "registry"`), and the field renders
 as a dropdown of that registry's current entries — same picker either way, whether the reference
 lives at the top level or, as here, nested inside another registry's `itemSchema`. An entry's dropdown
-title is its own `name` field (falling back to its raw id if it doesn't have one), matching
-`RegistryTree`'s own card-label convention — so a `dateRules` registry entry named "Overdue" shows up
+title is its own `name` field (falling back to its raw id if it doesn't have one) — so a `dateRules`
+registry entry named "Overdue" shows up
 as "Overdue" in every `dateRuleId` dropdown that references it, and renaming it there updates every
 reference's display immediately, since the reference only ever stores the id.
 
@@ -218,7 +219,7 @@ picking an existing entry by name without also surfacing its fields.
 ### Nesting — a `list`/`registry` entry containing its own `list`/`registry`
 
 `itemSchema` is a full schema in its own right, so an `itemSchema` field can itself be `type: "list"`
-or `type: "registry"` — `Field`/`ListTable`/`RegistryTree` all dispatch and recurse the same way
+or `type: "registry"` — `Field`/`ListItems`/`RegistryItems` all dispatch and recurse the same way
 regardless of depth, and `registries` (every top-level registry's current entries, for resolving
 `reference` fields) is threaded down unchanged at every level, so a `reference` nested arbitrarily
 deep still resolves against the *top-level* registry it names, never a same-named field at some
@@ -250,14 +251,13 @@ each usage referencing an entry in a separate top-level registry:
 }
 ```
 
-Each Search Group card contains its own nested `RegistryTree` of usages; each usage card's own label
-resolves through its first field the same way a bare item does — and since that first field
-(`elementId` above) is itself a `reference`, the label shown is the *referenced* search's `name`
-("Overdue"), not the raw reference id, matching what a `reference` field's own dropdown shows.
-Editing a usage here only ever touches `enabled`/`elementId`; to edit the referenced search's own
-`name`/`rule`, go to wherever `searches` itself renders (its own tab, or another registry/tab that
-also references it) — nesting and cross-registry references compose, but a nested item's fields are
-still only ever its own `itemSchema` fields, never a different registry's fields folded in inline.
+Each Search Group entry contains its own nested stack of usage entries, rendered the same
+form-per-entry way as anything else. Editing a usage here only ever touches `enabled`/`elementId`; to
+edit the referenced search's own `name`/`rule` too, either go to wherever `searches` itself renders
+(its own tab, or another registry/tab that also references it) or mark `elementId` `inline: true` (see
+above) to fold those fields into the usage's own form directly — nesting and cross-registry references
+compose either way, but without `inline` a nested item's fields are only ever its own `itemSchema`
+fields, never a different registry's fields folded in.
 
 ### Tabs
 
@@ -371,9 +371,9 @@ export default function MySettings() {
 Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
 entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
 picker, `color` → swatch picker, `reference` → dropdown of another registry's entries, `list` →
-repeatable table of the above, `registry` → id-keyed stack of collapsible cards of the above), and
-owns its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't
-dictate page layout, only the fields.
+repeatable stack of forms of the above, `registry` → id-keyed stack of forms of the above), and owns
+its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't dictate
+page layout, only the fields.
 
 `color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
 dependency of this library, not something a consumer needs to declare directly.

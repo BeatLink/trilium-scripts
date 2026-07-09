@@ -128,7 +128,7 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
 
 // `registries` is the full top-level values object (every schema key's
 // current value, keyed the same as the schema) — threaded down through
-// every Field/ListTable/RegistryTree call so a `reference` field anywhere
+// every Field/ListItems/RegistryItems call so a `reference` field anywhere
 // (including inside a nested itemSchema) can resolve `def.registry` against
 // a sibling top-level `registry`/`list` field's current entries, regardless
 // of how deep it's nested. `schemas` is the equivalent top-level *schema*
@@ -161,14 +161,14 @@ function Field({ def, value, onChange, registries, schemas, updateReferencedFiel
             )
         case "list":
             return (
-                <ListTable
+                <ListItems
                     itemSchema={def.itemSchema} items={value || []} onChange={onChange}
                     registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
                 />
             )
         case "registry":
             return (
-                <RegistryTree
+                <RegistryItems
                     itemSchema={def.itemSchema} items={value || {}} onChange={onChange}
                     registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
                 />
@@ -196,7 +196,7 @@ function Field({ def, value, onChange, registries, schemas, updateReferencedFiel
             return (
                 <div class="lst-reference-inline">
                     {picker}
-                    <div class="lst-tree-item-fields">
+                    <div class="lst-item-fields">
                         {Object.entries(refItemSchema).map(([fieldKey, fieldDef]) => matchesShowWhen(fieldDef, refItem) && (
                             <div class="lst-field-row" key={fieldKey} title={fieldDef.description || undefined}>
                                 <label>{fieldDef.label}</label>
@@ -236,22 +236,56 @@ function matchesShowWhen(def, item) {
     })
 }
 
-// One row per item, one column per itemSchema key, plus a fixed actions
-// column (move/remove) and an Add button that seeds a blank item from
-// defaults — a real <table> rather than a stack of always-expanded cards.
-// A column whose `showWhen` doesn't match a given row renders as a blank
-// cell rather than being omitted — the column (and its header) still exists
-// for every other row where it does apply.
-function ListTable({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
-    const columns = Object.entries(itemSchema)
+// One labeled field row per itemSchema key (skipping a field whose `showWhen`
+// doesn't match this item), used by both ListItems and RegistryItems so a
+// `list` entry and a `registry` entry render identically — the only
+// difference between the two types is how items are keyed/reordered/added,
+// never how one item's own fields look.
+function ItemFields({ itemSchema, item, onFieldChange, registries, schemas, updateReferencedField }) {
+    return (
+        <div class="lst-item-fields">
+            {Object.entries(itemSchema).map(([fieldKey, def]) => matchesShowWhen(def, item) && (
+                <div class="lst-field-row" key={fieldKey} title={def.description || undefined}>
+                    <label>{def.label}</label>
+                    <Field
+                        def={def}
+                        value={item[fieldKey]}
+                        onChange={v => onFieldChange(fieldKey, v)}
+                        registries={registries}
+                        schemas={schemas}
+                        updateReferencedField={updateReferencedField}
+                    />
+                </div>
+            ))}
+        </div>
+    )
+}
 
+// Move-up/move-down/remove, always at the top of an item — so reordering or
+// removing an entry never requires scrolling past its (possibly long) form
+// first.
+function ItemActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) {
+    return (
+        <div class="lst-item-actions">
+            <Button icon="bx-chevron-up" onClick={onMoveUp} disabled={disableUp} />
+            <Button icon="bx-chevron-down" onClick={onMoveDown} disabled={disableDown} />
+            <Button icon="bx-x" onClick={onRemove} />
+        </div>
+    )
+}
+
+// A positional array of items, each rendered as its own bordered form (top:
+// reorder/remove controls, below: one labeled field row per itemSchema key)
+// — no table, no columns, so an item's fields read top-to-bottom like any
+// other form on this page rather than needing to scan across a row.
+function ListItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
     function updateItem(index, key, value) {
         onChange(items.map((item, i) => i === index ? { ...item, [key]: value } : item))
     }
 
     function addItem() {
         const blank = {}
-        for (const [key, def] of columns) blank[key] = def.default
+        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
         onChange([...items, blank])
     }
 
@@ -268,47 +302,24 @@ function ListTable({ itemSchema, items, onChange, registries, schemas, updateRef
     }
 
     return (
-        <table class="lst-table">
-            <thead>
-                <tr>
-                    {columns.map(([key, def]) => <th key={key} title={def.description || undefined}>{def.label}</th>)}
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {items.length === 0 && (
-                    <tr><td class="lst-table-empty" colSpan={columns.length + 1}>No entries yet.</td></tr>
-                )}
-                {items.map((item, index) => (
-                    <tr key={index}>
-                        {columns.map(([key, def]) => (
-                            <td key={key}>
-                                {matchesShowWhen(def, item) && (
-                                    <Field
-                                        def={def}
-                                        value={item[key]}
-                                        onChange={v => updateItem(index, key, v)}
-                                        registries={registries}
-                                        schemas={schemas}
-                                        updateReferencedField={updateReferencedField}
-                                    />
-                                )}
-                            </td>
-                        ))}
-                        <td class="lst-table-actions-cell">
-                            <div class="lst-table-actions">
-                                <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
-                                <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} />
-                                <Button icon="bx-x" onClick={() => removeItem(index)} />
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-            <tfoot>
-                <tr><td colSpan={columns.length + 1}><Button icon="bx-plus" text="Add" onClick={addItem} /></td></tr>
-            </tfoot>
-        </table>
+        <div class="lst-list">
+            {items.length === 0 && <p class="lst-list-empty">No entries yet.</p>}
+            {items.map((item, index) => (
+                <div class="lst-item" key={index}>
+                    <ItemActions
+                        onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
+                        onMoveDown={() => moveItem(index, 1)} disableDown={index === items.length - 1}
+                        onRemove={() => removeItem(index)}
+                    />
+                    <ItemFields
+                        itemSchema={itemSchema} item={item}
+                        onFieldChange={(key, v) => updateItem(index, key, v)}
+                        registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    />
+                </div>
+            ))}
+            <Button icon="bx-plus" text="Add" onClick={addItem} />
+        </div>
     )
 }
 
@@ -318,39 +329,11 @@ function generateRegistryId() {
     return `item-${Date.now()}-${registryIdCounter}`
 }
 
-// Same shape as ListTable but keyed by id (`{ [id]: item }`) rather than a
-// positional array, and rendered as a stack of collapsible cards instead of
-// table rows — one labeled field row per itemSchema key inside each card,
-// via the same `Field` dispatch every other entry uses (including passing
-// `registries` through, so a nested `reference` field can resolve another
-// top-level registry's current entries). A registry entry's collapsed label
-// prefers an itemSchema field literally named `name` (matching the
-// convention every consumer's item schema already uses for its display
-// name — also what a `reference` field pointing at this registry shows in
-// its own dropdown); otherwise it falls back to the first field's value.
-// Expand/collapse state is local-only (not persisted) — a pure editing
-// convenience, not data every reader of the settings needs to agree on.
-function RegistryTree({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
+// Same shape as ListItems but keyed by id (`{ [id]: item }`) rather than a
+// positional array — everything else (form-per-item, controls at the top)
+// is identical; only add/remove/reorder work id-first instead of index-first.
+function RegistryItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
     const keys = Object.keys(items)
-    const [expandedKeys, setExpandedKeys] = useState(() => new Set())
-    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
-
-    // An item without its own `name` field falls back to its first field's
-    // value — but a nested registry whose entries are themselves usages of
-    // another registry (elementId+enabled, no `name` of their own) would
-    // otherwise show a raw reference id as the card label. Resolving through
-    // a first field that's itself a `reference` shows the referenced entry's
-    // own name instead, same as a `reference` field's own dropdown does.
-    function labelFor(item) {
-        if ("name" in itemSchema) return item.name || "Untitled"
-        if (!firstKey) return "Untitled"
-        const rawValue = item[firstKey]
-        if (firstDef.type === "reference") {
-            const referenced = registries?.[firstDef.registry]?.[rawValue]
-            return referenced?.name || rawValue || "Untitled"
-        }
-        return rawValue || "Untitled"
-    }
 
     function updateItem(key, newValue) {
         onChange({ ...items, [key]: newValue })
@@ -365,9 +348,7 @@ function RegistryTree({ itemSchema, items, onChange, registries, schemas, update
     function addItem() {
         const blank = {}
         for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
-        const id = generateRegistryId()
-        setExpandedKeys(prev => new Set(prev).add(id))
-        onChange({ ...items, [id]: blank })
+        onChange({ ...items, [generateRegistryId()]: blank })
     }
 
     function moveItem(index, direction) {
@@ -380,53 +361,23 @@ function RegistryTree({ itemSchema, items, onChange, registries, schemas, update
         onChange(reordered)
     }
 
-    function setExpanded(key, isExpanded) {
-        setExpandedKeys(prev => {
-            const next = new Set(prev)
-            if (isExpanded) next.add(key)
-            else next.delete(key)
-            return next
-        })
-    }
-
     return (
-        <div class="lst-tree">
-            {keys.length === 0 && <p class="lst-tree-empty">No entries yet.</p>}
-            {keys.map((key, index) => {
-                const item = items[key]
-                return (
-                    <details
-                        key={key}
-                        class="lst-tree-item"
-                        open={expandedKeys.has(key)}
-                        onToggle={e => setExpanded(key, e.currentTarget.open)}
-                    >
-                        <summary>{labelFor(item)}</summary>
-                        <div class="lst-tree-item-body">
-                            <div class="lst-tree-item-fields">
-                                {Object.entries(itemSchema).map(([fieldKey, def]) => matchesShowWhen(def, item) && (
-                                    <div class="lst-field-row" key={fieldKey} title={def.description || undefined}>
-                                        <label>{def.label}</label>
-                                        <Field
-                                            def={def}
-                                            value={item[fieldKey]}
-                                            onChange={v => updateItem(key, { ...item, [fieldKey]: v })}
-                                            registries={registries}
-                                            schemas={schemas}
-                                            updateReferencedField={updateReferencedField}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            <div class="lst-tree-item-actions">
-                                <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
-                                <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === keys.length - 1} />
-                                <Button icon="bx-x" onClick={() => removeItem(key)} />
-                            </div>
-                        </div>
-                    </details>
-                )
-            })}
+        <div class="lst-list">
+            {keys.length === 0 && <p class="lst-list-empty">No entries yet.</p>}
+            {keys.map((key, index) => (
+                <div class="lst-item" key={key}>
+                    <ItemActions
+                        onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
+                        onMoveDown={() => moveItem(index, 1)} disableDown={index === keys.length - 1}
+                        onRemove={() => removeItem(key)}
+                    />
+                    <ItemFields
+                        itemSchema={itemSchema} item={items[key]}
+                        onFieldChange={(fieldKey, v) => updateItem(key, { ...items[key], [fieldKey]: v })}
+                        registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    />
+                </div>
+            ))}
             <Button icon="bx-plus" text="Add" onClick={addItem} />
         </div>
     )
@@ -529,6 +480,12 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     // profile-identity-style fields that want a deliberate Save.
     const needsSaveButton = entries.some(([, def]) => !def.autosave)
 
+    // A group field (list/registry) keeps its own heading above a full-width
+    // widget — a fixed left-hand label column doesn't make sense next to
+    // something that tall. A scalar field instead renders as a `.lst-field-row`
+    // (label left, value right), the same left-label/right-value layout every
+    // item's own fields already use, so a schema's top-level scalar fields
+    // read consistently with everything nested inside a list/registry entry.
     // A field's own heading is redundant when the tab bar already shows the
     // same label right above it (the common case: a lone list/registry field
     // that is its own tab) — but still shown whenever there's no tab bar to
@@ -545,9 +502,19 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
         }
 
         return (
-            <div class={isGroup ? undefined : "lst-field"} key={key}>
-                {showHeading && <h4>{def.label}</h4>}
-                {def.description && <label class="lst-field-description">{def.description}</label>}
+            <div
+                class={isGroup ? "lst-field" : "lst-field-row"}
+                key={key}
+                title={!isGroup ? (def.description || undefined) : undefined}
+            >
+                {isGroup ? (
+                    <>
+                        {showHeading && <h4>{def.label}</h4>}
+                        {def.description && <label class="lst-field-description">{def.description}</label>}
+                    </>
+                ) : (
+                    <label>{def.label}</label>
+                )}
                 <Field
                     def={def}
                     value={values[key]}
