@@ -17,9 +17,11 @@ import { ColorPicker } from "ColorPicker.jsx"
 />
 ```
 
-Clicking a swatch calls `onChange` with that CSS color name. Clicking the dashed "custom" swatch (or
-passing an empty string as `currentValue`) reveals a free-text input for any CSS color the palette
-doesn't cover (a hex code, or any other valid CSS color keyword).
+Renders as a single compact swatch button; clicking it opens a popover with the palette grid.
+Clicking a swatch calls `onChange` with that CSS color name and closes the popover. Clicking the
+dashed "custom" swatch (or passing an empty string as `currentValue`) reveals a free-text input for
+any CSS color the palette doesn't cover (a hex code, or any other valid CSS color keyword) and keeps
+the popover open for typing.
 
 ## Props
 

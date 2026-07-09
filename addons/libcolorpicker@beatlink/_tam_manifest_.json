@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcolorpicker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libcolorpicker@beatlink/_tam_manifest_.json",
@@ -25,16 +25,33 @@
                 "type": "code",
                 "mime": "text/markdown",
                 "sourceUrl": "README.md"
+            },
+            {
+                "id": "css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "ColorPicker.css"
             }
         ],
         "children": [
             {
                 "parent": "lib",
                 "child": "readme"
+            },
+            {
+                "parent": "lib",
+                "child": "css"
             }
         ],
         "relations": [],
-        "labels": [],
+        "labels": [
+            {
+                "note": "css",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
         "dependencies": [],
         "exports": {
             "lib": "lib"
