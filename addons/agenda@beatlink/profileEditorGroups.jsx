@@ -1,4 +1,5 @@
 import { Button, FormTextBox, useState } from "trilium:preact"
+import { Collapsible } from "Collapsible.jsx"
 
 let idCounter = 0
 function generateKey() {
@@ -79,6 +80,94 @@ export function KeyedList({ items, onChange, newItemFactory, renderItem, columns
                 <tr><td colSpan={columnCount}><Button icon="bx-plus" text={addLabel} onClick={addItem} /></td></tr>
             </tfoot>
         </table>
+    )
+}
+
+// Same add/remove/reorder contract as KeyedList (same `columns` shape too —
+// a column whose render returns null for a given item is simply omitted,
+// same as a blank table cell), but renders each item as a collapsible tree
+// node instead of a table row: the summary is the item's own label (falling
+// back to a generic name if the caller doesn't supply `getLabel`), and each
+// column becomes a labeled field row stacked vertically inside — labels
+// stay beside their field via the same `.pe-field-row` used elsewhere in
+// this editor, rather than living in a table header far above the value.
+// Expand/collapse state is local-only (not persisted): it's a pure editing
+// convenience, not data every reader of the profile needs to agree on.
+export function TreeList({ items, onChange, newItemFactory, columns, getLabel, addLabel = "Add" }) {
+    const keys = Object.keys(items)
+    const [expandedKeys, setExpandedKeys] = useState(() => new Set())
+    const labelFor = getLabel || (item => item.name || "Untitled")
+
+    function updateItem(key, newValue) {
+        onChange({ ...items, [key]: newValue })
+    }
+
+    function removeItem(key) {
+        const updated = { ...items }
+        delete updated[key]
+        onChange(updated)
+    }
+
+    function addItem() {
+        const key = generateKey()
+        setExpandedKeys(prev => new Set(prev).add(key))
+        onChange({ ...items, [key]: newItemFactory() })
+    }
+
+    function moveItem(index, direction) {
+        const target = index + direction
+        if (target < 0 || target >= keys.length) return
+        const newKeys = [...keys]
+        ;[newKeys[index], newKeys[target]] = [newKeys[target], newKeys[index]]
+        const reordered = {}
+        for (const k of newKeys) reordered[k] = items[k]
+        onChange(reordered)
+    }
+
+    function setExpanded(key, isExpanded) {
+        setExpandedKeys(prev => {
+            const next = new Set(prev)
+            if (isExpanded) next.add(key)
+            else next.delete(key)
+            return next
+        })
+    }
+
+    return (
+        <div className="pe-tree">
+            {keys.length === 0 && <p className="pe-list-empty">No entries yet.</p>}
+            {keys.map((key, index) => {
+                const item = items[key]
+                const update = value => updateItem(key, value)
+                return (
+                    <Collapsible
+                        key={key}
+                        label={labelFor(item)}
+                        expanded={expandedKeys.has(key)}
+                        onToggle={e => setExpanded(key, e.currentTarget.open)}
+                        className="pe-tree-item"
+                    >
+                        <div className="pe-tree-item-fields">
+                            {columns.map(col => {
+                                const rendered = col.render(item, update)
+                                return rendered == null ? null : (
+                                    <div className="pe-field-row" key={col.label}>
+                                        <label>{col.label}</label>
+                                        {rendered}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <div className="pe-table-actions">
+                            <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
+                            <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === keys.length - 1} />
+                            <Button icon="bx-x" text="Remove" onClick={() => removeItem(key)} />
+                        </div>
+                    </Collapsible>
+                )
+            })}
+            <Button icon="bx-plus" text={addLabel} onClick={addItem} />
+        </div>
     )
 }
 

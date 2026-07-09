@@ -6,7 +6,7 @@ import { FilterGroupsEditor } from "profileEditorFilterGroups.jsx"
 import { SortsEditor } from "profileEditorSorts.jsx"
 import { PrefixesEditor } from "profileEditorPrefixes.jsx"
 import { ColorsEditor } from "profileEditorColors.jsx"
-import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
+import { KeyedList, TreeList, LabelValueMapEditor } from "profileEditorGroups.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
 import { SettingsForm } from "libSettingsUI.jsx"
@@ -170,7 +170,7 @@ function FiltersTab({ filters, dateRules, onChange }) {
     }
 
     return (
-        <KeyedList
+        <TreeList
             items={filters}
             onChange={onChange}
             newItemFactory={newFilter}
@@ -233,11 +233,12 @@ function CriteriaEditor({ rule, onChange }) {
     }
 
     return (
-        <KeyedList
+        <TreeList
             items={items}
             onChange={handleChange}
             newItemFactory={newCriterion}
             addLabel="Add Criterion"
+            getLabel={row => row.attribute || "New Criterion"}
             columns={[
                 { label: "Attribute", render: (row, update) => (
                     <FormTextBox currentValue={row.attribute} onChange={v => update({ ...row, attribute: v })} />
@@ -255,7 +256,7 @@ function CriteriaEditor({ rule, onChange }) {
 
 function SortsTab({ sorts, onChange }) {
     return (
-        <KeyedList
+        <TreeList
             items={sorts}
             onChange={onChange}
             newItemFactory={newSort}
@@ -344,11 +345,12 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
                 renderValue={(value, onChangeValue) => <ValueEditor value={value} onChange={onChangeValue} />}
             />
         ) : (
-            <KeyedList
+            <TreeList
                 items={variant.intervals || {}}
                 onChange={intervals => update({ ...variant, intervals })}
                 newItemFactory={newInterval}
                 addLabel="Add Interval"
+                getLabel={interval => dateRules[interval.dateRuleId]?.name || "New Interval"}
                 columns={[
                     { label: "Date Rule", render: (interval, updateInterval) => (
                         <ElementSelect
@@ -372,7 +374,7 @@ function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, Inte
 
 function PrefixesTab({ prefixes, dateRules, onChange }) {
     return (
-        <KeyedList
+        <TreeList
             items={prefixes}
             onChange={onChange}
             newItemFactory={() => newVariant("Prefix")}
@@ -390,7 +392,7 @@ function PrefixesTab({ prefixes, dateRules, onChange }) {
 
 function ColorsTab({ colors, dateRules, onChange }) {
     return (
-        <KeyedList
+        <TreeList
             items={colors}
             onChange={onChange}
             newItemFactory={() => newVariant("Color")}
@@ -473,8 +475,10 @@ function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave
 // of element (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit alongside
 // both as flat tabs — each is its own page, shown one at a time, rather than
 // nested under a further "Element Library" tab. The *items within* a category
-// (each individual search, filter, etc.) still render as a plain KeyedList,
-// not a further layer of tabs. Settings itself is just `SettingsForm` dropped
+// (each individual search, filter, etc.) still render as a plain list — a
+// KeyedList table for Searches/Date Rules, a TreeList of collapsible nodes
+// for Filters/Sorts/Prefixes/Colors — not a further layer of tabs. Settings
+// itself is just `SettingsForm` dropped
 // in as-is (self-contained: loads/saves schema.json+config.json, owns its own
 // Save button) — the only tab of the seven that isn't defined in this file.
 const CATEGORIES = [
