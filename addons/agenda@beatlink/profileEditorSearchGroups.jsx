@@ -7,7 +7,7 @@ function newGroup() {
     return { name: "New Group", expanded: true, children: {} }
 }
 
-function SearchGroupEditor({ group, registry, onChange, onOpenLibrary }) {
+function SearchGroupEditor({ group, registry, onChange }) {
     return (
         <Collapsible
             label={group.name}
@@ -27,7 +27,6 @@ function SearchGroupEditor({ group, registry, onChange, onOpenLibrary }) {
                         category="searches"
                         registry={registry}
                         onChange={update}
-                        onOpenLibrary={onOpenLibrary}
                     />
                 )}
             />
@@ -35,7 +34,10 @@ function SearchGroupEditor({ group, registry, onChange, onOpenLibrary }) {
     )
 }
 
-export function SearchGroupsEditor({ searchGroups, registry, onChange, onOpenLibrary }) {
+// Lives on the Searches tab, alongside the shared search element library it
+// picks from, rather than on the Profile tab — keeping "which searches
+// exist" and "how they're grouped for this profile" on one screen.
+export function SearchGroupsEditor({ searchGroups, registry, onChange }) {
     return (
         <Collapsible
             label="Search Groups"
@@ -49,7 +51,7 @@ export function SearchGroupsEditor({ searchGroups, registry, onChange, onOpenLib
                 newItemFactory={newGroup}
                 addLabel="Add Group"
                 renderItem={(key, group, update) => (
-                    <SearchGroupEditor group={group} registry={registry} onChange={update} onOpenLibrary={onOpenLibrary} />
+                    <SearchGroupEditor group={group} registry={registry} onChange={update} />
                 )}
             />
         </Collapsible>

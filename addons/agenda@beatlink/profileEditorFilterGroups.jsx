@@ -7,7 +7,7 @@ function newFilterGroup() {
     return { name: "New Filter", expanded: true, children: {} }
 }
 
-function FilterGroupEditor({ group, registry, onChange, onOpenLibrary }) {
+function FilterGroupEditor({ group, registry, onChange }) {
     return (
         <Collapsible
             label={group.name}
@@ -27,7 +27,6 @@ function FilterGroupEditor({ group, registry, onChange, onOpenLibrary }) {
                         category="filters"
                         registry={registry}
                         onChange={update}
-                        onOpenLibrary={onOpenLibrary}
                     />
                 )}
             />
@@ -35,7 +34,10 @@ function FilterGroupEditor({ group, registry, onChange, onOpenLibrary }) {
     )
 }
 
-export function FilterGroupsEditor({ filterGroups, registry, onChange, onOpenLibrary }) {
+// Lives on the Filters tab, alongside the shared filter element library it
+// picks from, rather than on the Profile tab — keeping "which filters
+// exist" and "how they're grouped for this profile" on one screen.
+export function FilterGroupsEditor({ filterGroups, registry, onChange }) {
     return (
         <Collapsible
             label="Filter Groups"
@@ -49,7 +51,7 @@ export function FilterGroupsEditor({ filterGroups, registry, onChange, onOpenLib
                 newItemFactory={newFilterGroup}
                 addLabel="Add Filter Group"
                 renderItem={(key, group, update) => (
-                    <FilterGroupEditor group={group} registry={registry} onChange={update} onOpenLibrary={onOpenLibrary} />
+                    <FilterGroupEditor group={group} registry={registry} onChange={update} />
                 )}
             />
         </Collapsible>

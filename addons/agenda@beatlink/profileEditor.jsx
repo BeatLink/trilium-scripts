@@ -19,7 +19,13 @@ const { operatorOptions, momentOptions, bracketOptions, defaultForOperator, spli
 // Every search, filter, date rule, sort, prefix, and color a profile can use
 // lives here. Profiles only ever reference an element from here by id, so
 // editing one updates every profile using it; each edit below autosaves
-// immediately (unlike the Profile tab, which saves explicitly).
+// immediately (unlike the Profile tab's sort/prefix/color picks, which save
+// explicitly). Search Groups/Filter Groups also live here rather than on the
+// Profile tab — they're a profile-specific tree of which elements are in use,
+// so they belong beside the library they pick from; unlike the rest of this
+// tab, though, editing one writes to the *profile*, so it autosaves through
+// the same profile-autosave path as everything else that touches profile
+// data outside the Profile tab's explicit Save button.
 
 // Searches -----------------------------------------------------------------
 
@@ -27,22 +33,30 @@ function newSearch() {
     return { name: "New Search", rule: "" }
 }
 
-function SearchesTab({ searches, onChange }) {
+function SearchesTab({ searches, searchGroups, onChangeSearches, onChangeSearchGroups }) {
     return (
-        <KeyedList
-            items={searches}
-            onChange={onChange}
-            newItemFactory={newSearch}
-            addLabel="Add Search"
-            columns={[
-                { label: "Name", render: (element, update) => (
-                    <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
-                ) },
-                { label: "Search Rule", render: (element, update) => (
-                    <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
-                ) }
-            ]}
-        />
+        <div className="pe-list">
+            <SearchGroupsEditor
+                searchGroups={searchGroups}
+                registry={{ searches }}
+                onChange={onChangeSearchGroups}
+            />
+            <h3>Search Elements</h3>
+            <KeyedList
+                items={searches}
+                onChange={onChangeSearches}
+                newItemFactory={newSearch}
+                addLabel="Add Search"
+                columns={[
+                    { label: "Name", render: (element, update) => (
+                        <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                    ) },
+                    { label: "Search Rule", render: (element, update) => (
+                        <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
+                    ) }
+                ]}
+            />
+        </div>
     )
 }
 
@@ -157,7 +171,7 @@ function newFilter() {
 // whole contents by type — a row's columns for the other type just render
 // blank (Search Rule for a dayjs-type row, or Date Rule for a search-type
 // row).
-function FiltersTab({ filters, dateRules, onChange }) {
+function FiltersTab({ filters, filterGroups, dateRules, onChangeFilters, onChangeFilterGroups }) {
     function setType(element, update, newType) {
         if (newType === element.type) return
         update({
@@ -170,36 +184,44 @@ function FiltersTab({ filters, dateRules, onChange }) {
     }
 
     return (
-        <TreeList
-            items={filters}
-            onChange={onChange}
-            newItemFactory={newFilter}
-            addLabel="Add Filter"
-            columns={[
-                { label: "Name", render: (element, update) => (
-                    <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
-                ) },
-                { label: "Type", render: (element, update) => (
-                    <FormDropdownList
-                        values={filterTypeOptions}
-                        currentValue={element.type}
-                        onChange={newType => setType(element, update, newType)}
-                        keyProperty="key" titleProperty="title"
-                    />
-                ) },
-                { label: "Search Rule", render: (element, update) => element.type === "search" ? (
-                    <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
-                ) : null },
-                { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
-                    <ElementSelect
-                        category="dateRules"
-                        registry={{ dateRules }}
-                        value={element.dateRuleId}
-                        onChange={dateRuleId => update({ ...element, dateRuleId })}
-                    />
-                ) : null }
-            ]}
-        />
+        <div className="pe-list">
+            <FilterGroupsEditor
+                filterGroups={filterGroups}
+                registry={{ filters }}
+                onChange={onChangeFilterGroups}
+            />
+            <h3>Filter Elements</h3>
+            <TreeList
+                items={filters}
+                onChange={onChangeFilters}
+                newItemFactory={newFilter}
+                addLabel="Add Filter"
+                columns={[
+                    { label: "Name", render: (element, update) => (
+                        <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                    ) },
+                    { label: "Type", render: (element, update) => (
+                        <FormDropdownList
+                            values={filterTypeOptions}
+                            currentValue={element.type}
+                            onChange={newType => setType(element, update, newType)}
+                            keyProperty="key" titleProperty="title"
+                        />
+                    ) },
+                    { label: "Search Rule", render: (element, update) => element.type === "search" ? (
+                        <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
+                    ) : null },
+                    { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
+                        <ElementSelect
+                            category="dateRules"
+                            registry={{ dateRules }}
+                            value={element.dateRuleId}
+                            onChange={dateRuleId => update({ ...element, dateRuleId })}
+                        />
+                    ) : null }
+                ]}
+            />
+        </div>
     )
 }
 
@@ -409,6 +431,9 @@ function ColorsTab({ colors, dateRules, onChange }) {
 }
 
 // Profile tab ------------------------------------------------------------------
+// Search Groups/Filter Groups live on the Searches/Filters tabs instead of
+// here (see the Element Library comment above) — this tab only holds the
+// profile's identity and its single sort/prefix/color pick.
 
 function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave }) {
     const saveLabel = saveStatus === "saving" ? "Saving…"
@@ -427,18 +452,6 @@ function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave
                 <NoteAutocomplete noteId={profile.parentNoteId} noteIdChanged={v => onChange({ parentNoteId: v })} />
             </div>
 
-            <SearchGroupsEditor
-                searchGroups={profile.searchGroups}
-                registry={registry}
-                onChange={searchGroups => onChange({ searchGroups })}
-                onOpenLibrary={() => onOpenTab("searches")}
-            />
-            <FilterGroupsEditor
-                filterGroups={profile.filterGroups}
-                registry={registry}
-                onChange={filterGroups => onChange({ filterGroups })}
-                onOpenLibrary={() => onOpenTab("filters")}
-            />
             <SortsEditor
                 sorts={profile.sorts}
                 registry={registry}
@@ -471,14 +484,17 @@ function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave
 
 // Page -------------------------------------------------------------------------
 // Settings (the schema.json/config.json label-name vocabulary) comes first,
-// Profile is the day-to-day editing surface, and the library's own six kinds
-// of element (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit alongside
-// both as flat tabs — each is its own page, shown one at a time, rather than
-// nested under a further "Element Library" tab. The *items within* a category
-// (each individual search, filter, etc.) still render as a plain list — a
-// KeyedList table for Searches/Date Rules, a TreeList of collapsible nodes
-// for Filters/Sorts/Prefixes/Colors — not a further layer of tabs. Settings
-// itself is just `SettingsForm` dropped
+// Profile is the day-to-day editing surface for the profile's identity and
+// its sort/prefix/color pick, and the library's own six kinds of element
+// (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit alongside both as
+// flat tabs — each is its own page, shown one at a time, rather than nested
+// under a further "Element Library" tab. The Searches/Filters tabs also each
+// host the profile's Search Groups/Filter Groups tree above their library
+// list, since that's where a profile actually picks which of those elements
+// it uses. The *items within* a category (each individual search, filter,
+// etc.) still render as a plain list — a KeyedList table for Searches/Date
+// Rules, a TreeList of collapsible nodes for Filters/Sorts/Prefixes/Colors —
+// not a further layer of tabs. Settings itself is just `SettingsForm` dropped
 // in as-is (self-contained: loads/saves schema.json+config.json, owns its own
 // Save button) — the only tab of the seven that isn't defined in this file.
 const CATEGORIES = [
@@ -526,6 +542,17 @@ export default function ProfileEditor() {
         saveData(ids.profileContext.dataNoteId, ids.profileContext.builtinElementsNoteId, newData)
     }
 
+    // Search Groups/Filter Groups edit the profile itself (unlike every other
+    // thing on the Searches/Filters tabs, which edits the shared element
+    // library), but they still autosave the same way the library does rather
+    // than waiting on the Profile tab's explicit Save button.
+    async function autosaveProfilePatch(patch) {
+        const updated = { ...profile, ...patch }
+        setProfile(updated)
+        await saveProfile(updated)
+        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+    }
+
     async function handleSave() {
         setSaveStatus("saving")
         try {
@@ -548,11 +575,11 @@ export default function ProfileEditor() {
             <h2>Agenda Editor</h2>
             <p>
                 Override the label-name vocabulary this addon reads/writes on the Settings tab.
-                Build the active profile's search/filter groups and pick its sort/prefix/color on
-                the Profile tab. Every search, filter, date rule, sort, prefix, and color a profile
-                can use is defined on the other tabs — edit one there to change it everywhere it's
-                referenced. A profile only ever picks from that list; if nothing fits, add a new
-                element instead of editing the profile directly.
+                Build the active profile's search/filter groups on the Searches/Filters tabs, and
+                pick its sort/prefix/color on the Profile tab. Every search, filter, date rule, sort,
+                prefix, and color a profile can use is defined on its own tab — edit one there to
+                change it everywhere it's referenced. A profile only ever picks from that list; if
+                nothing fits, add a new element instead of editing the profile directly.
             </p>
 
             <div className="pe-tabbed">
@@ -583,7 +610,12 @@ export default function ProfileEditor() {
                         />
                     )}
                     {activeCategory === "searches" && (
-                        <SearchesTab searches={data.searches} onChange={v => updateElements("searches", v)} />
+                        <SearchesTab
+                            searches={data.searches}
+                            searchGroups={profile.searchGroups}
+                            onChangeSearches={v => updateElements("searches", v)}
+                            onChangeSearchGroups={searchGroups => autosaveProfilePatch({ searchGroups })}
+                        />
                     )}
                     {activeCategory === "dateRules" && (
                         <DateRulesTab dateRules={data.dateRules} onChange={v => updateElements("dateRules", v)} />
@@ -591,8 +623,10 @@ export default function ProfileEditor() {
                     {activeCategory === "filters" && (
                         <FiltersTab
                             filters={data.filters}
+                            filterGroups={profile.filterGroups}
                             dateRules={data.dateRules}
-                            onChange={v => updateElements("filters", v)}
+                            onChangeFilters={v => updateElements("filters", v)}
+                            onChangeFilterGroups={filterGroups => autosaveProfilePatch({ filterGroups })}
                         />
                     )}
                     {activeCategory === "sorts" && (

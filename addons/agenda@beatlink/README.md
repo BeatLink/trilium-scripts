@@ -13,15 +13,18 @@ widgets plus a single tabbed editor page:
 4. **Agenda Editor** (`profileEditor.jsx`, a `render`-type page reachable from TAM's **Settings**
    button or the Overview widget) — a single tabbed page with seven tabs. Its **Settings** tab is
    just `SettingsForm` (the `libsettings@beatlink` schema/config UI) dropped in as-is. Its
-   **Profile** tab builds a profile's search/filter groups and picks its sort/prefix/color, by
-   referencing elements from the other tabs rather than hand-editing JSON. Its **Searches / Filters
-   / Sorts / Prefixes / Colors / Date Rules** tabs are the Element Library, where every such element
-   actually gets defined. Profiles never embed a rule's definition; they only reference an element
-   by id, so editing an element on its tab updates every profile using it. Date rules are one level
-   deeper than the rest: a dayjs-type filter and a prefix/color interval both reference a shared
-   date rule (e.g. "Overdue") rather than each embedding their own copy of the same
-   `["isBefore","startOfToday"]`-style criteria tuple. The Settings tab and the Profile tab each
-   save explicitly (their own Save button); every element tab autosaves each edit immediately.
+   **Profile** tab holds the profile's identity (name, File Tasks Under) and picks its sort/prefix/
+   color. Its **Searches / Filters / Sorts / Prefixes / Colors / Date Rules** tabs are the Element
+   Library, where every such element actually gets defined; the **Searches**/**Filters** tabs also
+   each hold that profile's Search Groups/Filter Groups tree (which of those elements are active,
+   grouped and toggled) above their library list, since that's where a profile actually picks which
+   elements it uses. Profiles never embed a rule's definition; they only reference an element by id,
+   so editing an element on its tab updates every profile using it. Date rules are one level deeper
+   than the rest: a dayjs-type filter and a prefix/color interval both reference a shared date rule
+   (e.g. "Overdue") rather than each embedding their own copy of the same
+   `["isBefore","startOfToday"]`-style criteria tuple. The Settings tab and the Profile tab's
+   sort/prefix/color pick each save explicitly (their own Save button); everything else — every
+   element definition, plus the Search Groups/Filter Groups trees — autosaves each edit immediately.
 
 ## Setup
 
@@ -29,8 +32,8 @@ widgets plus a single tabbed editor page:
    Agenda Editor. Its Settings tab lets you override any of the label names (`startDateTime`,
    `dueDateTime`, `duration`, `recurrence`, `rank`, etc — defaults match the original system).
 2. On the Agenda Editor's Profile tab, point the shipped "default" profile's **File Tasks Under** at
-   whichever note you want tasks re-filed into, and enable/build out its search and filter groups
-   (referencing the built-in elements, or new ones you add on the editor's other tabs).
+   whichever note you want tasks re-filed into. On the Searches/Filters tabs, enable/build out its
+   search and filter groups (referencing the built-in elements, or new ones you add there).
 3. Open any note filed under that target — the Overview widget there lets you toggle individual
    searches/filters and change sort/prefix/color live, without leaving the note.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
