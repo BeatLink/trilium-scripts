@@ -79,10 +79,34 @@ function newFilter() {
     return { name: "New Filter", type: "search", rule: "" }
 }
 
-function FilterElementRow({ element, dateRules, onChange }) {
-    function setType(newType) {
+function FilterDetails({ element, dateRules, onChange }) {
+    return element.type === "dayjs" ? (
+        <div className="pe-field-row">
+            <FormTextBox
+                currentValue={element.datetimeLabel || ""}
+                onChange={v => onChange({ ...element, datetimeLabel: v })}
+            />
+            <FormCheckbox
+                label="Use Number of Days"
+                currentValue={!!element.useNumberOfDays}
+                onChange={v => onChange({ ...element, useNumberOfDays: v })}
+            />
+            <ElementSelect
+                category="dateRules"
+                registry={{ dateRules }}
+                value={element.dateRuleId}
+                onChange={dateRuleId => onChange({ ...element, dateRuleId })}
+            />
+        </div>
+    ) : (
+        <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
+    )
+}
+
+function FiltersTab({ filters, dateRules, onChange }) {
+    function setType(element, update, newType) {
         if (newType === element.type) return
-        onChange({
+        update({
             ...element,
             type: newType,
             ...(newType === "dayjs"
@@ -92,51 +116,27 @@ function FilterElementRow({ element, dateRules, onChange }) {
     }
 
     return (
-        <div className="pe-group">
-            <div>
-                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
-                <FormDropdownList
-                    values={filterTypeOptions}
-                    currentValue={element.type}
-                    onChange={setType}
-                    keyProperty="key" titleProperty="title"
-                />
-                {element.type === "dayjs" ? (
-                    <>
-                        <FormTextBox
-                            currentValue={element.datetimeLabel || ""}
-                            onChange={v => onChange({ ...element, datetimeLabel: v })}
-                        />
-                        <FormCheckbox
-                            label="Use Number of Days"
-                            currentValue={!!element.useNumberOfDays}
-                            onChange={v => onChange({ ...element, useNumberOfDays: v })}
-                        />
-                        <ElementSelect
-                            category="dateRules"
-                            registry={{ dateRules }}
-                            value={element.dateRuleId}
-                            onChange={dateRuleId => onChange({ ...element, dateRuleId })}
-                        />
-                    </>
-                ) : (
-                    <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
-                )}
-            </div>
-        </div>
-    )
-}
-
-function FiltersTab({ filters, dateRules, onChange }) {
-    return (
         <KeyedList
             items={filters}
             onChange={onChange}
             newItemFactory={newFilter}
             addLabel="Add Filter"
-            renderItem={(key, element, update) => (
-                <FilterElementRow element={element} dateRules={dateRules} onChange={update} />
-            )}
+            columns={[
+                { label: "Name", render: (element, update) => (
+                    <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                ) },
+                { label: "Type", render: (element, update) => (
+                    <FormDropdownList
+                        values={filterTypeOptions}
+                        currentValue={element.type}
+                        onChange={newType => setType(element, update, newType)}
+                        keyProperty="key" titleProperty="title"
+                    />
+                ) },
+                { label: "Details", render: (element, update) => (
+                    <FilterDetails element={element} dateRules={dateRules} onChange={update} />
+                ) }
+            ]}
         />
     )
 }
@@ -225,82 +225,57 @@ function newVariant(namePrefix) {
     return { name: `New ${namePrefix}`, type: "label", label: "", children: {} }
 }
 
-function VariantEditor({ variant, dateRules, onChange, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
-    function setType(newType) {
-        if (newType === variant.type) return
-        onChange({
-            ...variant,
-            type: newType,
-            ...(newType === "label"
-                ? { label: "", children: {} }
-                : { dateLabel: "", useNumberOfDays: false, intervals: {} })
-        })
-    }
-
+function VariantDetails({ variant, dateRules, onChange, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
     function newInterval() {
         return { dateRuleId: firstElementId({ dateRules }, "dateRules"), [valueField]: defaultValue }
     }
 
-    return (
-        <div className="pe-group">
-            <div>
-                <FormTextBox currentValue={variant.name} onChange={v => onChange({ ...variant, name: v })} />
-                <FormDropdownList
-                    values={variantTypeOptions}
-                    currentValue={variant.type}
-                    onChange={setType}
-                    keyProperty="key" titleProperty="title"
-                />
-                {variant.type === "label" && (
-                    <>
-                        <FormTextBox
-                            currentValue={variant.label || ""}
-                            onChange={v => onChange({ ...variant, label: v })}
+    return variant.type === "label" ? (
+        <div className="pe-field-row">
+            <FormTextBox
+                currentValue={variant.label || ""}
+                onChange={v => onChange({ ...variant, label: v })}
+            />
+            <LabelValueMapEditor
+                entries={variant.children || {}}
+                onChange={children => onChange({ ...variant, children })}
+                defaultValue={defaultValue}
+                renderValue={(value, update) => <ValueEditor value={value} onChange={update} />}
+            />
+        </div>
+    ) : (
+        <div className="pe-field-row">
+            <FormTextBox
+                currentValue={variant.dateLabel || ""}
+                onChange={v => onChange({ ...variant, dateLabel: v })}
+            />
+            <FormCheckbox
+                label="Use Number of Days"
+                currentValue={!!variant.useNumberOfDays}
+                onChange={v => onChange({ ...variant, useNumberOfDays: v })}
+            />
+            <KeyedList
+                items={variant.intervals || {}}
+                onChange={intervals => onChange({ ...variant, intervals })}
+                newItemFactory={newInterval}
+                addLabel="Add Interval"
+                columns={[
+                    { label: "Date Rule", render: (interval, update) => (
+                        <ElementSelect
+                            category="dateRules"
+                            registry={{ dateRules }}
+                            value={interval.dateRuleId}
+                            onChange={dateRuleId => update({ ...interval, dateRuleId })}
                         />
-                        <LabelValueMapEditor
-                            entries={variant.children || {}}
-                            onChange={children => onChange({ ...variant, children })}
-                            defaultValue={defaultValue}
-                            renderValue={(value, update) => <ValueEditor value={value} onChange={update} />}
+                    ) },
+                    { label: "Value", render: (interval, update) => (
+                        <IntervalValueEditor
+                            value={interval[valueField]}
+                            onChange={v => update({ ...interval, [valueField]: v })}
                         />
-                    </>
-                )}
-                {variant.type === "dayjs" && (
-                    <>
-                        <FormTextBox
-                            currentValue={variant.dateLabel || ""}
-                            onChange={v => onChange({ ...variant, dateLabel: v })}
-                        />
-                        <FormCheckbox
-                            label="Use Number of Days"
-                            currentValue={!!variant.useNumberOfDays}
-                            onChange={v => onChange({ ...variant, useNumberOfDays: v })}
-                        />
-                        <KeyedList
-                            items={variant.intervals || {}}
-                            onChange={intervals => onChange({ ...variant, intervals })}
-                            newItemFactory={newInterval}
-                            addLabel="Add Interval"
-                            columns={[
-                                { label: "Date Rule", render: (interval, update) => (
-                                    <ElementSelect
-                                        category="dateRules"
-                                        registry={{ dateRules }}
-                                        value={interval.dateRuleId}
-                                        onChange={dateRuleId => update({ ...interval, dateRuleId })}
-                                    />
-                                ) },
-                                { label: "Value", render: (interval, update) => (
-                                    <IntervalValueEditor
-                                        value={interval[valueField]}
-                                        onChange={v => update({ ...interval, [valueField]: v })}
-                                    />
-                                ) }
-                            ]}
-                        />
-                    </>
-                )}
-            </div>
+                    ) }
+                ]}
+            />
         </div>
     )
 }
@@ -313,6 +288,44 @@ function ColorValueEditor({ value, onChange }) {
     return <ColorPicker currentValue={value} onChange={onChange} />
 }
 
+function variantColumns({ dateRules, valueField, defaultValue, ValueEditor, IntervalValueEditor }) {
+    function setType(variant, update, newType) {
+        if (newType === variant.type) return
+        update({
+            ...variant,
+            type: newType,
+            ...(newType === "label"
+                ? { label: "", children: {} }
+                : { dateLabel: "", useNumberOfDays: false, intervals: {} })
+        })
+    }
+
+    return [
+        { label: "Name", render: (variant, update) => (
+            <FormTextBox currentValue={variant.name} onChange={v => update({ ...variant, name: v })} />
+        ) },
+        { label: "Type", render: (variant, update) => (
+            <FormDropdownList
+                values={variantTypeOptions}
+                currentValue={variant.type}
+                onChange={newType => setType(variant, update, newType)}
+                keyProperty="key" titleProperty="title"
+            />
+        ) },
+        { label: "Details", render: (variant, update) => (
+            <VariantDetails
+                variant={variant}
+                dateRules={dateRules}
+                onChange={update}
+                valueField={valueField}
+                defaultValue={defaultValue}
+                ValueEditor={ValueEditor}
+                IntervalValueEditor={IntervalValueEditor}
+            />
+        ) }
+    ]
+}
+
 function PrefixesTab({ prefixes, dateRules, onChange }) {
     return (
         <KeyedList
@@ -320,17 +333,13 @@ function PrefixesTab({ prefixes, dateRules, onChange }) {
             onChange={onChange}
             newItemFactory={() => newVariant("Prefix")}
             addLabel="Add Prefix"
-            renderItem={(key, variant, update) => (
-                <VariantEditor
-                    variant={variant}
-                    dateRules={dateRules}
-                    onChange={update}
-                    valueField="formatString"
-                    defaultValue=""
-                    ValueEditor={PrefixTextEditor}
-                    IntervalValueEditor={PrefixTextEditor}
-                />
-            )}
+            columns={variantColumns({
+                dateRules,
+                valueField: "formatString",
+                defaultValue: "",
+                ValueEditor: PrefixTextEditor,
+                IntervalValueEditor: PrefixTextEditor
+            })}
         />
     )
 }
@@ -342,17 +351,13 @@ function ColorsTab({ colors, dateRules, onChange }) {
             onChange={onChange}
             newItemFactory={() => newVariant("Color")}
             addLabel="Add Color"
-            renderItem={(key, variant, update) => (
-                <VariantEditor
-                    variant={variant}
-                    dateRules={dateRules}
-                    onChange={update}
-                    valueField="color"
-                    defaultValue="gray"
-                    ValueEditor={ColorValueEditor}
-                    IntervalValueEditor={ColorValueEditor}
-                />
-            )}
+            columns={variantColumns({
+                dateRules,
+                valueField: "color",
+                defaultValue: "gray",
+                ValueEditor: ColorValueEditor,
+                IntervalValueEditor: ColorValueEditor
+            })}
         />
     )
 }
@@ -365,11 +370,11 @@ function ColorsTab({ colors, dateRules, onChange }) {
 // render as a plain KeyedList, not a further layer of tabs.
 const CATEGORIES = [
     { key: "searches", label: "Searches" },
-    { key: "dateRules", label: "Date Rules" },
     { key: "filters", label: "Filters" },
     { key: "sorts", label: "Sorts" },
     { key: "prefixes", label: "Prefixes" },
-    { key: "colors", label: "Colors" }
+    { key: "colors", label: "Colors" },
+    { key: "dateRules", label: "Date Rules" }
 ]
 
 export default function ElementLibrary() {
