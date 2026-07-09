@@ -86,7 +86,7 @@ function Field({ def, value, onChange }) {
                 />
             )
         case "list":
-            return <ListField itemSchema={def.itemSchema} items={value || []} onChange={onChange} />
+            return <ListTable itemSchema={def.itemSchema} items={value || []} onChange={onChange} />
         case "color":
             return <ColorPicker currentValue={value} onChange={onChange} />
         default:
@@ -94,16 +94,19 @@ function Field({ def, value, onChange }) {
     }
 }
 
-// One row per item, each row rendering a Field per itemSchema key, plus
-// move/remove controls and an Add button that seeds a blank item from defaults.
-function ListField({ itemSchema, items, onChange }) {
+// One row per item, one column per itemSchema key, plus a fixed actions
+// column (move/remove) and an Add button that seeds a blank item from
+// defaults — a real <table> rather than a stack of always-expanded cards.
+function ListTable({ itemSchema, items, onChange }) {
+    const columns = Object.entries(itemSchema)
+
     function updateItem(index, key, value) {
         onChange(items.map((item, i) => i === index ? { ...item, [key]: value } : item))
     }
 
     function addItem() {
         const blank = {}
-        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
+        for (const [key, def] of columns) blank[key] = def.default
         onChange([...items, blank])
     }
 
@@ -120,38 +123,57 @@ function ListField({ itemSchema, items, onChange }) {
     }
 
     return (
-        <div class="lst-list">
-            {items.length === 0 && <p class="lst-list-empty">No entries yet. Add one below.</p>}
-            {items.map((item, index) => (
-                <div class="lst-list-item" key={index}>
-                    <div class="lst-list-item-fields">
-                        {Object.entries(itemSchema).map(([key, def]) => (
-                            <div class="lst-field" key={key}>
-                                <h4>{def.label}</h4>
-                                {def.description && <label class="lst-field-description">{def.description}</label>}
+        <table class="lst-table">
+            <thead>
+                <tr>
+                    {columns.map(([key, def]) => <th key={key} title={def.description || undefined}>{def.label}</th>)}
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {items.length === 0 && (
+                    <tr><td class="lst-table-empty" colSpan={columns.length + 1}>No entries yet.</td></tr>
+                )}
+                {items.map((item, index) => (
+                    <tr key={index}>
+                        {columns.map(([key, def]) => (
+                            <td key={key}>
                                 <Field def={def} value={item[key]} onChange={v => updateItem(index, key, v)} />
-                            </div>
+                            </td>
                         ))}
-                    </div>
-                    <div class="lst-list-item-controls">
-                        <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
-                        <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} />
-                        <Button icon="bx-x" onClick={() => removeItem(index)} />
-                    </div>
-                </div>
-            ))}
-            <Button icon="bx-plus" text="Add" onClick={addItem} />
-        </div>
+                        <td class="lst-table-actions-cell">
+                            <div class="lst-table-actions">
+                                <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
+                                <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} />
+                                <Button icon="bx-x" onClick={() => removeItem(index)} />
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+            <tfoot>
+                <tr><td colSpan={columns.length + 1}><Button icon="bx-plus" text="Add" onClick={addItem} /></td></tr>
+            </tfoot>
+        </table>
     )
 }
 
 // Self-contained: loads schema.json + config.json itself, renders one field per schema
 // entry, and owns its own Save button. The consuming addon just places this wherever
 // it wants in its own settings widget.
+//
+// Fields split into groups the same way the Element Library does: a single
+// "General" group for every plain (non-list) field, plus one group per
+// "list" field (each rendered as its own ListTable). When there's more than
+// one group they become top-level tabs — one page at a time — rather than
+// every group stacked and expanded together; a schema with only one group
+// (the common case: just a handful of scalar fields, or just one list)
+// renders directly with no tab bar.
 export function SettingsForm({ schemaNoteId, configNoteId }) {
     const [schema, setSchema] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
+    const [activeTab, setActiveTab] = useState(null)
 
     useEffect(() => {
         (async () => {
@@ -169,15 +191,67 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
 
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
 
+    const entries = Object.entries(schema)
+    const generalEntries = entries.filter(([, def]) => def.type !== "list")
+    const listEntries = entries.filter(([, def]) => def.type === "list")
+
+    const tabs = []
+    if (generalEntries.length > 0) tabs.push({ key: "__general", label: "General" })
+    for (const [key, def] of listEntries) tabs.push({ key, label: def.label || key })
+    const useTabs = tabs.length > 1
+    const activeKey = useTabs && tabs.some(t => t.key === activeTab) ? activeTab : tabs[0]?.key
+
+    function renderGeneral() {
+        return generalEntries.map(([key, def]) => (
+            <div class="lst-field" key={key}>
+                <h4>{def.label}</h4>
+                {def.description && <label class="lst-field-description">{def.description}</label>}
+                <Field def={def} value={values[key]} onChange={v => setValues({ ...values, [key]: v })} />
+            </div>
+        ))
+    }
+
+    function renderList([key, def]) {
+        return (
+            <div key={key}>
+                {!useTabs && <h4>{def.label}</h4>}
+                {def.description && <label class="lst-field-description">{def.description}</label>}
+                <ListTable
+                    itemSchema={def.itemSchema}
+                    items={values[key] || []}
+                    onChange={v => setValues({ ...values, [key]: v })}
+                />
+            </div>
+        )
+    }
+
     return (
         <div class="lst-panel">
-            {Object.entries(schema).map(([key, def]) => (
-                <div class="lst-field" key={key}>
-                    <h4>{def.label}</h4>
-                    {def.description && <label class="lst-field-description">{def.description}</label>}
-                    <Field def={def} value={values[key]} onChange={v => setValues({ ...values, [key]: v })} />
+            {useTabs ? (
+                <div class="lst-tabbed">
+                    <div class="lst-tabbed-tabs">
+                        {tabs.map(tab => (
+                            <button
+                                type="button"
+                                key={tab.key}
+                                class={`lst-tab${tab.key === activeKey ? " lst-tab-active" : ""}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div class="lst-tabbed-panel">
+                        {activeKey === "__general" && renderGeneral()}
+                        {listEntries.filter(([key]) => key === activeKey).map(renderList)}
+                    </div>
                 </div>
-            ))}
+            ) : (
+                <>
+                    {renderGeneral()}
+                    {listEntries.map(renderList)}
+                </>
+            )}
             <div class="lst-actions">
                 <Button
                     icon={saveStatus === "saved" ? "bx-check" : "bx-save"}

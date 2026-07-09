@@ -61,9 +61,12 @@ way at any depth `mergeDefaults`/`filterBySchema` are applied in both
 }
 ```
 
-In the generated form, `SettingsForm` renders this as a list of rows (one per entry), each row
-showing the `itemSchema` fields plus move-up/move-down/remove controls, with an "Add" button that
-seeds a new row from `itemSchema`'s defaults — see
+In the generated form, `SettingsForm` renders this as a real `<table>` — one row per entry, one
+column per `itemSchema` field, plus a fixed actions column (move-up/move-down/remove) — with an
+"Add" button that seeds a new row from `itemSchema`'s defaults. If the schema has more than one
+group (a `list` field alongside plain fields, or more than one `list` field), each group becomes its
+own top-level tab — a "General" tab for the plain fields, one tab per `list` field — shown one page
+at a time; a schema with only one group (the common case) skips the tab bar entirely. See
 [`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
 
 ## Backend usage
