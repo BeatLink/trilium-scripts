@@ -3,11 +3,13 @@ import { loadSettings } from "libSettingsUI.jsx"
 
 // Resolves this addon's settings into the shape every agenda library expects:
 // a `constants` label-name object and a `profileContext` ({ dataNoteId,
-// profileIds }) pointing at the single shared agendaData.json note. Every
-// widget that needs either calls this once. Must read via `startNote` (the
-// note actually running the widget script), not `api.currentNote` (whichever
-// note the user currently has open) — the schemaNote/settingsNote relations
-// live on the widget's own note, not on whatever's being viewed.
+// profileIds }) pointing at the single shared agendaData.json note, plus the
+// raw `schemaNoteId`/`configNoteId` for a caller that wants to render its own
+// `SettingsForm` (e.g. the Agenda Editor's Settings tab). Every widget that
+// needs any of these calls this once. Must read via `startNote` (the note
+// actually running the widget script), not `api.currentNote` (whichever note
+// the user currently has open) — the schemaNote/settingsNote relations live
+// on the widget's own note, not on whatever's being viewed.
 //
 // dataNoteId is resolved indirectly through the settings note's own
 // AddonData:profile relation (same pattern as configNoteId/AddonData:config)
@@ -47,5 +49,5 @@ export async function getAgendaSettings() {
 
     const profileContext = { dataNoteId, builtinElementsNoteId, profileIds: [settings.profileId || "default"] }
 
-    return { constants, profileContext }
+    return { constants, profileContext, schemaNoteId, configNoteId }
 }

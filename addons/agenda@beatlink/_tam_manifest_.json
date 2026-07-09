@@ -5,13 +5,13 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.8.1",
+    "latestVersion": "1.9.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
-        "settingsNote": "settings-page",
+        "settingsNote": "profile-editor-page",
         "notes": [
             {
                 "id": "root",
@@ -43,15 +43,8 @@
             },
             {
                 "id": "settings",
-                "title": "settings.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "settings.jsx"
-            },
-            {
-                "id": "settings-page",
                 "title": "Settings",
-                "type": "render",
+                "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
@@ -232,10 +225,6 @@
             },
             {
                 "parent": "root",
-                "child": "settings-page"
-            },
-            {
-                "parent": "settings-page",
                 "child": "settings"
             },
             {
@@ -309,11 +298,6 @@
             },
             {
                 "parent": "agenda-settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
-            },
-            {
-                "parent": "settings",
                 "addon": "libsettings@beatlink",
                 "child": "ui"
             },
@@ -438,6 +422,11 @@
                 "child": "lib"
             },
             {
+                "parent": "profile-editor",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
                 "parent": "profile-editor-search-groups",
                 "child": "profile-editor-groups"
             },
@@ -495,16 +484,6 @@
                 "from": "settings",
                 "type": "builtinElementsNote",
                 "to": "builtin-elements"
-            },
-            {
-                "from": "settings",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "settings-page",
-                "type": "renderNote",
-                "to": "settings"
             },
             {
                 "from": "overview",
@@ -593,11 +572,6 @@
             },
             {
                 "from": "overview",
-                "type": "profileEditorNote",
-                "to": "profile-editor-page"
-            },
-            {
-                "from": "settings",
                 "type": "profileEditorNote",
                 "to": "profile-editor-page"
             }

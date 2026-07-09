@@ -9,6 +9,7 @@ import { ColorsEditor } from "profileEditorColors.jsx"
 import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
+import { SettingsForm } from "libSettingsUI.jsx"
 
 const { loadData, saveData, saveProfile, updateTaskLists } = require("libAgendaOverview.js")
 const { parseSortCriteria } = require("libMultisort.js")
@@ -474,13 +475,17 @@ function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave
 }
 
 // Page -------------------------------------------------------------------------
-// Profile is the first tab (the day-to-day editing surface); the library's own
-// six kinds of element (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit
-// alongside it as flat tabs — each is its own page, shown one at a time, rather
-// than nested under a further "Element Library" tab. The *items within* a
-// category (each individual search, filter, etc.) still render as a plain
-// KeyedList, not a further layer of tabs.
+// Settings (the schema.json/config.json label-name vocabulary) comes first,
+// Profile is the day-to-day editing surface, and the library's own six kinds
+// of element (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit alongside
+// both as flat tabs — each is its own page, shown one at a time, rather than
+// nested under a further "Element Library" tab. The *items within* a category
+// (each individual search, filter, etc.) still render as a plain KeyedList,
+// not a further layer of tabs. Settings itself is just `SettingsForm` dropped
+// in as-is (self-contained: loads/saves schema.json+config.json, owns its own
+// Save button) — the only tab of the seven that isn't defined in this file.
 const CATEGORIES = [
+    { key: "settings", label: "Settings" },
     { key: "profile", label: "Profile" },
     { key: "searches", label: "Searches" },
     { key: "filters", label: "Filters" },
@@ -499,11 +504,11 @@ export default function ProfileEditor() {
 
     useEffect(() => {
         (async () => {
-            const { constants, profileContext } = await getAgendaSettings()
+            const { constants, profileContext, schemaNoteId, configNoteId } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
             const profileId = profileContext.profileIds[0]
             const loaded = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
-            setIds({ constants, profileContext, profileId, icalNoteId })
+            setIds({ constants, profileContext, profileId, icalNoteId, schemaNoteId, configNoteId })
             setData(loaded)
             setProfile({
                 id: profileId,
@@ -543,8 +548,9 @@ export default function ProfileEditor() {
 
     return (
         <div className="profile-editor">
-            <h2>Agenda</h2>
+            <h2>Agenda Editor</h2>
             <p>
+                Override the label-name vocabulary this addon reads/writes on the Settings tab.
                 Build the active profile's search/filter groups and pick its sort/prefix/color on
                 the Profile tab. Every search, filter, date rule, sort, prefix, and color a profile
                 can use is defined on the other tabs — edit one there to change it everywhere it's
@@ -566,6 +572,9 @@ export default function ProfileEditor() {
                     ))}
                 </div>
                 <div className="pe-tabbed-panel-body">
+                    {activeCategory === "settings" && (
+                        <SettingsForm schemaNoteId={ids.schemaNoteId} configNoteId={ids.configNoteId} />
+                    )}
                     {activeCategory === "profile" && (
                         <ProfileTab
                             profile={profile}
