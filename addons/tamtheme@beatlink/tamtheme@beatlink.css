@@ -339,6 +339,75 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     }
 }
 
+/* Form controls — "next" renders text inputs/selects/textareas with no
+   border at rest (border: unset; just a focus outline ring), unlike TAM's
+   own widget inputs (see tam.css's #search) which always show a visible
+   border, colored on hover/focus. No CSS variable governs that `unset`, so
+   restoring it needs the same selector lists forms.css itself uses. */
+input:not([type]),
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+:root input.ck.ck-input-text,
+:root input.ck.ck-input-number,
+textarea.form-control,
+textarea,
+:root textarea.ck.ck-textarea,
+.tn-input-field,
+.input-group,
+select,
+select.form-select,
+select.form-control,
+.select-button.dropdown-toggle.btn {
+    border: 1.5px solid var(--t-border) !important;
+}
+
+input:not([type]):hover,
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="password"]:hover,
+input[type="date"]:hover,
+input[type="time"]:hover,
+input[type="datetime-local"]:hover,
+:root input.ck.ck-input-text:not([readonly="true"]):hover,
+:root input.ck.ck-input-number:not([readonly="true"]):hover,
+textarea.form-control:hover,
+textarea:hover,
+:root textarea.ck.ck-textarea:hover,
+.tn-input-field:hover,
+.input-group:hover,
+select:hover,
+select.form-select:hover,
+select.form-control:hover,
+.select-button.dropdown-toggle.btn:hover {
+    border-color: var(--t-border-strong) !important;
+}
+
+input:not([type]):focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus,
+:root input.ck.ck-input-text:not([readonly="true"]):focus,
+:root input.ck.ck-input-number:not([readonly="true"]):focus,
+textarea.form-control:focus,
+textarea:focus,
+:root textarea.ck.ck-textarea:focus,
+.tn-input-field:focus,
+.tn-input-field:focus-within,
+.input-group:focus-within,
+select:focus,
+select.form-select:focus,
+select.form-control:focus,
+.select-button.dropdown-toggle.btn:focus {
+    border-color: var(--t-accent) !important;
+}
+
 /* Extra polish — TAM's own headings (h1-h5) are always slate-900/slate-100,
    never the accent color, so note-content headings match that rather than
    turning blue like a plain link would. */

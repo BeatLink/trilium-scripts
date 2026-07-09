@@ -15,4 +15,10 @@ Every `--` variable declaration carries `!important`: Trilium's own `theme-next-
 `--left-pane-background-color`) under an equal-specificity plain `:root` selector, so without
 `!important` a load-order change could silently make TAMTheme lose that variable back to stock.
 
+Text inputs/selects/textareas also get a small block of real selector-based CSS (not just
+variables): the "next" base theme renders them with `border: unset` at rest — no CSS variable
+governs that, it's a literal `unset` — so form controls otherwise show no visible border until
+focused. TAMTheme restores a persistent border (accent-colored on focus/hover), matching TAM's own
+widget inputs.
+
 Add to a CSS note and set the following attributes: `#appThemeBase=next` `#appTheme=TAMTheme`
