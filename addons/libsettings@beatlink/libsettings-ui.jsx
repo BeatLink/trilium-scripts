@@ -236,6 +236,25 @@ function matchesShowWhen(def, item) {
     })
 }
 
+// An item's collapsed-summary title prefers an itemSchema field literally
+// named `name` (matching the convention every consumer's item schema already
+// uses for its display name — also what a `reference` field pointing at this
+// registry shows in its own dropdown); otherwise it falls back to the first
+// field's value — resolved through a `reference` field to the *referenced*
+// entry's own name (rather than showing a raw reference id) when that first
+// field is itself a `reference`.
+function titleFor(itemSchema, item, registries) {
+    if ("name" in itemSchema) return item.name || "Untitled"
+    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
+    if (!firstKey) return "Untitled"
+    const rawValue = item[firstKey]
+    if (firstDef.type === "reference") {
+        const referenced = registries?.[firstDef.registry]?.[rawValue]
+        return referenced?.name || rawValue || "Untitled"
+    }
+    return rawValue || "Untitled"
+}
+
 // One labeled field row per itemSchema key (skipping a field whose `showWhen`
 // doesn't match this item), used by both ListItems and RegistryItems so a
 // `list` entry and a `registry` entry render identically — the only
@@ -261,24 +280,46 @@ function ItemFields({ itemSchema, item, onFieldChange, registries, schemas, upda
     )
 }
 
-// Move-up/move-down/remove, always at the top of an item — so reordering or
-// removing an entry never requires scrolling past its (possibly long) form
-// first.
-function ItemActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) {
+// A collapsible entry — the summary is the item's own title (see `titleFor`)
+// *and* its move-up/move-down/remove controls, so acting on an entry never
+// requires expanding it first; the form-based fields below only show once
+// expanded. Shared by ListItems and RegistryItems; expand/collapse state is
+// local-only (not persisted) — a pure editing convenience, not data every
+// reader of the settings needs to agree on.
+function Item({
+    itemSchema, item, onFieldChange, registries, schemas, updateReferencedField,
+    expanded, onToggle, onMoveUp, onMoveDown, onRemove, disableUp, disableDown
+}) {
+    // A click on the actions would otherwise also toggle the <details> open/
+    // closed, since <summary> treats any click inside it as "toggle" unless
+    // told not to — preventDefault stops just that default action, letting
+    // each Button's own onClick still fire normally.
     return (
-        <div class="lst-item-actions">
-            <Button icon="bx-chevron-up" onClick={onMoveUp} disabled={disableUp} />
-            <Button icon="bx-chevron-down" onClick={onMoveDown} disabled={disableDown} />
-            <Button icon="bx-x" onClick={onRemove} />
-        </div>
+        <details class="lst-item" open={expanded} onToggle={onToggle}>
+            <summary>
+                <span class="lst-item-title">{titleFor(itemSchema, item, registries)}</span>
+                <div class="lst-item-actions" onClick={e => e.preventDefault()}>
+                    <Button icon="bx-chevron-up" onClick={onMoveUp} disabled={disableUp} />
+                    <Button icon="bx-chevron-down" onClick={onMoveDown} disabled={disableDown} />
+                    <Button icon="bx-x" onClick={onRemove} />
+                </div>
+            </summary>
+            <div class="lst-item-body">
+                <ItemFields
+                    itemSchema={itemSchema} item={item} onFieldChange={onFieldChange}
+                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                />
+            </div>
+        </details>
     )
 }
 
-// A positional array of items, each rendered as its own bordered form (top:
-// reorder/remove controls, below: one labeled field row per itemSchema key)
-// — no table, no columns, so an item's fields read top-to-bottom like any
-// other form on this page rather than needing to scan across a row.
+// A positional array of items, each its own collapsible form — no table, no
+// columns, so an expanded item's fields read top-to-bottom like any other
+// form on this page rather than needing to scan across a row.
 function ListItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
+    const [expandedKeys, setExpandedKeys] = useState(() => new Set())
+
     function updateItem(index, key, value) {
         onChange(items.map((item, i) => i === index ? { ...item, [key]: value } : item))
     }
@@ -286,6 +327,7 @@ function ListItems({ itemSchema, items, onChange, registries, schemas, updateRef
     function addItem() {
         const blank = {}
         for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
+        setExpandedKeys(prev => new Set(prev).add(items.length))
         onChange([...items, blank])
     }
 
@@ -301,22 +343,29 @@ function ListItems({ itemSchema, items, onChange, registries, schemas, updateRef
         onChange(updated)
     }
 
+    function setExpanded(index, isExpanded) {
+        setExpandedKeys(prev => {
+            const next = new Set(prev)
+            if (isExpanded) next.add(index)
+            else next.delete(index)
+            return next
+        })
+    }
+
     return (
         <div class="lst-list">
             {items.length === 0 && <p class="lst-list-empty">No entries yet.</p>}
             {items.map((item, index) => (
-                <div class="lst-item" key={index}>
-                    <ItemActions
-                        onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
-                        onMoveDown={() => moveItem(index, 1)} disableDown={index === items.length - 1}
-                        onRemove={() => removeItem(index)}
-                    />
-                    <ItemFields
-                        itemSchema={itemSchema} item={item}
-                        onFieldChange={(key, v) => updateItem(index, key, v)}
-                        registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
-                    />
-                </div>
+                <Item
+                    key={index}
+                    itemSchema={itemSchema} item={item}
+                    onFieldChange={(key, v) => updateItem(index, key, v)}
+                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    expanded={expandedKeys.has(index)} onToggle={e => setExpanded(index, e.currentTarget.open)}
+                    onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
+                    onMoveDown={() => moveItem(index, 1)} disableDown={index === items.length - 1}
+                    onRemove={() => removeItem(index)}
+                />
             ))}
             <Button icon="bx-plus" text="Add" onClick={addItem} />
         </div>
@@ -330,10 +379,12 @@ function generateRegistryId() {
 }
 
 // Same shape as ListItems but keyed by id (`{ [id]: item }`) rather than a
-// positional array — everything else (form-per-item, controls at the top)
-// is identical; only add/remove/reorder work id-first instead of index-first.
+// positional array — everything else (collapsible form-per-item, controls at
+// the top) is identical; only add/remove/reorder work id-first instead of
+// index-first.
 function RegistryItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
     const keys = Object.keys(items)
+    const [expandedKeys, setExpandedKeys] = useState(() => new Set())
 
     function updateItem(key, newValue) {
         onChange({ ...items, [key]: newValue })
@@ -348,7 +399,9 @@ function RegistryItems({ itemSchema, items, onChange, registries, schemas, updat
     function addItem() {
         const blank = {}
         for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
-        onChange({ ...items, [generateRegistryId()]: blank })
+        const id = generateRegistryId()
+        setExpandedKeys(prev => new Set(prev).add(id))
+        onChange({ ...items, [id]: blank })
     }
 
     function moveItem(index, direction) {
@@ -361,22 +414,29 @@ function RegistryItems({ itemSchema, items, onChange, registries, schemas, updat
         onChange(reordered)
     }
 
+    function setExpanded(key, isExpanded) {
+        setExpandedKeys(prev => {
+            const next = new Set(prev)
+            if (isExpanded) next.add(key)
+            else next.delete(key)
+            return next
+        })
+    }
+
     return (
         <div class="lst-list">
             {keys.length === 0 && <p class="lst-list-empty">No entries yet.</p>}
             {keys.map((key, index) => (
-                <div class="lst-item" key={key}>
-                    <ItemActions
-                        onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
-                        onMoveDown={() => moveItem(index, 1)} disableDown={index === keys.length - 1}
-                        onRemove={() => removeItem(key)}
-                    />
-                    <ItemFields
-                        itemSchema={itemSchema} item={items[key]}
-                        onFieldChange={(fieldKey, v) => updateItem(key, { ...items[key], [fieldKey]: v })}
-                        registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
-                    />
-                </div>
+                <Item
+                    key={key}
+                    itemSchema={itemSchema} item={items[key]}
+                    onFieldChange={(fieldKey, v) => updateItem(key, { ...items[key], [fieldKey]: v })}
+                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    expanded={expandedKeys.has(key)} onToggle={e => setExpanded(key, e.currentTarget.open)}
+                    onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
+                    onMoveDown={() => moveItem(index, 1)} disableDown={index === keys.length - 1}
+                    onRemove={() => removeItem(key)}
+                />
             ))}
             <Button icon="bx-plus" text="Add" onClick={addItem} />
         </div>

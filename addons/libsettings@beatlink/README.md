@@ -66,10 +66,13 @@ way at any depth `mergeDefaults`/`filterBySchema` are applied in both
 }
 ```
 
-In the generated form, `SettingsForm` renders this as a stack of forms, one per entry — each entry's
-own move-up/move-down/remove controls sit at its top, followed by one labeled field row per
-`itemSchema` key, stacked vertically like any other form on the page (not a wide table with a column
-per field) — with an "Add" button below that seeds a new entry from `itemSchema`'s defaults. See
+In the generated form, `SettingsForm` renders this as a stack of collapsible entries — each entry's
+summary is its `name` field if `itemSchema` declares one, otherwise its first field's value, *and*
+that same summary row carries its move-up/move-down/remove controls (usable whether the entry is
+expanded or collapsed, so acting on an entry never requires opening it first); expanding one instead
+shows one labeled field row per `itemSchema` key stacked vertically like any other form on the page
+(not a wide table with a column per field) — with an "Add" button below that seeds a new entry from
+`itemSchema`'s defaults, expanded by default. See
 [`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
 
 ### `registry` fields — id-keyed collections of settings
@@ -94,11 +97,13 @@ Validated/defaulted against `itemSchema` the same recursive way as `list`.
 }
 ```
 
-`SettingsForm` renders this the same way as `list` — a stack of forms, one per entry, move-up/move-
-down/remove at the top followed by one labeled field row per `itemSchema` key — just keyed by id
-instead of position. Reasonable to use for the same cases as `list` when you know something else
-needs to reference an entry by a stable id (a `reference` field elsewhere pointing at "which entry of
-this registry" would break silently on reorder if entries were addressed by array position instead).
+`SettingsForm` renders this the same way as `list` — a stack of collapsible entries, each summary
+carrying its own move-up/move-down/remove controls, then one labeled field row per `itemSchema` key
+once expanded — just keyed by id instead of position. Reasonable to use for the same cases as `list`
+when you know something else needs to reference an entry by a stable id (a `reference` field
+elsewhere pointing at
+"which entry of this registry" would break silently on reorder if entries were addressed by array
+position instead).
 
 ### Shipped entries — `registry` fields the addon itself ships entries into
 

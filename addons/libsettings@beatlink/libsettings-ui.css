@@ -110,6 +110,38 @@
     border-left: 3px solid var(--main-text-color, #888) !important;
     border-radius: 0.375rem !important;
     background-color: var(--main-background-color) !important;
+
+    & > summary {
+        cursor: pointer !important;
+        user-select: none !important;
+        padding: 0.5rem 0.75rem !important;
+        font-weight: 600 !important;
+        background-color: var(--accented-background-color) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+
+        /* Browsers other than Firefox render a disclosure triangle as a
+           ::marker pseudo-element that isn't part of the flex row above —
+           without shrinking it wouldn't wrap the title/actions row inline
+           with it, but Firefox's own ::-moz-list-bullet already accounts for
+           this on its own. Harmless duplication either way. */
+        &::marker, &::-webkit-details-marker {
+            flex: 0 0 auto !important;
+        }
+    }
+}
+
+.lst-item-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.lst-item-body {
     padding: 0.75rem !important;
     display: flex !important;
     flex-direction: column !important;
@@ -141,12 +173,12 @@
     }
 }
 
-/* Reorder/remove controls sit at the top of each item (before its fields),
-   not the bottom — so acting on an entry never means scrolling past its
-   (possibly long) form first. */
+/* Reorder/remove controls sit in the item's own summary/title row, visible
+   and usable whether the item is expanded or collapsed. */
 .lst-item-actions {
     display: flex !important;
     flex-direction: row !important;
+    flex: 0 0 auto !important;
     gap: 0.25rem !important;
 
     /* Trilium's own .btn-secondary (what a plain Button defaults to) sets
