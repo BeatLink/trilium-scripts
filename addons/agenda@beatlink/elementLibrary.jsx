@@ -14,17 +14,6 @@ function newSearch() {
     return { name: "New Search", rule: "" }
 }
 
-function SearchElementRow({ element, onChange }) {
-    return (
-        <div className="pe-group">
-            <div>
-                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
-                <FormTextBox currentValue={element.rule} onChange={v => onChange({ ...element, rule: v })} />
-            </div>
-        </div>
-    )
-}
-
 function SearchesTab({ searches, onChange }) {
     return (
         <KeyedList
@@ -32,7 +21,14 @@ function SearchesTab({ searches, onChange }) {
             onChange={onChange}
             newItemFactory={newSearch}
             addLabel="Add Search"
-            renderItem={(key, element, update) => <SearchElementRow element={element} onChange={update} />}
+            columns={[
+                { label: "Name", render: (element, update) => (
+                    <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                ) },
+                { label: "Search Rule", render: (element, update) => (
+                    <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
+                ) }
+            ]}
         />
     )
 }
@@ -48,17 +44,6 @@ function newDateRule() {
     return { name: "New Date Rule", rule: ["isNull"] }
 }
 
-function DateRuleElementRow({ element, onChange }) {
-    return (
-        <div className="pe-group">
-            <div>
-                <FormTextBox currentValue={element.name} onChange={v => onChange({ ...element, name: v })} />
-                <DayjsRulePicker value={element.rule} onChange={rule => onChange({ ...element, rule })} />
-            </div>
-        </div>
-    )
-}
-
 function DateRulesTab({ dateRules, onChange }) {
     return (
         <KeyedList
@@ -66,7 +51,14 @@ function DateRulesTab({ dateRules, onChange }) {
             onChange={onChange}
             newItemFactory={newDateRule}
             addLabel="Add Date Rule"
-            renderItem={(key, element, update) => <DateRuleElementRow element={element} onChange={update} />}
+            columns={[
+                { label: "Name", render: (element, update) => (
+                    <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                ) },
+                { label: "Rule", render: (element, update) => (
+                    <DayjsRulePicker value={element.rule} onChange={rule => update({ ...element, rule })} />
+                ) }
+            ]}
         />
     )
 }
@@ -184,17 +176,17 @@ function CriteriaEditor({ rule, onChange }) {
             onChange={handleChange}
             newItemFactory={newCriterion}
             addLabel="Add Criterion"
-            renderItem={(key, row, update) => (
-                <div className="pe-field-row">
+            columns={[
+                { label: "Attribute", render: (row, update) => (
                     <FormTextBox currentValue={row.attribute} onChange={v => update({ ...row, attribute: v })} />
-                    <FormCheckbox label="Descending" currentValue={row.desc} onChange={v => update({ ...row, desc: v })} />
-                    <FormCheckbox
-                        label="Case Insensitive"
-                        currentValue={row.caseInsensitive}
-                        onChange={v => update({ ...row, caseInsensitive: v })}
-                    />
-                </div>
-            )}
+                ) },
+                { label: "Descending", render: (row, update) => (
+                    <FormCheckbox currentValue={row.desc} onChange={v => update({ ...row, desc: v })} />
+                ) },
+                { label: "Case Insensitive", render: (row, update) => (
+                    <FormCheckbox currentValue={row.caseInsensitive} onChange={v => update({ ...row, caseInsensitive: v })} />
+                ) }
+            ]}
         />
     )
 }
@@ -206,14 +198,14 @@ function SortsTab({ sorts, onChange }) {
             onChange={onChange}
             newItemFactory={newSort}
             addLabel="Add Sort"
-            renderItem={(key, sort, update) => (
-                <div className="pe-group">
-                    <div>
-                        <FormTextBox currentValue={sort.name} onChange={v => update({ ...sort, name: v })} />
-                        <CriteriaEditor rule={sort.rule} onChange={rule => update({ ...sort, rule })} />
-                    </div>
-                </div>
-            )}
+            columns={[
+                { label: "Name", render: (sort, update) => (
+                    <FormTextBox currentValue={sort.name} onChange={v => update({ ...sort, name: v })} />
+                ) },
+                { label: "Criteria", render: (sort, update) => (
+                    <CriteriaEditor rule={sort.rule} onChange={rule => update({ ...sort, rule })} />
+                ) }
+            ]}
         />
     )
 }
@@ -289,20 +281,22 @@ function VariantEditor({ variant, dateRules, onChange, valueField, defaultValue,
                             onChange={intervals => onChange({ ...variant, intervals })}
                             newItemFactory={newInterval}
                             addLabel="Add Interval"
-                            renderItem={(key, interval, update) => (
-                                <div className="pe-field-row">
+                            columns={[
+                                { label: "Date Rule", render: (interval, update) => (
                                     <ElementSelect
                                         category="dateRules"
                                         registry={{ dateRules }}
                                         value={interval.dateRuleId}
                                         onChange={dateRuleId => update({ ...interval, dateRuleId })}
                                     />
+                                ) },
+                                { label: "Value", render: (interval, update) => (
                                     <IntervalValueEditor
                                         value={interval[valueField]}
                                         onChange={v => update({ ...interval, [valueField]: v })}
                                     />
-                                </div>
-                            )}
+                                ) }
+                            ]}
                         />
                     </>
                 )}

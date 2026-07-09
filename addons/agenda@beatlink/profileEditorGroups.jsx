@@ -9,8 +9,14 @@ function generateKey() {
 // Generic add/remove/reorder editor for a `{ [key]: value }` object (the
 // shape every group/child collection in a profile uses). Reorder rebuilds
 // key insertion order via a fresh object rather than mutating in place.
-export function KeyedList({ items, onChange, newItemFactory, renderItem, addLabel = "Add" }) {
+// Renders as a real <table>. Pass `columns` (an array of
+// `{ label, render: (item, update) => node }`) for a fixed-shape item
+// (each field gets its own column); omit it and pass `renderItem` instead
+// for an item whose shape varies (e.g. a type dropdown that swaps in
+// different fields) — that content spans a single wide cell.
+export function KeyedList({ items, onChange, newItemFactory, renderItem, columns, addLabel = "Add" }) {
     const keys = Object.keys(items)
+    const columnCount = (columns ? columns.length : 1) + 1
 
     function updateItem(key, newValue) {
         onChange({ ...items, [key]: newValue })
@@ -37,22 +43,42 @@ export function KeyedList({ items, onChange, newItemFactory, renderItem, addLabe
     }
 
     return (
-        <div className="pe-list">
-            {keys.length === 0 && <p className="pe-list-empty">No entries yet.</p>}
-            {keys.map((key, index) => (
-                <div className="pe-list-item" key={key}>
-                    <div className="pe-list-item-body">
-                        {renderItem(key, items[key], value => updateItem(key, value))}
-                    </div>
-                    <div className="pe-list-item-controls">
-                        <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
-                        <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === keys.length - 1} />
-                        <Button icon="bx-x" onClick={() => removeItem(key)} />
-                    </div>
-                </div>
-            ))}
-            <Button icon="bx-plus" text={addLabel} onClick={addItem} />
-        </div>
+        <table className="pe-table">
+            {columns && (
+                <thead>
+                    <tr>
+                        {columns.map(col => <th key={col.label}>{col.label}</th>)}
+                        <th></th>
+                    </tr>
+                </thead>
+            )}
+            <tbody>
+                {keys.length === 0 && (
+                    <tr><td className="pe-table-empty" colSpan={columnCount}>No entries yet.</td></tr>
+                )}
+                {keys.map((key, index) => {
+                    const item = items[key]
+                    const update = value => updateItem(key, value)
+                    return (
+                        <tr key={key}>
+                            {columns
+                                ? columns.map(col => <td key={col.label}>{col.render(item, update)}</td>)
+                                : <td>{renderItem(key, item, update)}</td>}
+                            <td className="pe-table-actions-cell">
+                                <div className="pe-table-actions">
+                                    <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
+                                    <Button icon="bx-chevron-down" onClick={() => moveItem(index, 1)} disabled={index === keys.length - 1} />
+                                    <Button icon="bx-x" onClick={() => removeItem(key)} />
+                                </div>
+                            </td>
+                        </tr>
+                    )
+                })}
+            </tbody>
+            <tfoot>
+                <tr><td colSpan={columnCount}><Button icon="bx-plus" text={addLabel} onClick={addItem} /></td></tr>
+            </tfoot>
+        </table>
     )
 }
 
