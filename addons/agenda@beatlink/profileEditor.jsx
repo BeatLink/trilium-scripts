@@ -16,49 +16,16 @@ const { parseSortCriteria } = require("libMultisort.js")
 const { operatorOptions, momentOptions, bracketOptions, defaultForOperator, splitRule } = require("dayjsRule.js")
 
 // Element Library tabs -------------------------------------------------------
-// Every search, filter, date rule, sort, prefix, and color a profile can use
-// lives here. Profiles only ever reference an element from here by id, so
-// editing one updates every profile using it; each edit below autosaves
-// immediately (unlike the Profile tab's sort/prefix/color picks, which save
-// explicitly). Search Groups/Filter Groups also live here rather than on the
-// Profile tab — they're a profile-specific tree of which elements are in use,
-// so they belong beside the library they pick from; unlike the rest of this
-// tab, though, editing one writes to the *profile*, so it autosaves through
-// the same profile-autosave path as everything else that touches profile
-// data outside the Profile tab's explicit Save button.
-
-// Searches -----------------------------------------------------------------
-
-function newSearch() {
-    return { name: "New Search", rule: "" }
-}
-
-function SearchesTab({ searches, searchGroups, onChangeSearches, onChangeSearchGroups }) {
-    return (
-        <div className="pe-list">
-            <SearchGroupsEditor
-                searchGroups={searchGroups}
-                registry={{ searches }}
-                onChange={onChangeSearchGroups}
-            />
-            <h3>Search Elements</h3>
-            <KeyedList
-                items={searches}
-                onChange={onChangeSearches}
-                newItemFactory={newSearch}
-                addLabel="Add Search"
-                columns={[
-                    { label: "Name", render: (element, update) => (
-                        <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
-                    ) },
-                    { label: "Search Rule", render: (element, update) => (
-                        <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
-                    ) }
-                ]}
-            />
-        </div>
-    )
-}
+// Every date rule, sort, prefix, and color a profile can use lives here.
+// Profiles only ever reference an element from here by id, so editing one
+// updates every profile using it; each edit below autosaves immediately
+// (unlike the Profile tab's sort/prefix/color picks, which save explicitly).
+// Search/filter elements don't get their own flat list on these tabs —
+// SearchGroupsEditor/FilterGroupsEditor (rendered directly by the Page
+// section below) fold each element's definition into the profile's Search
+// Groups/Filter Groups tree instead, since that's where a profile actually
+// uses them; an element not currently referenced by any group still shows
+// up there, in its own "Ungrouped" fallback section.
 
 // Date Rules -------------------------------------------------------------------
 // The actual `["isBefore","startOfToday"]`-style dayjs criteria tuple a
@@ -146,82 +113,6 @@ function DateRulesTab({ dateRules, onChange }) {
                 } }
             ]}
         />
-    )
-}
-
-// Filters --------------------------------------------------------------------
-// Unlike a search element (always a plain query string), a filter element
-// carries its own type — a shared filter has to be self-describing since
-// it's no longer scoped inside a profile-local group that used to hold that
-// context. A dayjs-type filter references a Date Rule element rather than
-// embedding its own criteria tuple; the label to test and whether to use
-// whole-day granularity live on that Date Rule, not on the filter, since
-// they describe the comparison itself rather than any one use of it.
-
-const filterTypeOptions = [
-    { key: "search", title: "Search Query" },
-    { key: "dayjs", title: "Date Comparison" }
-]
-
-function newFilter() {
-    return { name: "New Filter", type: "search", rule: "" }
-}
-
-// One column per field rather than a single "Details" cell that swaps its
-// whole contents by type — a row's columns for the other type just render
-// blank (Search Rule for a dayjs-type row, or Date Rule for a search-type
-// row).
-function FiltersTab({ filters, filterGroups, dateRules, onChangeFilters, onChangeFilterGroups }) {
-    function setType(element, update, newType) {
-        if (newType === element.type) return
-        update({
-            ...element,
-            type: newType,
-            ...(newType === "dayjs"
-                ? { dateRuleId: firstElementId({ dateRules }, "dateRules") }
-                : { rule: "" })
-        })
-    }
-
-    return (
-        <div className="pe-list">
-            <FilterGroupsEditor
-                filterGroups={filterGroups}
-                registry={{ filters }}
-                onChange={onChangeFilterGroups}
-            />
-            <h3>Filter Elements</h3>
-            <TreeList
-                items={filters}
-                onChange={onChangeFilters}
-                newItemFactory={newFilter}
-                addLabel="Add Filter"
-                columns={[
-                    { label: "Name", render: (element, update) => (
-                        <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
-                    ) },
-                    { label: "Type", render: (element, update) => (
-                        <FormDropdownList
-                            values={filterTypeOptions}
-                            currentValue={element.type}
-                            onChange={newType => setType(element, update, newType)}
-                            keyProperty="key" titleProperty="title"
-                        />
-                    ) },
-                    { label: "Search Rule", render: (element, update) => element.type === "search" ? (
-                        <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
-                    ) : null },
-                    { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
-                        <ElementSelect
-                            category="dateRules"
-                            registry={{ dateRules }}
-                            value={element.dateRuleId}
-                            onChange={dateRuleId => update({ ...element, dateRuleId })}
-                        />
-                    ) : null }
-                ]}
-            />
-        </div>
     )
 }
 
@@ -488,15 +379,17 @@ function ProfileTab({ profile, registry, onChange, onOpenTab, saveStatus, onSave
 // its sort/prefix/color pick, and the library's own six kinds of element
 // (Searches/Date Rules/Filters/Sorts/Prefixes/Colors) sit alongside both as
 // flat tabs — each is its own page, shown one at a time, rather than nested
-// under a further "Element Library" tab. The Searches/Filters tabs also each
-// host the profile's Search Groups/Filter Groups tree above their library
-// list, since that's where a profile actually picks which of those elements
-// it uses. The *items within* a category (each individual search, filter,
-// etc.) still render as a plain list — a KeyedList table for Searches/Date
-// Rules, a TreeList of collapsible nodes for Filters/Sorts/Prefixes/Colors —
-// not a further layer of tabs. Settings itself is just `SettingsForm` dropped
-// in as-is (self-contained: loads/saves schema.json+config.json, owns its own
-// Save button) — the only tab of the seven that isn't defined in this file.
+// under a further "Element Library" tab. Searches/Filters are the odd ones
+// out: SearchGroupsEditor/FilterGroupsEditor (defined in their own files, not
+// above) fold each element's own definition into the profile's Search
+// Groups/Filter Groups tree instead of listing elements flat, since that's
+// where a profile actually uses them — there's no separate "Search Elements"/
+// "Filter Elements" list on these tabs. Date Rules/Sorts/Prefixes/Colors
+// still render as a flat list of items — a KeyedList table for Date Rules, a
+// TreeList of collapsible nodes for Sorts/Prefixes/Colors — not a further
+// layer of tabs. Settings itself is just `SettingsForm` dropped in as-is
+// (self-contained: loads/saves schema.json+config.json, owns its own Save
+// button) — the only tab of the seven that isn't defined in this file.
 const CATEGORIES = [
     { key: "settings", label: "Settings" },
     { key: "profile", label: "Profile" },
@@ -610,23 +503,23 @@ export default function ProfileEditor() {
                         />
                     )}
                     {activeCategory === "searches" && (
-                        <SearchesTab
-                            searches={data.searches}
+                        <SearchGroupsEditor
                             searchGroups={profile.searchGroups}
+                            searches={data.searches}
+                            onChangeGroups={searchGroups => autosaveProfilePatch({ searchGroups })}
                             onChangeSearches={v => updateElements("searches", v)}
-                            onChangeSearchGroups={searchGroups => autosaveProfilePatch({ searchGroups })}
                         />
                     )}
                     {activeCategory === "dateRules" && (
                         <DateRulesTab dateRules={data.dateRules} onChange={v => updateElements("dateRules", v)} />
                     )}
                     {activeCategory === "filters" && (
-                        <FiltersTab
-                            filters={data.filters}
+                        <FilterGroupsEditor
                             filterGroups={profile.filterGroups}
+                            filters={data.filters}
                             dateRules={data.dateRules}
+                            onChangeGroups={filterGroups => autosaveProfilePatch({ filterGroups })}
                             onChangeFilters={v => updateElements("filters", v)}
-                            onChangeFilterGroups={filterGroups => autosaveProfilePatch({ filterGroups })}
                         />
                     )}
                     {activeCategory === "sorts" && (

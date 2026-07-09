@@ -14,14 +14,16 @@ widgets plus a single tabbed editor page:
    button or the Overview widget) — a single tabbed page with seven tabs. Its **Settings** tab is
    just `SettingsForm` (the `libsettings@beatlink` schema/config UI) dropped in as-is. Its
    **Profile** tab holds the profile's identity (name, File Tasks Under) and picks its sort/prefix/
-   color. Its **Searches / Filters / Sorts / Prefixes / Colors / Date Rules** tabs are the Element
-   Library, where every such element actually gets defined; the **Searches**/**Filters** tabs also
-   each hold that profile's Search Groups/Filter Groups tree (which of those elements are active,
-   grouped and toggled) above their library list, since that's where a profile actually picks which
-   elements it uses. Profiles never embed a rule's definition; they only reference an element by id,
-   so editing an element on its tab updates every profile using it. Date rules are one level deeper
-   than the rest: a dayjs-type filter and a prefix/color interval both reference a shared date rule
-   (e.g. "Overdue") rather than each embedding their own copy of the same
+   color. Its **Date Rules / Sorts / Prefixes / Colors** tabs are a flat Element Library, where every
+   such element gets defined; editing one updates every profile using it. Its **Searches**/
+   **Filters** tabs are different: rather than a flat library plus a separate usage tree, each
+   element's own definition is folded directly into the Search Groups/Filter Groups tree that uses
+   it — expand a group, then a usage inside it, and you're editing that search/filter's actual Name/
+   Rule (or Type/Search Rule/Date Rule for a filter), not just picking it by name. An element not
+   currently referenced by any group falls into an "Ungrouped Searches"/"Ungrouped Filters" bucket
+   instead, so it's still reachable/editable/removable and new elements can still be created there.
+   Date rules are one level deeper than the rest: a dayjs-type filter and a prefix/color interval both
+   reference a shared date rule (e.g. "Overdue") rather than each embedding their own copy of the same
    `["isBefore","startOfToday"]`-style criteria tuple. The Settings tab and the Profile tab's
    sort/prefix/color pick each save explicitly (their own Save button); everything else — every
    element definition, plus the Search Groups/Filter Groups trees — autosaves each edit immediately.

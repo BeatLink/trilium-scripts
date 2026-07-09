@@ -2,7 +2,10 @@ import { Button, FormTextBox, useState } from "trilium:preact"
 import { Collapsible } from "Collapsible.jsx"
 
 let idCounter = 0
-function generateKey() {
+// Exported for callers that need a fresh registry-element id outside of a
+// KeyedList/TreeList's own add flow — e.g. creating a new shared search/
+// filter element at the same time as the profile usage that references it.
+export function generateKey() {
     idCounter += 1
     return `item-${Date.now()}-${idCounter}`
 }
@@ -92,8 +95,11 @@ export function KeyedList({ items, onChange, newItemFactory, renderItem, columns
 // stay beside their field via the same `.pe-field-row` used elsewhere in
 // this editor, rather than living in a table header far above the value.
 // Expand/collapse state is local-only (not persisted): it's a pure editing
-// convenience, not data every reader of the profile needs to agree on.
-export function TreeList({ items, onChange, newItemFactory, columns, getLabel, addLabel = "Add" }) {
+// convenience, not data every reader of the profile needs to agree on. Like
+// KeyedList, accepts `renderItem(key, item, update)` instead of `columns`
+// when an item's shape doesn't flatten into fixed label/field rows (e.g. a
+// group whose body is itself a nested TreeList of usages).
+export function TreeList({ items, onChange, newItemFactory, columns, renderItem, getLabel, addLabel = "Add" }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
     const labelFor = getLabel || (item => item.name || "Untitled")
@@ -148,15 +154,17 @@ export function TreeList({ items, onChange, newItemFactory, columns, getLabel, a
                         className="pe-tree-item"
                     >
                         <div className="pe-tree-item-fields">
-                            {columns.map(col => {
-                                const rendered = col.render(item, update)
-                                return rendered == null ? null : (
-                                    <div className="pe-field-row" key={col.label}>
-                                        <label>{col.label}</label>
-                                        {rendered}
-                                    </div>
-                                )
-                            })}
+                            {columns
+                                ? columns.map(col => {
+                                    const rendered = col.render(item, update)
+                                    return rendered == null ? null : (
+                                        <div className="pe-field-row" key={col.label}>
+                                            <label>{col.label}</label>
+                                            {rendered}
+                                        </div>
+                                    )
+                                })
+                                : renderItem(key, item, update)}
                         </div>
                         <div className="pe-table-actions">
                             <Button icon="bx-chevron-up" onClick={() => moveItem(index, -1)} disabled={index === 0} />
@@ -169,6 +177,30 @@ export function TreeList({ items, onChange, newItemFactory, columns, getLabel, a
             <Button icon="bx-plus" text={addLabel} onClick={addItem} />
         </div>
     )
+}
+
+// Shared by SearchGroupsEditor/FilterGroupsEditor: with element definitions
+// folded into the groups tree that use them, each still needs a fallback
+// bucket for elements no usage currently references (otherwise they'd be
+// unreachable/unremovable), so both editors need "which element ids appear
+// in some group" and a way to merge an edited subset (that fallback bucket)
+// back into the full registry without clobbering grouped elements.
+export function usedElementIds(groups) {
+    const ids = new Set()
+    for (const group of Object.values(groups.children || {})) {
+        for (const usage of Object.values(group.children || {})) {
+            if (usage.elementId) ids.add(usage.elementId)
+        }
+    }
+    return ids
+}
+
+export function mergeElementSubset(elements, oldSubset, newSubset) {
+    const merged = { ...elements }
+    for (const key of Object.keys(oldSubset)) {
+        if (!(key in newSubset)) delete merged[key]
+    }
+    return { ...merged, ...newSubset }
 }
 
 let rowIdCounter = 0

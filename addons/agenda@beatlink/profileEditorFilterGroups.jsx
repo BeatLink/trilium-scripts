@@ -1,59 +1,186 @@
-import { FormTextBox } from "trilium:preact"
+import { FormTextBox, FormCheckbox, FormDropdownList, useState } from "trilium:preact"
 import { Collapsible } from "Collapsible.jsx"
-import { KeyedList } from "profileEditorGroups.jsx"
-import { ElementUsageRow, firstElementId } from "elementPicker.jsx"
+import { TreeList, generateKey, usedElementIds, mergeElementSubset } from "profileEditorGroups.jsx"
+import { ElementSelect, firstElementId } from "elementPicker.jsx"
 
-function newFilterGroup() {
+const filterTypeOptions = [
+    { key: "search", title: "Search Query" },
+    { key: "dayjs", title: "Date Comparison" }
+]
+
+function newGroup() {
     return { name: "New Filter", expanded: true, children: {} }
 }
 
-function FilterGroupEditor({ group, registry, onChange }) {
+function newFilterElement() {
+    return { name: "New Filter", type: "search", rule: "" }
+}
+
+// A usage's fields: which shared filter element it points at, whether it's
+// enabled, and — since element definitions are folded into the groups tree
+// rather than living in a separate library list — the element's own Type/
+// Rule/Date Rule, editable right here. Editing those writes through to the
+// shared `filters` registry (every other usage of the same element sees the
+// change immediately), while Filter/Enabled only ever touch this usage.
+function usageColumns({ filters, dateRules, onChangeFilters }) {
+    function updateElement(elementId, patch) {
+        onChangeFilters({ ...filters, [elementId]: { ...(filters[elementId] || {}), ...patch } })
+    }
+
+    function setType(elementId, element, newType) {
+        if (newType === element.type) return
+        updateElement(elementId, {
+            type: newType,
+            ...(newType === "dayjs"
+                ? { dateRuleId: firstElementId({ dateRules }, "dateRules") }
+                : { rule: "" })
+        })
+    }
+
+    return [
+        { label: "Filter", render: (usage, update) => (
+            <ElementSelect
+                category="filters"
+                registry={{ filters }}
+                value={usage.elementId}
+                onChange={elementId => update({ ...usage, elementId })}
+            />
+        ) },
+        { label: "Enabled", render: (usage, update) => (
+            <FormCheckbox currentValue={usage.enabled} onChange={v => update({ ...usage, enabled: v })} />
+        ) },
+        { label: "Type", render: (usage) => filters[usage.elementId] ? (
+            <FormDropdownList
+                values={filterTypeOptions}
+                currentValue={filters[usage.elementId].type}
+                onChange={newType => setType(usage.elementId, filters[usage.elementId], newType)}
+                keyProperty="key" titleProperty="title"
+            />
+        ) : null },
+        { label: "Search Rule", render: (usage) => filters[usage.elementId]?.type === "search" ? (
+            <FormTextBox
+                currentValue={filters[usage.elementId].rule}
+                onChange={v => updateElement(usage.elementId, { rule: v })}
+            />
+        ) : null },
+        { label: "Date Rule", render: (usage) => filters[usage.elementId]?.type === "dayjs" ? (
+            <ElementSelect
+                category="dateRules"
+                registry={{ dateRules }}
+                value={filters[usage.elementId].dateRuleId}
+                onChange={dateRuleId => updateElement(usage.elementId, { dateRuleId })}
+            />
+        ) : null }
+    ]
+}
+
+function FilterGroupBody({ group, filters, dateRules, onChangeFilters, onChange }) {
+    function newUsage() {
+        const elementId = generateKey()
+        onChangeFilters({ ...filters, [elementId]: newFilterElement() })
+        return { elementId, enabled: true }
+    }
+
     return (
-        <Collapsible
-            label={group.name}
-            expanded={group.expanded}
-            onToggle={e => onChange({ ...group, expanded: e.currentTarget.open })}
-            className="pe-group"
-        >
+        <>
             <FormTextBox currentValue={group.name} onChange={v => onChange({ ...group, name: v })} />
-            <KeyedList
+            <TreeList
                 items={group.children}
                 onChange={children => onChange({ ...group, children })}
-                newItemFactory={() => ({ elementId: firstElementId(registry, "filters"), enabled: true })}
+                newItemFactory={newUsage}
                 addLabel="Add Rule"
-                renderItem={(key, usage, update) => (
-                    <ElementUsageRow
-                        usage={usage}
-                        category="filters"
-                        registry={registry}
-                        onChange={update}
-                    />
-                )}
+                getLabel={usage => filters[usage.elementId]?.name || "New Filter"}
+                columns={usageColumns({ filters, dateRules, onChangeFilters })}
             />
-        </Collapsible>
+        </>
     )
 }
 
-// Lives on the Filters tab, alongside the shared filter element library it
-// picks from, rather than on the Profile tab — keeping "which filters
-// exist" and "how they're grouped for this profile" on one screen.
-export function FilterGroupsEditor({ filterGroups, registry, onChange }) {
+// Lives on the Filters tab. Every filter a profile can use is folded into
+// this tree: each group holds its usages, and each usage's own fields are
+// the actual shared filter element's Type/Rule/Date Rule — there's no
+// separate flat "library" list to jump to. An element not currently
+// referenced by any usage would otherwise be unreachable, so it falls into
+// "Ungrouped Filters" below instead, still editable/removable there.
+export function FilterGroupsEditor({ filterGroups, filters, dateRules, onChangeGroups, onChangeFilters }) {
+    const [ungroupedExpanded, setUngroupedExpanded] = useState(false)
+    const usedIds = usedElementIds(filterGroups)
+    const ungrouped = Object.fromEntries(Object.entries(filters).filter(([id]) => !usedIds.has(id)))
+
+    function setType(element, update, newType) {
+        if (newType === element.type) return
+        update({
+            ...element,
+            type: newType,
+            ...(newType === "dayjs"
+                ? { dateRuleId: firstElementId({ dateRules }, "dateRules") }
+                : { rule: "" })
+        })
+    }
+
     return (
-        <Collapsible
-            label="Filter Groups"
-            expanded={filterGroups.expanded}
-            onToggle={e => onChange({ ...filterGroups, expanded: e.currentTarget.open })}
-            className="pe-section"
-        >
-            <KeyedList
-                items={filterGroups.children}
-                onChange={children => onChange({ ...filterGroups, children })}
-                newItemFactory={newFilterGroup}
-                addLabel="Add Filter Group"
-                renderItem={(key, group, update) => (
-                    <FilterGroupEditor group={group} registry={registry} onChange={update} />
-                )}
-            />
-        </Collapsible>
+        <div className="pe-list">
+            <Collapsible
+                label="Filter Groups"
+                expanded={filterGroups.expanded}
+                onToggle={e => onChangeGroups({ ...filterGroups, expanded: e.currentTarget.open })}
+                className="pe-section"
+            >
+                <TreeList
+                    items={filterGroups.children}
+                    onChange={children => onChangeGroups({ ...filterGroups, children })}
+                    newItemFactory={newGroup}
+                    addLabel="Add Filter Group"
+                    getLabel={group => group.name}
+                    renderItem={(key, group, update) => (
+                        <FilterGroupBody
+                            group={group}
+                            filters={filters}
+                            dateRules={dateRules}
+                            onChangeFilters={onChangeFilters}
+                            onChange={update}
+                        />
+                    )}
+                />
+            </Collapsible>
+            <Collapsible
+                label={`Ungrouped Filters (${Object.keys(ungrouped).length})`}
+                expanded={ungroupedExpanded}
+                onToggle={e => setUngroupedExpanded(e.currentTarget.open)}
+                className="pe-section"
+            >
+                <TreeList
+                    items={ungrouped}
+                    onChange={newSubset => onChangeFilters(mergeElementSubset(filters, ungrouped, newSubset))}
+                    newItemFactory={newFilterElement}
+                    addLabel="Add Filter"
+                    getLabel={element => element.name}
+                    columns={[
+                        { label: "Name", render: (element, update) => (
+                            <FormTextBox currentValue={element.name} onChange={v => update({ ...element, name: v })} />
+                        ) },
+                        { label: "Type", render: (element, update) => (
+                            <FormDropdownList
+                                values={filterTypeOptions}
+                                currentValue={element.type}
+                                onChange={newType => setType(element, update, newType)}
+                                keyProperty="key" titleProperty="title"
+                            />
+                        ) },
+                        { label: "Search Rule", render: (element, update) => element.type === "search" ? (
+                            <FormTextBox currentValue={element.rule} onChange={v => update({ ...element, rule: v })} />
+                        ) : null },
+                        { label: "Date Rule", render: (element, update) => element.type === "dayjs" ? (
+                            <ElementSelect
+                                category="dateRules"
+                                registry={{ dateRules }}
+                                value={element.dateRuleId}
+                                onChange={dateRuleId => update({ ...element, dateRuleId })}
+                            />
+                        ) : null }
+                    ]}
+                />
+            </Collapsible>
+        </div>
     )
 }
