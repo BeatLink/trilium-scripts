@@ -1,4 +1,4 @@
-import { Button, FormTextBox, useState, useEffect } from "trilium:preact"
+import { Button, FormTextBox, useState } from "trilium:preact"
 
 let idCounter = 0
 function generateKey() {
@@ -52,81 +52,6 @@ export function KeyedList({ items, onChange, newItemFactory, renderItem, addLabe
                 </div>
             ))}
             <Button icon="bx-plus" text={addLabel} onClick={addItem} />
-        </div>
-    )
-}
-
-// Same add/remove/reorder contract as KeyedList, but only one item is
-// rendered at a time — picked via a tab bar — instead of every item
-// stacked and expanded at once. Meant for collections whose items are big
-// enough (a full element definition) that showing all of them together is
-// more scrolling than browsing.
-export function TabbedKeyedList({ items, onChange, newItemFactory, renderItem, addLabel = "Add", nameOf = item => item.name }) {
-    const keys = Object.keys(items)
-    const [activeKey, setActiveKey] = useState(keys[0] ?? null)
-
-    useEffect(() => {
-        if (activeKey === null || !keys.includes(activeKey)) {
-            setActiveKey(keys[0] ?? null)
-        }
-    }, [items])
-
-    function updateItem(key, newValue) {
-        onChange({ ...items, [key]: newValue })
-    }
-
-    function removeItem(key) {
-        const updated = { ...items }
-        delete updated[key]
-        onChange(updated)
-    }
-
-    function addItem() {
-        const key = generateKey()
-        onChange({ ...items, [key]: newItemFactory() })
-        setActiveKey(key)
-    }
-
-    function moveItem(index, direction) {
-        const target = index + direction
-        if (target < 0 || target >= keys.length) return
-        const newKeys = [...keys]
-        ;[newKeys[index], newKeys[target]] = [newKeys[target], newKeys[index]]
-        const reordered = {}
-        for (const k of newKeys) reordered[k] = items[k]
-        onChange(reordered)
-    }
-
-    const activeIndex = keys.indexOf(activeKey)
-
-    return (
-        <div className="pe-tabbed">
-            <div className="pe-tabbed-tabs">
-                {keys.map((key, index) => (
-                    <button
-                        type="button"
-                        key={key}
-                        className={`pe-tab${key === activeKey ? " pe-tab-active" : ""}`}
-                        onClick={() => setActiveKey(key)}
-                    >
-                        {nameOf(items[key]) || `Item ${index + 1}`}
-                    </button>
-                ))}
-                <Button icon="bx-plus" text={addLabel} onClick={addItem} />
-            </div>
-            {keys.length === 0 && <p className="pe-list-empty">No entries yet.</p>}
-            {activeKey !== null && items[activeKey] && (
-                <div className="pe-tabbed-panel">
-                    <div className="pe-tabbed-panel-body">
-                        {renderItem(activeKey, items[activeKey], value => updateItem(activeKey, value))}
-                    </div>
-                    <div className="pe-tabbed-panel-controls">
-                        <Button icon="bx-chevron-left" onClick={() => moveItem(activeIndex, -1)} disabled={activeIndex <= 0} />
-                        <Button icon="bx-chevron-right" onClick={() => moveItem(activeIndex, 1)} disabled={activeIndex === -1 || activeIndex === keys.length - 1} />
-                        <Button icon="bx-x" text="Remove" onClick={() => removeItem(activeKey)} />
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect, FormTextBox, FormCheckbox, FormDropdownList } from "trilium:preact"
 import { startNote } from "trilium:api"
-import { Collapsible } from "Collapsible.jsx"
-import { KeyedList, TabbedKeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
+import { KeyedList, LabelValueMapEditor } from "profileEditorGroups.jsx"
 import { DayjsRulePicker } from "dayjsRulePicker.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
 import { ElementSelect, firstElementId } from "elementPicker.jsx"
@@ -28,7 +27,7 @@ function SearchElementRow({ element, onChange }) {
 
 function SearchesTab({ searches, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={searches}
             onChange={onChange}
             newItemFactory={newSearch}
@@ -62,7 +61,7 @@ function DateRuleElementRow({ element, onChange }) {
 
 function DateRulesTab({ dateRules, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={dateRules}
             onChange={onChange}
             newItemFactory={newDateRule}
@@ -138,7 +137,7 @@ function FilterElementRow({ element, dateRules, onChange }) {
 
 function FiltersTab({ filters, dateRules, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={filters}
             onChange={onChange}
             newItemFactory={newFilter}
@@ -202,7 +201,7 @@ function CriteriaEditor({ rule, onChange }) {
 
 function SortsTab({ sorts, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={sorts}
             onChange={onChange}
             newItemFactory={newSort}
@@ -322,7 +321,7 @@ function ColorValueEditor({ value, onChange }) {
 
 function PrefixesTab({ prefixes, dateRules, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={prefixes}
             onChange={onChange}
             newItemFactory={() => newVariant("Prefix")}
@@ -344,7 +343,7 @@ function PrefixesTab({ prefixes, dateRules, onChange }) {
 
 function ColorsTab({ colors, dateRules, onChange }) {
     return (
-        <TabbedKeyedList
+        <KeyedList
             items={colors}
             onChange={onChange}
             newItemFactory={() => newVariant("Color")}
@@ -365,24 +364,24 @@ function ColorsTab({ colors, dateRules, onChange }) {
 }
 
 // Page -------------------------------------------------------------------------
-
-function Section({ label, children }) {
-    const [expanded, setExpanded] = useState(true)
-    return (
-        <Collapsible
-            label={label}
-            expanded={expanded}
-            onToggle={e => setExpanded(e.currentTarget.open)}
-            className="pe-section"
-        >
-            {children}
-        </Collapsible>
-    )
-}
+// The library's own six kinds of element (Searches/Date Rules/Filters/Sorts/
+// Prefixes/Colors) are the top-level tabs — each is its own page, shown one
+// at a time, rather than every category stacked and expanded together. The
+// *items within* a category (each individual search, filter, etc.) still
+// render as a plain KeyedList, not a further layer of tabs.
+const CATEGORIES = [
+    { key: "searches", label: "Searches" },
+    { key: "dateRules", label: "Date Rules" },
+    { key: "filters", label: "Filters" },
+    { key: "sorts", label: "Sorts" },
+    { key: "prefixes", label: "Prefixes" },
+    { key: "colors", label: "Colors" }
+]
 
 export default function ElementLibrary() {
     const [dataNoteId, setDataNoteId] = useState(null)
     const [data, setData] = useState(null)
+    const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].key)
 
     useEffect(() => {
         (async () => {
@@ -412,41 +411,52 @@ export default function ElementLibrary() {
                 profile directly.
             </p>
 
-            <Section label="Searches">
-                <SearchesTab searches={data.searches} onChange={v => update("searches", v)} />
-            </Section>
-
-            <Section label="Date Rules">
-                <DateRulesTab dateRules={data.dateRules} onChange={v => update("dateRules", v)} />
-            </Section>
-
-            <Section label="Filters">
-                <FiltersTab
-                    filters={data.filters}
-                    dateRules={data.dateRules}
-                    onChange={v => update("filters", v)}
-                />
-            </Section>
-
-            <Section label="Sorts">
-                <SortsTab sorts={data.sorts} onChange={v => update("sorts", v)} />
-            </Section>
-
-            <Section label="Prefixes">
-                <PrefixesTab
-                    prefixes={data.prefixes}
-                    dateRules={data.dateRules}
-                    onChange={v => update("prefixes", v)}
-                />
-            </Section>
-
-            <Section label="Colors">
-                <ColorsTab
-                    colors={data.colors}
-                    dateRules={data.dateRules}
-                    onChange={v => update("colors", v)}
-                />
-            </Section>
+            <div className="pe-tabbed">
+                <div className="pe-tabbed-tabs">
+                    {CATEGORIES.map(cat => (
+                        <button
+                            type="button"
+                            key={cat.key}
+                            className={`pe-tab${cat.key === activeCategory ? " pe-tab-active" : ""}`}
+                            onClick={() => setActiveCategory(cat.key)}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="pe-tabbed-panel-body">
+                    {activeCategory === "searches" && (
+                        <SearchesTab searches={data.searches} onChange={v => update("searches", v)} />
+                    )}
+                    {activeCategory === "dateRules" && (
+                        <DateRulesTab dateRules={data.dateRules} onChange={v => update("dateRules", v)} />
+                    )}
+                    {activeCategory === "filters" && (
+                        <FiltersTab
+                            filters={data.filters}
+                            dateRules={data.dateRules}
+                            onChange={v => update("filters", v)}
+                        />
+                    )}
+                    {activeCategory === "sorts" && (
+                        <SortsTab sorts={data.sorts} onChange={v => update("sorts", v)} />
+                    )}
+                    {activeCategory === "prefixes" && (
+                        <PrefixesTab
+                            prefixes={data.prefixes}
+                            dateRules={data.dateRules}
+                            onChange={v => update("prefixes", v)}
+                        />
+                    )}
+                    {activeCategory === "colors" && (
+                        <ColorsTab
+                            colors={data.colors}
+                            dateRules={data.dateRules}
+                            onChange={v => update("colors", v)}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     )
 }

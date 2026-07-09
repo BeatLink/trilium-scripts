@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.2",
+    "latestVersion": "1.5.3",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -485,11 +485,6 @@
             {
                 "parent": "element-library",
                 "child": "profile-editor-dayjs-rule"
-            },
-            {
-                "parent": "element-library",
-                "addon": "libcollapsible@beatlink",
-                "child": "lib"
             },
             {
                 "parent": "element-library",
