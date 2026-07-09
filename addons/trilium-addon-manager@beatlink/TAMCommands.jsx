@@ -3,6 +3,7 @@
 // state (which view is open, validation results) and composes this hook's output into JSX.
 
 import { useState, useEffect } from "trilium:preact"
+import { activateNote } from "trilium:api"
 import { TAM_ID } from "TAMShared.jsx"
 const libTAMjs = require("libTAM.js")
 
