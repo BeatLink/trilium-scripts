@@ -139,7 +139,7 @@ function AgendaOverviewWidgetJSX() {
     useEffect(() => {
         if (!ids || !noteId) return
         (async () => {
-            const data = await loadData(ids.profileContext.dataNoteId)
+            const data = await loadData(ids.profileContext.dataNoteId, ids.profileContext.builtinElementsNoteId)
             setRegistry(data)
             const profileData = await getMatchingProfile(ids.profileContext, noteId)
             if (profileData) {

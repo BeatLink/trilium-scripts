@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.9",
+    "latestVersion": "1.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -61,6 +61,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "agendaData.json"
+            },
+            {
+                "id": "builtin-elements",
+                "title": "builtinElements.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "builtinElements.json"
             },
             {
                 "id": "ical",
@@ -248,6 +255,10 @@
             {
                 "parent": "root",
                 "child": "profile"
+            },
+            {
+                "parent": "root",
+                "child": "builtin-elements"
             },
             {
                 "parent": "root",
@@ -506,6 +517,11 @@
                 "from": "settings",
                 "type": "AddonData:profile",
                 "to": "profile"
+            },
+            {
+                "from": "settings",
+                "type": "builtinElementsNote",
+                "to": "builtin-elements"
             },
             {
                 "from": "settings",

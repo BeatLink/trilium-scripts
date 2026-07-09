@@ -48,22 +48,23 @@ This addon owns exactly two things every other `lib*@beatlink` piece explicitly 
   canonical label-name vocabulary (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`,
   `recurrenceLabel`, `rankLabel`, etc) plus an optional `profileId` string override. `agendaSettings.jsx`
   loads this once per widget and reshapes it into the `constants` object (uppercase keys) and a
-  `profileContext` (`{ dataNoteId, profileIds }`) every `lib*@beatlink` function expects — those
+  `profileContext` (`{ dataNoteId, builtinElementsNoteId, profileIds }`) every `lib*@beatlink` function expects — those
   libraries never import settings themselves, they take `constants`/`profileContext` as parameters,
   so this is the *one* place those label names are defined, top-down, rather than each library
   depending on a shared constants module bottom-up. If `profileId` is left blank, the shipped
   `"default"` profile is used.
-- **`agendaData.json` / `agendaNowConfig.json`** — plain JSON notes (not additional
-  `libsettings@beatlink` schemas), edited through the Profile Editor / Element Library pages rather
-  than by hand. `agendaData.json` holds every shared search/filter/sort/prefix/color element plus
-  every profile that references them — its shape doesn't fit a flat schema, and this addon only
-  supports a single active profile at a time — see
-  [libagendaoverview@beatlink's README](../libagendaoverview@beatlink/README.md) for the exact shape,
-  the single-profile caveat, and where a real multi-profile design would go. `agendaNowConfig.json`
-  could be moved to `libsettings@beatlink` later (flattening its one nested `newWindowConfig` object,
-  since `libsettings`' schema has no nested-group field type yet) but wasn't, to keep this addon's
-  scope to the actual widgets rather than also building a second settings screen nobody asked for
-  yet.
+- **`agendaData.json` / `builtinElements.json` / `agendaNowConfig.json`** — plain JSON notes (not
+  additional `libsettings@beatlink` schemas), edited through the Profile Editor / Element Library
+  pages rather than by hand. `agendaData.json` holds every user-added or user-edited search/filter/
+  sort/prefix/color element, a `removedBuiltinIds` set recording any built-in the user deleted, and
+  every profile that references them; `builtinElements.json` holds only the addon's own shipped
+  built-in elements. Its shape doesn't fit a flat schema, and this addon only supports a single active
+  profile at a time — see [libagendaoverview@beatlink's README](../libagendaoverview@beatlink/README.md)
+  for the exact shape, the built-in/user-data split, the single-profile caveat, and where a real
+  multi-profile design would go. `agendaNowConfig.json` could be moved to `libsettings@beatlink` later
+  (flattening its one nested `newWindowConfig` object, since `libsettings`' schema has no nested-group
+  field type yet) but wasn't, to keep this addon's scope to the actual widgets rather than also
+  building a second settings screen nobody asked for yet.
 
 `agendaData.json` is persisted across addon updates via an `AddonData:profile` relation owned by the
 `settings` note (mirroring `AddonData:config`'s existing pattern) — **not** a direct relation from
@@ -71,7 +72,12 @@ every widget straight to the data note. Every widget instead resolves `settingsN
 reads `AddonData:profile` off of *that* note, live, whenever it needs the data note's id. This
 indirection matters: TAM's persistence mechanism duplicates a note into permanent storage and rewires
 only the relation literally named `AddonData:<key>` to point at the copy — any other relation that
-had pointed straight at the original note would be left dangling once the original is deleted. Every
+had pointed straight at the original note would be left dangling once the original is deleted.
+`builtinElements.json`, by contrast, is **not** an `AddonData:` target — it's a plain
+`builtinElementsNote` relation, so TAM overwrites its content on every update like any other addon
+note. That's the whole point of splitting it out: shipping a new built-in search/filter/sort/prefix/
+color in a future `agenda@beatlink` version now reaches already-installed users automatically (merged
+in by `loadData`), instead of being silently dropped because the persisted data note is frozen. Every
 widget resolves its other relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
 `agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `elementLibraryNote`) once on mount and
 passes the resolved ids/constants down to whichever shared library functions it calls — none of those

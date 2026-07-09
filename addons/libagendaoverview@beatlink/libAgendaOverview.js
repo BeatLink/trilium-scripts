@@ -41,10 +41,25 @@ function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
 // tests against is itself a named, shared element — a filter, a prefix
 // interval, and a color interval that all mean "overdue" reference the same
 // `dateRules` entry instead of each retyping the same tuple independently.
-// All of it — every registry plus every profile — lives in a single JSON
-// note (see agendaData.json), read/written as one document.
+//
+// The built-in registry entries the addon ships (`builtin: true`) live in a
+// separate, non-persisted note (builtinElementsNote) that TAM overwrites on
+// every update like any other addon note — this is what lets new built-ins
+// reach existing installs. The persisted data note (dataNoteId) holds only
+// the user's own deltas: added elements, edits to a built-in (keyed by the
+// same elementId, shadowing the shipped version), `removedBuiltinIds` for any
+// built-in the user deleted, and every profile. `loadData` merges the two;
+// `saveData` diffs the caller's edited view back down to just the delta
+// before persisting, so an untouched built-in never gets baked into the
+// persisted note and blocks future updates.
 
-const EMPTY_DATA = { searches: {}, filters: {}, dateRules: {}, sorts: {}, prefixes: {}, colors: {}, profiles: {} }
+const CATEGORIES = ["searches", "dateRules", "filters", "sorts", "prefixes", "colors"]
+
+const EMPTY_DATA = {
+    searches: {}, filters: {}, dateRules: {}, sorts: {}, prefixes: {}, colors: {},
+    removedBuiltinIds: { searches: [], dateRules: [], filters: [], sorts: [], prefixes: [], colors: [] },
+    profiles: {}
+}
 
 // Older installs' data note held exactly one profile's fields at the
 // top level (name/parentNoteId/searchGroups/...), with every search/filter
@@ -148,30 +163,104 @@ function migrateInlineDateRules(data) {
     return data
 }
 
-async function loadData(dataNoteId) {
-    const note = await api.getNote(dataNoteId)
-    const raw = JSON.parse((await note.getContent()) || "{}")
-    let migrated = migrateLegacyData(raw)
-    migrated = migrateInlineDateRules(migrated)
-    if (migrated !== raw) await saveData(dataNoteId, migrated)
-    return { ...EMPTY_DATA, ...migrated }
+async function loadBuiltinElements(builtinElementsNoteId) {
+    if (!builtinElementsNoteId) return {}
+    const note = await api.getNote(builtinElementsNoteId)
+    return JSON.parse((await note.getContent()) || "{}")
 }
 
-async function saveData(dataNoteId, data){
+// Splits an edited *effective* (shipped-merged-with-persisted) registry view
+// back down into: the delta worth persisting (anything absent from, or
+// different than, the shipped defaults — i.e. user additions and edits) and
+// the set of shipped built-in ids no longer present (i.e. the user deleted
+// them). Used both by saveData on every write and, once, by
+// migrateBuiltinSplit to carve up an old install's fully-inlined data.
+function diffFromBuiltins(shipped, effective) {
+    const persisted = {}
+    const removedBuiltinIds = {}
+    for (const category of CATEGORIES) {
+        persisted[category] = {}
+        removedBuiltinIds[category] = []
+        const shippedCategory = shipped[category] || {}
+        for (const [elementId, element] of Object.entries(effective[category] || {})) {
+            const shippedElement = shippedCategory[elementId]
+            if (!shippedElement || JSON.stringify(shippedElement) !== JSON.stringify(element)) {
+                persisted[category][elementId] = element
+            }
+        }
+        for (const elementId of Object.keys(shippedCategory)) {
+            if (!(elementId in (effective[category] || {}))) {
+                removedBuiltinIds[category].push(elementId)
+            }
+        }
+    }
+    return { persisted, removedBuiltinIds }
+}
+
+function mergeRegistries(shipped, persisted, removedBuiltinIds) {
+    const merged = {}
+    for (const category of CATEGORIES) {
+        merged[category] = {}
+        const removed = (removedBuiltinIds && removedBuiltinIds[category]) || []
+        for (const [elementId, element] of Object.entries(shipped[category] || {})) {
+            if (!removed.includes(elementId)) merged[category][elementId] = element
+        }
+        Object.assign(merged[category], persisted[category] || {})
+    }
+    return merged
+}
+
+// One-time migration for installs from before builtinElementsNote existed:
+// their persisted note holds every built-in inlined alongside user data.
+// Reuses diffFromBuiltins against the now-shipped defaults to strip anything
+// unchanged (it'll come back for free via the merge in loadData), keep any
+// user edits/additions as a delta, and record deletions.
+function migrateBuiltinSplit(data, shipped) {
+    if (data.removedBuiltinIds) return data
+    const { persisted, removedBuiltinIds } = diffFromBuiltins(shipped, { ...EMPTY_DATA, ...data })
+    return { ...persisted, profiles: data.profiles || {}, removedBuiltinIds }
+}
+
+async function loadRawData(dataNoteId) {
+    const note = await api.getNote(dataNoteId)
+    return JSON.parse((await note.getContent()) || "{}")
+}
+
+async function saveRawData(dataNoteId, data){
     await api.runOnBackend((dataNoteId, data) => {
         api.getNote(dataNoteId).setJsonContent(data)
     }, [dataNoteId, data]);
 }
 
-async function getAllProfiles({ dataNoteId, profileIds }) {
-    const data = await loadData(dataNoteId)
-    return profileIds
-        .filter(id => data.profiles[id])
-        .map(id => ({ id, dataNoteId, ...data.profiles[id] }))
+async function loadData(dataNoteId, builtinElementsNoteId) {
+    const raw = await loadRawData(dataNoteId)
+    let migrated = migrateLegacyData(raw)
+    migrated = migrateInlineDateRules(migrated)
+
+    const shipped = await loadBuiltinElements(builtinElementsNoteId)
+    migrated = migrateBuiltinSplit(migrated, shipped)
+
+    if (migrated !== raw) await saveRawData(dataNoteId, migrated)
+
+    const merged = mergeRegistries(shipped, migrated, migrated.removedBuiltinIds)
+    return { ...EMPTY_DATA, ...migrated, ...merged }
 }
 
-async function getMatchingProfile({ dataNoteId, profileIds }, overviewNoteId) {
-    for (let profile of await getAllProfiles({ dataNoteId, profileIds })){
+async function saveData(dataNoteId, builtinElementsNoteId, effectiveData){
+    const shipped = await loadBuiltinElements(builtinElementsNoteId)
+    const { persisted, removedBuiltinIds } = diffFromBuiltins(shipped, effectiveData)
+    await saveRawData(dataNoteId, { ...persisted, profiles: effectiveData.profiles || {}, removedBuiltinIds })
+}
+
+async function getAllProfiles({ dataNoteId, builtinElementsNoteId, profileIds }) {
+    const data = await loadData(dataNoteId, builtinElementsNoteId)
+    return profileIds
+        .filter(id => data.profiles[id])
+        .map(id => ({ id, dataNoteId, builtinElementsNoteId, ...data.profiles[id] }))
+}
+
+async function getMatchingProfile({ dataNoteId, builtinElementsNoteId, profileIds }, overviewNoteId) {
+    for (let profile of await getAllProfiles({ dataNoteId, builtinElementsNoteId, profileIds })){
         if (profile["parentNoteId"] == overviewNoteId){
             return profile
         }
@@ -179,10 +268,10 @@ async function getMatchingProfile({ dataNoteId, profileIds }, overviewNoteId) {
 }
 
 async function saveProfile(profile){
-    const data = await loadData(profile.dataNoteId)
-    const { id, dataNoteId, ...profileFields } = profile
+    const { id, dataNoteId, builtinElementsNoteId, ...profileFields } = profile
+    const data = await loadData(dataNoteId, builtinElementsNoteId)
     data.profiles[id] = profileFields
-    await saveData(dataNoteId, data)
+    await saveData(dataNoteId, builtinElementsNoteId, data)
 }
 
 async function deleteChildBranches(parentNoteId){
@@ -340,7 +429,7 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 async function updateTaskLists(profileContext, constants, icalNoteId) {
-    const data = await loadData(profileContext.dataNoteId)
+    const data = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
     let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
         //await deleteChildBranches(profile.parentNoteId)
@@ -355,7 +444,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
 }
 
 async function getTaskList(profileContext) {
-    const data = await loadData(profileContext.dataNoteId)
+    const data = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
     let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)){
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)

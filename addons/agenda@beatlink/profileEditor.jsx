@@ -20,10 +20,15 @@ export default function ProfileEditor() {
             const { constants, profileContext } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
             const profileId = profileContext.profileIds[0]
-            const data = await loadData(profileContext.dataNoteId)
+            const data = await loadData(profileContext.dataNoteId, profileContext.builtinElementsNoteId)
             setIds({ constants, profileContext, profileId, icalNoteId })
             setRegistry(data)
-            setProfile({ id: profileId, dataNoteId: profileContext.dataNoteId, ...data.profiles[profileId] })
+            setProfile({
+                id: profileId,
+                dataNoteId: profileContext.dataNoteId,
+                builtinElementsNoteId: profileContext.builtinElementsNoteId,
+                ...data.profiles[profileId]
+            })
         })()
     }, [])
 
@@ -36,7 +41,7 @@ export default function ProfileEditor() {
         try {
             await saveProfile(profile)
             await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
-            setRegistry(await loadData(ids.profileContext.dataNoteId))
+            setRegistry(await loadData(ids.profileContext.dataNoteId, ids.profileContext.builtinElementsNoteId))
             setSaveStatus("saved")
         } catch (err) {
             setSaveStatus("failed")

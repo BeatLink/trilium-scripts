@@ -18,18 +18,51 @@ string inline; that logic now lives in one place, shared with
 Like [libagendatask@beatlink](../libagendatask@beatlink/), this library doesn't resolve its own
 relations or import a shared constants module — the caller supplies:
 
-- **`profileContext`** — `{ dataNoteId, profileIds }`. `dataNoteId` is the single JSON note holding
-  every element registry plus every profile (however the caller resolves it — see
-  [agenda@beatlink](../agenda@beatlink/)'s use of an `AddonData:profile` relation, indirected through
-  its own settings note so the relation survives persistence). `profileIds` is an array of keys into
-  `data.profiles`.
+- **`profileContext`** — `{ dataNoteId, builtinElementsNoteId, profileIds }`. `dataNoteId` is the
+  persisted JSON note holding the user's own element additions/edits/deletions plus every profile
+  (however the caller resolves it — see [agenda@beatlink](../agenda@beatlink/)'s use of an
+  `AddonData:profile` relation, indirected through its own settings note so the relation survives
+  persistence). `builtinElementsNoteId` is a plain (non-`AddonData:`) note holding the addon's shipped
+  built-in elements, overwritten like any other note on every update — `loadData` merges the two so a
+  future built-in addition reaches existing installs without touching the user's own data.
+  `profileIds` is an array of keys into `data.profiles`.
 - **`constants`** — the same label-name object described in
   [libagendatask@beatlink's README](../libagendatask@beatlink/README.md#constants-injection) (this
   library and the `libAgendaTask.js` calls it makes both read from it).
 - **`icalNoteId`** — the note id of the `.ical`-mime file note to write the generated calendar feed
   to.
 
+## Built-in vs. persisted data
+
+Every element registry (`searches`, `dateRules`, `filters`, `sorts`, `prefixes`, `colors`) is split
+across two notes:
+
+- **`builtinElementsNoteId`** — the addon's own shipped built-ins (`builtin: true`), overwritten on
+  every TAM update like any other note.
+- **`dataNoteId`** — the persisted note (an `AddonData:` target, never overwritten). It holds only
+  what the built-in note doesn't already cover: user-added elements, user edits to a built-in (same
+  `elementId`, shadowing the shipped version), a `removedBuiltinIds` set per category recording any
+  built-in the user deleted, and every profile.
+
+`loadData` merges the two into one effective view: shipped built-ins not in `removedBuiltinIds`, then
+persisted entries layered on top (so an edited built-in or a user addition wins). `saveData` does the
+reverse — given that same effective view (as edited by the Element Library or a profile save), it
+diffs each category against the shipped defaults and only persists entries that differ or are new,
+plus the ids of any built-in no longer present. This is what lets a future `agenda@beatlink` release
+add new built-in searches/filters/sorts/prefixes/colors and have them show up for existing installs:
+they're never baked into the frozen persisted note in the first place, so there's nothing to update
+there — they just appear from `builtinElementsNoteId` on the next merge.
+
+An install from before this split existed has every built-in inlined directly into its persisted
+note; `loadData` detects that (no `removedBuiltinIds` key) and migrates it in place the first time
+it's loaded after updating, using the same diff-against-shipped-defaults logic to strip anything
+unchanged (redundant now that it comes from `builtinElementsNoteId`) while keeping any user edits/
+additions and recording any deletions.
+
 ## Data note shape
+
+Shape of the *persisted* data note (`dataNoteId`) — `builtinElementsNoteId` holds the same top-level
+categories (minus `removedBuiltinIds` and `profiles`), just with only the shipped built-ins:
 
 ```json
 {
@@ -61,6 +94,9 @@ relations or import a shared constants module — the caller supplies:
             "dateLabel": "<note label name>", "useNumberOfDays": false,
             "intervals": { "<intervalKey>": { "dateRuleId": "<key into dateRules>", "color": "<CSS color>" } }
         }
+    },
+    "removedBuiltinIds": {
+        "searches": ["<elementId>"], "dateRules": [], "filters": [], "sorts": [], "prefixes": [], "colors": []
     },
     "profiles": {
         "<profileId>": {
@@ -110,7 +146,9 @@ insertion order, first match wins.
 Older installs' data note held exactly one profile's fields at the top level, with every
 search/filter rule inlined directly rather than referenced — `loadData` detects that shape (no
 `profiles` key) and migrates it in place, promoting every inlined rule into the appropriate registry
-and rewriting the profile to hold references, the first time it's loaded after an update.
+and rewriting the profile to hold references, the first time it's loaded after an update. A separate,
+later migration (no `removedBuiltinIds` key) splits an install's inlined built-ins out into the
+built-in/persisted-delta shape described above — see "Built-in vs. persisted data".
 
 **Only one profile per `parentNoteId` is supported** — `getMatchingProfile` returns the first profile
 whose `parentNoteId` matches, and `getTaskList` (and everything built on it — due notifications,
@@ -133,25 +171,31 @@ await updateTaskLists(profileContext, constants, icalNoteId)
 
 ## API
 
-### `loadData(dataNoteId)`
+### `loadData(dataNoteId, builtinElementsNoteId)`
 
-Parses the data note's JSON content, migrating it in place (and persisting the migration) if it's
-still in the old single-profile shape. Returns the full `{searches, filters, sorts, prefixes, colors,
-profiles}` document.
+Parses the persisted data note's JSON content, migrating it in place (and persisting the migration)
+if it's still in the old single-profile shape or predates the built-in/persisted-delta split. Merges
+in `builtinElementsNoteId`'s shipped built-ins (skipping any id the user deleted). Returns the full
+effective `{searches, filters, sorts, prefixes, colors, removedBuiltinIds, profiles}` document.
 
-### `saveData(dataNoteId, data)`
+### `saveData(dataNoteId, builtinElementsNoteId, effectiveData)`
 
-Writes the full document back to the data note as JSON.
+Takes an edited effective document (same shape `loadData` returns) and diffs each registry category
+against `builtinElementsNoteId`'s shipped defaults, persisting only entries that are new or differ
+from the shipped version (plus the ids of any deleted built-in) — an untouched built-in is never
+written to the persisted note.
 
 ### `getMatchingProfile(profileContext, overviewNoteId)`
 
-Returns the parsed profile object (with `id`/`dataNoteId` set) whose `parentNoteId` equals
-`overviewNoteId` — used by the overview widget to find its own profile among all of them.
+Returns the parsed profile object (with `id`/`dataNoteId`/`builtinElementsNoteId` set) whose
+`parentNoteId` equals `overviewNoteId` — used by the overview widget to find its own profile among
+all of them.
 
 ### `saveProfile(profile)`
 
 Writes a (possibly edited) profile object — as returned by `getMatchingProfile`/`getAllProfiles`,
-carrying its own `id`/`dataNoteId` — back into the data note's `profiles` map.
+carrying its own `id`/`dataNoteId`/`builtinElementsNoteId` — back into the data note's `profiles`
+map.
 
 ### `updateTaskLists(profileContext, constants, icalNoteId)`
 

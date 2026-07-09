@@ -1,11 +1,11 @@
 {
     "id": "libagendaoverview@beatlink",
     "name": "Agenda Overview",
-    "description": "Search/filter/sort/prefix/color engine for an agenda/task-management system: resolves a profileContext ({dataNoteId, profileIds}) against a single consolidated JSON note (shared search/filter/sort/prefix/color element registries plus one or more named profiles that reference them) into a filtered, sorted, re-filed list of task notes, and exports due tasks as an iCal feed. The data note id, label-name constants, and the iCal note id are all injected by the caller rather than resolved from relations on the library's own note.",
+    "description": "Search/filter/sort/prefix/color engine for an agenda/task-management system: resolves a profileContext ({dataNoteId, builtinElementsNoteId, profileIds}) against a persisted JSON note holding the user's own element additions/edits/deletions and profiles, merged at read time with a separately-shipped built-in element registry (searches/filters/sorts/prefixes/colors) so addon updates can add new built-ins without clobbering user customizations, into a filtered, sorted, re-filed list of task notes, and exports due tasks as an iCal feed. The data note id, built-in elements note id, label-name constants, and the iCal note id are all injected by the caller rather than resolved from relations on the library's own note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendaoverview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.3.0",
+    "latestVersion": "1.4.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libagendaoverview@beatlink/_tam_manifest_.json",

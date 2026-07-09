@@ -379,6 +379,7 @@ const CATEGORIES = [
 
 export default function ElementLibrary() {
     const [dataNoteId, setDataNoteId] = useState(null)
+    const [builtinElementsNoteId, setBuiltinElementsNoteId] = useState(null)
     const [data, setData] = useState(null)
     const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].key)
 
@@ -387,15 +388,17 @@ export default function ElementLibrary() {
             const settingsNoteId = await startNote.getRelationValue("settingsNote")
             const settingsNote = await api.getNote(settingsNoteId)
             const id = settingsNote.getRelationValue("AddonData:profile")
+            const builtinId = settingsNote.getRelationValue("builtinElementsNote")
             setDataNoteId(id)
-            setData(await loadData(id))
+            setBuiltinElementsNoteId(builtinId)
+            setData(await loadData(id, builtinId))
         })()
     }, [])
 
     function update(category, value) {
         const newData = { ...data, [category]: value }
         setData(newData)
-        saveData(dataNoteId, newData)
+        saveData(dataNoteId, builtinElementsNoteId, newData)
     }
 
     if (!data) return <div>Loading...</div>
