@@ -76,7 +76,13 @@ export async function loadSettings(schemaNoteId, configNoteId) {
     return loadValues(schema, configNoteId)
 }
 
-function Field({ def, value, onChange }) {
+// `registries` is the full top-level values object (every schema key's
+// current value, keyed the same as the schema) — threaded down through
+// every Field/ListTable/RegistryTree call so a `reference` field anywhere
+// (including inside a nested itemSchema) can resolve `def.registry` against
+// a sibling top-level `registry`/`list` field's current entries, regardless
+// of how deep it's nested.
+function Field({ def, value, onChange, registries }) {
     switch (def.type) {
         case "boolean":
             return <FormCheckbox label={def.label} currentValue={value} onChange={onChange} />
@@ -100,9 +106,21 @@ function Field({ def, value, onChange }) {
                 />
             )
         case "list":
-            return <ListTable itemSchema={def.itemSchema} items={value || []} onChange={onChange} />
+            return <ListTable itemSchema={def.itemSchema} items={value || []} onChange={onChange} registries={registries} />
         case "registry":
-            return <RegistryTree itemSchema={def.itemSchema} items={value || {}} onChange={onChange} />
+            return <RegistryTree itemSchema={def.itemSchema} items={value || {}} onChange={onChange} registries={registries} />
+        case "reference": {
+            const entries = Object.entries(registries?.[def.registry] || {})
+            const options = entries.map(([id, item]) => ({ key: id, title: item?.name ?? id }))
+            return (
+                <FormDropdownList
+                    currentValue={value}
+                    values={options}
+                    keyProperty="key" titleProperty="title"
+                    onChange={onChange}
+                />
+            )
+        }
         case "color":
             return <ColorPicker currentValue={value} onChange={onChange} />
         default:
@@ -110,10 +128,28 @@ function Field({ def, value, onChange }) {
     }
 }
 
+// A field only applies to an item whose sibling values match its own
+// `showWhen` condition (e.g. `{"type": "dayjs"}`, or `{"type": ["dayjs", "search"]}`
+// for more than one matching value) — this is what lets one itemSchema
+// describe a polymorphic item (a filter that's either a search query or a
+// date comparison, a variant that's either by-label or by-date) instead of
+// needing every field to always apply. A field with no `showWhen` always
+// applies, same as before this existed.
+function matchesShowWhen(def, item) {
+    if (!def.showWhen) return true
+    return Object.entries(def.showWhen).every(([key, expected]) => {
+        const actual = item?.[key]
+        return Array.isArray(expected) ? expected.includes(actual) : actual === expected
+    })
+}
+
 // One row per item, one column per itemSchema key, plus a fixed actions
 // column (move/remove) and an Add button that seeds a blank item from
 // defaults — a real <table> rather than a stack of always-expanded cards.
-function ListTable({ itemSchema, items, onChange }) {
+// A column whose `showWhen` doesn't match a given row renders as a blank
+// cell rather than being omitted — the column (and its header) still exists
+// for every other row where it does apply.
+function ListTable({ itemSchema, items, onChange, registries }) {
     const columns = Object.entries(itemSchema)
 
     function updateItem(index, key, value) {
@@ -154,7 +190,9 @@ function ListTable({ itemSchema, items, onChange }) {
                     <tr key={index}>
                         {columns.map(([key, def]) => (
                             <td key={key}>
-                                <Field def={def} value={item[key]} onChange={v => updateItem(index, key, v)} />
+                                {matchesShowWhen(def, item) && (
+                                    <Field def={def} value={item[key]} onChange={v => updateItem(index, key, v)} registries={registries} />
+                                )}
                             </td>
                         ))}
                         <td class="lst-table-actions-cell">
@@ -183,13 +221,16 @@ function generateRegistryId() {
 // Same shape as ListTable but keyed by id (`{ [id]: item }`) rather than a
 // positional array, and rendered as a stack of collapsible cards instead of
 // table rows — one labeled field row per itemSchema key inside each card,
-// via the same `Field` dispatch every other entry uses. A registry entry's
-// collapsed label prefers an itemSchema field literally named `name`
-// (matching the convention every consumer's item schema already uses for
-// its display name); otherwise it falls back to the first field's value.
+// via the same `Field` dispatch every other entry uses (including passing
+// `registries` through, so a nested `reference` field can resolve another
+// top-level registry's current entries). A registry entry's collapsed label
+// prefers an itemSchema field literally named `name` (matching the
+// convention every consumer's item schema already uses for its display
+// name — also what a `reference` field pointing at this registry shows in
+// its own dropdown); otherwise it falls back to the first field's value.
 // Expand/collapse state is local-only (not persisted) — a pure editing
 // convenience, not data every reader of the settings needs to agree on.
-function RegistryTree({ itemSchema, items, onChange }) {
+function RegistryTree({ itemSchema, items, onChange, registries }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
     const firstKey = Object.keys(itemSchema)[0]
@@ -251,13 +292,14 @@ function RegistryTree({ itemSchema, items, onChange }) {
                         <summary>{labelFor(item)}</summary>
                         <div class="lst-tree-item-body">
                             <div class="lst-tree-item-fields">
-                                {Object.entries(itemSchema).map(([fieldKey, def]) => (
+                                {Object.entries(itemSchema).map(([fieldKey, def]) => matchesShowWhen(def, item) && (
                                     <div class="lst-field-row" key={fieldKey} title={def.description || undefined}>
                                         <label>{def.label}</label>
                                         <Field
                                             def={def}
                                             value={item[fieldKey]}
                                             onChange={v => updateItem(key, { ...item, [fieldKey]: v })}
+                                            registries={registries}
                                         />
                                     </div>
                                 ))}
@@ -346,7 +388,7 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
             <div class={isGroup ? undefined : "lst-field"} key={key}>
                 {showHeading && <h4>{def.label}</h4>}
                 {def.description && <label class="lst-field-description">{def.description}</label>}
-                <Field def={def} value={values[key]} onChange={v => setValues({ ...values, [key]: v })} />
+                <Field def={def} value={values[key]} onChange={v => setValues({ ...values, [key]: v })} registries={values} />
             </div>
         )
     }

@@ -28,13 +28,15 @@ library's — schema lives with the addon that defines it):
 
 | Field         | Required | Description                                              |
 |---------------|----------|------------------------------------------------------------|
-| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, `list`, or `registry` |
+| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, `list`, `registry`, or `reference` |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
-| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`, `{}` for `registry`) |
+| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`, `{}` for `registry`, `""` for `reference`) |
 | `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
 | `itemSchema`  | `list`/`registry` only | A nested schema object (same shape as above) describing the fields of each entry |
+| `registry`    | `reference` only | The sibling top-level schema key (must be a `registry` field) this field picks an entry from |
 | `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
+| `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
 first read, so there's nothing to duplicate between the two files.
@@ -94,6 +96,60 @@ each card's summary is its `name` field if `itemSchema` declares one, otherwise 
 value, and its body is one labeled field row per `itemSchema` key. Reasonable to use for the same
 cases as `list` when entries get numerous/verbose enough that a wide table becomes hard to scan, or
 whenever you know something else needs to reference an entry by a stable id.
+
+### Polymorphic items — a `list`/`registry` entry whose fields depend on its own type
+
+An `itemSchema` field can declare `showWhen` to say it only applies to an item whose sibling
+field(s) currently match — this is what lets one `itemSchema` describe an item that's really one of
+several shapes (e.g. a filter that's either a plain search query or a date comparison), rather than
+needing a separate `list`/`registry` per shape:
+
+```json
+{
+    "filters": {
+        "type": "registry",
+        "label": "Filters",
+        "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Filter"},
+            "type": {
+                "type": "select", "label": "Type", "default": "search",
+                "options": [
+                    {"value": "search", "label": "Search Query"},
+                    {"value": "dayjs", "label": "Date Comparison"}
+                ]
+            },
+            "rule": {"type": "string", "label": "Search Rule", "default": "", "showWhen": {"type": "search"}},
+            "dateRuleId": {"type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "", "showWhen": {"type": "dayjs"}}
+        }
+    }
+}
+```
+
+The discriminator (`type` above) is just a plain `select` field — nothing marks it as special; every
+other field in the same `itemSchema` that carries `showWhen` is simply hidden (not rendered at all in
+`RegistryTree`, rendered as a blank cell in `ListTable` so the table shape stays fixed) whenever the
+item's current values don't match. A hidden field's stored value is left alone rather than cleared —
+switching `type` back and forth doesn't lose whatever was typed into the other branch. `showWhen` is a
+purely presentational filter: `mergeDefaults`/`filterBySchema` don't evaluate it at all, since every
+`itemSchema` field always exists as a key on every item regardless of which branch currently applies.
+
+### Cross-registry references — a field that picks an entry from another registry
+
+`dateRuleId` above is a `reference` field: `"registry": "dateRules"` names a *sibling top-level
+schema key* (elsewhere in the same schema, must itself be `type: "registry"`), and the field renders
+as a dropdown of that registry's current entries — same picker either way, whether the reference
+lives at the top level or, as here, nested inside another registry's `itemSchema`. An entry's dropdown
+title is its own `name` field (falling back to its raw id if it doesn't have one), matching
+`RegistryTree`'s own card-label convention — so a `dateRules` registry entry named "Overdue" shows up
+as "Overdue" in every `dateRuleId` dropdown that references it, and renaming it there updates every
+reference's display immediately, since the reference only ever stores the id.
+
+This is what lets several registries share one underlying comparison (a filter *and* a prefix/color
+interval both testing "overdue" against the same `dateRules` entry) instead of each embedding its own
+copy — the motivating case this type exists for. `reference` doesn't validate that the stored id still
+exists in the target registry (an entry can be deleted out from under a reference); a dangling
+reference just renders as an empty dropdown selection.
 
 ### Tabs
 
@@ -179,9 +235,10 @@ export default function MySettings() {
 
 Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
 entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
-picker, `color` → swatch picker, `list` → repeatable table of the above, `registry` → id-keyed stack
-of collapsible cards of the above), and owns its own Save button and save-status flash. Place it
-anywhere in your own widget — it doesn't dictate page layout, only the fields.
+picker, `color` → swatch picker, `reference` → dropdown of another registry's entries, `list` →
+repeatable table of the above, `registry` → id-keyed stack of collapsible cards of the above), and
+owns its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't
+dictate page layout, only the fields.
 
 `color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
 dependency of this library, not something a consumer needs to declare directly.
