@@ -25,6 +25,11 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     const [pendingPrompts, setPendingPrompts] = useState([])
     const [promptAddonId, setPromptAddonId] = useState(null)
     const [promptQueue, setPromptQueue] = useState([])
+    // Extra detail a handler can surface alongside its generic command label
+    // while it's running — currently just update-all's "which addon, how
+    // far through the queue" (the single dispatched command object doesn't
+    // change across that whole loop, so it can't carry this by itself).
+    const [progressDetail, setProgressDetail] = useState(null)
 
     async function reload() {
         const freshAddons = await libTAMjs.getAllAddons()
@@ -169,11 +174,14 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
             .map(a => a.id)
 
         const queue = []
-        for (const addonId of targets) {
+        for (let i = 0; i < targets.length; i++) {
+            const addonId = targets[i]
+            setProgressDetail(`${addonId} (${i + 1}/${targets.length})`)
             await libTAMjs.syncAddon(addonId)
             const prompts = await libTAMjs.getPendingPrompts(addonId)
             if (prompts.length > 0) queue.push(addonId)
         }
+        setProgressDetail(null)
         await advancePromptQueue(queue)
     }
 
@@ -244,6 +252,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
                 console.error("TAM: command failed", command, e)
                 api.showError(`TAM: ${e.message || e}`)
             }
+            setProgressDetail(null)
             setCommand(null)
         }
         commandHandler()
@@ -252,6 +261,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     return {
         addons, catalogs, catalogBrowse, catalogAddons,
         pendingPrompts, promptAddonId, promptQueue,
+        pendingCommand: command, progressDetail,
         dispatch: setCommand
     }
 }

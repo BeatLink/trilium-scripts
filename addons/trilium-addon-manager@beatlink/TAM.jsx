@@ -13,7 +13,7 @@ import {
     currentNote
 } from "trilium:api"
 
-import { Badge, BackLink, TamButton, TAM_ID } from "TAMShared.jsx"
+import { Badge, BackLink, TamButton, Spinner, commandLabel, TAM_ID } from "TAMShared.jsx"
 import { ListView, CatalogBrowseView } from "TAMListViews.jsx"
 import { AddonDetail, SettingsView } from "TAMDetailAndSettings.jsx"
 import { PromptReview, ExternalReferenceWarning } from "TAMDialogs.jsx"
@@ -32,7 +32,8 @@ export default function RepoManager() {
 
     const {
         addons, catalogs, catalogBrowse, catalogAddons,
-        pendingPrompts, promptAddonId, promptQueue, dispatch
+        pendingPrompts, promptAddonId, promptQueue,
+        pendingCommand, progressDetail, dispatch
     } = useTamCommands(resolveDisplayNote, { setExternalRefWarning, setView, setValidationTitle, setValidationIssues })
 
     // Trigger loading of addons on page load.
@@ -218,9 +219,20 @@ export default function RepoManager() {
         )
     }
 
+    // browse-catalog already shows its own inline Spinner in CatalogBrowseView —
+    // the blocking overlay is for everything else, where nothing on screen
+    // otherwise indicates a long-running mutation is in flight.
+    const showProgressOverlay = pendingCommand && pendingCommand.command !== "browse-catalog"
+
     return (
         <div className="TAM-body">
             <header>{headerContent}</header>
+            {showProgressOverlay && (
+                <div className="TAM-progress-overlay">
+                    <Spinner />
+                    <p>{progressDetail || commandLabel(pendingCommand)}…</p>
+                </div>
+            )}
             <main>
                 {validationIssues !== null && (
                     <div className="TAM-validation-results">

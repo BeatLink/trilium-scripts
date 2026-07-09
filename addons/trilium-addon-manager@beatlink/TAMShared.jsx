@@ -45,6 +45,36 @@ function Spinner() {
     return <div className="TAM-spinner" />
 }
 
+const COMMAND_LABELS = {
+    "load-addons": "Loading addons",
+    "add-catalog": "Adding catalog",
+    "delete-catalog": "Removing catalog",
+    "browse-catalog": "Loading catalog",
+    "visit-catalog-website": "Opening website",
+    "install-addon": "Installing addon",
+    "install-by-url": "Installing addon",
+    "request-uninstall": "Checking for external references",
+    "delete-addon": "Uninstalling addon",
+    "update-addon": "Updating addon",
+    "resolve-prompts": "Applying update",
+    "update-all": "Updating all addons",
+    "enable-addon": "Updating addon",
+    "check-updates": "Checking for updates",
+    "validate-database": "Validating database",
+    "cleanup-persistence": "Cleaning up persisted data",
+    "sweep-orphans": "Sweeping orphaned notes",
+    "reinitialize-database": "Reinitializing database"
+}
+
+// Turns the dispatched command object into a short human label for the
+// progress overlay — falls back to the raw command name for anything not
+// in the map (new commands don't need a matching entry to be safe).
+function commandLabel(command) {
+    if (!command) return ""
+    const base = COMMAND_LABELS[command.command] || command.command
+    return command.addon ? `${base}: ${command.addon}` : base
+}
+
 function computeStats(addons, catalogs) {
     let installedCount = 0, persistedCount = 0, updateCount = 0
     for (const addonData of Object.values(addons)) {
@@ -129,6 +159,7 @@ module.exports = {
     TamButton,
     BackLink,
     Spinner,
+    commandLabel,
     computeStats,
     SearchFilterToolbar,
     useAddonFilter
