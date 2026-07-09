@@ -28,12 +28,13 @@ library's — schema lives with the addon that defines it):
 
 | Field         | Required | Description                                              |
 |---------------|----------|------------------------------------------------------------|
-| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, or `list` |
+| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, `list`, or `registry` |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
-| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`) |
+| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`, `{}` for `registry`) |
 | `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
-| `itemSchema`  | `list` only | A nested schema object (same shape as above) describing the fields of each list entry |
+| `itemSchema`  | `list`/`registry` only | A nested schema object (same shape as above) describing the fields of each entry |
+| `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
 first read, so there's nothing to duplicate between the two files.
@@ -63,11 +64,57 @@ way at any depth `mergeDefaults`/`filterBySchema` are applied in both
 
 In the generated form, `SettingsForm` renders this as a real `<table>` — one row per entry, one
 column per `itemSchema` field, plus a fixed actions column (move-up/move-down/remove) — with an
-"Add" button that seeds a new row from `itemSchema`'s defaults. If the schema has more than one
-group (a `list` field alongside plain fields, or more than one `list` field), each group becomes its
-own top-level tab — a "General" tab for the plain fields, one tab per `list` field — shown one page
-at a time; a schema with only one group (the common case) skips the tab bar entirely. See
+"Add" button that seeds a new row from `itemSchema`'s defaults. See
 [`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
+
+### `registry` fields — id-keyed collections of settings
+
+Same idea as `list`, but keyed by an opaque generated id (`{ [id]: item }`) instead of a positional
+array, for the case where other data needs to reference a specific entry stably by id rather than by
+array position (e.g. a second `registry`/`list` field's item pointing back at "which entry of this
+other registry" — that reference would break silently on reorder if entries were addressed by index).
+Validated/defaulted against `itemSchema` the same recursive way as `list`.
+
+```json
+{
+    "dateRules": {
+        "type": "registry",
+        "label": "Date Rules",
+        "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Date Rule"},
+            "days": {"type": "number", "label": "Days", "default": 0}
+        }
+    }
+}
+```
+
+`SettingsForm` renders this as a stack of collapsible cards (one per entry) instead of a table row —
+each card's summary is its `name` field if `itemSchema` declares one, otherwise its first field's
+value, and its body is one labeled field row per `itemSchema` key. Reasonable to use for the same
+cases as `list` when entries get numerous/verbose enough that a wide table becomes hard to scan, or
+whenever you know something else needs to reference an entry by a stable id.
+
+### Tabs
+
+Every field lands on a tab: an explicit `"tab": "Some Label"` string on the field's own definition, if
+present; otherwise a `list`/`registry` field defaults to its own tab (labeled by its own `label`,
+the original/default behavior), and every other field defaults to `"General"`. Fields are grouped by
+resolved tab label in schema-declaration order; when the result is more than one tab, they render as
+top-level tabs — one page at a time — with a field's own `<h4>` heading suppressed only when it's the
+sole content of its tab (its label already matches the tab button, so repeating it would be
+redundant). A schema that resolves to a single tab (the common case: a handful of scalar fields, or
+just one `list`/`registry`) skips the tab bar entirely. Use explicit `tab` to combine multiple
+fields — including more than one `list`/`registry`, or a mix of scalar and `list`/`registry` fields —
+onto one named tab instead of each getting its own:
+
+```json
+{
+    "parentNoteId": {"type": "note", "label": "File Tasks Under", "default": "", "tab": "Profile"},
+    "searches": {"type": "registry", "label": "Searches", "default": {}, "itemSchema": {...}, "tab": "Searches"},
+    "searchGroups": {"type": "registry", "label": "Search Groups", "default": {}, "itemSchema": {...}, "tab": "Searches"}
+}
+```
 
 ## Backend usage
 
@@ -132,9 +179,9 @@ export default function MySettings() {
 
 Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
 entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
-picker, `color` → swatch picker, `list` → repeatable group of the above), and owns its own Save
-button and save-status flash. Place it anywhere in your own widget — it doesn't dictate page layout,
-only the fields.
+picker, `color` → swatch picker, `list` → repeatable table of the above, `registry` → id-keyed stack
+of collapsible cards of the above), and owns its own Save button and save-status flash. Place it
+anywhere in your own widget — it doesn't dictate page layout, only the fields.
 
 `color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
 dependency of this library, not something a consumer needs to declare directly.

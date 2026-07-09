@@ -1,12 +1,21 @@
 // Schema-driven settings engine for backend (customRequestHandler) scripts.
 // Stateless: callers pass in the noteIds of their own schema.json and config.json notes.
 
+function isPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
 function mergeDefaults(schema, stored) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
         if (def.type === "list") {
             const storedList = Array.isArray(stored?.[key]) ? stored[key] : (def.default ?? [])
             values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item))
+        } else if (def.type === "registry") {
+            const storedRegistry = isPlainObject(stored?.[key]) ? stored[key] : (def.default ?? {})
+            values[key] = Object.fromEntries(
+                Object.entries(storedRegistry).map(([id, item]) => [id, mergeDefaults(def.itemSchema, item)])
+            )
         } else {
             values[key] = (stored && key in stored) ? stored[key] : def.default
         }
@@ -21,6 +30,11 @@ function filterBySchema(schema, values) {
         if (def.type === "list") {
             const list = Array.isArray(values?.[key]) ? values[key] : []
             filtered[key] = list.map(item => filterBySchema(def.itemSchema, item))
+        } else if (def.type === "registry") {
+            const registry = isPlainObject(values?.[key]) ? values[key] : {}
+            filtered[key] = Object.fromEntries(
+                Object.entries(registry).map(([id, item]) => [id, filterBySchema(def.itemSchema, item)])
+            )
         } else {
             filtered[key] = values[key]
         }
