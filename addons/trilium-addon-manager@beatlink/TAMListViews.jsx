@@ -43,7 +43,7 @@ function AddonCard({ addonData, onOpen, onInstall, onUpdate, onEnable, onSetting
                     />
                 </div>
             )}
-            {addonData.installedVersion && (onUpdate && addonData.updateAvailable || onEnable || (onSettings && addonData.settingsNoteId)) && (
+            {addonData.installedVersion && (onUpdate && addonData.updateAvailable || onEnable || (onSettings && addonData.settingsNoteId && addonData.enabled)) && (
                 <div className="TAM-card-quick-actions">
                     {onUpdate && addonData.updateAvailable && (
                         <TamButton
@@ -66,7 +66,7 @@ function AddonCard({ addonData, onOpen, onInstall, onUpdate, onEnable, onSetting
                             }}
                         />
                     )}
-                    {onSettings && addonData.settingsNoteId && (
+                    {onSettings && addonData.settingsNoteId && addonData.enabled && (
                         <TamButton
                             className="btn-ghost"
                             icon="bx bx-cog"

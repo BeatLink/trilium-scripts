@@ -49,7 +49,7 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnabl
                             onClick={() => onEnable(addonData.id, !addonData.enabled)}
                         />
                     )}
-                    {addonData.installedVersion && addonData.settingsNoteId && (
+                    {addonData.installedVersion && addonData.settingsNoteId && addonData.enabled && (
                         <TamButton className="btn-ghost" icon="bx bx-cog" text="Addon Settings" onClick={() => activateNote(addonData.settingsNoteId)} />
                     )}
                     {addonData.updateAvailable && (
