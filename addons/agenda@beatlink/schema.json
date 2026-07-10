@@ -53,6 +53,12 @@
         "default": "rank",
         "tab": "Settings"
     },
+    "tableViews": {
+        "type": "json",
+        "hidden": true,
+        "label": "Table Views",
+        "default": {}
+    },
     "profiles": {
         "type": "registry",
         "label": "Profiles",

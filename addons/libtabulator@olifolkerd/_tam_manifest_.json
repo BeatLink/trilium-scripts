@@ -1,0 +1,67 @@
+{
+    "id": "libtabulator@olifolkerd",
+    "name": "Tabulator",
+    "description": "Vendored Tabulator (standalone browser build + stylesheet) — an interactive data-table UI library with column show/hide and sorting, bundled as static resources for TriliumNext widgets to load as a script tag.",
+    "author": "olifolkerd",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libtabulator@olifolkerd",
+    "license": "MIT",
+    "latestVersion": "6.5.2",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libtabulator@olifolkerd/_tam_manifest_.json",
+    "manifest": {
+        "root": "core",
+        "notes": [
+            {
+                "id": "core",
+                "title": "tabulator.min.js",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "tabulator.min.js"
+            },
+            {
+                "id": "style",
+                "title": "tabulator.min.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "tabulator.min.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "core",
+                "child": "style"
+            },
+            {
+                "parent": "core",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "core",
+                "name": "customResourceProvider",
+                "value": "libTabulator.js"
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "dependencies": [],
+        "exports": {
+            "core": "core",
+            "style": "style"
+        },
+        "readmeNote": "readme"
+    }
+}

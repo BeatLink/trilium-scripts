@@ -525,7 +525,11 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
 
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
 
-    const entries = Object.entries(schema)
+    // A `hidden: true` field is still loaded, merged, and persisted like any
+    // other (it stays in `values` and rides every save) — it's just never
+    // rendered into a tab. For state a widget writes programmatically and
+    // wants durable in the config note, without a place in the editor UI.
+    const entries = Object.entries(schema).filter(([, def]) => !def.hidden)
     const tabOrder = []
     const tabEntries = {}
     for (const entry of entries) {

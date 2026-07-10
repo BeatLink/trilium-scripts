@@ -3,17 +3,20 @@ import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { TreeView } from "TreeView.jsx"
 import { KanbanView } from "KanbanView.jsx"
+import { TableView } from "TableView.jsx"
 import { AgendaCalendarView } from "agendaCalendarView.jsx"
 
 const {
     loadData, getAllProfiles, getSortedTaskList,
     getPrefixes, getColors,
-    getGroups, getGroupColumns, setGroupForNote
+    getGroups, getGroupColumns, setGroupForNote,
+    getTableView, saveTableView
 } = require("libAgendaOverview.js")
 
 const VIEW_MODES = [
     { key: "tree", label: "Tree" },
     { key: "kanban", label: "Kanban" },
+    { key: "table", label: "Table" },
     { key: "calendar", label: "Calendar" }
 ]
 
@@ -29,6 +32,7 @@ export default function TaskView() {
     const [prefixDict, setPrefixDict] = useState({})
     const [colorDict, setColorDict] = useState({})
     const [groupDict, setGroupDict] = useState({})
+    const [tableColumnState, setTableColumnState] = useState(null)
 
     // Bumped to force a full data reload. The Overview sidebar writes profile
     // edits (searches/filters/sort/prefix/color) into the shared config note;
@@ -87,8 +91,19 @@ export default function TaskView() {
 
             const groupingInfo = data.groupings[profile.groupings.selected]
             setGroupDict(groupingInfo ? await getGroups(data.dateRules, groupingInfo, list) : {})
+
+            setTableColumnState(await getTableView(ids.profileContext, profileId))
         })()
     }, [ids, data, profileId])
+
+    // Persist a Table View column-visibility/sort change into the shared config
+    // note, keyed by profile. Kept in local state too so the table isn't torn
+    // down and rebuilt on its own edit (the config-note reload triggers a
+    // reloadTick, which re-pulls this via the effect above anyway).
+    async function onTableColumnState(state) {
+        setTableColumnState(state)
+        await saveTableView(ids.profileContext, profileId, state)
+    }
 
     async function onCardMove(noteId, newGroupKey) {
         setGroupDict(g => ({ ...g, [noteId]: newGroupKey }))
@@ -162,6 +177,18 @@ export default function TaskView() {
                         dragEnabled={groupingInfo.type === "label"}
                     />
                 )
+            )}
+
+            {viewMode === "table" && (
+                <TableView
+                    noteIds={noteIds}
+                    titles={titles}
+                    colorDict={colorDict}
+                    constants={ids.constants}
+                    columnState={tableColumnState}
+                    onColumnState={onTableColumnState}
+                    onRowClick={activateNote}
+                />
             )}
 
             {viewMode === "calendar" && (

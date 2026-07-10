@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.5.0",
+    "latestVersion": "2.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -354,6 +354,11 @@
                 "child": "lib"
             },
             {
+                "parent": "task-view",
+                "addon": "libagendatableview@beatlink",
+                "child": "lib"
+            },
+            {
                 "parent": "calendar-view",
                 "addon": "libcalendarwidget@beatlink",
                 "child": "lib"
@@ -536,7 +541,8 @@
             "librankpicker@beatlink",
             "libcalendarwidget@beatlink",
             "libagendatreeview@beatlink",
-            "libagendakanbanview@beatlink"
+            "libagendakanbanview@beatlink",
+            "libagendatableview@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"

@@ -1,0 +1,199 @@
+import { useEffect, useRef, useState } from "trilium:preact"
+
+// Tabulator ships as a browser-only global build with no CommonJS export, so
+// it's loaded as a plain <script> that sets window.Tabulator (its stylesheet
+// rides along as libtabulator@olifolkerd's #appCss note). Mirrors how
+// CalendarWidget.jsx loads FullCalendar.
+const SCRIPT_URL = "custom/libTabulator.js"
+
+let loadPromise = null
+
+// Loads the vendored script exactly once per page, however many TableView
+// instances mount.
+function loadTabulator() {
+    if (!loadPromise) {
+        loadPromise = new Promise((resolve, reject) => {
+            if (window.Tabulator) { resolve(); return }
+            const script = document.createElement("script")
+            script.src = SCRIPT_URL
+            script.onload = resolve
+            script.onerror = () => reject(new Error(`Failed to load ${SCRIPT_URL}`))
+            document.head.appendChild(script)
+        })
+    }
+    return loadPromise
+}
+
+// The full set of columns this view can show, in display order. `field` is the
+// row-data key; `label` maps to a constants.*_LABEL note-label name (or null
+// for the synthetic "title"). Title is pinned visible and non-hideable; the
+// rest are toggled per-profile via Tabulator's built-in header menu. Keep these
+// `field` keys stable — they're the identifiers persisted in a profile's saved
+// column-visibility/sort state.
+const COLUMN_DEFS = [
+    { field: "title", title: "Title", label: null, hideable: false, defaultVisible: true },
+    { field: "start", title: "Start", label: "START_DATETIME_LABEL", hideable: true, defaultVisible: true },
+    { field: "due", title: "Due", label: "DUE_DATETIME_LABEL", hideable: true, defaultVisible: true },
+    { field: "duration", title: "Duration", label: "DURATION_LABEL", hideable: true, defaultVisible: false },
+    { field: "recurrence", title: "Recurrence", label: "RECURRENCE_LABEL", hideable: true, defaultVisible: false },
+    { field: "rank", title: "Rank", label: "RANK_LABEL", hideable: true, defaultVisible: false }
+]
+
+const CHECK = "✓ "
+const BLANK = "  "
+
+// A Tabulator header menu: one toggle entry per hideable column. Passed as each
+// column definition's `headerMenu`, which Tabulator calls every time the menu
+// opens, so `tableRef.current` is populated by then and the check marks reflect
+// live visibility. Bound to a ref rather than the table instance directly since
+// the column definitions are built before the table exists.
+function makeHeaderMenu(tableRef) {
+    return () => {
+        const table = tableRef.current
+        if (!table) return []
+        return COLUMN_DEFS.filter(c => c.hideable).map(col => ({
+            label: (table.getColumn(col.field)?.isVisible() ? CHECK : BLANK) + col.title,
+            action: (e) => {
+                e.stopPropagation()
+                table.getColumn(col.field).toggle()
+            }
+        }))
+    }
+}
+
+// Renders the "Title" cell with a left color dot driven by colorDict.
+function titleFormatter(cell) {
+    const color = cell.getRow().getData().color
+    const text = document.createTextNode(cell.getValue() ?? "")
+    if (!color) {
+        const span = document.createElement("span")
+        span.appendChild(text)
+        return span
+    }
+    const wrap = document.createElement("span")
+    wrap.className = "libagendatableview-title"
+    const dot = document.createElement("span")
+    dot.className = "libagendatableview-dot"
+    dot.style.backgroundColor = color
+    wrap.appendChild(dot)
+    wrap.appendChild(text)
+    return wrap
+}
+
+// Turns a sorted note-id list into Tabulator row objects. Each row carries the
+// note id (as the Tabulator index) plus one cell per column, read from the
+// note's labels; `color` (from colorDict) drives the title-cell accent.
+async function buildRows(noteIds, titles, colorDict, constants) {
+    const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
+    return notes.map(note => {
+        const row = {
+            id: note.noteId,
+            title: titles?.[note.noteId] ?? note.title,
+            color: colorDict?.[note.noteId] || ""
+        }
+        for (const col of COLUMN_DEFS) {
+            if (col.label) row[col.field] = note.getLabelValue(constants[col.label]) || ""
+        }
+        return row
+    })
+}
+
+// Renders a sortable, column-toggleable table over a flat, already-sorted
+// task-note-id list.
+//   - noteIds/titles/colorDict/constants: same shape the other agenda views get
+//   - columnState: persisted { visible: {field: bool}, sort: [{column, dir}] };
+//     null/undefined falls back to each column's defaultVisible and no sort
+//   - onColumnState(state): called when the user toggles a column or re-sorts,
+//     with the new state to persist
+//   - onRowClick(noteId): row activation
+export function TableView({ noteIds, titles, colorDict, constants, columnState, onColumnState, onRowClick }) {
+    const containerRef = useRef(null)
+    const tableRef = useRef(null)
+    const [loaded, setLoaded] = useState(false)
+    const [rows, setRows] = useState(null)
+
+    // Keep the latest callbacks/state in refs so the Tabulator event handlers
+    // (bound once at table-build time) always see current values without
+    // forcing a full table rebuild.
+    const onColumnStateRef = useRef(onColumnState)
+    const onRowClickRef = useRef(onRowClick)
+    const columnStateRef = useRef(columnState)
+    onColumnStateRef.current = onColumnState
+    onRowClickRef.current = onRowClick
+    columnStateRef.current = columnState
+
+    useEffect(() => {
+        let cancelled = false
+        loadTabulator().then(() => { if (!cancelled) setLoaded(true) })
+        return () => { cancelled = true }
+    }, [])
+
+    useEffect(() => {
+        if (!noteIds) { setRows(null); return }
+        let cancelled = false
+        buildRows(noteIds, titles, colorDict, constants).then(r => { if (!cancelled) setRows(r) })
+        return () => { cancelled = true }
+    }, [noteIds, titles, colorDict, constants])
+
+    useEffect(() => {
+        if (!loaded || !containerRef.current || !rows) return
+
+        const state = columnStateRef.current || {}
+        const visible = state.visible || {}
+        const savedSort = Array.isArray(state.sort) ? state.sort : []
+        const headerMenu = makeHeaderMenu(tableRef)
+
+        const columns = COLUMN_DEFS.map(col => {
+            const isVisible = (col.field in visible) ? !!visible[col.field] : col.defaultVisible
+            return {
+                title: col.title,
+                field: col.field,
+                visible: col.hideable ? isVisible : true,
+                headerMenu: col.hideable ? headerMenu : undefined,
+                formatter: col.field === "title" ? titleFormatter : undefined
+            }
+        })
+
+        const table = new window.Tabulator(containerRef.current, {
+            data: rows,
+            index: "id",
+            columns,
+            layout: "fitColumns",
+            initialSort: savedSort
+                .filter(s => COLUMN_DEFS.some(c => c.field === s.column))
+                .map(s => ({ column: s.column, dir: s.dir === "desc" ? "desc" : "asc" }))
+        })
+        tableRef.current = table
+
+        function emitState() {
+            if (!onColumnStateRef.current) return
+            const vis = {}
+            for (const col of COLUMN_DEFS) {
+                if (col.hideable) vis[col.field] = table.getColumn(col.field).isVisible()
+            }
+            const sort = table.getSorters().map(s => ({ column: s.field, dir: s.dir }))
+            onColumnStateRef.current({ visible: vis, sort })
+        }
+
+        table.on("columnVisibilityChanged", emitState)
+        table.on("dataSorted", () => {
+            // dataSorted fires on the initial build too; only persist real user
+            // re-sorts, once the table is up.
+            if (table.initialized) emitState()
+        })
+        table.on("rowClick", (e, row) => {
+            if (onRowClickRef.current) onRowClickRef.current(row.getData().id)
+        })
+
+        return () => {
+            table.destroy()
+            tableRef.current = null
+        }
+    }, [loaded, rows])
+
+    if (!noteIds || noteIds.length === 0) {
+        return <div className="libagendatableview-empty">No tasks.</div>
+    }
+
+    return <div ref={containerRef} className="libagendatableview" />
+}

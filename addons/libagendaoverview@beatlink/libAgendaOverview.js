@@ -417,6 +417,23 @@ async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
     }, [noteId, groupingInfo.label, targetGroupKey])
 }
 
+// Per-profile Table View state (which columns are shown + the sort order) is
+// stored in its own `tableViews` map in the config note, keyed by profile id,
+// rather than as a field on the profile itself — the profile editor's autosave
+// round-trips profiles through reshape/unshapeProfile, which would drop an
+// unrecognised field, so keeping this separate keeps it durable. Shape:
+//   values.tableViews[profileId] = { visible: {field: bool}, sort: [{column, dir}] }
+async function getTableView({ schemaNoteId, configNoteId }, profileId) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    return (values.tableViews || {})[profileId] || null
+}
+
+async function saveTableView({ schemaNoteId, configNoteId }, profileId, state) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    values.tableViews = { ...(values.tableViews || {}), [profileId]: state }
+    await saveSettings(schemaNoteId, configNoteId, values)
+}
+
 async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
     api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
         for (let [index, noteId] of notesList.entries()) {
@@ -570,6 +587,8 @@ module.exports = {
     getColors,
     getGroupColumns,
     setGroupForNote,
+    getTableView,
+    saveTableView,
     sendNotificationForDueTasks,
     rescheduleAllTasks,
     setCalendarEvents
