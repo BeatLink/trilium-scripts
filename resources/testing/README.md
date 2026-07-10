@@ -57,18 +57,64 @@ Re-run `trilium_seed` any time you want to rebuild the snapshot from scratch (e.
 TAM change) — it always starts from a fresh copy of Trilium's own fixture, never from whatever state
 a previous test run left behind.
 
-## What this doesn't cover (yet)
+## Browser-driven testing (Playwright)
 
-This is a headless layer only — it proves "does installing/syncing an addon produce the right note
-tree / database state," via `/api/script/exec` and note import/inspection, not "does the rendered
-widget actually look and behave right in a browser." That would mean a Playwright layer on top, the
-same way Trilium's own `apps/server-e2e` package drives its e2e tests against this exact same kind of
-seeded database — a reasonable future addition, not built here.
+`trilium_client.py`'s `exec_script` only runs **backend**-env script bundles (Trilium's own
+`/api/script/exec` route hardcodes `getScriptBundle(currentNote, true, "backend", ...)` — see its
+docstring). TAM's own UI (`TAM.jsx` et al.) and anything else living in a `env=frontend` note —
+including `require()`-driven module resolution, `fetch()`-based manifest installs, and actual
+button clicks — can only be exercised by a real browser loading Trilium's frontend bundle. That's
+what `browser_client.py` is for:
+
+```python
+import sys
+sys.path.insert(0, "resources/testing")
+import trilium_client as tc
+from browser_client import launch
+
+tam_note = tc.search_notes('#TAMFILEID="trilium-addon-manager@beatlink/root"')["results"][0]["noteId"]
+
+with launch() as page:                 # launches headless Chromium
+    page.goto_note(tam_note)           # navigates to http://127.0.0.1:8090/#root/<noteId>
+    page.enable_render_note()          # dismisses the one-time "untrusted render note" warning
+    page.locator("a:visible", has_text="Settings").first.click()
+    # ...from here `page` is a plain Playwright Page — use its full API.
+```
+
+`shell.nix` provisions everything this needs — `pkgs.python3.withPackages (ps: [... ps.playwright])`
+plus `pkgs.playwright-driver.browsers` (prebuilt Chromium/Firefox/WebKit binaries matching the pinned
+`playwright` package's expected revision) — and the shellHook sets `PLAYWRIGHT_BROWSERS_PATH` /
+`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` so `playwright install` (which tries to download into
+`$HOME/.cache` and fails offline/in a sandbox) is never needed. Works out of the box inside
+`nix develop`/`nix-shell`, no manual setup.
+
+Known frontend-only gotcha: `exec_script`'s "any note works as an anchor" doesn't apply here —
+`page.goto_note` needs `enable_render_note()` once per note before its widget mounts, and elements
+matching by visible text can collide with the note tree's own titles (e.g. a literal note named
+"Settings") — scope locators to `:visible` or a container role instead of bare text matches.
+
+## Known harness/tooling bugs found this way
+
+- **`tam_to_zip.py` silently dropped every clone branch** (same-addon multi-parent notes, and every
+  cross-addon `children[]` dependency wiring) from its ZIP output. Trilium's own ZIP import walks
+  *physical archive entries* — a meta.json `isClone` entry with no backing data file is never visited,
+  so its branch never gets created (confirmed by reading Trilium's own export code, which writes a
+  placeholder file per clone precisely so its own import can find it). Fixed by having `tam_to_zip.py`
+  emit the same placeholder-file-per-clone convention. Before the fix, this even broke TAM's own
+  seeded self-install (`seed.py` uses `tam_to_zip.py` on TAM itself) — its own `TAMListViews.jsx`
+  failed to load with "Could not find module note TAMShared.jsx" because the clone wiring it depends
+  on was silently missing.
+- **In-memory mode (`trilium_server start`, no `--real`)** still fails with `SQLITE_CANTOPEN` — not
+  yet root-caused. Use `--real` (disk-backed) for now and re-run `trilium_seed` afterward to reset the
+  golden snapshot, since `--real` mode persists whatever a test run wrote.
 
 ## Files
 
 - `../../flake.nix` — the `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`,
   `trilium_seed`/`trilium_server` shell functions.
+- `../../shell.nix` — also provisions `playwright` + `playwright-driver.browsers` for the browser layer.
 - `seed.py` — one-time (re-runnable) golden-snapshot bootstrap.
 - `run_server.py` — start/stop the server against that snapshot.
 - `trilium_client.py` — stdlib HTTP client: `exec_script`, `import_zip`, `get_note`, `search_notes`.
+- `browser_client.py` — Playwright wrapper for frontend-only flows: `launch()`, `goto_note`,
+  `enable_render_note`.

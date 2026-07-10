@@ -2,8 +2,9 @@
 
 pkgs.mkShell {
   packages = [
-    (pkgs.python3.withPackages (ps: [ ps.markdown ]))
+    (pkgs.python3.withPackages (ps: [ ps.markdown ps.playwright ]))
     pkgs.gh
+    pkgs.playwright-driver.browsers
   ];
 
   shellHook = ''
@@ -16,6 +17,14 @@ pkgs.mkShell {
     backfill_manifest_source_url() { python3 resources/scripts/backfill_manifest_source_url.py "$@"; }
 
     export -f validate ci generate_pages zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
+
+    # playwright-driver.browsers ships prebuilt browser binaries matching the
+    # exact revision the pinned `playwright` Python package expects -- point
+    # at it directly instead of `playwright install` (which would try to
+    # download into $HOME/.cache and fails offline/in sandboxes), and skip
+    # the host-requirements probe that otherwise complains about a NixOS host.
+    export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+    export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 
     echo ""
     echo "  Trilium Scripts Dev Shell"

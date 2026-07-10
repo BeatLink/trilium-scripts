@@ -223,17 +223,33 @@ def process_manifest(full_manifest, addon_dir, deps_map):
             })
             pos += 10
 
+        # A Trilium ZIP import walks the archive's *physical* file entries — meta.json is only
+        # consulted once a matching path is found (see saveNote() in Trilium's own zip.ts import
+        # service) — so an isClone meta entry with no backing file is simply never visited and its
+        # branch never gets created, no matter how correct its noteId/notePath look. Trilium's own
+        # exporter accounts for this by writing a placeholder file (a stub "this is a clone" note)
+        # for every clone alongside its meta entry; mirror that here with an empty placeholder and
+        # a "dataFileName", or every clone (same-addon multi-parent, and every cross-addon
+        # dependency child) silently fails to attach on import.
+        def clone_entry(note_id, note_path, position):
+            clone_name = unique_base(child_prefix, "clone") + ".html"
+            zip_files.append((child_prefix + clone_name, b""))
+            return {
+                "isClone":      True,
+                "noteId":       note_id,
+                "notePath":     note_path,
+                "notePosition": position,
+                "prefix":       None,
+                "isExpanded":   False,
+                "dataFileName": clone_name,
+            }
+
         child_entries = []
         for i, (child_lid, is_clone_ref) in enumerate(local_children, start=1):
             if is_clone_ref:
-                child_entries.append({
-                    "isClone":      True,
-                    "noteId":       uuid_map[child_lid],
-                    "notePath":     current_path + [uuid_map[child_lid]],
-                    "notePosition": i * 10,
-                    "prefix":       None,
-                    "isExpanded":   False,
-                })
+                child_entries.append(
+                    clone_entry(uuid_map[child_lid], current_path + [uuid_map[child_lid]], i * 10)
+                )
             else:
                 child_entries.append(
                     build_entry(child_lid, i * 10, child_prefix, current_path)
@@ -249,14 +265,7 @@ def process_manifest(full_manifest, addon_dir, deps_map):
                     f"export '{exp_name}' not resolved — skipped"
                 )
                 continue
-            child_entries.append({
-                "isClone":      True,
-                "noteId":       dep_note_id,
-                "notePath":     [dep_note_id],
-                "notePosition": j * 10,
-                "prefix":       None,
-                "isExpanded":   False,
-            })
+            child_entries.append(clone_entry(dep_note_id, [dep_note_id], j * 10))
 
         entry = {
             "isClone":      False,
