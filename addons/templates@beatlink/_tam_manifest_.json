@@ -221,6 +221,16 @@
                 "value": "single"
             },
             {
+                "note": "routine",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "routine",
+                "name": "type",
+                "value": "2-routine"
+            },
+            {
                 "note": "task",
                 "name": "template",
                 "value": ""
@@ -241,6 +251,16 @@
                 "value": "single"
             },
             {
+                "note": "task",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "task",
+                "name": "type",
+                "value": "3-task"
+            },
+            {
                 "note": "future",
                 "name": "template",
                 "value": ""
@@ -259,6 +279,16 @@
                 "note": "future",
                 "name": "label:area",
                 "value": "single"
+            },
+            {
+                "note": "future",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "future",
+                "name": "type",
+                "value": "4-future"
             },
             {
                 "note": "project",
