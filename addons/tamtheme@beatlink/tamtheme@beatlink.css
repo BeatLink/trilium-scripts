@@ -417,6 +417,7 @@ select.form-select,
 select.form-control,
 .select-button.dropdown-toggle.btn {
     /*border: 1.5px solid var(--t-border) !important;*/
+    border-color: var(--t-border-strong) !important;
 }
 
 input:not([type]):hover,
