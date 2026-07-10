@@ -46,7 +46,10 @@ widgets plus a single schema-driven editor page:
    each group you add picks which profile it belongs to.
 3. Open the profile's claimed note (its **File Tasks Under** target in reparent mode, or its **Virtual
    View Note** in virtual mode) — the Overview widget there lets you toggle individual searches/filters
-   and change sort/prefix/color live, without leaving the note.
+   and change sort/prefix/color live, without leaving the note. The widget only appears on a claimed
+   note (it renders nothing elsewhere); when more than one profile exists, a **Profile** dropdown at
+   the top lets you switch which profile you're editing. A virtual profile's **Virtual View Note**
+   reflects Overview edits live — it re-renders when the sidebar saves.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
    sorted/prefixed/colored per the profile's rules.
 5. Give a note template the `#agendaTaskWidget` label (with no value) to make the Task widget appear
@@ -63,7 +66,9 @@ widgets plus a single schema-driven editor page:
    profile's **Kanban Grouping** (also Profiles tab, referencing a **Groupings**
    tab entry) picks which registry drives its Kanban view's columns — build one there the same way you
    build a Prefix or Color entry (by label value, or by date rule), except each column also gets its
-   own display name and color.
+   own display name and color. Three groupings ship by default, mirroring the Prefix/Color defaults —
+   **By Priority** (the "default" profile's initial pick), **By Area**, and **By Interval** (date
+   windows).
 
 ## Architecture
 
@@ -128,6 +133,12 @@ kanban's drag-drop write) alternate presentation over the same profile data, not
 matching/sorting logic. `libagendataskcard@beatlink`/`libagendatreeview@beatlink`/
 `libagendakanbanview@beatlink` are presentation-only, dependency-injected components (props in, no
 relation resolution) like every other `lib*@beatlink` UI piece — see their own READMEs for props.
+
+The Task View stays live with the Overview sidebar via a `useTriliumEvent("entitiesReloaded", ...)`
+subscription: the sidebar writes profile edits into the shared `config.json` note, and when that
+note's content reloads on the frontend, the Task View re-pulls `loadData`/`getAllProfiles` and its
+task list (keeping the user's selected profile if it still exists). It watches only its own config
+note, via `loadResults.isNoteContentReloaded(configNoteId)`, so unrelated edits don't churn it.
 
 ## Known limitations
 

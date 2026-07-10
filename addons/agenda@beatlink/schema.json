@@ -85,7 +85,7 @@
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",
                 "colorSelected": "priority",
-                "groupingSelected": ""
+                "groupingSelected": "priority"
             }
         }
     },
@@ -448,6 +448,38 @@
                     "3-high": { "labelValue": "3-high", "display": "Should Do", "color": "gold" },
                     "2-medium": { "labelValue": "2-medium", "display": "Could Do", "color": "lime" },
                     "1-low": { "labelValue": "1-low", "display": "Want to Do", "color": "cyan" }
+                }
+            },
+            "area": {
+                "name": "By Area", "type": "label", "label": "area",
+                "children": {
+                    "01-career": { "labelValue": "01-career", "display": "Career", "color": "red" },
+                    "02-finances": { "labelValue": "02-finances", "display": "Finances", "color": "red" },
+                    "03-home": { "labelValue": "03-home", "display": "Home", "color": "darkorange" },
+                    "04-car": { "labelValue": "04-car", "display": "Car", "color": "darkorange" },
+                    "05-fitness": { "labelValue": "05-fitness", "display": "Fitness", "color": "gold" },
+                    "06-grooming": { "labelValue": "06-grooming", "display": "Grooming", "color": "gold" },
+                    "07-sexual": { "labelValue": "07-sexual", "display": "Sexual", "color": "gold" },
+                    "08-social": { "labelValue": "08-social", "display": "Social", "color": "lime" },
+                    "09-health": { "labelValue": "09-health", "display": "Health", "color": "lime" },
+                    "10-mental": { "labelValue": "10-mental", "display": "Mental", "color": "lime" },
+                    "11-identity": { "labelValue": "11-identity", "display": "Identity", "color": "lime" },
+                    "12-productivity": { "labelValue": "12-productivity", "display": "Productivity", "color": "lime" },
+                    "13-tech": { "labelValue": "13-tech", "display": "Tech", "color": "cyan" },
+                    "14-fun": { "labelValue": "14-fun", "display": "Fun", "color": "magenta" }
+                }
+            },
+            "interval": {
+                "name": "By Interval", "type": "dayjs",
+                "intervals": {
+                    "overdue": { "dateRuleId": "overdue", "display": "Overdue", "color": "red" },
+                    "now": { "dateRuleId": "now", "display": "Now", "color": "lime" },
+                    "restOfDay": { "dateRuleId": "restOfDay", "display": "Later Today", "color": "cyan" },
+                    "tomorrow": { "dateRuleId": "tomorrow", "display": "Tomorrow", "color": "gray" },
+                    "thisWeek": { "dateRuleId": "thisWeek", "display": "This Week", "color": "lightgray" },
+                    "thisMonth": { "dateRuleId": "thisMonth", "display": "This Month", "color": "lightgray" },
+                    "thisYear": { "dateRuleId": "thisYear", "display": "This Year", "color": "lightgray" },
+                    "future": { "dateRuleId": "future", "display": "Future", "color": "lightgray" }
                 }
             }
         }

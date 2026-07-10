@@ -1,4 +1,4 @@
-import { useState, useEffect, FormDropdownList } from "trilium:preact"
+import { useState, useEffect, FormDropdownList, useTriliumEvent } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { TreeView } from "TreeView.jsx"
@@ -30,6 +30,13 @@ export default function TaskView() {
     const [colorDict, setColorDict] = useState({})
     const [groupDict, setGroupDict] = useState({})
 
+    // Bumped to force a full data reload. The Overview sidebar writes profile
+    // edits (searches/filters/sort/prefix/color) into the shared config note;
+    // this render note isn't otherwise told about that, so we watch for the
+    // config note's content reloading and re-pull everything, keeping the web
+    // view live with the sidebar. See useTriliumEvent below.
+    const [reloadTick, setReloadTick] = useState(0)
+
     // Resolve this page's own relations + settings once.
     useEffect(() => {
         (async () => {
@@ -38,7 +45,18 @@ export default function TaskView() {
         })()
     }, [])
 
-    // Load the schema-driven registries + every profile.
+    // Refresh whenever the config note the sidebar just saved reloads on the
+    // frontend — Trilium fires entitiesReloaded with a LoadResults describing
+    // exactly which notes changed, so we only react to our own config note.
+    useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+        if (ids && loadResults.isNoteContentReloaded(ids.profileContext.configNoteId)) {
+            setReloadTick(t => t + 1)
+        }
+    })
+
+    // Load the schema-driven registries + every profile. Re-runs on reloadTick
+    // so a sidebar edit is reflected here; a profile the user had selected is
+    // kept selected if it still exists, else falls back to the first.
     useEffect(() => {
         if (!ids) return
         (async () => {
@@ -46,9 +64,11 @@ export default function TaskView() {
             setData(loaded)
             const allProfiles = await getAllProfiles(ids.profileContext)
             setProfiles(allProfiles)
-            if (allProfiles.length > 0) setProfileId(allProfiles[0].id)
+            setProfileId(prev => (prev && allProfiles.some(p => p.id === prev))
+                ? prev
+                : (allProfiles.length > 0 ? allProfiles[0].id : null))
         })()
-    }, [ids])
+    }, [ids, reloadTick])
 
     // Load the current profile's task list + prefix/color/group dicts.
     useEffect(() => {

@@ -9,13 +9,13 @@ import {
     useState
 } from "trilium:preact"
 
-import { startNote, activateNote } from "trilium:api"
+import { startNote } from "trilium:api"
 
 import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, rescheduleAllTasks } = require("libAgendaOverview.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, rescheduleAllTasks } = require("libAgendaOverview.js")
 
 // Preact Components ------------------------------------------------------
 
@@ -111,8 +111,9 @@ function AgendaOverviewWidgetJSX() {
     const { note } = useActiveNoteContext()
     const noteId = useNoteProperty(note, "noteId")
     const [profile, setProfile] = useState(null)
+    const [profiles, setProfiles] = useState(null)
+    const [profileId, setProfileId] = useState(null)
     const [registry, setRegistry] = useState(null)
-    const [unclaimed, setUnclaimed] = useState(false)
     const [ids, setIds] = useState(null)
 
     // Resolve this widget's own relations + settings once — separate from
@@ -131,49 +132,44 @@ function AgendaOverviewWidgetJSX() {
         const newProfile = structuredClone(profile)
         fn(newProfile)
         setProfile(newProfile)
+        setProfiles(ps => (ps || []).map(p => p.id === newProfile.id ? newProfile : p))
         saveProfile(newProfile)
         updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
     }
 
-    // Load Profile
+    // The widget only appears when the browsed note is claimed by a profile
+    // (its `parentNoteId` in reparent mode, its `viewNoteId` in virtual mode);
+    // on any other note it renders nothing at all. When claimed, the dropdown
+    // still lets the user edit *any* profile, but the initial pick is the one
+    // that claims this note. `claimed` gates rendering (see the early return
+    // below); `profileId` drives which profile is edited.
     useEffect(() => {
         if (!ids || !noteId) return
         (async () => {
+            const claimed = await getMatchingProfile(ids.profileContext, noteId)
+            if (!claimed) {
+                setProfiles(null)
+                setProfile(null)
+                setProfileId(null)
+                return
+            }
             const data = await loadData(ids.profileContext.schemaNoteId, ids.profileContext.configNoteId)
             setRegistry(data)
-            const profileData = await getMatchingProfile(ids.profileContext, noteId)
-            if (profileData) {
-                setProfile(profileData)
-                setUnclaimed(false)
-                await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
-            } else {
-                setProfile(null)
-                setUnclaimed(true)
-            }
+            const allProfiles = await getAllProfiles(ids.profileContext)
+            setProfiles(allProfiles)
+            setProfileId(claimed.id)
+            await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
         })()
     }, [noteId, ids])
 
-    // Filing tasks into a note requires a fully-built profile (search/filter/
-    // sort/prefix/color rules), not just picking a parent note — that's what
-    // the Profile Editor page is for. Resolved live via the profileEditorNote
-    // relation rather than hardcoded, same as every other cross-note jump in
-    // this addon.
-    async function openProfileEditor() {
-        const profileEditorNoteId = await startNote.getRelationValue("profileEditorNote")
-        if (profileEditorNoteId) await activateNote(profileEditorNoteId)
-    }
+    // Load the selected profile's editable object whenever the dropdown pick
+    // (or the underlying profile list) changes.
+    useEffect(() => {
+        if (!profiles || !profileId) return
+        setProfile(profiles.find(p => p.id === profileId) || null)
+    }, [profileId, profiles])
 
-    if (unclaimed) {
-        return (
-            <RightPanelWidget title="Agenda">
-                <div className="agenda-widget">
-                    <p>No agenda profile files tasks into this note yet.</p>
-                    <Button icon="bx bx-edit" text="Open Profile Editor" onClick={openProfileEditor} />
-                </div>
-            </RightPanelWidget>
-        )
-    }
-
+    // No profile claims the browsed note -> the widget doesn't appear at all.
     if (!profile || !registry){
         return null
     }
@@ -181,6 +177,22 @@ function AgendaOverviewWidgetJSX() {
     return (
         <RightPanelWidget title="Agenda">
             <div id="x-agenda-overview-widget" className="agenda-widget">
+
+                {/* Profile selector — edit any profile, not just the one that
+                    claims the current note */}
+                {profiles && profiles.length > 1 && (
+                    <div className="agenda-profile-selector">
+                        <label>Profile</label>
+                        <FormDropdownList
+                            values={profiles.map(p => ({ key: p.id, title: p.name }))}
+                            currentValue={profileId}
+                            onChange={setProfileId}
+                            keyProperty="key"
+                            titleProperty="title"
+                            class="dropdown-component form-control"
+                        />
+                    </div>
+                )}
 
                 {/* Search */}
                 <CheckboxSection
