@@ -7,7 +7,7 @@ import { AgendaCalendarView } from "agendaCalendarView.jsx"
 
 const {
     loadData, getAllProfiles, getSortedTaskList,
-    getPrefixes: computePrefixes, getColors: computeColors,
+    getPrefixes, getColors,
     getGroups, getGroupColumns, setGroupForNote
 } = require("libAgendaOverview.js")
 
@@ -62,8 +62,8 @@ export default function TaskView() {
             const notes = await Promise.all(list.map(noteId => api.getNote(noteId)))
             setTitles(Object.fromEntries(notes.map(note => [note.noteId, note.title])))
 
-            setPrefixDict(await computePrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], list))
-            setColorDict(await computeColors(data.dateRules, data.colors[profile.colors.selected], list))
+            setPrefixDict(await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], list))
+            setColorDict(await getColors(data.dateRules, data.colors[profile.colors.selected], list))
 
             const groupingInfo = data.groupings[profile.groupings.selected]
             setGroupDict(groupingInfo ? await getGroups(data.dateRules, groupingInfo, list) : {})
