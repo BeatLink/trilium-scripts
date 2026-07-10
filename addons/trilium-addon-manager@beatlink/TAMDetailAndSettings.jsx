@@ -5,7 +5,7 @@ import { activateNote } from "trilium:api"
 import { TamButton, Spinner, computeStats } from "TAMShared.jsx"
 const { fetchReadmeHtml } = require("libTAM.js")
 
-function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnable }) {
+function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReinstall, onEnable }) {
     const [readmeHtml, setReadmeHtml] = useState(null)
     const [readmeLoading, setReadmeLoading] = useState(false)
 
@@ -54,6 +54,9 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onEnabl
                     )}
                     {addonData.updateAvailable && (
                         <TamButton icon="bx bx-sync" text={`Update${addonData.availableVersion ? ` (${addonData.availableVersion})` : ""}`} onClick={() => onUpdate(addonData.id)} />
+                    )}
+                    {addonData.installedVersion && (
+                        <TamButton className="btn-ghost" icon="bx bx-refresh" text="Reinstall" onClick={() => onReinstall(addonData.id)} />
                     )}
                 </div>
             </aside>

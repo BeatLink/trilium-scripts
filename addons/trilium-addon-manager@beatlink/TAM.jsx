@@ -157,6 +157,7 @@ export default function RepoManager() {
                     onInstall={handleInstall}
                     onDelete={addonId => dispatch({ command: "request-uninstall", addon: addonId })}
                     onUpdate={addonId => dispatch({ command: "update-addon", addon: addonId })}
+                    onReinstall={addonId => dispatch({ command: "reinstall-addon", addon: addonId })}
                     onEnable={(addonId, enabled) => dispatch({ command: "enable-addon", addon: addonId, enabled })}
                 />
             )

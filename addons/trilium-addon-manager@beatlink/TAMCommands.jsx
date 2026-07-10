@@ -157,6 +157,17 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         }
     }
 
+    async function handleReinstallAddon(command) {
+        await libTAMjs.syncAddon(command.addon)
+        const prompts = await libTAMjs.getPendingPrompts(command.addon)
+        if (prompts.length > 0) {
+            setPendingPrompts(prompts)
+            setPromptAddonId(command.addon)
+        } else {
+            await reloadAndActivate()
+        }
+    }
+
     async function handleResolvePrompts(command) {
         const { addonId, decisions } = command
         for (const [noteLocalId, useNew] of Object.entries(decisions)) {
@@ -233,6 +244,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "request-uninstall": handleRequestUninstall,
         "delete-addon": handleDeleteAddon,
         "update-addon": handleUpdateAddon,
+        "reinstall-addon": handleReinstallAddon,
         "resolve-prompts": handleResolvePrompts,
         "update-all": handleUpdateAll,
         "enable-addon": handleEnableAddon,
