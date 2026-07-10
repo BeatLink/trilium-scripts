@@ -50,7 +50,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
        TAM's own embedded-widget font stack here ties the whole app back to
        TAM's visual identity instead of just recoloring the default. */
     --main-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    --center-pane-border-radius: 14px !important;
+    --center-pane-border-radius: 8px !important;
 
     --main-background-color: var(--t-surface) !important;
     --main-text-color: var(--t-text) !important;
@@ -284,7 +284,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     --new-tab-button-hover-background: var(--t-chrome-bg-2) !important;
     --new-tab-button-hover-color: #fff !important;
 
-    --right-pane-background-color: var(--t-surface) !important;
+    --right-pane-background-color: var(--t-surface2) !important;
     --right-pane-item-hover-background: var(--t-surface-2) !important;
     --right-pane-item-hover-color: var(--t-text) !important;
 
@@ -367,6 +367,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     }
 }
 
+
 /* Command buttons (.btn-primary/.btn-secondary/.btn-sm/.btn-success — every
    plain Button component ends up as one of these, "secondary" by default)
    — same story as text inputs: the border is a literal `border: unset` in
@@ -417,7 +418,6 @@ select.form-select,
 select.form-control,
 .select-button.dropdown-toggle.btn {
     /*border: 1.5px solid var(--t-border) !important;*/
-    border-color: var(--t-border-strong) !important;
 }
 
 input:not([type]):hover,
@@ -510,7 +510,25 @@ select.form-control:focus,
    lift) on the right pane's own card-style panels (promoted attributes,
    "what links here", etc.) so they read as part of the same design. */
 #right-pane .card-header {
-    border-top: 2px solid var(--t-accent) !important;
+    border-radius: 0 !important;
+}
+
+body.desktop.experimental-feature-new-layout .split-note-container-widget > .note-split {
+    border-start-end-radius: var(--center-pane-border-radius)  !important;    
+    border-end-end-radius: var(--center-pane-border-radius)  !important;
+    border-radius: var(--center-pane-border-radius) !important
+}
+
+body.experimental-feature-new-layout #right-pane .card {
+    background-color: var(--t-surface) !important;
+    margin: 0.2rem !important;
+    margin-right: calc(5px + 0.2rem) !important;
+    border: 2px solid --t-border !important;
+    border-radius: var(--center-pane-border-radius) !important;
+    /*border-top: 2px solid var(--t-accent) !important;*/
+
+    
+    
 }
 
 span.fancytree-title {
