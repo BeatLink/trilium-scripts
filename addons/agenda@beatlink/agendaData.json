@@ -24,7 +24,7 @@
                         "name": "Note Type",
                         "expanded": true,
                         "children": {
-                            "calendar": { "elementId": "calendar", "enabled": true },
+                            "goal": { "elementId": "goal", "enabled": true },
                             "routine": { "elementId": "routine", "enabled": true },
                             "tasks": { "elementId": "tasks", "enabled": true },
                             "future": { "elementId": "future", "enabled": true }

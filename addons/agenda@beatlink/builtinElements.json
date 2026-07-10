@@ -1,10 +1,18 @@
 {
     "searches": {
-        "all": { "name": "All Tasks", "rule": "#startDateTime", "builtin": true },
-        "calendar": { "name": "1. High Priority", "rule": "~template.title='1. High Priority' AND not(note.parents.relations.template.title='1. High Priority')", "builtin": true },
+        "all": { "name": "All Tasks", "rule": "#startDateTime OR #dueDateTime", "builtin": true },
+        "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal')", "builtin": true },
         "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine')", "builtin": true },
-        "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND #dueDateTime", "builtin": true },
-        "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')", "builtin": true }
+        "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task')", "builtin": true },
+        "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')", "builtin": true },
+        "goal-dated": { "name": "1. Goal (Dated)", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND (#startDateTime OR #dueDateTime)", "builtin": true },
+        "routine-dated": { "name": "2. Routines (Dated)", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND (#startDateTime OR #dueDateTime)", "builtin": true },
+        "tasks-dated": { "name": "3. Tasks (Dated)", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime OR #dueDateTime)", "builtin": true },
+        "future-dated": { "name": "4. Future (Dated)", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND (#startDateTime OR #dueDateTime)", "builtin": true },
+        "must": { "name": "Must Do", "rule": "#priority='4-critical' AND #startDateTime", "builtin": true },
+        "should": { "name": "Should Do", "rule": "#priority='3-high' AND #startDateTime", "builtin": true },
+        "could": { "name": "Could Do", "rule": "#priority='2-medium' AND #startDateTime", "builtin": true },
+        "want": { "name": "Want To Do", "rule": "#priority='1-low' AND #startDateTime", "builtin": true }
     },
     "dateRules": {
         "noDate": { "name": "No Date", "rule": ["isNull"], "dateLabel": "startDateTime", "useNumberOfDays": false, "builtin": true },
@@ -88,6 +96,7 @@
             "type": "dayjs",
             "builtin": true,
             "intervals": {
+                "noDate": { "dateRuleId": "noDate", "formatString": "[No Date]" },
                 "overdue": { "dateRuleId": "overdue", "formatString": "MMM D, YYYY HH:mm" },
                 "now": { "dateRuleId": "now", "formatString": "HH:mm" },
                 "restOfDay": { "dateRuleId": "restOfDay", "formatString": "HH:mm" },
@@ -124,6 +133,7 @@
             "type": "dayjs",
             "builtin": true,
             "intervals": {
+                "noDate": { "dateRuleId": "noDate", "color": "gray" },
                 "overdue": { "dateRuleId": "overdue", "color": "red" },
                 "now": { "dateRuleId": "now", "color": "lime" },
                 "restOfDay": { "dateRuleId": "restOfDay", "color": "cyan" },
