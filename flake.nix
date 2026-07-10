@@ -4,11 +4,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
-    # Pulled in solely to build a headless trilium-server binary and to read
-    # its e2e-test seed database (apps/server/spec/db) — see
-    # resources/testing/. Nothing here assumes a local checkout of this repo
-    # exists anywhere; Nix fetches and builds it.
+    # Pulled in solely to read its e2e-test seed database
+    # (apps/server/spec/db) — see resources/testing/. Nothing here assumes a
+    # local checkout of this repo exists anywhere; Nix fetches it (a plain
+    # source fetch, no build). The server *binary* itself comes from
+    # nixpkgs' own prebuilt `trilium-server` package below instead of
+    # building this input from source — nixpkgs' copy is a cached release
+    # tarball, so it resolves in seconds rather than a full compile.
     trilium.url = "github:BeatLink/Trilium";
+    trilium.flake = false;
   };
 
   outputs = { self, nixpkgs, flake-utils, trilium }:
@@ -20,11 +24,17 @@
         # source of truth for that tooling, `nix-shell` alone still works
         # exactly as before.
         baseShell = import ./shell.nix { inherit pkgs; };
-        triliumServer = trilium.packages.${system}.server;
+        triliumServer = pkgs.trilium-server;
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = baseShell.buildInputs ++ [ triliumServer ];
+          # `pkgs.mkShell`'s `packages` argument is stored as
+          # `nativeBuildInputs` on the resulting derivation, not
+          # `buildInputs` — baseShell.buildInputs silently evaluated to `[]`
+          # here (python3/gh from shell.nix were never actually reaching
+          # this shell's PATH) until this was caught by trying to actually
+          # run trilium_seed.
+          packages = baseShell.nativeBuildInputs ++ [ triliumServer ];
 
           shellHook = baseShell.shellHook + ''
             # Points resources/testing/seed.py at Trilium's own e2e-test seed

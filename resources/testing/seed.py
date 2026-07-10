@@ -26,20 +26,44 @@ DATA_DIR = run_server.DATA_DIR
 TRILIUM_SRC = __import__("os").environ.get("TRILIUM_SRC")
 
 
+# Where each fixture file lives has moved at least once as the upstream
+# TriliumNext monorepo has been restructured — document.db used to sit
+# alongside config.ini under apps/server/spec/db, then moved to
+# packages/trilium-core/src/test/fixtures while config.ini stayed put. Check
+# every known location for each file independently rather than assuming
+# they're still siblings, so a future restructuring only needs a new
+# candidate added here instead of the whole layout re-derived.
+SEED_FIXTURE_DIRS = (
+    "apps/server/spec/db",
+    "packages/trilium-core/src/test/fixtures",
+)
+
+
+def find_seed_file(name):
+    for rel_dir in SEED_FIXTURE_DIRS:
+        candidate = Path(TRILIUM_SRC) / rel_dir / name
+        if candidate.exists():
+            return candidate
+    searched = ", ".join(str(Path(TRILIUM_SRC) / d / name) for d in SEED_FIXTURE_DIRS)
+    sys.exit(f"No {name} fixture found -- looked in: {searched} -- did the trilium flake input change shape?")
+
+
 def main():
     if not TRILIUM_SRC:
         sys.exit("$TRILIUM_SRC not set -- run inside `nix develop` (see flake.nix)")
-
-    seed_src = Path(TRILIUM_SRC) / "apps" / "server" / "spec" / "db"
-    if not (seed_src / "document.db").exists():
-        sys.exit(f"No seed fixture at {seed_src} -- did the trilium flake input change shape?")
 
     if DATA_DIR.exists():
         shutil.rmtree(DATA_DIR)
     DATA_DIR.mkdir(parents=True)
     for name in ("document.db", "config.ini"):
-        shutil.copy(seed_src / name, DATA_DIR / name)
-    print(f"Copied seed fixture from {seed_src} to {DATA_DIR}")
+        src = find_seed_file(name)
+        dest = DATA_DIR / name
+        shutil.copy(src, dest)
+        # Files fetched out of the Nix store are read-only (the store itself
+        # is immutable) -- shutil.copy preserves that mode bit, but the
+        # server needs to write to its own copy of document.db.
+        dest.chmod(0o644)
+        print(f"Copied {src} to {dest}")
 
     print("Starting server for real (disk-backed) to import TAM...")
     run_server.start(real=True)
