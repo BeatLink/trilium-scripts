@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.4",
+    "latestVersion": "2.0.5",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/area-picker@beatlink/_tam_manifest_.json",
@@ -46,7 +46,8 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": "config.json",
+                "promptOnUpdate": true
             },
             {
                 "id": "settings",
@@ -60,7 +61,8 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [
@@ -69,7 +71,7 @@
                 "child": "script"
             },
             {
-                "parent": "root",
+                "parent": "script",
                 "child": "style"
             },
             {
