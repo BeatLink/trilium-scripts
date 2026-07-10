@@ -125,6 +125,17 @@ for manifest_file in manifest_files:
     if settings_note and settings_note.get("type") == "code":
         warn(manifest_file, f"settingsNote '{m['settingsNote']}' is a raw code note — point it at the wrapping render note instead")
 
+    # Notes served as static HTTP resources via customResourceProvider are NOT
+    # code modules — a browser refuses to execute a <script> whose Content-Type
+    # (set verbatim from the note mime) carries the non-standard ;env=frontend
+    # parameter, so these deliberately use a bare application/javascript. Exempt
+    # them from the env-qualifier check below.
+    resource_note_ids = {
+        lbl.get("note")
+        for lbl in m.get("labels", [])
+        if lbl.get("name") == "customResourceProvider"
+    }
+
     # JS notes: mime must declare env=frontend or env=backend, never anything else
     for note in notes:
         nid = note.get("id", note.get("title", "?"))
@@ -132,7 +143,7 @@ for manifest_file in manifest_files:
         if mime.startswith("application/javascript"):
             if "env=hybrid" in mime:
                 error(manifest_file, f"note '{nid}': mime declares 'env=hybrid', which does not exist — ship two notes (env=frontend + env=backend) instead")
-            elif "env=frontend" not in mime and "env=backend" not in mime:
+            elif "env=frontend" not in mime and "env=backend" not in mime and nid not in resource_note_ids:
                 warn(manifest_file, f"note '{nid}': mime '{mime}' is missing an env=frontend/env=backend qualifier")
 
     # plain .js notes (not .jsx) are never transpiled — ES export/import syntax

@@ -2,6 +2,14 @@
 
 - No `env=hybrid`: a JS/JSX note is `env=frontend` or `env=backend` and can only `require()` notes
   of the same environment. Needed in both? Ship as two notes sharing one `sourceUrl`.
+- A `#customResourceProvider` JS note served over HTTP (`<script src="custom/x.js">`) must use a
+  plain `application/javascript` mime with NO `;env=frontend` suffix. Trilium's `downloadData` sets
+  `Content-Type` verbatim from the note mime, and browsers refuse to execute a script whose type
+  carries the non-standard `env=` parameter (silent MIME-rejection, calendar/widget just never
+  loads). If the same file is ALSO `require()`d (which needs `env=frontend`), ship a separate
+  resource note (bare mime, distinct title, local child of the `require`able note so it rides its
+  install closure) rather than reusing the module note. `validate.py` exempts
+  `customResourceProvider`-labeled notes from the env-qualifier warning.
 - Only `.jsx` notes are transpiled (ES `export`/`import`). Plain `.js` notes run as-is — use
   CommonJS `module.exports`/`require()`.
 - Library note titles are global identifiers (`require("Title")` matches by exact title across
