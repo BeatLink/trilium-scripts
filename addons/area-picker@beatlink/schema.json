@@ -4,20 +4,66 @@
         "label": "Areas",
         "description": "The life areas shown in the Area picker dropdown, in display order.",
         "default": [
-            { "key": "career", "title": "Career", "color": "red" },
-            { "key": "finances", "title": "Finances", "color": "red" },
-            { "key": "home", "title": "Home", "color": "darkorange" },
-            { "key": "car", "title": "Car", "color": "darkorange" },
-            { "key": "tech", "title": "Tech", "color": "darkorange" },
-            { "key": "grooming", "title": "Grooming", "color": "gold" },
-            { "key": "sexual", "title": "Sexual", "color": "gold" },
-            { "key": "social", "title": "Social", "color": "lime" },
-            { "key": "health", "title": "Health", "color": "lime" },
-            { "key": "fitness", "title": "Fitness", "color": "lime" },
-            { "key": "mental", "title": "Mental", "color": "lime" },
-            { "key": "identity", "title": "Identity", "color": "lime" },
-            { "key": "productivity", "title": "Productivity", "color": "lime" },
-            { "key": "fun", "title": "Fun", "color": "magenta" }
+            {
+                "key": "01-career",
+                "title": "Career",
+                "color": "red"
+            },
+            {
+                "key": "02-finances",
+                "title": "Finances",
+                "color": "red"
+            },
+            {
+                "key": "03-home",
+                "title": "Home",
+                "color": "darkorange"
+            },
+            {
+                "key": "04-car",
+                "title": "Car",
+                "color": "darkorange"
+            },
+            {
+                "key": "05-tech",
+                "title": "Tech",
+                "color": "darkorange"
+            },
+            {
+                "key": "06-fitness",
+                "title": "Fitness",
+                "color": "lime"
+            },
+            {
+                "key": "07-grooming",
+                "title": "Grooming",
+                "color": "gold"
+            },
+            {
+                "key": "08-sexual",
+                "title": "Sexual",
+                "color": "gold"
+            },
+            {
+                "key": "09-social",
+                "title": "Social",
+                "color": "lime"
+            },
+            {
+                "key": "10-health",
+                "title": "Health",
+                "color": "lime"
+            },
+            {
+                "key": "11-mental",
+                "title": "Mental",
+                "color": "lime"
+            },
+            {
+                "key": "12-fun",
+                "title": "Fun",
+                "color": "magenta"
+            }
         ],
         "itemSchema": {
             "key": {
