@@ -98,6 +98,7 @@
                 "name": "Note Type",
                 "profileId": "default",
                 "children": {
+                    "all": { "elementId": "all", "enabled": false },
                     "calendar": { "elementId": "calendar", "enabled": true },
                     "routine": { "elementId": "routine", "enabled": true },
                     "tasks": { "elementId": "tasks", "enabled": true },

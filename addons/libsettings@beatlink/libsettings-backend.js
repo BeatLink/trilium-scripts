@@ -19,15 +19,26 @@ function isPlainObject(value) {
 // the flat runtime map (shipped, minus removed, with entries overlaid) that
 // the rest of this module and the UI both work with; `filterRegistryBySchema`
 // is the inverse, run on save.
+// A registry field can itself nest further `list`/`registry` fields in its
+// `itemSchema` (e.g. a colour/prefix variant's `children`, one flat
+// label-value map per variant — see libsettings@beatlink's README "Nesting"
+// section). The shipped baseline for such a nested field lives inside its
+// *parent item's own* shipped default (`shippedItem[key]`, e.g.
+// `colors.default.priority.children`), never in the nested field's own
+// schema `default` (which is only the blank starting point for a brand-new
+// item added through the UI, always `{}`) — so `mergeDefaults`/
+// `filterBySchema` thread a `shippedNode` parameter through every level of
+// recursion instead of re-deriving "shipped" from `def.default` past the
+// top level.
 function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
     const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
     const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
     const merged = {}
     for (const [id, item] of Object.entries(shipped)) {
-        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item)
+        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item, null)
     }
     for (const [id, item] of Object.entries(storedEntries)) {
-        merged[id] = mergeDefaults(itemSchema, item)
+        merged[id] = mergeDefaults(itemSchema, shipped[id] ?? null, item)
     }
     return merged
 }
@@ -36,9 +47,11 @@ function filterRegistryBySchema(itemSchema, shipped, effective) {
     const entries = {}
     const removedIds = []
     for (const [id, item] of Object.entries(effective)) {
-        const filteredItem = filterBySchema(itemSchema, item)
-        const shippedItem = shipped[id]
-        const shippedFiltered = shippedItem ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem)) : null
+        const shippedItem = shipped[id] ?? null
+        const filteredItem = filterBySchema(itemSchema, item, shippedItem)
+        const shippedFiltered = shippedItem
+            ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem, null), shippedItem)
+            : null
         if (shippedFiltered === null || JSON.stringify(shippedFiltered) !== JSON.stringify(filteredItem)) {
             entries[id] = filteredItem
         }
@@ -49,31 +62,33 @@ function filterRegistryBySchema(itemSchema, shipped, effective) {
     return { entries, removedIds }
 }
 
-function mergeDefaults(schema, stored) {
+function mergeDefaults(schema, shippedNode, storedNode) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
+        const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
         if (def.type === "list") {
-            const storedList = Array.isArray(stored?.[key]) ? stored[key] : (def.default ?? [])
-            values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item))
+            const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
+            values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item, item))
         } else if (def.type === "registry") {
-            values[key] = mergeRegistryDefaults(def.itemSchema, def.default || {}, stored?.[key])
+            values[key] = mergeRegistryDefaults(def.itemSchema, shippedValue || {}, storedNode?.[key])
         } else {
-            values[key] = (stored && key in stored) ? stored[key] : def.default
+            values[key] = (storedNode && key in storedNode) ? storedNode[key] : shippedValue
         }
     }
     return values
 }
 
-function filterBySchema(schema, values) {
+function filterBySchema(schema, values, shippedNode) {
     const filtered = {}
     for (const key of Object.keys(schema)) {
         const def = schema[key]
         if (def.type === "list") {
             const list = Array.isArray(values?.[key]) ? values[key] : []
-            filtered[key] = list.map(item => filterBySchema(def.itemSchema, item))
+            filtered[key] = list.map(item => filterBySchema(def.itemSchema, item, item))
         } else if (def.type === "registry") {
             const effective = isPlainObject(values?.[key]) ? values[key] : {}
-            filtered[key] = filterRegistryBySchema(def.itemSchema, def.default || {}, effective)
+            const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : (def.default || {})
+            filtered[key] = filterRegistryBySchema(def.itemSchema, shippedValue || {}, effective)
         } else {
             filtered[key] = values[key]
         }
@@ -84,12 +99,12 @@ function filterBySchema(schema, values) {
 function loadSettings(schemaNoteId, configNoteId) {
     const schema = JSON.parse(api.getNote(schemaNoteId).getContent() || "{}")
     const stored = JSON.parse(api.getNote(configNoteId).getContent() || "{}")
-    return mergeDefaults(schema, stored)
+    return mergeDefaults(schema, null, stored)
 }
 
 function saveSettings(schemaNoteId, configNoteId, values) {
     const schema = JSON.parse(api.getNote(schemaNoteId).getContent() || "{}")
-    const filtered = filterBySchema(schema, values)
+    const filtered = filterBySchema(schema, values, null)
     api.getNote(configNoteId).setContent(JSON.stringify(filtered, null, 4))
 }
 
