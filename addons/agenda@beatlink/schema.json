@@ -63,7 +63,9 @@
             "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "" },
             "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
             "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
-            "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" }
+            "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
+            "searchGroups": { "type": "checklist", "label": "Searches", "registry": "searchGroups", "filterBy": "profileId" },
+            "filterGroups": { "type": "checklist", "label": "Filters", "registry": "filterGroups", "filterBy": "profileId" }
         },
         "default": {
             "default": {

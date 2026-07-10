@@ -147,8 +147,15 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
 // every Field/ListItems/RegistryItems call so a `reference` field anywhere
 // (including inside a nested itemSchema) can resolve `def.registry` against
 // a sibling top-level `registry`/`list` field's current entries, regardless
-// of how deep it's nested.
-function Field({ def, value, onChange, registries }) {
+// of how deep it's nested. `itemKey` is the id of the enclosing registry
+// entry (only meaningful inside a `registry`'s itemSchema — `RegistryItems`
+// passes its own entry id down; `ListItems` passes its index for signature
+// symmetry) — `checklist` needs it to filter a sibling registry down to just
+// the entries that reference this one. `onRegistriesChange` replaces the
+// *entire* top-level values object and persists immediately; only
+// `checklist` uses it, since toggling one edits a sibling top-level field
+// rather than this field's own value.
+function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }) {
     switch (def.type) {
         case "boolean":
             return <FormCheckbox label={def.label} currentValue={value} onChange={onChange} />
@@ -175,16 +182,49 @@ function Field({ def, value, onChange, registries }) {
             return (
                 <ListItems
                     itemSchema={def.itemSchema} items={value || []} onChange={onChange}
-                    registries={registries}
+                    registries={registries} onRegistriesChange={onRegistriesChange}
                 />
             )
         case "registry":
             return (
                 <RegistryItems
                     itemSchema={def.itemSchema} items={value || {}} onChange={onChange}
-                    registries={registries}
+                    registries={registries} onRegistriesChange={onRegistriesChange}
                 />
             )
+        case "checklist": {
+            const sourceRegistry = registries?.[def.registry] || {}
+            const groups = Object.entries(sourceRegistry).filter(([, g]) => g?.[def.filterBy] === itemKey)
+            return (
+                <div class="lst-checklist">
+                    {groups.length === 0 && <p class="lst-list-empty">Nothing assigned yet.</p>}
+                    {groups.map(([groupId, group]) => (
+                        <details class="lst-checklist-group" key={groupId} open>
+                            <summary>{group.name}</summary>
+                            <div class="lst-checklist-items">
+                                {Object.entries(group.children || {}).map(([childId, child]) => (
+                                    <FormCheckbox
+                                        key={childId}
+                                        label={child.name}
+                                        currentValue={child.enabled}
+                                        onChange={v => {
+                                            const updatedGroup = {
+                                                ...group,
+                                                children: { ...group.children, [childId]: { ...child, enabled: v } }
+                                            }
+                                            onRegistriesChange({
+                                                ...registries,
+                                                [def.registry]: { ...sourceRegistry, [groupId]: updatedGroup }
+                                            })
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </details>
+                    ))}
+                </div>
+            )
+        }
         case "reference": {
             const targetRegistry = registries?.[def.registry] || {}
             const options = Object.entries(targetRegistry).map(([id, item]) => ({ key: id, title: item?.name ?? id }))
@@ -243,7 +283,7 @@ function titleFor(itemSchema, item, registries) {
 // `list` entry and a `registry` entry render identically — the only
 // difference between the two types is how items are keyed/reordered/added,
 // never how one item's own fields look.
-function ItemFields({ itemSchema, item, onFieldChange, registries }) {
+function ItemFields({ itemSchema, item, onFieldChange, registries, itemKey, onRegistriesChange }) {
     return (
         <div class="lst-item-fields">
             {Object.entries(itemSchema).map(([fieldKey, def]) => matchesShowWhen(def, item) && (
@@ -254,6 +294,8 @@ function ItemFields({ itemSchema, item, onFieldChange, registries }) {
                         value={item[fieldKey]}
                         onChange={v => onFieldChange(fieldKey, v)}
                         registries={registries}
+                        itemKey={itemKey}
+                        onRegistriesChange={onRegistriesChange}
                     />
                 </div>
             ))}
@@ -268,7 +310,7 @@ function ItemFields({ itemSchema, item, onFieldChange, registries }) {
 // local-only (not persisted) — a pure editing convenience, not data every
 // reader of the settings needs to agree on.
 function Item({
-    itemSchema, item, onFieldChange, registries,
+    itemSchema, item, onFieldChange, registries, itemKey, onRegistriesChange,
     expanded, onToggle, onMoveUp, onMoveDown, onRemove, disableUp, disableDown
 }) {
     // A click on the actions would otherwise also toggle the <details> open/
@@ -288,7 +330,7 @@ function Item({
             <div class="lst-item-body">
                 <ItemFields
                     itemSchema={itemSchema} item={item} onFieldChange={onFieldChange}
-                    registries={registries}
+                    registries={registries} itemKey={itemKey} onRegistriesChange={onRegistriesChange}
                 />
             </div>
         </details>
@@ -298,7 +340,7 @@ function Item({
 // A positional array of items, each its own collapsible form — no table, no
 // columns, so an expanded item's fields read top-to-bottom like any other
 // form on this page rather than needing to scan across a row.
-function ListItems({ itemSchema, items, onChange, registries }) {
+function ListItems({ itemSchema, items, onChange, registries, onRegistriesChange }) {
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
 
     function updateItem(index, key, value) {
@@ -341,7 +383,7 @@ function ListItems({ itemSchema, items, onChange, registries }) {
                     key={index}
                     itemSchema={itemSchema} item={item}
                     onFieldChange={(key, v) => updateItem(index, key, v)}
-                    registries={registries}
+                    registries={registries} itemKey={index} onRegistriesChange={onRegistriesChange}
                     expanded={expandedKeys.has(index)} onToggle={e => setExpanded(index, e.currentTarget.open)}
                     onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
                     onMoveDown={() => moveItem(index, 1)} disableDown={index === items.length - 1}
@@ -363,7 +405,7 @@ function generateRegistryId() {
 // positional array — everything else (collapsible form-per-item, controls at
 // the top) is identical; only add/remove/reorder work id-first instead of
 // index-first.
-function RegistryItems({ itemSchema, items, onChange, registries }) {
+function RegistryItems({ itemSchema, items, onChange, registries, onRegistriesChange }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
 
@@ -412,7 +454,7 @@ function RegistryItems({ itemSchema, items, onChange, registries }) {
                     key={key}
                     itemSchema={itemSchema} item={items[key]}
                     onFieldChange={(fieldKey, v) => updateItem(key, { ...items[key], [fieldKey]: v })}
-                    registries={registries}
+                    registries={registries} itemKey={key} onRegistriesChange={onRegistriesChange}
                     expanded={expandedKeys.has(key)} onToggle={e => setExpanded(key, e.currentTarget.open)}
                     onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
                     onMoveDown={() => moveItem(index, 1)} disableDown={index === keys.length - 1}
@@ -542,6 +584,7 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
                     value={values[key]}
                     onChange={handleChange}
                     registries={values}
+                    onRegistriesChange={v => { setValues(v); persistNow(v) }}
                 />
             </div>
         )

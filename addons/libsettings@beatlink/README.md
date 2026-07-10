@@ -235,6 +235,51 @@ form-per-entry way as anything else — reasonable whenever nothing needs one se
 than one group; reach for a `reference` field (see above) instead when an entry genuinely needs to be
 usable from more than one place without duplicating it.
 
+### Checklist fields — toggling entries from another registry, filtered to this one
+
+`reference` (above) lets an entry *pick* one entry from another registry. `checklist` is the inverse
+shape: it shows every entry from another registry that *already points back* at this one, as a plain
+list of checkboxes — no separate item-editing form, just enable/disable. It only makes sense inside a
+`registry`'s `itemSchema` (it filters by the enclosing entry's own id):
+
+```json
+{
+    "searchGroups": {
+        "type": "registry", "label": "Search Groups", "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Group"},
+            "profileId": {"type": "reference", "label": "Profile", "registry": "profiles", "default": ""},
+            "children": {
+                "type": "registry", "label": "Searches", "default": {},
+                "itemSchema": {
+                    "name": {"type": "string", "label": "Name", "default": "New Search"},
+                    "rule": {"type": "string", "label": "Search Rule", "default": ""},
+                    "enabled": {"type": "boolean", "label": "Enabled", "default": true}
+                }
+            }
+        }
+    },
+    "profiles": {
+        "type": "registry", "label": "Profiles", "default": {},
+        "itemSchema": {
+            "name": {"type": "string", "label": "Name", "default": "New Profile"},
+            "searchGroups": {"type": "checklist", "label": "Searches", "registry": "searchGroups", "filterBy": "profileId"}
+        }
+    }
+}
+```
+
+For a given `profiles` entry, the `searchGroups` checklist field looks at the top-level `searchGroups`
+registry named by `registry`, keeps only the entries whose `filterBy` field (`profileId`) equals this
+profile's own id, and renders each as a collapsible group of checkboxes — one per `children` entry,
+bound to its `enabled` field. Toggling one writes straight back into that sibling top-level
+`searchGroups` registry and persists immediately (regardless of whether the enclosing field is
+`autosave`); the `checklist` field itself stores nothing under its own key, so it needs no `default`
+and doesn't participate in `mergeDefaults`/`filterBySchema`. Anything not covered by the checklist view
+(a group's own name, its members' `rule`, adding/removing a group, reassigning which profile a group
+belongs to) is still edited on the referenced registry's own tab — `checklist` only ever toggles
+`enabled`.
+
 ### Tabs
 
 Every field lands on a tab: an explicit `"tab": "Some Label"` string on the field's own definition, if

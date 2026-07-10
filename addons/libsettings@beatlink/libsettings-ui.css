@@ -202,6 +202,33 @@
     }
 }
 
+.lst-checklist {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+}
+
+.lst-checklist-group {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    background-color: var(--main-background-color) !important;
+
+    & > summary {
+        cursor: pointer !important;
+        user-select: none !important;
+        padding: 0.5rem 0.75rem !important;
+        font-weight: 600 !important;
+    }
+}
+
+.lst-checklist-items {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+    padding: 0 0.75rem 0.75rem 0.75rem !important;
+}
+
 .lst-reference-inline {
     display: flex !important;
     flex-direction: column !important;
