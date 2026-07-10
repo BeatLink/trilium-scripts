@@ -37,19 +37,35 @@ async function detachAddonOwnedBranches(addonId) {
             const tamFileId = note.getLabelValue(tamFileIdLabel)
             if (!tamFileId || !tamFileId.startsWith(prefix)) continue
 
+            const parentsToDetach = []
+            let keepsAnyParent = false
             for (const parentNote of note.getParentNotes()) {
                 const isAnchor = anchorIds.includes(parentNote.noteId)
                 const parentTamId = parentNote.getLabelValue(tamFileIdLabel)
                 const ownedByThisAddon = parentTamId && parentTamId.startsWith(prefix)
                 // Preserve a parent branch clearly owned by a different addon; detach everything else.
                 const ownedByAnotherAddon = parentTamId && !ownedByThisAddon && !isAnchor
-                if (!ownedByAnotherAddon) {
-                    api.ensureNoteIsAbsentFromParent(note.noteId, parentNote.noteId)
+                if (ownedByAnotherAddon) {
+                    keepsAnyParent = true
+                } else {
+                    parentsToDetach.push(parentNote)
                 }
             }
-            const stillLive = api.getNote(note.noteId)
-            if (stillLive && !stillLive.isDeleted && stillLive.getParentNotes().length === 0) {
-                stillLive.deleteNote()
+
+            if (!keepsAnyParent) {
+                // Every parent branch here is slated for removal — this note should end up fully
+                // deleted. Go straight to deleteNote() instead of stripping branches one at a time
+                // via ensureNoteIsAbsentFromParent: that function silently REFUSES to remove a
+                // note's last remaining strong branch ("this would delete the note as well" is
+                // exactly the outcome wanted here, not a reason to abort), so calling it on every
+                // parent one-by-one always leaves exactly one branch behind and the note never
+                // actually gets removed.
+                note.deleteNote()
+                continue
+            }
+
+            for (const parentNote of parentsToDetach) {
+                api.ensureNoteIsAbsentFromParent(note.noteId, parentNote.noteId)
             }
         }
     }, [tamFileIdLabel, addonId, anchorIds])
