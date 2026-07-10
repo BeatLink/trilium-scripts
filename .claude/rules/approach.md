@@ -12,7 +12,8 @@
 - Use `Read` with `offset`/`limit` to scope reads instead of pulling whole large files when only a
   section is needed.
 - Prefer `grep`/glob-style targeted search over dumping whole directories for context.
-- For open-ended exploration needing more than ~3 searches, delegate to the `Explore` subagent
-  rather than accumulating raw search noise in the main context.
+- Prefer direct tools (`grep`, `find`, `Read`) over spawning a subagent.
+- Do not spawn subagents for tasks doable in one or two direct tool calls. Reserve subagents for
+  genuinely open-ended exploration (5+ searches with no clear target) or real parallelism.
 - Keep this file and the other `.claude/rules/` files lean — they're loaded every turn, so bloat
   costs tokens on every message, not just once. Prune stale entries when found.
