@@ -1,7 +1,6 @@
 import { useState, useEffect, FormDropdownList, useTriliumEvent } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
-import { TreeView } from "TreeView.jsx"
 import { KanbanView } from "KanbanView.jsx"
 import { TableView } from "TableView.jsx"
 import { AgendaCalendarView } from "agendaCalendarView.jsx"
@@ -14,7 +13,6 @@ const {
 } = require("libAgendaOverview.js")
 
 const VIEW_MODES = [
-    { key: "tree", label: "Tree" },
     { key: "kanban", label: "Kanban" },
     { key: "table", label: "Table" },
     { key: "calendar", label: "Calendar" }
@@ -25,7 +23,7 @@ export default function TaskView() {
     const [data, setData] = useState(null)
     const [profiles, setProfiles] = useState(null)
     const [profileId, setProfileId] = useState(null)
-    const [viewMode, setViewMode] = useState("tree")
+    const [viewMode, setViewMode] = useState("table")
 
     const [noteIds, setNoteIds] = useState(null)
     const [titles, setTitles] = useState({})
@@ -147,16 +145,6 @@ export default function TaskView() {
                     ))}
                 </div>
             </div>
-
-            {viewMode === "tree" && (
-                <TreeView
-                    noteIds={noteIds}
-                    titles={titles}
-                    prefixDict={prefixDict}
-                    colorDict={colorDict}
-                    onCardClick={activateNote}
-                />
-            )}
 
             {viewMode === "kanban" && (
                 !groupingInfo ? (

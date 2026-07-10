@@ -23,7 +23,8 @@ widgets plus a single schema-driven editor page:
    pointing at elements elsewhere. Every registry tab (including Profiles) autosaves each edit
    immediately; only the Settings tab's label-name fields wait on an explicit Save.
 5. **Agenda Task View** (`taskView.jsx`, a shipped `render` code note) — shows a profile's task list
-   as **Tree** (a flat sorted list), **Kanban**
+   as **Table** (a sortable, column-toggleable grid whose rows expand to show each task note's child
+   notes; the default view), **Kanban**
    (columns from the profile's picked `groupings` entry, drag-and-drop between columns to reassign the
    underlying label), or **Calendar** (via `libcalendarwidget@beatlink`, mapped directly from the task
    list rather than the ical feed). A profile switcher appears when more than one profile exists.
@@ -130,7 +131,7 @@ find-or-set and idempotent, run on every update. It reads the same `getSortedTas
 `getGroups`/`getGroupColumns` functions the Overview widget's `updateTaskLists` composes, just without
 ever calling `loadNotes` (the re-parenting step) — it's a read-only (except for `setGroupForNote`,
 kanban's drag-drop write) alternate presentation over the same profile data, not a second copy of the
-matching/sorting logic. `libagendataskcard@beatlink`/`libagendatreeview@beatlink`/
+matching/sorting logic. `libagendataskcard@beatlink`/`libagendatableview@beatlink`/
 `libagendakanbanview@beatlink` are presentation-only, dependency-injected components (props in, no
 relation resolution) like every other `lib*@beatlink` UI piece — see their own READMEs for props.
 
@@ -154,9 +155,10 @@ note, via `loadResults.isNoteContentReloaded(configNoteId)`, so unrelated edits 
 - **Kanban drag-and-drop only works for `type:"label"` groupings** — a `type:"dayjs"` grouping's
   columns are date windows (e.g. "Overdue"/"This Week"), not settable values, so dragging a card into
   one wouldn't have anything sensible to write; the Kanban view disables drag entirely for those.
-- **The Task View's Tree mode is a flat sorted list, not a real note hierarchy** — it renders the same
-  flat, ordered note-id list the Overview widget's re-parenting flow already flattens into one parent
-  today; it doesn't compute or display actual parent/child nesting.
+- **The Task View's Table rows are a flat sorted list at top level** — the top-level rows are the
+  flat, ordered note-id list the Overview widget's re-parenting flow produces, not a computed
+  parent/child ordering. Expanding a row does show that task note's actual child notes as sub-rows
+  (from `getChildNotes`), but the top-level ordering itself is the flat profile list.
 - **No migration from pre-2.0 installs.** This version replaced the addon's entire bespoke
   `agendaData.json`/`builtinElements.json` data model with a `libsettings@beatlink` schema — an
   install upgrading from an earlier version resets to the shipped schema defaults rather than

@@ -80,22 +80,46 @@ function titleFormatter(cell) {
     return wrap
 }
 
-// Turns a sorted note-id list into Tabulator row objects. Each row carries the
-// note id (as the Tabulator index) plus one cell per column, read from the
-// note's labels; `color` (from colorDict) drives the title-cell accent.
+// Builds a single Tabulator row object from a frontend note. `color` (from
+// colorDict, keyed by note id) drives the title-cell accent; child notes have
+// no entry there so their dot is simply absent.
+function buildRow(note, titles, colorDict, constants) {
+    const row = {
+        id: note.noteId,
+        title: titles?.[note.noteId] ?? note.title,
+        color: colorDict?.[note.noteId] || ""
+    }
+    for (const col of COLUMN_DEFS) {
+        if (col.label) row[col.field] = note.getLabelValue(constants[col.label]) || ""
+    }
+    return row
+}
+
+// Recursively expands a note into a row plus a `_children` array of its child
+// notes' rows, so Tabulator's dataTree can render them as expandable sub-rows.
+// A visited set guards against cycles from cloned notes. Child cells are read
+// from the child note's own labels; child notes aren't in titles/colorDict, so
+// buildRow falls back to the note's real title and no color.
+async function buildRowTree(note, titles, colorDict, constants, visited) {
+    const row = buildRow(note, titles, colorDict, constants)
+    const children = await note.getChildNotes()
+    const childRows = []
+    for (const child of children) {
+        if (visited.has(child.noteId)) continue
+        visited.add(child.noteId)
+        childRows.push(await buildRowTree(child, titles, colorDict, constants, visited))
+    }
+    if (childRows.length > 0) row._children = childRows
+    return row
+}
+
+// Turns a sorted note-id list into Tabulator row objects. Each top-level row
+// carries the note id (as the Tabulator index), one cell per column read from
+// the note's labels, and a `_children` tree of that note's descendant notes.
 async function buildRows(noteIds, titles, colorDict, constants) {
     const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
-    return notes.map(note => {
-        const row = {
-            id: note.noteId,
-            title: titles?.[note.noteId] ?? note.title,
-            color: colorDict?.[note.noteId] || ""
-        }
-        for (const col of COLUMN_DEFS) {
-            if (col.label) row[col.field] = note.getLabelValue(constants[col.label]) || ""
-        }
-        return row
-    })
+    return Promise.all(notes.map(note =>
+        buildRowTree(note, titles, colorDict, constants, new Set([note.noteId]))))
 }
 
 // Renders a sortable, column-toggleable table over a flat, already-sorted
@@ -159,6 +183,12 @@ export function TableView({ noteIds, titles, colorDict, constants, columnState, 
             index: "id",
             columns,
             layout: "fitColumns",
+            // Render each note's child notes as expandable sub-rows. The toggle
+            // control lives in the always-visible, non-hideable title column.
+            dataTree: true,
+            dataTreeChildField: "_children",
+            dataTreeStartExpanded: false,
+            dataTreeElementColumn: "title",
             initialSort: savedSort
                 .filter(s => COLUMN_DEFS.some(c => c.field === s.column))
                 .map(s => ({ column: s.column, dir: s.dir === "desc" ? "desc" : "asc" }))
