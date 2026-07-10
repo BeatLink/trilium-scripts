@@ -519,6 +519,10 @@ body.desktop.experimental-feature-new-layout .split-note-container-widget>.note-
     border-radius: var(--center-pane-border-radius) !important
 }
 
+body.desktop.experimental-feature-new-layout .tab-row-container {
+    margin: 0.2rem !important;
+}
+
 body.experimental-feature-new-layout #right-pane .card {
     background-color: var(--t-surface) !important;
     padding: 0.2rem !important;
