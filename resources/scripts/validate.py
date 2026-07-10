@@ -2,6 +2,7 @@
 """Validates addon structure before publishing."""
 
 import json
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse, unquote
@@ -99,10 +100,12 @@ for manifest_file in manifest_files:
         continue
 
     note_ids = set()
+    by_id = {}
     for note in notes:
         nid = note.get("id") or note.get("title")
         if nid:
             note_ids.add(nid)
+            by_id[nid] = note
         if not note.get("title"):
             warn(manifest_file, f"note '{nid}' missing 'title'")
 
@@ -115,6 +118,54 @@ for manifest_file in manifest_files:
         local_id = m.get(field)
         if local_id and local_id not in note_ids:
             error(manifest_file, f"manifest.{field} '{local_id}' not found in notes")
+
+    # settingsNote should point at a render-type note, not the raw JSX/code note
+    # (see CLAUDE.md/.claude/rules/tam-gotchas.md — activating a code note opens its source)
+    settings_note = by_id.get(m.get("settingsNote"))
+    if settings_note and settings_note.get("type") == "code":
+        warn(manifest_file, f"settingsNote '{m['settingsNote']}' is a raw code note — point it at the wrapping render note instead")
+
+    # JS notes: mime must declare env=frontend or env=backend, never anything else
+    for note in notes:
+        nid = note.get("id", note.get("title", "?"))
+        mime = note.get("mime") or ""
+        if mime.startswith("application/javascript"):
+            if "env=hybrid" in mime:
+                error(manifest_file, f"note '{nid}': mime declares 'env=hybrid', which does not exist — ship two notes (env=frontend + env=backend) instead")
+            elif "env=frontend" not in mime and "env=backend" not in mime:
+                warn(manifest_file, f"note '{nid}': mime '{mime}' is missing an env=frontend/env=backend qualifier")
+
+    # plain .js notes (not .jsx) are never transpiled — ES export/import syntax
+    # will throw at runtime; they must use CommonJS module.exports/require()
+    export_re = re.compile(r"^\s*export\s+(const|let|var|function|class|default|\{)", re.MULTILINE)
+    for note in notes:
+        nid = note.get("id", note.get("title", "?"))
+        source_url = note.get("sourceUrl") or ""
+        if source_url.endswith(".js") and not source_url.startswith(("http://", "https://")):
+            source_path = addon_dir / source_url
+            if source_path.exists() and export_re.search(source_path.read_text(errors="ignore")):
+                warn(manifest_file, f"note '{nid}': plain .js source uses ES 'export' syntax, which is not transpiled — use CommonJS module.exports instead")
+
+    # notes unreachable from root via children[] will never be created
+    local_children = {c.get("child") for c in m.get("children", []) if c.get("child") and not c.get("addon")}
+    for nid in note_ids:
+        if nid != root_id and nid not in local_children:
+            warn(manifest_file, f"note '{nid}' is not attached under any parent in 'children' — it will never be created")
+
+    # promptOnUpdate silently no-ops without a matching AddonData: relation
+    # (collectPendingPrompts in libTAMSync.js skips notes with no such relation)
+    addon_data_targets = {rel.get("to") for rel in m.get("relations", []) if str(rel.get("type", "")).startswith("AddonData:")}
+    for note in notes:
+        nid = note.get("id", note.get("title", "?"))
+        if note.get("promptOnUpdate") and nid not in addon_data_targets:
+            warn(manifest_file, f"note '{nid}' sets promptOnUpdate but has no matching 'AddonData:{nid}' relation — the keep-mine/use-new prompt will never fire")
+
+    # generic library titles collide globally across every addon that require()s them
+    GENERIC_TITLES = {"lib", "library", "libsettings", "settings", "utils", "helper", "helpers"}
+    for note in notes:
+        title = note.get("title", "")
+        if title.lower() in GENERIC_TITLES and note.get("type") == "code":
+            warn(manifest_file, f"note title '{title}' is generic — require()/the bundle-global namespace is shared across all addons; use a fully-qualified title")
 
     # --- sourceUrl files must exist ------------------------------------------
     for note in notes:
