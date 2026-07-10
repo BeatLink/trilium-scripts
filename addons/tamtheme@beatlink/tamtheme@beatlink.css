@@ -513,22 +513,19 @@ select.form-control:focus,
     border-radius: 0 !important;
 }
 
-body.desktop.experimental-feature-new-layout .split-note-container-widget > .note-split {
-    border-start-end-radius: var(--center-pane-border-radius)  !important;    
-    border-end-end-radius: var(--center-pane-border-radius)  !important;
+body.desktop.experimental-feature-new-layout .split-note-container-widget>.note-split {
+    border-start-end-radius: var(--center-pane-border-radius) !important;
+    border-end-end-radius: var(--center-pane-border-radius) !important;
     border-radius: var(--center-pane-border-radius) !important
 }
 
 body.experimental-feature-new-layout #right-pane .card {
     background-color: var(--t-surface) !important;
+    padding: 0.2rem !important;
     margin: 0.2rem !important;
     margin-right: calc(5px + 0.2rem) !important;
-    border: 2px solid --t-border !important;
+    border: 1px solid var(--t-border) !important;
     border-radius: var(--center-pane-border-radius) !important;
-    /*border-top: 2px solid var(--t-accent) !important;*/
-
-    
-    
 }
 
 span.fancytree-title {
