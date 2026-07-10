@@ -14,6 +14,7 @@ repo (no build step).
 - [commands.md](.claude/rules/commands.md) — dev/test commands, `nix-shell`/`nix develop` usage
 - [tam-gotchas.md](.claude/rules/tam-gotchas.md) — non-obvious TAM/addon behavior that will bite you
 - [addon-workflow.md](.claude/rules/addon-workflow.md) — how to add/edit an addon
+- [approach.md](.claude/rules/approach.md) — general working style (conciseness, verification, tone)
 
 ## Maintaining this file
 
