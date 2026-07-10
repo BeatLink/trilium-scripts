@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcalendarwidget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libcalendarwidget@beatlink/_tam_manifest_.json",
@@ -42,6 +42,16 @@
             {
                 "parent": "lib",
                 "child": "readme"
+            },
+            {
+                "parent": "lib",
+                "addon": "libfullcalendar@arshaw",
+                "child": "core"
+            },
+            {
+                "parent": "lib",
+                "addon": "libical@kewisch",
+                "child": "lib"
             }
         ],
         "relations": [],

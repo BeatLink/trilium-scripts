@@ -5,7 +5,7 @@
     "author": "arshaw",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libfullcalendar@arshaw",
     "license": "MIT",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.0.3",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libfullcalendar@arshaw/_tam_manifest_.json",
@@ -58,7 +58,10 @@
             }
         ],
         "dependencies": [],
-        "exports": {},
+        "exports": {
+            "core": "core",
+            "icalendar": "icalendar"
+        },
         "readmeNote": "readme"
     }
 }

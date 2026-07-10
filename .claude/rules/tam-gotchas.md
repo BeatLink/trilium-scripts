@@ -10,6 +10,12 @@
   specific note — `currentNote` varies per module inside a bundle, `startNote` doesn't.
 - `#TAMFILEID` is the only note-identity mechanism; resolution is always find-or-create, never
   cached. No offline "repair" exists — reinstall via `syncAddon` instead.
+- The manifest `dependencies` array is metadata only — it does NOT install anything. An addon's
+  notes are installed only when another addon references one of its `exports` via a `children[]` (or
+  `relations[]`) entry carrying `addon` + `child`/`to`. A dep that's listed but never wired is never
+  installed, so any `#customResourceProvider` it ships 404s (`custom/<x>.js` -> HTTP 404, MIME
+  `text/plain`). Fix by giving the dep real `exports` and wiring them from the consumer, mirroring how
+  `libcalendar@beatlink` wires `libical@kewisch`.
 - Renamed destructuring on a `require()` call (`const { foo: bar } = require(...)`) silently breaks —
   `bar` ends up `undefined` at runtime with no error until called ("X is not a function"). Destructure
   with the original export names and alias via a separate `const alias = foo` line instead, or just
