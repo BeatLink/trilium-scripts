@@ -1,5 +1,5 @@
 import { useState, useEffect, FormDropdownList, useTriliumEvent } from "trilium:preact"
-import { activateNote } from "trilium:api"
+import { activateNote, startNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { KanbanView } from "KanbanView.jsx"
 import { TableView } from "TableView.jsx"
@@ -9,8 +9,9 @@ const {
     loadData, getAllProfiles, getSortedTaskList,
     getPrefixes, getColors,
     getGroups, getGroupColumns, setGroupForNote,
-    getTableView, saveTableView
+    getTableView, saveTableView, updateTaskLists
 } = require("libAgendaOverview.js")
+const { complete, rescheduleByDays } = require("libAgendaTask.js")
 
 const VIEW_MODES = [
     { key: "kanban", label: "Kanban" },
@@ -39,11 +40,14 @@ export default function TaskView() {
     // view live with the sidebar. See useTriliumEvent below.
     const [reloadTick, setReloadTick] = useState(0)
 
-    // Resolve this page's own relations + settings once.
+    // Resolve this page's own relations + settings once. The task-view note
+    // carries an `icalNote` relation (see manifest) so row actions can refresh
+    // the overview lists + ical export afterward, matching agendaTask.jsx.
     useEffect(() => {
         (async () => {
             const settings = await getAgendaSettings()
-            setIds(settings)
+            const icalNoteId = await startNote.getRelationValue("icalNote")
+            setIds({ ...settings, icalNoteId })
         })()
     }, [])
 
@@ -101,6 +105,20 @@ export default function TaskView() {
     async function onTableColumnState(state) {
         setTableColumnState(state)
         await saveTableView(ids.profileContext, profileId, state)
+    }
+
+    // A Table View row-action button was clicked. Mutates the task's labels via
+    // libAgendaTask, then refreshes the overview lists + ical export (the config
+    // note reload then bumps reloadTick, re-pulling the task list here).
+    async function onTableAction(noteId, action) {
+        if (action === "complete") {
+            await complete(noteId, ids.constants)
+        } else if (action === "today") {
+            await rescheduleByDays(noteId, ids.constants, 0)
+        } else if (action === "tomorrow") {
+            await rescheduleByDays(noteId, ids.constants, 1)
+        }
+        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
     async function onCardMove(noteId, newGroupKey) {
@@ -176,6 +194,7 @@ export default function TaskView() {
                     columnState={tableColumnState}
                     onColumnState={onTableColumnState}
                     onRowClick={activateNote}
+                    onAction={onTableAction}
                 />
             )}
 

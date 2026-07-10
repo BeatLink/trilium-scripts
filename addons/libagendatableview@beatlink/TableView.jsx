@@ -42,6 +42,42 @@ const COLUMN_DEFS = [
 const CHECK = "✓ "
 const BLANK = "  "
 
+// The action buttons rendered in the always-visible, non-hideable "Actions"
+// column. `action` is passed back to the caller's onAction(noteId, action) so
+// the presentation component stays free of task-mutation logic. Keep these keys
+// stable — the caller switches on them.
+const ROW_ACTIONS = [
+    { action: "complete", icon: "bx bx-check", title: "Complete Task" },
+    { action: "today", icon: "bx bx-rocket", title: "Start Today" },
+    { action: "tomorrow", icon: "bx bx-rocket", title: "Start Tomorrow" }
+]
+
+// Builds the Actions-cell formatter, bound to a ref holding the latest
+// onAction callback so button clicks always see the current handler without
+// rebuilding the table. Clicks stopPropagation so they don't also fire the
+// row-click navigation.
+function makeActionsFormatter(onActionRef) {
+    return (cell) => {
+        const noteId = cell.getRow().getData().id
+        const wrap = document.createElement("span")
+        wrap.className = "libagendatableview-actions"
+        for (const a of ROW_ACTIONS) {
+            const btn = document.createElement("button")
+            btn.className = "libagendatableview-action"
+            btn.title = a.title
+            const icon = document.createElement("span")
+            icon.className = a.icon
+            btn.appendChild(icon)
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation()
+                onActionRef.current?.(noteId, a.action)
+            })
+            wrap.appendChild(btn)
+        }
+        return wrap
+    }
+}
+
 // A Tabulator header menu: one toggle entry per hideable column. Passed as each
 // column definition's `headerMenu`, which Tabulator calls every time the menu
 // opens, so `tableRef.current` is populated by then and the check marks reflect
@@ -130,7 +166,9 @@ async function buildRows(noteIds, titles, colorDict, constants) {
 //   - onColumnState(state): called when the user toggles a column or re-sorts,
 //     with the new state to persist
 //   - onRowClick(noteId): row activation
-export function TableView({ noteIds, titles, colorDict, constants, columnState, onColumnState, onRowClick }) {
+//   - onAction(noteId, action): an Actions-column button was clicked; `action`
+//     is one of "complete" | "today" | "tomorrow" (see ROW_ACTIONS)
+export function TableView({ noteIds, titles, colorDict, constants, columnState, onColumnState, onRowClick, onAction }) {
     const containerRef = useRef(null)
     const tableRef = useRef(null)
     const [loaded, setLoaded] = useState(false)
@@ -141,9 +179,11 @@ export function TableView({ noteIds, titles, colorDict, constants, columnState, 
     // forcing a full table rebuild.
     const onColumnStateRef = useRef(onColumnState)
     const onRowClickRef = useRef(onRowClick)
+    const onActionRef = useRef(onAction)
     const columnStateRef = useRef(columnState)
     onColumnStateRef.current = onColumnState
     onRowClickRef.current = onRowClick
+    onActionRef.current = onAction
     columnStateRef.current = columnState
 
     useEffect(() => {
@@ -166,6 +206,7 @@ export function TableView({ noteIds, titles, colorDict, constants, columnState, 
         const visible = state.visible || {}
         const savedSort = Array.isArray(state.sort) ? state.sort : []
         const headerMenu = makeHeaderMenu(tableRef)
+        const actionsFormatter = makeActionsFormatter(onActionRef)
 
         const columns = COLUMN_DEFS.map(col => {
             const isVisible = (col.field in visible) ? !!visible[col.field] : col.defaultVisible
@@ -176,6 +217,17 @@ export function TableView({ noteIds, titles, colorDict, constants, columnState, 
                 headerMenu: col.hideable ? headerMenu : undefined,
                 formatter: col.field === "title" ? titleFormatter : undefined
             }
+        })
+
+        // Always-visible, non-hideable Actions column. Not a data field, so it
+        // isn't sortable and carries no header menu; width is content-sized.
+        columns.push({
+            title: "Actions",
+            field: "_actions",
+            headerSort: false,
+            hozAlign: "center",
+            width: 120,
+            formatter: actionsFormatter
         })
 
         const table = new window.Tabulator(containerRef.current, {

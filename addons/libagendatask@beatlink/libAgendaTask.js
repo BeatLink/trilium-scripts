@@ -107,16 +107,17 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0){
     await api.runOnBackend((noteId, daysToAdd, startDateLabel) => {
         const note = api.getNote(noteId)
         const startDateString = note.getLabelValue(startDateLabel)
-        if (startDateString) {
-            const startDate = api.dayjs(startDateString)
-            const newDate = api.dayjs()
-                .add(daysToAdd, 'day')
-                .hour(startDate.hour())
-                .minute(startDate.minute())
-                .startOf('minute')
-                .format("YYYY-MM-DDTHH:mm")
-            note.setLabel(startDateLabel, newDate)
-        }
+        // Preserve the existing time-of-day when there's an existing start;
+        // otherwise (start date null) fall back to the current time-of-day so
+        // rescheduling a not-yet-scheduled task still works.
+        const timeSource = startDateString ? api.dayjs(startDateString) : api.dayjs()
+        const newDate = api.dayjs()
+            .add(daysToAdd, 'day')
+            .hour(timeSource.hour())
+            .minute(timeSource.minute())
+            .startOf('minute')
+            .format("YYYY-MM-DDTHH:mm")
+        note.setLabel(startDateLabel, newDate)
     }, [noteId, daysToAdd, constants.START_DATETIME_LABEL])
     await updateDependentAttributes(noteId, constants)
 }

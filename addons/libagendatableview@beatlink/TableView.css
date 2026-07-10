@@ -24,3 +24,25 @@
     border-radius: 50%;
     flex: none;
 }
+
+.libagendatableview-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.libagendatableview-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+}
+
+.libagendatableview-action:hover {
+    opacity: 1;
+}
