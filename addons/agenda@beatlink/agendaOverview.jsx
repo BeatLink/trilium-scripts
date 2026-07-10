@@ -19,13 +19,12 @@ const { saveProfile, loadData, updateTaskLists, getMatchingProfile, rescheduleAl
 
 // Preact Components ------------------------------------------------------
 
-// registryKey selects which of data.searches/data.filters a group's usages
-// (elementId + enabled) resolve display names against.
+// A group's `children` fully embed their own search/filter (name/rule/
+// enabled, or name/type/rule-or-dateRuleId/enabled) — no separate registry
+// to resolve a display name against.
 function CheckboxSection({
     sectionPath,   // e.g. ["searchGroups"]
     title,
-    registryKey,
-    registry,
     profile,
     update
 }) {
@@ -53,7 +52,7 @@ function CheckboxSection({
                     items={Object.entries(group.children || {}).map(
                         ([itemKey, usage]) => ({
                             key: itemKey,
-                            label: registry[registryKey][usage.elementId]?.name ?? "(missing element)",
+                            label: usage.name,
                             currentValue: usage.enabled,
                             onChange: checked =>
                                 update(p => {
@@ -186,8 +185,6 @@ function AgendaOverviewWidgetJSX() {
                 <CheckboxSection
                     title="Searches"
                     sectionPath={["searchGroups"]}
-                    registryKey="searches"
-                    registry={registry}
                     profile={profile}
                     update={update}
                 />
@@ -196,8 +193,6 @@ function AgendaOverviewWidgetJSX() {
                 <CheckboxSection
                     title="Filters"
                     sectionPath={["filterGroups"]}
-                    registryKey="filters"
-                    registry={registry}
                     profile={profile}
                     update={update}
                 />

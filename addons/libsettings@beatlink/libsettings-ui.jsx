@@ -147,12 +147,8 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
 // every Field/ListItems/RegistryItems call so a `reference` field anywhere
 // (including inside a nested itemSchema) can resolve `def.registry` against
 // a sibling top-level `registry`/`list` field's current entries, regardless
-// of how deep it's nested. `schemas` is the equivalent top-level *schema*
-// object (needed only by an `inline` reference, to find the referenced
-// registry's own `itemSchema`) and `updateReferencedField` is the write-
-// through callback an `inline` reference uses to edit the referenced
-// entry's own fields in place — both threaded the same unchanging way.
-function Field({ def, value, onChange, registries, schemas, updateReferencedField }) {
+// of how deep it's nested.
+function Field({ def, value, onChange, registries }) {
     switch (def.type) {
         case "boolean":
             return <FormCheckbox label={def.label} currentValue={value} onChange={onChange} />
@@ -179,55 +175,26 @@ function Field({ def, value, onChange, registries, schemas, updateReferencedFiel
             return (
                 <ListItems
                     itemSchema={def.itemSchema} items={value || []} onChange={onChange}
-                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    registries={registries}
                 />
             )
         case "registry":
             return (
                 <RegistryItems
                     itemSchema={def.itemSchema} items={value || {}} onChange={onChange}
-                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    registries={registries}
                 />
             )
         case "reference": {
             const targetRegistry = registries?.[def.registry] || {}
             const options = Object.entries(targetRegistry).map(([id, item]) => ({ key: id, title: item?.name ?? id }))
-            const picker = (
+            return (
                 <FormDropdownList
                     currentValue={value}
                     values={options}
                     keyProperty="key" titleProperty="title"
                     onChange={onChange}
                 />
-            )
-            // `inline` folds the referenced entry's own fields directly below
-            // the picker, editable in place — writing through `updateReferencedField`
-            // to the *other* registry, never to this field's own value. Falls back
-            // to the plain picker if there's nothing resolvable to fold in (no
-            // itemSchema for the target registry, or nothing currently selected).
-            if (!def.inline) return picker
-            const refItemSchema = schemas?.[def.registry]?.itemSchema
-            const refItem = targetRegistry[value]
-            if (!refItemSchema || !refItem) return picker
-            return (
-                <div class="lst-reference-inline">
-                    {picker}
-                    <div class="lst-item-fields">
-                        {Object.entries(refItemSchema).map(([fieldKey, fieldDef]) => matchesShowWhen(fieldDef, refItem) && (
-                            <div class="lst-field-row" key={fieldKey} title={fieldDef.description || undefined}>
-                                <label>{fieldDef.label}</label>
-                                <Field
-                                    def={fieldDef}
-                                    value={refItem[fieldKey]}
-                                    onChange={v => updateReferencedField(def.registry, value, fieldKey, v)}
-                                    registries={registries}
-                                    schemas={schemas}
-                                    updateReferencedField={updateReferencedField}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
             )
         }
         case "color":
@@ -276,7 +243,7 @@ function titleFor(itemSchema, item, registries) {
 // `list` entry and a `registry` entry render identically — the only
 // difference between the two types is how items are keyed/reordered/added,
 // never how one item's own fields look.
-function ItemFields({ itemSchema, item, onFieldChange, registries, schemas, updateReferencedField }) {
+function ItemFields({ itemSchema, item, onFieldChange, registries }) {
     return (
         <div class="lst-item-fields">
             {Object.entries(itemSchema).map(([fieldKey, def]) => matchesShowWhen(def, item) && (
@@ -287,8 +254,6 @@ function ItemFields({ itemSchema, item, onFieldChange, registries, schemas, upda
                         value={item[fieldKey]}
                         onChange={v => onFieldChange(fieldKey, v)}
                         registries={registries}
-                        schemas={schemas}
-                        updateReferencedField={updateReferencedField}
                     />
                 </div>
             ))}
@@ -303,7 +268,7 @@ function ItemFields({ itemSchema, item, onFieldChange, registries, schemas, upda
 // local-only (not persisted) — a pure editing convenience, not data every
 // reader of the settings needs to agree on.
 function Item({
-    itemSchema, item, onFieldChange, registries, schemas, updateReferencedField,
+    itemSchema, item, onFieldChange, registries,
     expanded, onToggle, onMoveUp, onMoveDown, onRemove, disableUp, disableDown
 }) {
     // A click on the actions would otherwise also toggle the <details> open/
@@ -323,7 +288,7 @@ function Item({
             <div class="lst-item-body">
                 <ItemFields
                     itemSchema={itemSchema} item={item} onFieldChange={onFieldChange}
-                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    registries={registries}
                 />
             </div>
         </details>
@@ -333,7 +298,7 @@ function Item({
 // A positional array of items, each its own collapsible form — no table, no
 // columns, so an expanded item's fields read top-to-bottom like any other
 // form on this page rather than needing to scan across a row.
-function ListItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
+function ListItems({ itemSchema, items, onChange, registries }) {
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
 
     function updateItem(index, key, value) {
@@ -376,7 +341,7 @@ function ListItems({ itemSchema, items, onChange, registries, schemas, updateRef
                     key={index}
                     itemSchema={itemSchema} item={item}
                     onFieldChange={(key, v) => updateItem(index, key, v)}
-                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    registries={registries}
                     expanded={expandedKeys.has(index)} onToggle={e => setExpanded(index, e.currentTarget.open)}
                     onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
                     onMoveDown={() => moveItem(index, 1)} disableDown={index === items.length - 1}
@@ -398,7 +363,7 @@ function generateRegistryId() {
 // positional array — everything else (collapsible form-per-item, controls at
 // the top) is identical; only add/remove/reorder work id-first instead of
 // index-first.
-function RegistryItems({ itemSchema, items, onChange, registries, schemas, updateReferencedField }) {
+function RegistryItems({ itemSchema, items, onChange, registries }) {
     const keys = Object.keys(items)
     const [expandedKeys, setExpandedKeys] = useState(() => new Set())
 
@@ -447,7 +412,7 @@ function RegistryItems({ itemSchema, items, onChange, registries, schemas, updat
                     key={key}
                     itemSchema={itemSchema} item={items[key]}
                     onFieldChange={(fieldKey, v) => updateItem(key, { ...items[key], [fieldKey]: v })}
-                    registries={registries} schemas={schemas} updateReferencedField={updateReferencedField}
+                    registries={registries}
                     expanded={expandedKeys.has(key)} onToggle={e => setExpanded(key, e.currentTarget.open)}
                     onMoveUp={() => moveItem(index, -1)} disableUp={index === 0}
                     onMoveDown={() => moveItem(index, 1)} disableDown={index === keys.length - 1}
@@ -482,7 +447,7 @@ function resolveTab(def) {
 // scalar fields, or just one list/registry) renders directly with no tab bar.
 //
 // A field marked `autosave: true` persists on every edit instead of only on
-// Save — see `handleChange`/`updateReferencedField` below. The Save button
+// Save — see `handleChange` below. The Save button
 // itself is only rendered if at least one field isn't `autosave`; a schema
 // that's entirely autosave fields has nothing left for it to do.
 export function SettingsForm({ schemaNoteId, configNoteId }) {
@@ -514,25 +479,6 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     // an autosave field never has a pending edit to report on.
     function persistNow(updatedValues) {
         persistValues(schema, configNoteId, updatedValues)
-    }
-
-    // Write-through for an `inline` reference field: edits the *referenced*
-    // registry's entry directly (never this field's own value), regardless
-    // of how deep the reference itself is nested — every reference resolves
-    // and writes against these same top-level `values`. Autosaves if the
-    // *referenced* registry's own field is marked `autosave` (not the
-    // reference field itself, which has no persisted value of its own to
-    // gate on) — editing a search's name inline from an autosaving Filters
-    // tab shouldn't require a trip to the Searches tab's own Save button.
-    function updateReferencedField(registryKey, entryId, fieldKey, newFieldValue) {
-        const registry = values[registryKey] || {}
-        const entry = registry[entryId] || {}
-        const updated = {
-            ...values,
-            [registryKey]: { ...registry, [entryId]: { ...entry, [fieldKey]: newFieldValue } }
-        }
-        setValues(updated)
-        if (schema[registryKey]?.autosave) persistNow(updated)
     }
 
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
@@ -596,8 +542,6 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
                     value={values[key]}
                     onChange={handleChange}
                     registries={values}
-                    schemas={schema}
-                    updateReferencedField={updateReferencedField}
                 />
             </div>
         )

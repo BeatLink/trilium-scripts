@@ -89,11 +89,15 @@ function reshapeVariant(variant) {
 }
 
 // `searchGroups`/`filterGroups` are their own top-level registries in the
-// schema (shown on the Searches/Filters tabs respectively, alongside the
-// `searches`/`filters` library they reference — not nested inside `profiles`,
-// so a group's elements stay reachable from the same tab that defines them),
-// each entry carrying a `profileId` (`reference` → `profiles`) saying which
-// profile it belongs to. `groupsForProfile` filters down to just one
+// schema (shown on the Searches/Filters tabs respectively) — not nested
+// inside `profiles`, so a group stays reachable from its own tab. Each
+// group's `children` fully embeds its own searches/filters (name/rule/
+// enabled, or name/type/rule-or-dateRuleId/enabled) directly, rather than
+// referencing a separate shared `searches`/`filters` registry — nothing in
+// this addon needs one search/filter shared across more than one group, so
+// there's no indirection to keep in sync. Each group entry also carries a
+// `profileId` (`reference` → `profiles`) saying which profile it belongs to.
+// `groupsForProfile` filters down to just one
 // profile's own groups and reshapes each into the `{groupId: {name,
 // children}}` shape `getNotesForSearchGroups`/`getFilteredNotes` already
 // iterate — dropping `profileId` itself, since it's already implied by which
@@ -181,8 +185,6 @@ async function loadData(schemaNoteId, configNoteId) {
     )
 
     return {
-        searches: values.searches || {},
-        filters: values.filters || {},
         dateRules, sorts, prefixes, colors, profiles
     }
 }
@@ -223,9 +225,8 @@ async function getNotesForSearchGroups(data, searchGroupsChildren) {
     let allNotes = []
     for (const group of Object.values(searchGroupsChildren)){
         for (const usage of Object.values(group.children)){
-            const element = data.searches[usage.elementId]
-            if (usage.enabled && element){
-                let noteIds = (await api.searchForNotes(element.rule)).map(note => note.noteId)
+            if (usage.enabled && usage.rule){
+                let noteIds = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
                 allNotes = allNotes.concat(noteIds)
             }
         }
@@ -238,14 +239,13 @@ async function getFilteredNotes(data, filterGroupsChildren, notesList){
     for (const [groupId, group] of Object.entries(filterGroupsChildren)){
         filterGroups[groupId] = []
         for (const usage of Object.values(group.children)){
-            const element = data.filters[usage.elementId]
-            if (usage.enabled && element){
-                if (element.type == "search"){
-                    let notes = (await api.searchForNotes(element.rule)).map(note => note.noteId)
+            if (usage.enabled){
+                if (usage.type == "search" && usage.rule){
+                    let notes = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
                     filterGroups[groupId] = filterGroups[groupId].concat(notes)
                 }
-                if (element.type == "dayjs"){
-                    const dateRule = data.dateRules[element.dateRuleId]
+                if (usage.type == "dayjs"){
+                    const dateRule = data.dateRules[usage.dateRuleId]
                     if (dateRule) {
                         for (let note of notesList){
                             let noteDate = (await api.getNote(note)).getLabelValue(dateRule.dateLabel)

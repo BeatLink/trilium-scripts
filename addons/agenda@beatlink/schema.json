@@ -88,7 +88,8 @@
                 "label": "Searches",
                 "default": {},
                 "itemSchema": {
-                    "elementId": { "type": "reference", "label": "Search", "registry": "searches", "inline": true, "default": "" },
+                    "name": { "type": "string", "label": "Name", "default": "New Search" },
+                    "rule": { "type": "string", "label": "Search Rule", "default": "" },
                     "enabled": { "type": "boolean", "label": "Enabled", "default": true }
                 }
             }
@@ -98,30 +99,13 @@
                 "name": "Note Type",
                 "profileId": "default",
                 "children": {
-                    "all": { "elementId": "all", "enabled": false },
-                    "calendar": { "elementId": "calendar", "enabled": true },
-                    "routine": { "elementId": "routine", "enabled": true },
-                    "tasks": { "elementId": "tasks", "enabled": true },
-                    "future": { "elementId": "future", "enabled": true }
+                    "all": { "name": "All Tasks", "rule": "#startDateTime", "enabled": false },
+                    "calendar": { "name": "1. High Priority", "rule": "~template.title='1. High Priority' AND not(note.parents.relations.template.title='1. High Priority')", "enabled": true },
+                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine')", "enabled": true },
+                    "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND #dueDateTime", "enabled": true },
+                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')", "enabled": true }
                 }
             }
-        }
-    },
-    "searches": {
-        "type": "registry",
-        "label": "Searches",
-        "tab": "Searches",
-        "autosave": true,
-        "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Search" },
-            "rule": { "type": "string", "label": "Search Rule", "default": "" }
-        },
-        "default": {
-            "all": { "name": "All Tasks", "rule": "#startDateTime" },
-            "calendar": { "name": "1. High Priority", "rule": "~template.title='1. High Priority' AND not(note.parents.relations.template.title='1. High Priority')" },
-            "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine')" },
-            "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND #dueDateTime" },
-            "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')" }
         }
     },
     "filterGroups": {
@@ -137,7 +121,16 @@
                 "label": "Filters",
                 "default": {},
                 "itemSchema": {
-                    "elementId": { "type": "reference", "label": "Filter", "registry": "filters", "inline": true, "default": "" },
+                    "name": { "type": "string", "label": "Name", "default": "New Filter" },
+                    "type": {
+                        "type": "select", "label": "Type", "default": "search",
+                        "options": [
+                            { "value": "search", "label": "Search Query" },
+                            { "value": "dayjs", "label": "Date Comparison" }
+                        ]
+                    },
+                    "rule": { "type": "string", "label": "Search Rule", "default": "", "showWhen": { "type": "search" } },
+                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "", "showWhen": { "type": "dayjs" } },
                     "enabled": { "type": "boolean", "label": "Enabled", "default": true }
                 }
             }
@@ -147,116 +140,61 @@
                 "name": "Priority",
                 "profileId": "default",
                 "children": {
-                    "must": { "elementId": "must", "enabled": true },
-                    "should": { "elementId": "should", "enabled": true },
-                    "could": { "elementId": "could", "enabled": true },
-                    "want": { "elementId": "want", "enabled": true },
-                    "none": { "elementId": "none", "enabled": false }
+                    "must": { "name": "Must Do", "type": "search", "rule": "#priority='4-critical'", "enabled": true },
+                    "should": { "name": "Should Do", "type": "search", "rule": "#priority='3-high'", "enabled": true },
+                    "could": { "name": "Could Do", "type": "search", "rule": "#priority='2-medium'", "enabled": true },
+                    "want": { "name": "Want To Do", "type": "search", "rule": "#priority='1-low'", "enabled": true },
+                    "none": { "name": "No Priority", "type": "search", "rule": "#!priority OR #priority=''", "enabled": false }
                 }
             },
             "date": {
                 "name": "Date",
                 "profileId": "default",
                 "children": {
-                    "noDate": { "elementId": "noDate", "enabled": false },
-                    "overdue": { "elementId": "overdue", "enabled": true },
-                    "now": { "elementId": "now", "enabled": true },
-                    "restOfDay": { "elementId": "restOfDay", "enabled": true },
-                    "tomorrow": { "elementId": "tomorrow", "enabled": false },
-                    "thisWeek": { "elementId": "thisWeek", "enabled": false },
-                    "thisMonth": { "elementId": "thisMonth", "enabled": false },
-                    "thisYear": { "elementId": "thisYear", "enabled": false },
-                    "future": { "elementId": "future", "enabled": false }
+                    "noDate": { "name": "No Date", "type": "dayjs", "dateRuleId": "noDate", "enabled": false },
+                    "overdue": { "name": "Overdue", "type": "dayjs", "dateRuleId": "overdue", "enabled": true },
+                    "now": { "name": "Now", "type": "dayjs", "dateRuleId": "now", "enabled": true },
+                    "restOfDay": { "name": "Later Today", "type": "dayjs", "dateRuleId": "restOfDay", "enabled": true },
+                    "tomorrow": { "name": "Tomorrow", "type": "dayjs", "dateRuleId": "tomorrow", "enabled": false },
+                    "thisWeek": { "name": "This Week", "type": "dayjs", "dateRuleId": "thisWeek", "enabled": false },
+                    "thisMonth": { "name": "This Month", "type": "dayjs", "dateRuleId": "thisMonth", "enabled": false },
+                    "thisYear": { "name": "This Year", "type": "dayjs", "dateRuleId": "thisYear", "enabled": false },
+                    "future": { "name": "Future", "type": "dayjs", "dateRuleId": "future", "enabled": false }
                 }
             },
             "recurrence": {
                 "name": "Recurrence",
                 "profileId": "default",
                 "children": {
-                    "hourly": { "elementId": "hourly", "enabled": true },
-                    "daily": { "elementId": "daily", "enabled": true },
-                    "weekly": { "elementId": "weekly", "enabled": true },
-                    "monthly": { "elementId": "monthly", "enabled": true },
-                    "yearly": { "elementId": "yearly", "enabled": true },
-                    "noRecurrence": { "elementId": "noRecurrence", "enabled": true }
+                    "hourly": { "name": "Hourly", "type": "search", "rule": "#recurrence *=* HOURLY", "enabled": true },
+                    "daily": { "name": "Daily", "type": "search", "rule": "#recurrence *=* DAILY", "enabled": true },
+                    "weekly": { "name": "Weekly", "type": "search", "rule": "#recurrence *=* WEEKLY", "enabled": true },
+                    "monthly": { "name": "Monthly", "type": "search", "rule": "#recurrence *=* MONTHLY", "enabled": true },
+                    "yearly": { "name": "Yearly", "type": "search", "rule": "#recurrence *=* YEARLY", "enabled": true },
+                    "noRecurrence": { "name": "No Recurrence", "type": "search", "rule": "#!recurrence OR (#recurrence='')", "enabled": true }
                 }
             },
             "area": {
                 "name": "Area",
                 "profileId": "default",
                 "children": {
-                    "1-career": { "elementId": "1-career", "enabled": true },
-                    "2-finances": { "elementId": "2-finances", "enabled": true },
-                    "3-home": { "elementId": "3-home", "enabled": true },
-                    "4-car": { "elementId": "4-car", "enabled": true },
-                    "5-fitness": { "elementId": "5-fitness", "enabled": true },
-                    "6-grooming": { "elementId": "6-grooming", "enabled": true },
-                    "7-sexual": { "elementId": "7-sexual", "enabled": true },
-                    "8-social": { "elementId": "8-social", "enabled": true },
-                    "9-health": { "elementId": "9-health", "enabled": true },
-                    "10-mental": { "elementId": "10-mental", "enabled": true },
-                    "11-identity": { "elementId": "11-identity", "enabled": true },
-                    "12-productivity": { "elementId": "12-productivity", "enabled": true },
-                    "13-tech": { "elementId": "13-tech", "enabled": true },
-                    "14-fun": { "elementId": "14-fun", "enabled": true },
-                    "15-none": { "elementId": "15-none", "enabled": true }
+                    "1-career": { "name": "Career", "type": "search", "rule": "#area='01-career'", "enabled": true },
+                    "2-finances": { "name": "Finances", "type": "search", "rule": "#area='02-finances'", "enabled": true },
+                    "3-home": { "name": "Home", "type": "search", "rule": "#area='03-home'", "enabled": true },
+                    "4-car": { "name": "Car", "type": "search", "rule": "#area='04-car'", "enabled": true },
+                    "5-fitness": { "name": "Fitness", "type": "search", "rule": "#area='05-fitness'", "enabled": true },
+                    "6-grooming": { "name": "Grooming", "type": "search", "rule": "#area='06-grooming'", "enabled": true },
+                    "7-sexual": { "name": "Sexual", "type": "search", "rule": "#area='07-sexual'", "enabled": true },
+                    "8-social": { "name": "Social", "type": "search", "rule": "#area='08-social'", "enabled": true },
+                    "9-health": { "name": "Health", "type": "search", "rule": "#area='09-health'", "enabled": true },
+                    "10-mental": { "name": "Mental", "type": "search", "rule": "#area='10-mental'", "enabled": true },
+                    "11-identity": { "name": "Identity", "type": "search", "rule": "#area='11-identity'", "enabled": true },
+                    "12-productivity": { "name": "Productivity", "type": "search", "rule": "#area='12-productivity'", "enabled": true },
+                    "13-tech": { "name": "Tech", "type": "search", "rule": "#area='13-tech'", "enabled": true },
+                    "14-fun": { "name": "Fun", "type": "search", "rule": "#area='14-fun'", "enabled": true },
+                    "15-none": { "name": "No Area", "type": "search", "rule": "#!area OR #area=''", "enabled": true }
                 }
             }
-        }
-    },
-    "filters": {
-        "type": "registry",
-        "label": "Filters",
-        "tab": "Filters",
-        "autosave": true,
-        "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Filter" },
-            "type": {
-                "type": "select", "label": "Type", "default": "search",
-                "options": [
-                    { "value": "search", "label": "Search Query" },
-                    { "value": "dayjs", "label": "Date Comparison" }
-                ]
-            },
-            "rule": { "type": "string", "label": "Search Rule", "default": "", "showWhen": { "type": "search" } },
-            "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "", "showWhen": { "type": "dayjs" } }
-        },
-        "default": {
-            "noDate": { "name": "No Date", "type": "dayjs", "dateRuleId": "noDate" },
-            "overdue": { "name": "Overdue", "type": "dayjs", "dateRuleId": "overdue" },
-            "now": { "name": "Now", "type": "dayjs", "dateRuleId": "now" },
-            "restOfDay": { "name": "Later Today", "type": "dayjs", "dateRuleId": "restOfDay" },
-            "tomorrow": { "name": "Tomorrow", "type": "dayjs", "dateRuleId": "tomorrow" },
-            "thisWeek": { "name": "This Week", "type": "dayjs", "dateRuleId": "thisWeek" },
-            "thisMonth": { "name": "This Month", "type": "dayjs", "dateRuleId": "thisMonth" },
-            "thisYear": { "name": "This Year", "type": "dayjs", "dateRuleId": "thisYear" },
-            "future": { "name": "Future", "type": "dayjs", "dateRuleId": "future" },
-            "must": { "name": "Must Do", "type": "search", "rule": "#priority='4-critical'" },
-            "should": { "name": "Should Do", "type": "search", "rule": "#priority='3-high'" },
-            "could": { "name": "Could Do", "type": "search", "rule": "#priority='2-medium'" },
-            "want": { "name": "Want To Do", "type": "search", "rule": "#priority='1-low'" },
-            "none": { "name": "No Priority", "type": "search", "rule": "#!priority OR #priority=''" },
-            "hourly": { "name": "Hourly", "type": "search", "rule": "#recurrence *=* HOURLY" },
-            "daily": { "name": "Daily", "type": "search", "rule": "#recurrence *=* DAILY" },
-            "weekly": { "name": "Weekly", "type": "search", "rule": "#recurrence *=* WEEKLY" },
-            "monthly": { "name": "Monthly", "type": "search", "rule": "#recurrence *=* MONTHLY" },
-            "yearly": { "name": "Yearly", "type": "search", "rule": "#recurrence *=* YEARLY" },
-            "noRecurrence": { "name": "No Recurrence", "type": "search", "rule": "#!recurrence OR (#recurrence='')" },
-            "1-career": { "name": "Career", "type": "search", "rule": "#area='01-career'" },
-            "2-finances": { "name": "Finances", "type": "search", "rule": "#area='02-finances'" },
-            "3-home": { "name": "Home", "type": "search", "rule": "#area='03-home'" },
-            "4-car": { "name": "Car", "type": "search", "rule": "#area='04-car'" },
-            "5-fitness": { "name": "Fitness", "type": "search", "rule": "#area='05-fitness'" },
-            "6-grooming": { "name": "Grooming", "type": "search", "rule": "#area='06-grooming'" },
-            "7-sexual": { "name": "Sexual", "type": "search", "rule": "#area='07-sexual'" },
-            "8-social": { "name": "Social", "type": "search", "rule": "#area='08-social'" },
-            "9-health": { "name": "Health", "type": "search", "rule": "#area='09-health'" },
-            "10-mental": { "name": "Mental", "type": "search", "rule": "#area='10-mental'" },
-            "11-identity": { "name": "Identity", "type": "search", "rule": "#area='11-identity'" },
-            "12-productivity": { "name": "Productivity", "type": "search", "rule": "#area='12-productivity'" },
-            "13-tech": { "name": "Tech", "type": "search", "rule": "#area='13-tech'" },
-            "14-fun": { "name": "Fun", "type": "search", "rule": "#area='14-fun'" },
-            "15-none": { "name": "No Area", "type": "search", "rule": "#!area OR #area=''" }
         }
     },
     "sorts": {
