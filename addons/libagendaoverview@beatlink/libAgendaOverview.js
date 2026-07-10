@@ -5,7 +5,7 @@ const multisort = require("libMultisort.js")
 const { loadSettings, saveSettings } = require("libSettingsUI.jsx")
 
 
-function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
+function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays) {
     let now = api.dayjs()
     let startOfToday = now.startOf("day")
     let dateVars = {
@@ -20,7 +20,7 @@ function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays){
     let dateCriteria = [...dateCriteriaList]
     let dateFunction = dateCriteria.shift()
     let dateParameters = dateCriteria
-    for (const [index, parameter] of dateParameters.entries()){
+    for (const [index, parameter] of dateParameters.entries()) {
         dateParameters[index] = parameter in dateVars ? dateVars[parameter] : dateParameters[index]
     }
     let date = api.dayjs(dateString)
@@ -229,26 +229,26 @@ async function getAllProfiles({ schemaNoteId, configNoteId, profileIds }) {
 }
 
 async function getMatchingProfile({ schemaNoteId, configNoteId, profileIds }, overviewNoteId) {
-    for (let profile of await getAllProfiles({ schemaNoteId, configNoteId, profileIds })){
-        if (profile["parentNoteId"] == overviewNoteId){
+    for (let profile of await getAllProfiles({ schemaNoteId, configNoteId, profileIds })) {
+        if (profile["parentNoteId"] == overviewNoteId) {
             return profile
         }
     }
 }
 
-async function deleteChildBranches(parentNoteId){
+async function deleteChildBranches(parentNoteId) {
     api.runOnBackend((parentNoteId) => {
-        for (let note of api.getNote(parentNoteId).getChildNotes()){
+        for (let note of api.getNote(parentNoteId).getChildNotes()) {
             api.toggleNoteInParent(false, note.noteId, parentNoteId)
         }
-    }, [parentNoteId]);
+    }, [parentNoteId])
 }
 
 async function getNotesForSearchGroups(data, searchGroupsChildren) {
     let allNotes = []
-    for (const group of Object.values(searchGroupsChildren)){
-        for (const usage of Object.values(group.children)){
-            if (usage.enabled && usage.rule){
+    for (const group of Object.values(searchGroupsChildren)) {
+        for (const usage of Object.values(group.children)) {
+            if (usage.enabled && usage.rule) {
                 let noteIds = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
                 allNotes = allNotes.concat(noteIds)
             }
@@ -257,22 +257,22 @@ async function getNotesForSearchGroups(data, searchGroupsChildren) {
     return allNotes
 }
 
-async function getFilteredNotes(data, filterGroupsChildren, notesList){
+async function getFilteredNotes(data, filterGroupsChildren, notesList) {
     let filterGroups = {}
-    for (const [groupId, group] of Object.entries(filterGroupsChildren)){
+    for (const [groupId, group] of Object.entries(filterGroupsChildren)) {
         filterGroups[groupId] = []
-        for (const usage of Object.values(group.children)){
-            if (usage.enabled){
-                if (usage.type == "search" && usage.rule){
+        for (const usage of Object.values(group.children)) {
+            if (usage.enabled) {
+                if (usage.type == "search" && usage.rule) {
                     let notes = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
                     filterGroups[groupId] = filterGroups[groupId].concat(notes)
                 }
-                if (usage.type == "dayjs"){
+                if (usage.type == "dayjs") {
                     const dateRule = data.dateRules[usage.dateRuleId]
                     if (dateRule) {
-                        for (let note of notesList){
+                        for (let note of notesList) {
                             let noteDate = (await api.getNote(note)).getLabelValue(dateRule.dateLabel)
-                            if (matchesDayJsCriteria(noteDate, dateRule.rule, dateRule.useNumberOfDays)){
+                            if (matchesDayJsCriteria(noteDate, dateRule.rule, dateRule.useNumberOfDays)) {
                                 filterGroups[groupId].push(note)
                             }
                         }
@@ -283,7 +283,7 @@ async function getFilteredNotes(data, filterGroupsChildren, notesList){
     }
     // Essentially the below checks that every note in the note list is also in all the filter lists
     let finalNotesList = notesList.filter(
-        noteId =>  Object.values(filterGroups).every(
+        noteId => Object.values(filterGroups).every(
             filter => filter.includes(noteId)))
     return finalNotesList
 }
@@ -299,22 +299,22 @@ async function sortNoteIds(sortString, noteIds) {
 
 async function getPrefixes(dateRules, prefixInfo, notesList) {
     let prefixDict = {}
-    for (let note of notesList){
+    for (let note of notesList) {
         if (!prefixInfo) {
             prefixDict[note] = ""
-        } else if (prefixInfo.type == "dayjs"){
+        } else if (prefixInfo.type == "dayjs") {
             const noteObj = await api.getNote(note)
             for (let interval of Object.values(prefixInfo.intervals)) {
                 const dateRule = dateRules[interval.dateRuleId]
                 if (!dateRule) continue
                 const date = noteObj.getLabelValue(dateRule.dateLabel)
-                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)) {
                     prefixDict[note] = api.dayjs(date).format(interval.formatString)
                     break
                 }
             }
             if (!(note in prefixDict)) prefixDict[note] = "No Date Set"
-        } else if (prefixInfo["type"] == "label"){
+        } else if (prefixInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(prefixInfo["label"])
             prefixDict[note] = prefixInfo.children ? prefixInfo.children[noteLabel] : noteLabel
         } else {
@@ -326,22 +326,22 @@ async function getPrefixes(dateRules, prefixInfo, notesList) {
 
 async function getColors(dateRules, colorInfo, notesList) {
     let colorDict = {}
-    for (let note of notesList){
+    for (let note of notesList) {
         if (!colorInfo) {
             colorDict[note] = ""
-        } else if (colorInfo.type == "dayjs"){
+        } else if (colorInfo.type == "dayjs") {
             const noteObj = await api.getNote(note)
             for (let interval of Object.values(colorInfo.intervals)) {
                 const dateRule = dateRules[interval.dateRuleId]
                 if (!dateRule) continue
                 const date = noteObj.getLabelValue(dateRule.dateLabel)
-                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)) {
                     colorDict[note] = interval.color
                     break
                 }
             }
             if (!(note in colorDict)) colorDict[note] = ""
-        } else if (colorInfo["type"] == "label"){
+        } else if (colorInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(colorInfo["label"])
             colorDict[note] = colorInfo.children ? colorInfo.children[noteLabel] : noteLabel
         } else {
@@ -357,22 +357,22 @@ async function getColors(dateRules, colorInfo, notesList) {
 // for display, and passes it back into setGroupForNote on drop.
 async function getGroups(dateRules, groupingInfo, notesList) {
     let groupDict = {}
-    for (let note of notesList){
+    for (let note of notesList) {
         if (!groupingInfo) {
             groupDict[note] = null
-        } else if (groupingInfo.type == "dayjs"){
+        } else if (groupingInfo.type == "dayjs") {
             const noteObj = await api.getNote(note)
             for (let [intervalId, interval] of Object.entries(groupingInfo.intervals)) {
                 const dateRule = dateRules[interval.dateRuleId]
                 if (!dateRule) continue
                 const date = noteObj.getLabelValue(dateRule.dateLabel)
-                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)) {
                     groupDict[note] = intervalId
                     break
                 }
             }
             if (!(note in groupDict)) groupDict[note] = null
-        } else if (groupingInfo["type"] == "label"){
+        } else if (groupingInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(groupingInfo["label"])
             groupDict[note] = noteLabel || null
         } else {
@@ -412,15 +412,15 @@ async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
 
 async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
     api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
-        for (let [index, noteId] of notesList.entries()){
+        for (let [index, noteId] of notesList.entries()) {
             api.toggleNoteInParent(true, noteId, parentNoteId, "")
             const note = api.getNote(noteId)
-            const padLength = String(notesList.length).length;
+            const padLength = String(notesList.length).length
             note.setLabel("agendaOverviewSort", String(index).padStart(padLength, '0'))
-            if (colorDict[noteId]){
-                function setColor(note, color){
+            if (colorDict[noteId]) {
+                function setColor(note, color) {
                     note.setLabel("color", color)
-                    for (let child of note.getChildNotes()){
+                    for (let child of note.getChildNotes()) {
                         setColor(child, color)
                     }
                 }
@@ -428,14 +428,14 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
             }
         }
         api.sortNotes(parentNoteId, { sortBy: "agendaOverviewSort" })
-        for (let note of api.getNote(parentNoteId).getChildNotes()){
-            if (!notesList.includes(note.noteId)){
+        for (let note of api.getNote(parentNoteId).getChildNotes()) {
+            if (!notesList.includes(note.noteId)) {
                 note.removeLabel("agendaOverviewSort")
                 api.toggleNoteInParent(false, note.noteId, parentNoteId, "")
             }
         }
-        for (let branch of api.getNote(parentNoteId).getChildBranches()){
-            if (branch.noteId in prefixDict){
+        for (let branch of api.getNote(parentNoteId).getChildBranches()) {
+            if (branch.noteId in prefixDict) {
                 branch.prefix = prefixDict[branch.noteId]
                 branch.save()
             }
@@ -448,7 +448,7 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 async function updateTaskLists(profileContext, constants, icalNoteId) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)){
+    for (let profile of Object.values(profiles)) {
         //await deleteChildBranches(profile.parentNoteId)
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
@@ -465,7 +465,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
 async function getTaskList(profileContext) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)){
+    for (let profile of Object.values(profiles)) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         return filteredNotes
@@ -481,7 +481,7 @@ async function getTaskList(profileContext) {
 async function getSortedTaskList(profileContext, profileId = null) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)){
+    for (let profile of Object.values(profiles)) {
         if (profileId && profile.id !== profileId) continue
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
@@ -490,9 +490,9 @@ async function getSortedTaskList(profileContext, profileId = null) {
     return []
 }
 
-async function sendNotificationForDueTasks(profileContext, constants){
+async function sendNotificationForDueTasks(profileContext, constants) {
     const taskList = await getTaskList(profileContext)
-    for (const taskId of taskList){
+    for (const taskId of taskList) {
         const task = await api.getNote(taskId)
         const startDate = task.getLabelValue(constants.START_DATETIME_LABEL)
         if (startDate) {
@@ -503,9 +503,9 @@ async function sendNotificationForDueTasks(profileContext, constants){
     }
 }
 
-async function rescheduleAllTasks(profileContext, constants, icalNoteId, days = 0){
+async function rescheduleAllTasks(profileContext, constants, icalNoteId, days = 0) {
     const taskList = await getTaskList(profileContext)
-    for (const taskId of taskList){
+    for (const taskId of taskList) {
         task.rescheduleByDays(taskId, constants, days)
     }
     await updateTaskLists(profileContext, constants, icalNoteId)
@@ -521,7 +521,7 @@ async function setCalendarEvents(profileContext, constants, icalNoteId) {
     })
     await api.runOnBackend((icalNoteId, icalString) => {
         const icalNote = api.getNote(icalNoteId)
-        icalNote.setContent(icalString, {forceSave: true})
+        icalNote.setContent(icalString, { forceSave: true })
     }, [icalNoteId, icalString])
 }
 
@@ -535,6 +535,8 @@ module.exports = {
     getTaskList,
     getSortedTaskList,
     getGroups,
+    getPrefixes,
+    getColors,
     getGroupColumns,
     setGroupForNote,
     sendNotificationForDueTasks,
