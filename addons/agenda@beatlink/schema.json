@@ -60,7 +60,6 @@
         "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Profile" },
-            "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "" },
             "fileMode": {
                 "type": "select", "label": "Task Filing Mode", "default": "reparent",
                 "options": [
@@ -68,6 +67,8 @@
                     { "value": "virtual", "label": "Virtual View Only" }
                 ]
             },
+            "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "", "showWhen": { "fileMode": "reparent" } },
+            "viewNoteId": { "type": "note", "label": "Virtual View Note", "default": "", "showWhen": { "fileMode": "virtual" } },
             "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
             "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
             "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
@@ -79,6 +80,7 @@
             "default": {
                 "name": "default",
                 "parentNoteId": "",
+                "viewNoteId": "",
                 "fileMode": "reparent",
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",

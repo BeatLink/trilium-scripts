@@ -152,6 +152,7 @@ function reshapeProfile(profile, searchGroups, filterGroups, profileId) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
+        viewNoteId: profile.viewNoteId,
         fileMode: profile.fileMode,
         searchGroups: { children: groupsForProfile(searchGroups, profileId) },
         filterGroups: { children: groupsForProfile(filterGroups, profileId) },
@@ -171,6 +172,7 @@ function unshapeProfile(profile) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
+        viewNoteId: profile.viewNoteId,
         fileMode: profile.fileMode,
         sortSelected: profile.sorts?.selected,
         prefixSelected: profile.prefixes?.selected,
@@ -228,9 +230,14 @@ async function getAllProfiles({ schemaNoteId, configNoteId, profileIds }) {
         .map(id => ({ id, schemaNoteId, configNoteId, ...data.profiles[id] }))
 }
 
+// The overview widget binds to whichever note the user is browsing. A
+// reparent profile claims its `parentNoteId` (the note its tasks are filed
+// under); a virtual profile claims its `viewNoteId` (the render note that
+// hosts its Task View). Either identifies the profile that "owns" the note.
 async function getMatchingProfile({ schemaNoteId, configNoteId, profileIds }, overviewNoteId) {
     for (let profile of await getAllProfiles({ schemaNoteId, configNoteId, profileIds })) {
-        if (profile["parentNoteId"] == overviewNoteId) {
+        const claimedNoteId = profile.fileMode === "virtual" ? profile.viewNoteId : profile.parentNoteId
+        if (claimedNoteId && claimedNoteId == overviewNoteId) {
             return profile
         }
     }
@@ -445,7 +452,28 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 
-async function updateTaskLists(profileContext, constants, icalNoteId) {
+// Turns a virtual profile's user-chosen `viewNoteId` into a live Task View:
+// makes that note a `render` note and points its `~renderNote` relation at
+// the addon's shipped task-view code note (`taskViewNoteId`), so opening the
+// note renders taskView.jsx. Find-or-set — safe to call every update; only
+// touches the note when its type/relation is not already what we want.
+async function configureViewNote(viewNoteId, taskViewNoteId) {
+    if (!viewNoteId || !taskViewNoteId) return
+    await api.runOnBackend((viewNoteId, taskViewNoteId) => {
+        const note = api.getNote(viewNoteId)
+        if (!note) return
+        if (note.type !== "render" || note.mime !== "text/html") {
+            note.type = "render"
+            note.mime = "text/html"
+            note.save()
+        }
+        if (note.getRelationValue("renderNote") !== taskViewNoteId) {
+            note.setRelation("renderNote", taskViewNoteId)
+        }
+    }, [viewNoteId, taskViewNoteId])
+}
+
+async function updateTaskLists(profileContext, constants, icalNoteId, taskViewNoteId) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profiles = await getAllProfiles(profileContext)
     for (let profile of Object.values(profiles)) {
@@ -453,7 +481,9 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
-        if (profile.fileMode !== "virtual") {
+        if (profile.fileMode === "virtual") {
+            await configureViewNote(profile.viewNoteId, taskViewNoteId)
+        } else {
             let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
             let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
             await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
@@ -532,6 +562,7 @@ module.exports = {
     getAllProfiles,
     saveProfile,
     updateTaskLists,
+    configureViewNote,
     getTaskList,
     getSortedTaskList,
     getGroups,

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.4.0",
+    "latestVersion": "2.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -131,13 +131,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "profileEditor.css"
-            },
-            {
-                "id": "task-view-page",
-                "title": "Agenda Task View",
-                "type": "render",
-                "mime": "text/html",
-                "sourceUrl": null
             },
             {
                 "id": "task-view",
@@ -331,10 +324,6 @@
             },
             {
                 "parent": "root",
-                "child": "task-view-page"
-            },
-            {
-                "parent": "task-view-page",
                 "child": "task-view"
             },
             {
@@ -471,11 +460,6 @@
                 "to": "profile-editor-page"
             },
             {
-                "from": "task-view-page",
-                "type": "renderNote",
-                "to": "task-view"
-            },
-            {
                 "from": "task-view",
                 "type": "schemaNote",
                 "to": "schema"
@@ -492,8 +476,8 @@
             },
             {
                 "from": "overview",
-                "type": "taskViewNote",
-                "to": "task-view-page"
+                "type": "taskViewRenderNote",
+                "to": "task-view"
             }
         ],
         "labels": [

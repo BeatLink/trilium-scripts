@@ -121,7 +121,8 @@ function AgendaOverviewWidgetJSX() {
         (async () => {
             const { constants, profileContext } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
-            setIds({ constants, profileContext, icalNoteId })
+            const taskViewNoteId = await startNote.getRelationValue("taskViewRenderNote")
+            setIds({ constants, profileContext, icalNoteId, taskViewNoteId })
         })()
     }, [])
 
@@ -131,7 +132,7 @@ function AgendaOverviewWidgetJSX() {
         fn(newProfile)
         setProfile(newProfile)
         saveProfile(newProfile)
-        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
     }
 
     // Load Profile
@@ -144,7 +145,7 @@ function AgendaOverviewWidgetJSX() {
             if (profileData) {
                 setProfile(profileData)
                 setUnclaimed(false)
-                await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+                await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
             } else {
                 setProfile(null)
                 setUnclaimed(true)
@@ -160,11 +161,6 @@ function AgendaOverviewWidgetJSX() {
     async function openProfileEditor() {
         const profileEditorNoteId = await startNote.getRelationValue("profileEditorNote")
         if (profileEditorNoteId) await activateNote(profileEditorNoteId)
-    }
-
-    async function openTaskView() {
-        const taskViewNoteId = await startNote.getRelationValue("taskViewNote")
-        if (taskViewNoteId) await activateNote(taskViewNoteId)
     }
 
     if (unclaimed) {
@@ -241,7 +237,6 @@ function AgendaOverviewWidgetJSX() {
                             text="Start All Tasks Today"
                             onClick={e => { rescheduleAllTasks(ids.profileContext, ids.constants, ids.icalNoteId) }}
                         />
-                        <Button icon="bx bx-columns" text="Open Task View" onClick={openTaskView} />
                     </div>
                 </div>
             </div>

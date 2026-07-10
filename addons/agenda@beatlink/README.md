@@ -22,8 +22,8 @@ widgets plus a single schema-driven editor page:
    it uses live on the same tab, nested, rather than a group living under a separate Profiles tab
    pointing at elements elsewhere. Every registry tab (including Profiles) autosaves each edit
    immediately; only the Settings tab's label-name fields wait on an explicit Save.
-5. **Agenda Task View** (`taskView.jsx`, a `render`-type page reachable from the Overview widget's
-   **Open Task View** button) — shows a profile's task list as **Tree** (a flat sorted list), **Kanban**
+5. **Agenda Task View** (`taskView.jsx`, a shipped `render` code note) — shows a profile's task list
+   as **Tree** (a flat sorted list), **Kanban**
    (columns from the profile's picked `groupings` entry, drag-and-drop between columns to reassign the
    underlying label), or **Calendar** (via `libcalendarwidget@beatlink`, mapped directly from the task
    list rather than the ical feed). A profile switcher appears when more than one profile exists.
@@ -36,14 +36,17 @@ widgets plus a single schema-driven editor page:
 1. Use TAM's **Settings** button (or navigate to this addon's "Agenda Editor" note) to open the
    Agenda Editor. Its Settings tab lets you override any of the label names (`startDateTime`,
    `dueDateTime`, `duration`, `recurrence`, `rank`, etc — defaults match the original system).
-2. On the Agenda Editor's Profiles tab, point the shipped "default" profile's **File Tasks Under** at
-   whichever note you want tasks re-filed into (only used when **Task Filing Mode** is "File Tasks as
-   Children" — see below), and optionally pick a **Kanban Grouping**. On the Searches/Filters tabs,
-   enable/build out that profile's search and filter groups (referencing the built-in elements there,
-   or new ones you add) — each group you add picks which profile it belongs to.
-3. Open any note filed under that target — the Overview widget there lets you toggle individual
-   searches/filters and change sort/prefix/color live, without leaving the note, and has an **Open
-   Task View** button.
+2. On the Agenda Editor's Profiles tab, set the shipped "default" profile's **Task Filing Mode**. In
+   **File Tasks as Children** mode, point its **File Tasks Under** at whichever note you want tasks
+   re-filed into. In **Virtual View Only** mode, point its **Virtual View Note** at any note you want
+   to turn into this profile's Task View — Agenda converts that note into a `render` note wired to the
+   shipped `taskView.jsx` (only one of the two fields is shown at a time, per the selected mode).
+   Optionally pick a **Kanban Grouping**. On the Searches/Filters tabs, enable/build out that
+   profile's search and filter groups (referencing the built-in elements there, or new ones you add) —
+   each group you add picks which profile it belongs to.
+3. Open the profile's claimed note (its **File Tasks Under** target in reparent mode, or its **Virtual
+   View Note** in virtual mode) — the Overview widget there lets you toggle individual searches/filters
+   and change sort/prefix/color live, without leaving the note.
 4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
    sorted/prefixed/colored per the profile's rules.
 5. Give a note template the `#agendaTaskWidget` label (with no value) to make the Task widget appear
@@ -55,8 +58,9 @@ widgets plus a single schema-driven editor page:
 7. Each profile's **Task Filing Mode** (Profiles tab) picks how its matching notes are surfaced:
    **"File Tasks as Children"** (default, preserves the original behavior — notes are re-parented
    under **File Tasks Under**, and the Overview widget only shows up when browsing there) or
-   **"Virtual View Only"** (no re-parenting; the profile's tasks are only browsable via the Agenda
-   Task View page). A profile's **Kanban Grouping** (also Profiles tab, referencing a **Groupings**
+   **"Virtual View Only"** (no re-parenting; the profile's **Virtual View Note** is converted into a
+   `render` note showing the Task View, and the Overview widget shows up when browsing that note). A
+   profile's **Kanban Grouping** (also Profiles tab, referencing a **Groupings**
    tab entry) picks which registry drives its Kanban view's columns — build one there the same way you
    build a Prefix or Color entry (by label value, or by date rule), except each column also gets its
    own display name and color.
@@ -97,7 +101,7 @@ back into the shapes the actual matching/sorting/prefix/color logic has always w
 logic never had to change at all; only the schema/config layer feeding it did.
 
 Every widget resolves its own relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `taskViewNote`) once on mount and passes the
+`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `taskViewRenderNote`) once on mount and passes the
 resolved ids/constants down to whichever shared library functions it calls — none of those relations
 live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference notes
 with no way to know which addon is asking. `config.json` is persisted across addon updates via an
@@ -112,7 +116,12 @@ persisted config is frozen — this is exactly how a profile missing `fileMode`/
 (from before this addon added them) picks up the schema's `"reparent"`/`""` defaults on next load with
 no migration step.
 
-The Task View page (`taskView.jsx`) reads the same `getSortedTaskList`/`getPrefixes`/`getColors`/
+The Task View (`taskView.jsx`, a shipped `render` code note) is not bundled onto a fixed page. A
+virtual-mode profile names a **Virtual View Note** on the Profiles tab; when the Overview widget
+runs `updateTaskLists` for that profile, `libagendaoverview`'s `configureViewNote` sets that note's
+type to `render` and points its `~renderNote` relation at the `taskView.jsx` code note (resolved via
+the widget's `taskViewRenderNote` relation) — so opening the note shows the Task View. This is
+find-or-set and idempotent, run on every update. It reads the same `getSortedTaskList`/`getPrefixes`/`getColors`/
 `getGroups`/`getGroupColumns` functions the Overview widget's `updateTaskLists` composes, just without
 ever calling `loadNotes` (the re-parenting step) — it's a read-only (except for `setGroupForNote`,
 kanban's drag-drop write) alternate presentation over the same profile data, not a second copy of the
@@ -127,10 +136,10 @@ relation resolution) like every other `lib*@beatlink` UI piece — see their own
   a data label, so it wasn't included alongside the other label-name settings.
 - **`agendaNowConfig.json` has no dedicated settings UI** — it's edited as raw JSON directly on its
   note.
-- **A "Virtual View Only" profile's tasks don't appear via the right-pane Overview widget** — that
-  widget is bound to whichever note the user is browsing, and a virtual-mode profile's tasks are never
-  filed under any note for it to render on. The Agenda Task View page is the only way to browse a
-  virtual-mode profile's tasks.
+- **A "Virtual View Only" profile files no tasks under any note** — its tasks stay in place. It is
+  surfaced through its **Virtual View Note** instead, which Agenda turns into a `render` note showing
+  the Task View. The Overview widget appears when browsing that note (matched by `viewNoteId`), same
+  as it appears on a reparent profile's **File Tasks Under** target (matched by `parentNoteId`).
 - **Kanban drag-and-drop only works for `type:"label"` groupings** — a `type:"dayjs"` grouping's
   columns are date windows (e.g. "Overdue"/"This Week"), not settable values, so dragging a card into
   one wouldn't have anything sensible to write; the Kanban view disables drag entirely for those.

@@ -79,8 +79,9 @@ which note-label it tests, and whether it uses whole-day (`useNumberOfDays`) gra
 place that means the same thing at once.
 
 **Multiple profiles are supported** — `updateTaskLists` refreshes every profile in
-`profileContext.profileIds`, and `getMatchingProfile` finds whichever one's `parentNoteId` matches a
-given overview widget instance's target note. `getTaskList` (and everything built on it — due
+`profileContext.profileIds`, and `getMatchingProfile` finds whichever one claims a given overview
+widget instance's target note (its `parentNoteId` for a reparent profile, its `viewNoteId` for a
+virtual profile). `getTaskList` (and everything built on it — due
 notifications, reschedule-all, iCal export) still only ever processes the *first* matching profile,
 by design — those are inherently single-profile-at-a-time operations (a notification/reschedule/iCal
 export has to pick one task list to act on).
@@ -108,8 +109,9 @@ revisions) has always worked with.
 
 ### `getMatchingProfile(profileContext, overviewNoteId)`
 
-Returns the parsed profile object (with `id`/`schemaNoteId`/`configNoteId` set) whose `parentNoteId`
-equals `overviewNoteId` — used by the overview widget to find its own profile among all of them.
+Returns the parsed profile object (with `id`/`schemaNoteId`/`configNoteId` set) that claims
+`overviewNoteId` — a reparent profile via its `parentNoteId`, a virtual profile via its `viewNoteId`.
+Used by the overview widget to find its own profile among all of them.
 
 ### `saveProfile(profile)`
 
@@ -120,12 +122,21 @@ carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: id
 `mergeProfileGroups` (preserving every other profile's groups untouched) before calling
 `libSettingsUI.jsx`'s `saveSettings`.
 
-### `updateTaskLists(profileContext, constants, icalNoteId)`
+### `updateTaskLists(profileContext, constants, icalNoteId, taskViewNoteId)`
 
-For every profile: runs its searches/filters/sort/prefix/color rules; if `profile.fileMode` isn't
-`"virtual"`, also re-files the resulting notes as children of `profile.parentNoteId` (the default,
-preserving pre-`fileMode` behavior for every existing profile). Refreshes the iCal feed
-unconditionally either way, so a virtual-mode profile's calendar export still works.
+For every profile: runs its searches/filters/sort/prefix/color rules. If `profile.fileMode` isn't
+`"virtual"`, re-files the resulting notes as children of `profile.parentNoteId` (the default,
+preserving pre-`fileMode` behavior for every existing profile). If it *is* `"virtual"`, instead calls
+`configureViewNote(profile.viewNoteId, taskViewNoteId)` to turn that note into the profile's Task View
+(no-op when either id is absent — e.g. callers like `rescheduleAllTasks` that don't pass
+`taskViewNoteId`). Refreshes the iCal feed unconditionally either way, so a virtual-mode profile's
+calendar export still works.
+
+### `configureViewNote(viewNoteId, taskViewNoteId)`
+
+Makes `viewNoteId` a `render` note whose `~renderNote` relation points at `taskViewNoteId` (the
+shipped `taskView.jsx` code note), so opening it shows the Task View. Find-or-set and idempotent —
+only writes when the note's type/relation isn't already correct. No-op if either id is falsy.
 
 ### `getTaskList(profileContext)`
 
