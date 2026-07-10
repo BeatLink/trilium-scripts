@@ -88,6 +88,24 @@ function reshapeVariant(variant) {
     return { name: variant.name, type: "dayjs", intervals: variant.intervals || {} }
 }
 
+// A grouping variant is shaped like a prefix/color variant, but each
+// child/interval carries both `display` and `color` (a kanban column needs
+// both at once, unlike prefixes/colors which are edited as two separate
+// registries) — reassembled the same way, just keeping the extra field and,
+// for the dayjs case, keeping each interval keyed by its own registry id
+// (that key doubles as the column's group key, same as a label variant's
+// `labelValue`).
+function reshapeGrouping(grouping) {
+    if (!grouping) return grouping
+    if (grouping.type === "label") {
+        const children = Object.fromEntries(
+            Object.values(grouping.children || {}).map(entry => [entry.labelValue, { display: entry.display, color: entry.color }])
+        )
+        return { name: grouping.name, type: "label", label: grouping.label, children }
+    }
+    return { name: grouping.name, type: "dayjs", intervals: grouping.intervals || {} }
+}
+
 // `searchGroups`/`filterGroups` are their own top-level registries in the
 // schema (shown on the Searches/Filters tabs respectively) — not nested
 // inside `profiles`, so a group stays reachable from its own tab. Each
@@ -134,11 +152,13 @@ function reshapeProfile(profile, searchGroups, filterGroups, profileId) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
+        fileMode: profile.fileMode,
         searchGroups: { children: groupsForProfile(searchGroups, profileId) },
         filterGroups: { children: groupsForProfile(filterGroups, profileId) },
         sorts: { selected: profile.sortSelected },
         prefixes: { selected: profile.prefixSelected },
-        colors: { selected: profile.colorSelected }
+        colors: { selected: profile.colorSelected },
+        groupings: { selected: profile.groupingSelected }
     }
 }
 
@@ -151,9 +171,11 @@ function unshapeProfile(profile) {
     return {
         name: profile.name,
         parentNoteId: profile.parentNoteId,
+        fileMode: profile.fileMode,
         sortSelected: profile.sorts?.selected,
         prefixSelected: profile.prefixes?.selected,
-        colorSelected: profile.colors?.selected
+        colorSelected: profile.colors?.selected,
+        groupingSelected: profile.groupings?.selected
     }
 }
 
@@ -178,6 +200,7 @@ async function loadData(schemaNoteId, configNoteId) {
 
     const prefixes = Object.fromEntries(Object.entries(values.prefixes || {}).map(([id, v]) => [id, reshapeVariant(v)]))
     const colors = Object.fromEntries(Object.entries(values.colors || {}).map(([id, v]) => [id, reshapeVariant(v)]))
+    const groupings = Object.fromEntries(Object.entries(values.groupings || {}).map(([id, v]) => [id, reshapeGrouping(v)]))
     const profiles = Object.fromEntries(
         Object.entries(values.profiles || {}).map(([id, p]) => [
             id, reshapeProfile(p, values.searchGroups || {}, values.filterGroups || {}, id)
@@ -185,7 +208,7 @@ async function loadData(schemaNoteId, configNoteId) {
     )
 
     return {
-        dateRules, sorts, prefixes, colors, profiles
+        dateRules, sorts, prefixes, colors, groupings, profiles
     }
 }
 
@@ -328,6 +351,65 @@ async function getColors(dateRules, colorInfo, notesList) {
     return colorDict
 }
 
+// Same matching logic as getPrefixes/getColors, but returns the group KEY
+// (label value, or dayjs interval's own registry id) instead of a resolved
+// display string — the caller looks the key up in getGroupColumns' output
+// for display, and passes it back into setGroupForNote on drop.
+async function getGroups(dateRules, groupingInfo, notesList) {
+    let groupDict = {}
+    for (let note of notesList){
+        if (!groupingInfo) {
+            groupDict[note] = null
+        } else if (groupingInfo.type == "dayjs"){
+            const noteObj = await api.getNote(note)
+            for (let [intervalId, interval] of Object.entries(groupingInfo.intervals)) {
+                const dateRule = dateRules[interval.dateRuleId]
+                if (!dateRule) continue
+                const date = noteObj.getLabelValue(dateRule.dateLabel)
+                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)){
+                    groupDict[note] = intervalId
+                    break
+                }
+            }
+            if (!(note in groupDict)) groupDict[note] = null
+        } else if (groupingInfo["type"] == "label"){
+            let noteLabel = (await api.getNote(note)).getLabelValue(groupingInfo["label"])
+            groupDict[note] = noteLabel || null
+        } else {
+            groupDict[note] = null
+        }
+    }
+    return groupDict
+}
+
+// Ordered column definitions for a kanban board's headers, independent of
+// any particular note list — registry insertion order, same convention
+// prefixes/colors already rely on.
+function getGroupColumns(groupingInfo) {
+    if (!groupingInfo) return []
+    if (groupingInfo.type === "label") {
+        return Object.entries(groupingInfo.children || {}).map(([key, v]) => ({ key, display: v.display, color: v.color }))
+    }
+    if (groupingInfo.type === "dayjs") {
+        return Object.entries(groupingInfo.intervals || {}).map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
+    }
+    return []
+}
+
+// The write side of a kanban drag-drop: only meaningful for type:"label"
+// groupings, since dropping a card writes the underlying note label
+// directly (e.g. #priority) so every other view (prefix/color/search/
+// filter) reading that same label stays in sync. type:"dayjs" groupings are
+// read-only for kanban purposes (a column is a date window, not a settable
+// value) — callers must disable drag entirely for those, not rely on this
+// silently no-op-ing.
+async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
+    if (!groupingInfo || groupingInfo.type !== "label") return
+    await api.runOnBackend((noteId, label, value) => {
+        api.getNote(noteId).setLabel(label, value)
+    }, [noteId, groupingInfo.label, targetGroupKey])
+}
+
 async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
     api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
         for (let [index, noteId] of notesList.entries()){
@@ -371,9 +453,11 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
-        let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
-        let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
-        await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
+        if (profile.fileMode !== "virtual") {
+            let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
+            let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
+            await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
+        }
         await setCalendarEvents(profileContext, constants, icalNoteId)
     }
 }
@@ -385,6 +469,23 @@ async function getTaskList(profileContext) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         return filteredNotes
+    }
+    return []
+}
+
+// Like getTaskList, but sorted (getTaskList is intentionally left
+// untouched — its existing callers don't need order, and this keeps their
+// behavior/blast-radius unchanged). `profileId` lets a caller with more
+// than one profile (e.g. a view page with a profile switcher) pick a
+// specific one instead of always taking the first match.
+async function getSortedTaskList(profileContext, profileId = null) {
+    const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
+    let profiles = await getAllProfiles(profileContext)
+    for (let profile of Object.values(profiles)){
+        if (profileId && profile.id !== profileId) continue
+        let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
+        let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
+        return await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
     }
     return []
 }
@@ -432,6 +533,10 @@ module.exports = {
     saveProfile,
     updateTaskLists,
     getTaskList,
+    getSortedTaskList,
+    getGroups,
+    getGroupColumns,
+    setGroupForNote,
     sendNotificationForDueTasks,
     rescheduleAllTasks,
     setCalendarEvents

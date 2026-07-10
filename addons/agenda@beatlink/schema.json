@@ -61,9 +61,17 @@
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Profile" },
             "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "" },
+            "fileMode": {
+                "type": "select", "label": "Task Filing Mode", "default": "reparent",
+                "options": [
+                    { "value": "reparent", "label": "File Tasks as Children" },
+                    { "value": "virtual", "label": "Virtual View Only" }
+                ]
+            },
             "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
             "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
             "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
+            "groupingSelected": { "type": "reference", "label": "Kanban Grouping", "registry": "groupings", "default": "" },
             "searchGroups": { "type": "checklist", "label": "Searches", "registry": "searchGroups", "filterBy": "profileId" },
             "filterGroups": { "type": "checklist", "label": "Filters", "registry": "filterGroups", "filterBy": "profileId" }
         },
@@ -71,9 +79,11 @@
             "default": {
                 "name": "default",
                 "parentNoteId": "",
+                "fileMode": "reparent",
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",
-                "colorSelected": "priority"
+                "colorSelected": "priority",
+                "groupingSelected": ""
             }
         }
     },
@@ -392,6 +402,50 @@
                     "thisMonth": { "dateRuleId": "thisMonth", "color": "lightgray" },
                     "thisYear": { "dateRuleId": "thisYear", "color": "lightgray" },
                     "future": { "dateRuleId": "future", "color": "lightgray" }
+                }
+            }
+        }
+    },
+    "groupings": {
+        "type": "registry",
+        "label": "Groupings",
+        "tab": "Groupings",
+        "autosave": true,
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Grouping" },
+            "type": {
+                "type": "select", "label": "Type", "default": "label",
+                "options": [
+                    { "value": "label", "label": "By Label Value" },
+                    { "value": "dayjs", "label": "By Date" }
+                ]
+            },
+            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": "label" } },
+            "children": {
+                "type": "registry", "label": "Columns", "default": {}, "showWhen": { "type": "label" },
+                "itemSchema": {
+                    "labelValue": { "type": "string", "label": "Label Value", "default": "" },
+                    "display": { "type": "string", "label": "Column Name", "default": "" },
+                    "color": { "type": "color", "label": "Column Color", "default": "gray" }
+                }
+            },
+            "intervals": {
+                "type": "registry", "label": "Intervals", "default": {}, "showWhen": { "type": "dayjs" },
+                "itemSchema": {
+                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
+                    "display": { "type": "string", "label": "Column Name", "default": "" },
+                    "color": { "type": "color", "label": "Column Color", "default": "gray" }
+                }
+            }
+        },
+        "default": {
+            "priority": {
+                "name": "By Priority", "type": "label", "label": "priority",
+                "children": {
+                    "4-critical": { "labelValue": "4-critical", "display": "Must Do", "color": "red" },
+                    "3-high": { "labelValue": "3-high", "display": "Should Do", "color": "gold" },
+                    "2-medium": { "labelValue": "2-medium", "display": "Could Do", "color": "lime" },
+                    "1-low": { "labelValue": "1-low", "display": "Want to Do", "color": "cyan" }
                 }
             }
         }

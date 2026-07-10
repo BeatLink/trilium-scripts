@@ -1,0 +1,9 @@
+.libagendatreeview {
+    display: flex;
+    flex-direction: column;
+}
+
+.libagendatreeview-empty {
+    opacity: 0.6;
+    padding: 8px;
+}

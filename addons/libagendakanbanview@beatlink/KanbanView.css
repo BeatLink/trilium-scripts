@@ -1,0 +1,41 @@
+.libagendakanbanview {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.libagendakanbanview-empty {
+    opacity: 0.6;
+    padding: 8px;
+}
+
+.libagendakanbanview-column {
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.05));
+    border-radius: 6px;
+    min-height: 60px;
+}
+
+.libagendakanbanview-column-dragover {
+    outline: 2px dashed var(--main-border-color, #888);
+    outline-offset: -2px;
+}
+
+.libagendakanbanview-column-header {
+    font-weight: bold;
+    padding: 8px 10px;
+    border-top: 3px solid transparent;
+    border-radius: 6px 6px 0 0;
+}
+
+.libagendakanbanview-column-body {
+    padding: 0 8px 8px;
+    flex: 1 1 auto;
+}
+
+.libagendakanbanview-card-dragging {
+    opacity: 0.4;
+}

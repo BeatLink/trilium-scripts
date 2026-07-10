@@ -1,0 +1,30 @@
+.libagendataskcard {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-left: 3px solid transparent;
+    border-radius: 4px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+    cursor: pointer;
+    user-select: none;
+}
+
+.libagendataskcard:hover {
+    background: var(--hover-item-background-color, rgba(127, 127, 127, 0.16));
+}
+
+.libagendataskcard-prefix {
+    flex: 0 0 auto;
+    font-size: 0.85em;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.libagendataskcard-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

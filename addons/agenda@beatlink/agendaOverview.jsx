@@ -162,6 +162,11 @@ function AgendaOverviewWidgetJSX() {
         if (profileEditorNoteId) await activateNote(profileEditorNoteId)
     }
 
+    async function openTaskView() {
+        const taskViewNoteId = await startNote.getRelationValue("taskViewNote")
+        if (taskViewNoteId) await activateNote(taskViewNoteId)
+    }
+
     if (unclaimed) {
         return (
             <RightPanelWidget title="Agenda">
@@ -236,6 +241,7 @@ function AgendaOverviewWidgetJSX() {
                             text="Start All Tasks Today"
                             onClick={e => { rescheduleAllTasks(ids.profileContext, ids.constants, ids.icalNoteId) }}
                         />
+                        <Button icon="bx bx-columns" text="Open Task View" onClick={openTaskView} />
                     </div>
                 </div>
             </div>

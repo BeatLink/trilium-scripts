@@ -1,30 +1,30 @@
 {
-    "id": "libcalendarwidget@beatlink",
-    "name": "Calendar Widget",
-    "description": "Reusable Preact component wrapping FullCalendar for TriliumNext widget UIs \u2014 renders a day/week/month grid from a plain events array, a raw ics string, or any ics feed URL.",
+    "id": "libagendakanbanview@beatlink",
+    "name": "Agenda Kanban View",
+    "description": "Reusable Preact component rendering a drag-and-drop kanban board of task cards for TriliumNext widget UIs — the kanban view mode of agenda@beatlink's Task View page.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libcalendarwidget@beatlink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendakanbanview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.0.0",
     "type": "library",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libcalendarwidget@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libagendakanbanview@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "lib",
         "notes": [
             {
                 "id": "lib",
-                "title": "CalendarWidget.jsx",
+                "title": "KanbanView.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "CalendarWidget.jsx"
+                "sourceUrl": "KanbanView.jsx"
             },
             {
                 "id": "style",
-                "title": "CalendarWidget.css",
+                "title": "KanbanView.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "CalendarWidget.css"
+                "sourceUrl": "KanbanView.css"
             },
             {
                 "id": "readme",
@@ -35,6 +35,11 @@
             }
         ],
         "children": [
+            {
+                "parent": "lib",
+                "addon": "libagendataskcard@beatlink",
+                "child": "lib"
+            },
             {
                 "parent": "lib",
                 "child": "style"
@@ -53,8 +58,7 @@
             }
         ],
         "dependencies": [
-            "libfullcalendar@arshaw",
-            "libical@kewisch"
+            "libagendataskcard@beatlink"
         ],
         "exports": {
             "lib": "lib"
