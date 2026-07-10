@@ -21,9 +21,9 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     /* Raw palette tokens — every Trilium variable below is expressed in
        terms of these, so the dark-mode block only has to flip these and
        the rest of the theme follows automatically. */
-    --t-bg: #e7ecf4 !important;
+    --t-bg: #f1f5f9 !important;
     --t-surface: #ffffff !important;
-    --t-surface-2: #f8fafc !important;
+    --t-surface-2: #f1f5f9 !important;
     --t-border: #e2e8f0 !important;
     --t-border-strong: #cbd5e1 !important;
     --t-text: #1a1a2e !important;
@@ -416,7 +416,7 @@ select,
 select.form-select,
 select.form-control,
 .select-button.dropdown-toggle.btn {
-    border: 1.5px solid var(--t-border) !important;
+    /*border: 1.5px solid var(--t-border) !important;*/
 }
 
 input:not([type]):hover,
