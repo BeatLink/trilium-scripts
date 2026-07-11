@@ -114,6 +114,10 @@
                 "child": "organize"
             },
             {
+                "parent": "organize-panel",
+                "child": "structure"
+            },
+            {
                 "parent": "root",
                 "child": "window-css"
             },
