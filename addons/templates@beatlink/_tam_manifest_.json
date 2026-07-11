@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.8",
+    "latestVersion": "1.1.0",
     "type": "template",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/templates@beatlink/_tam_manifest_.json",
@@ -21,6 +21,14 @@
                 "mime": "text/html",
                 "sourceUrl": null,
                 "skipOnUpdate": true
+            },
+            {
+                "id": "idea",
+                "title": "0. Ideas",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "ideas.html",
+                "promptOnUpdate": true
             },
             {
                 "id": "goal",
@@ -97,6 +105,10 @@
         "children": [
             {
                 "parent": "root",
+                "child": "idea"
+            },
+            {
+                "parent": "root",
                 "child": "goal"
             },
             {
@@ -137,6 +149,11 @@
                 "from": "root",
                 "type": "template",
                 "to": "special"
+            },
+            {
+                "from": "root",
+                "type": "AddonData:idea",
+                "to": "idea"
             },
             {
                 "from": "root",
@@ -184,6 +201,21 @@
                 "note": "root",
                 "name": "iconClass",
                 "value": "bx bx-copy-alt"
+            },
+            {
+                "note": "idea",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "idea",
+                "name": "iconClass",
+                "value": "bx bx-bulb"
+            },
+            {
+                "note": "idea",
+                "name": "label:area",
+                "value": "single"
             },
             {
                 "note": "goal",

@@ -59,7 +59,7 @@ The 7 from `templates@beatlink` — Goal, Routine, Task, Future, Project, Note, 
 
 | Type     | Icon              | Notes |
 |----------|-------------------|-------|
-| Ideas    | `bx-bulb`         | Raw, unevaluated thoughts. Non-actionable — **no** `#agendaTaskWidget`. New in this addon. |
+| Ideas    | `bx-bulb`         | Raw, unevaluated thoughts. Non-actionable — **no** `#agendaTaskWidget`. Ships as `0. Ideas` in templates@beatlink. |
 | Goals    | `bxs-star-half`   | Large, long-term life initiatives. |
 | Routines | `bx-sync`         | Ongoing maintenance activities, indefinite. |
 | Projects | `bx-check-double` | One-off outcomes; comprise subprojects + tasks; usually dated. |
@@ -102,16 +102,20 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
   (`lst-tab`/`lst-tab-active`, matching taskView's mode buttons), one per phase. **Organize** is wired
   (see below); Collect / Review / Execute are placeholders. As those are built, each tab composes the
   relevant agenda pieces (e.g. Review/Execute embed the Task View list) rather than reimplementing them.
-- **Organize tab — assign-a-template triage queue.** `workflowOrganizePanel.jsx` (id `organize-panel`,
-  a child of `window`) + backend helpers in `workflowOrganize.js` (id `organize`). It walks every
-  **untemplated** note under the Inbox and Area subtrees one at a time — showing the note's title, its
-  tree-path breadcrumb (via `getParentNotes()` up to root), and a short HTML-stripped **content
-  preview** of its opening text. Each item-type template is a **one-click button**: clicking one
-  assigns that `~template` (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx))
-  and auto-advances to the next note; Skip advances without change. Scope excludes the structural
-  `#workflowNote` notes (areas/buckets/Inbox themselves) — containers, not items. The buttons offer
-  only the item-type templates (`1. Goal`..`6. Note`; Area/Special excluded), resolved live by title
-  so any missing one (e.g. Ideas until its template ships) is simply omitted.
+- **Organize tab.** `workflowOrganizePanel.jsx` (id `organize-panel`, a child of `window`) + backend
+  helpers in `workflowOrganize.js` (id `organize`). The tab holds one section today, **Notes Without
+  Templates** (under its own `<h3>` heading — more Organize mechanisms are planned as sibling
+  sections). That section is a triage queue over every **untemplated** note under the Inbox and Area
+  subtrees, walked one at a time — showing the note's title, its tree-path breadcrumb (via
+  `getParentNotes()` up to root), and a short HTML-stripped **content preview** of its opening text.
+  Each item-type template is a **one-click button**: clicking one assigns that `~template`
+  (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx)) and
+  auto-advances. **Back/Forward** move through the queue without changing anything; **Delete** removes
+  the note (guarded by `window.confirm`, `note.deleteNote()` on the backend). Scope excludes the
+  structural `#workflowNote` notes (areas/buckets/Inbox themselves) — containers, not items. The
+  buttons offer only the item-type templates (`0. Ideas`, `1. Goal`..`6. Note`; Area/Special
+  excluded), resolved live by title so any that don't resolve are simply omitted. The note title is a
+  link (click to open the note) — there's no separate "go to note" button.
 - **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
   `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
   structure at runtime (see below). Shares `workflowWindow.css`.

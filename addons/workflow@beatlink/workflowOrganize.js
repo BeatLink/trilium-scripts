@@ -20,6 +20,7 @@ const WORKFLOW_LABEL = "workflowNote"
 // a title with no matching #template note (e.g. Ideas, until its template ships)
 // is simply omitted from the picker.
 const ITEM_TEMPLATE_TITLES = [
+    "0. Ideas",
     "1. Goal",
     "2. Routine",
     "3. Task",

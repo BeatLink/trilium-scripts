@@ -6,6 +6,7 @@ A collection of note templates for tasks, projects, notes, and areas, designed t
 
 | Template | Icon | Purpose |
 |----------|------|---------|
+| 0. Ideas | `bx-bulb` | Raw, unevaluated thoughts and possibilities |
 | 1. Goal | `bxs-star-half` | High-level goals and aspirations |
 | 2. Routine | `bx-sync` | Recurring tasks and habits |
 | 3. Task | `bx-check` | Standard single tasks |
