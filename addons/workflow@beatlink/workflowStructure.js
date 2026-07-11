@@ -54,7 +54,7 @@ const SUBTYPES = [
     { slug: "goals",    title: "Goals",    icon: "bxs-star-half" },
     { slug: "routines", title: "Routines", icon: "bx-sync" },
     { slug: "projects", title: "Projects", icon: "bx-check-double" },
-    { slug: "future",   title: "Future",   icon: "bx-hourglass" },
+    { slug: "future",   title: "Future",   icon: "bx-time-five" },
     { slug: "notes",    title: "Notes",    icon: "bx-notepad" }
 ]
 
@@ -101,7 +101,7 @@ function buildAreaNode(area, index) {
 // The full structure: three top-level container singletons, then one node per
 // area. Singletons use the Special container template.
 const STRUCTURE = [
-    { key: "inbox",  title: "Inbox",  icon: "bx-inbox",    template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+    { key: "inbox",  title: "Inbox",  icon: "bxs-inbox",   template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
     { key: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
     { key: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
     ...AREAS.map(buildAreaNode)

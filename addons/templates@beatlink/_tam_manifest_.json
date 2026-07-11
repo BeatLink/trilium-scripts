@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/templates@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.7",
+    "latestVersion": "1.0.8",
     "type": "template",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/templates@beatlink/_tam_manifest_.json",
@@ -268,7 +268,7 @@
             {
                 "note": "future",
                 "name": "iconClass",
-                "value": "bx bxs-hourglass"
+                "value": "bx bx-time-five"
             },
             {
                 "note": "future",

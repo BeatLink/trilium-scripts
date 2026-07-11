@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workflow@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.1.1",
+    "latestVersion": "0.2.0",
     "type": "widget",
     "readme": "develop.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/workflow@beatlink/_tam_manifest_.json",
@@ -38,6 +38,20 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "workflowWindow.jsx"
+            },
+            {
+                "id": "organize-panel",
+                "title": "workflowOrganizePanel.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "workflowOrganizePanel.jsx"
+            },
+            {
+                "id": "organize",
+                "title": "workflowOrganize.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "workflowOrganize.js"
             },
             {
                 "id": "window-css",
@@ -90,6 +104,14 @@
             {
                 "parent": "window-page",
                 "child": "window"
+            },
+            {
+                "parent": "window",
+                "child": "organize-panel"
+            },
+            {
+                "parent": "organize-panel",
+                "child": "organize"
             },
             {
                 "parent": "root",

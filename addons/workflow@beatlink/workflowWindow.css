@@ -86,3 +86,66 @@
     background: var(--main-border-color, #999);
     color: inherit;
 }
+
+/* --- Organize tab --- */
+
+.workflow-organize {
+    max-width: 70ch;
+}
+
+.workflow-organize-progress {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.workflow-organize-card {
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.workflow-organize-title {
+    font-size: 1.15em;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.workflow-organize-title:hover {
+    text-decoration: underline;
+}
+
+.workflow-organize-path {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+.workflow-organize-picker {
+    margin-bottom: 16px;
+    max-width: 320px;
+}
+
+.workflow-organize-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workflow-organize-skip {
+    background: none;
+    border: none;
+    opacity: 0.7;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.workflow-organize-skip:hover {
+    opacity: 1;
+}
+
+.workflow-organize-done {
+    padding: 12px 0;
+    margin-bottom: 8px;
+}

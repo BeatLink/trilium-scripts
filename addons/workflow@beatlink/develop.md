@@ -64,7 +64,7 @@ The 7 from `templates@beatlink` — Goal, Routine, Task, Future, Project, Note, 
 | Routines | `bx-sync`         | Ongoing maintenance activities, indefinite. |
 | Projects | `bx-check-double` | One-off outcomes; comprise subprojects + tasks; usually dated. |
 | Task     | `bx-check`        | Standard single task (agenda's core actionable unit). |
-| Future   | `bx-hourglass`    | Deferred / someday-maybe / blocked items. |
+| Future   | `bx-time-five`    | Deferred / someday-maybe / blocked items. |
 | Notes    | `bx-notepad`      | Non-actionable reference material. |
 | Area     | `bxs-circle`      | Structural container for an area of life (list view). |
 
@@ -81,7 +81,7 @@ task/routine/etc. notes filed inside them do, via their template.)
 ### Notebook top-level structure
 | Note   | Icon         |
 |--------|--------------|
-| Inbox  | `bx-inbox`   |
+| Inbox  | `bxs-inbox`  |
 | My Day | `bx-task`    |
 | Agenda | `bx-calendar`|
 
@@ -99,10 +99,18 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
   `workflowWindow.css` (`appCss`). This follows agenda's render-page pattern exactly
   ([agenda's profile-editor-page → profileEditor.jsx](../agenda@beatlink/_tam_manifest_.json),
   [taskView.jsx](../agenda@beatlink/taskView.jsx)). The component holds four tabs
-  (`lst-tab`/`lst-tab-active`, matching taskView's mode buttons), one per phase; each phase is a
-  placeholder panel today. As phases are built, each tab composes the relevant agenda pieces (e.g.
-  Review/Execute embed the Task View list; Organize embeds the pickers) rather than reimplementing
-  them.
+  (`lst-tab`/`lst-tab-active`, matching taskView's mode buttons), one per phase. **Organize** is wired
+  (see below); Collect / Review / Execute are placeholders. As those are built, each tab composes the
+  relevant agenda pieces (e.g. Review/Execute embed the Task View list) rather than reimplementing them.
+- **Organize tab — assign-a-template triage queue.** `workflowOrganizePanel.jsx` (id `organize-panel`,
+  a child of `window`) + backend helpers in `workflowOrganize.js` (id `organize`). It walks every
+  **untemplated** note under the Inbox and Area subtrees one at a time — showing the note's title, its
+  tree-path breadcrumb (via `getParentNotes()` up to root), and an item-type template picker — then
+  assigns the chosen `~template` (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx))
+  and advances; Skip advances without change. Scope excludes the structural `#workflowNote` notes
+  (areas/buckets/Inbox themselves) — containers, not items. The picker offers only the item-type
+  templates (`1. Goal`..`6. Note`; Area/Special excluded), resolved live by title so any missing one
+  (e.g. Ideas until its template ships) is simply omitted.
 - **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
   `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
   structure at runtime (see below). Shares `workflowWindow.css`.
@@ -198,9 +206,11 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
 - [ ] **Phase 1 — Preset.** Author `config.json` (15 areas + Ideas search rule, optionally
       Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
       preset + Ideas template. Run `validate`.
-- [ ] **Phase 3 — Tab wiring.** Fill in the window's panels: **Review**/**Execute** embed the agenda
-      Task View list (filtered per phase); **Organize** surfaces the area/type/priority/date pickers
-      for the selected item; **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
+- [~] **Phase 3 — Tab wiring.** Fill in the window's panels.
+      - [x] **Organize** — assign-a-template triage queue (untemplated notes under Inbox/Areas, one at
+        a time). Next for Organize: after type, prompt for area/priority/dates.
+      - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
+      - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance
       (`nix develop` → `trilium_seed` → `trilium_server start`). Confirm the notebook provisions, the
       preset drives the 15-area filters/colors/kanban, and each Workflow tab works end to end.

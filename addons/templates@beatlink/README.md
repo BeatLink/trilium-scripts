@@ -9,7 +9,7 @@ A collection of note templates for tasks, projects, notes, and areas, designed t
 | 1. Goal | `bxs-star-half` | High-level goals and aspirations |
 | 2. Routine | `bx-sync` | Recurring tasks and habits |
 | 3. Task | `bx-check` | Standard single tasks |
-| 4. Future | `bxs-hourglass` | Someday/maybe items and deferred tasks |
+| 4. Future | `bx-time-five` | Someday/maybe items and deferred tasks |
 | 5. Project | `bx-check-double` | Multi-step projects with subtasks |
 | 6. Note | `bx-notepad` | General-purpose notes |
 | 7. Area | `bxs-circle` | Areas of responsibility (list view) |

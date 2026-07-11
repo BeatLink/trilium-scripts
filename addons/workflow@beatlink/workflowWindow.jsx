@@ -1,10 +1,10 @@
 import { useState } from "trilium:preact"
+import OrganizePanel from "workflowOrganizePanel.jsx"
 
 // The Workflow window: a single render page split into the four phases of the
-// Capture -> Organize -> Review -> Execute workflow, one tab each. Each phase
-// is a placeholder for now (see develop.md's roadmap) — the tab shell and phase
-// scaffolding land first; each panel gets wired to the agenda engine + the
-// provisioned notebook in later phases.
+// Collect -> Organize -> Review -> Execute workflow, one tab each. Organize is
+// wired (the assign-a-template triage queue); the others are placeholders for
+// now (see develop.md's roadmap).
 //
 // Tab styling mirrors agenda's taskView.jsx (lst-tab / lst-tab-active), so the
 // window reads as native Trilium chrome.
@@ -21,8 +21,8 @@ const PHASES = [
         key: "organize",
         label: "Organize",
         heading: "Organize",
-        blurb: "Set each item's area and type, plus priority (MoSCoW), status, context, effort, and " +
-            "dates, then file it into the notebook tree under the right Area and Type."
+        blurb: "Work through every untemplated note under your Inbox and Areas, one at a time, and " +
+            "give each a type. Further attributes (priority, area, dates) follow."
     },
     {
         key: "review",
@@ -63,10 +63,14 @@ export default function WorkflowWindow() {
             <div className="workflow-window-panel">
                 <h2>{active.heading}</h2>
                 <p className="workflow-window-blurb">{active.blurb}</p>
-                <div className="workflow-window-placeholder">
-                    Coming soon — this phase is scaffolded but not yet wired. See the roadmap in the
-                    addon's develop.md.
-                </div>
+                {phase === "organize" ? (
+                    <OrganizePanel />
+                ) : (
+                    <div className="workflow-window-placeholder">
+                        Coming soon — this phase is scaffolded but not yet wired. See the roadmap in the
+                        addon's develop.md.
+                    </div>
+                )}
             </div>
         </div>
     )
