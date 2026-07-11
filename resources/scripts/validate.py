@@ -215,6 +215,107 @@ for manifest_file in manifest_files:
         if nid and nid not in note_ids:
             error(manifest_file, f"labels: note '{nid}' not found in notes")
 
+    # --- require()/import target notes must be co-installed in the requiring
+    # note's subtree --------------------------------------------------------
+    # A code note that require()s / imports another note by title resolves it
+    # within its own installed subtree. A local note title is always reachable
+    # (the whole addon hangs off one root). A cross-addon export is reachable
+    # only if it's wired (children[] with addon+child) onto a note at or below
+    # the requiring note. This catches the class of bug where a widget requires
+    # a library that was wired under a *sibling* note instead of the widget.
+    require_re = re.compile(r"""require\(\s*["']([^"']+)["']\s*\)""")
+    import_re  = re.compile(r"""^\s*import\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']""", re.MULTILINE)
+
+    # id -> title for local notes
+    id_to_title = {n.get("id") or n.get("title"): n.get("title", "") for n in notes}
+    local_titles = {t for t in id_to_title.values() if t}
+
+    # local parent -> [child ids]; cross-addon edges keyed by parent id
+    local_child_edges = {}
+    cross_edges = {}  # parent_id -> [(addon, child_key)]
+    for c in m.get("children", []):
+        parent = c.get("parent")
+        if not parent:
+            continue
+        if c.get("addon"):
+            cross_edges.setdefault(parent, []).append((c["addon"], c.get("child")))
+        elif c.get("child"):
+            local_child_edges.setdefault(parent, []).append(c["child"])
+
+    # resolve a cross-addon (addon_id, export_key) -> installed note title
+    _export_title_cache = {}
+    def resolve_export_title(dep_id, export_key):
+        cache_key = (dep_id, export_key)
+        if cache_key in _export_title_cache:
+            return _export_title_cache[cache_key]
+        title = None
+        dep_file = root / "addons" / dep_id / "_tam_manifest_.json"
+        if dep_file.exists():
+            try:
+                dm = json.loads(dep_file.read_text()).get("manifest", {})
+                local_id = (dm.get("exports") or {}).get(export_key, export_key)
+                for dn in dm.get("notes", []):
+                    if (dn.get("id") or dn.get("title")) == local_id:
+                        title = dn.get("title")
+                        break
+            except (json.JSONDecodeError, OSError):
+                pass
+        _export_title_cache[cache_key] = title
+        return title
+
+    def descendants(start_id):
+        seen = set()
+        stack = [start_id]
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            stack.extend(local_child_edges.get(cur, []))
+        return seen
+
+    for note in notes:
+        if note.get("type") != "code":
+            continue
+        # only executable JS/JSX notes resolve require()/import against note
+        # titles; markdown READMEs etc. just quote code and must be skipped
+        mime = note.get("mime") or ""
+        if not (mime.startswith("application/javascript") or "jsx" in mime):
+            continue
+        source_url = note.get("sourceUrl") or ""
+        if not source_url or source_url.startswith(("http://", "https://")):
+            continue
+        source_path = addon_dir / source_url
+        if not source_path.exists():
+            continue
+        src = source_path.read_text(errors="ignore")
+        targets = set(require_re.findall(src)) | set(import_re.findall(src))
+        # A note-title specifier ends in .js/.jsx. Runtime built-ins (trilium:*)
+        # and host/node packages (electron, @electron/remote/main) are not notes.
+        targets = {t for t in targets if t.endswith((".js", ".jsx"))}
+        if not targets:
+            continue
+
+        nid = note.get("id") or note.get("title")
+        subtree = descendants(nid)
+        # titles reachable at or below this note
+        reachable = {id_to_title.get(d, "") for d in subtree}
+        for parent_id in subtree:
+            for dep_id, child_key in cross_edges.get(parent_id, []):
+                t = resolve_export_title(dep_id, child_key)
+                if t:
+                    reachable.add(t)
+
+        for t in sorted(targets):
+            if t in reachable:
+                continue
+            if t in local_titles:
+                # co-installed in the addon but not under this note's subtree —
+                # require() resolves within the subtree, so this still fails
+                warn(manifest_file, f"note '{nid}': require/import of '{t}' resolves to a local note wired outside this note's subtree — it won't be found at runtime")
+            else:
+                warn(manifest_file, f"note '{nid}': require/import of '{t}' is not installed in this note's subtree — wire the providing addon's export under '{nid}' via children[]")
+
     # --- dependencies: each entry is a bare id string, or an explicit
     # {"id": ..., "manifestSourceUrl": ...} object for a dependency that isn't
     # expected to be resolvable through whatever source this addon itself
