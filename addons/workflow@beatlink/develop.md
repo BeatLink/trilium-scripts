@@ -101,6 +101,30 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
   placeholder panel today. As phases are built, each tab composes the relevant agenda pieces (e.g.
   Review/Execute embed the Task View list; Organize embeds the pickers) rather than reimplementing
   them.
+- **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
+  `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
+  structure at runtime (see below). Shares `workflowWindow.css`.
+
+### Provisioning model — runtime find-or-create, not manifest clone-in
+
+Unlike agenda/templates (which clone their notes in via the manifest), the notebook *structure* is
+provisioned by a **button on the Setup page**, so it merges with notes the user already created by
+hand. The structure is data (`workflowStructure.js`), the logic is `workflowProvision.js`:
+
+- **Anchor:** top-level notes (Inbox, My Day, Agenda, 15 Areas) are direct children of Trilium
+  `root`; each Area's six subtype notes (Ideas / Goals / Routines / Projects / Future / Notes) are
+  children of that Area.
+- **Identity:** each note is tagged **`#workflowNote=<key>`** (e.g. `inbox`, `area-03-legal`,
+  `area-03-legal-goals`) — this addon's analogue of TAM's `#TAMFILEID`, but applied to user notes and
+  scoped to this addon so it never collides with TAM's uninstall sweep.
+- **Resolution order per node (idempotent, rename-safe):** (1) a note already tagged
+  `#workflowNote=<key>` → adopt as-is; (2) else a same-titled child under the target parent → adopt +
+  tag it; (3) else create + tag. Adoption never overwrites content or existing labels; a node's
+  `#area`/`#iconClass`/`#agendaTaskWidget` labels are applied only on creation.
+- `.js` libs (`workflowStructure.js`, `workflowProvision.js`) are plain CommonJS
+  (`module.exports`/`require`), `env=frontend`; the backend work runs inside `api.runOnBackend`
+  closures (which may reference only `api`), mirroring
+  [web-preview's saveUrlToInbox](../web-preview@beatlink/libWebPreview.js).
 - **Notebook provisioning** uses the proven three-array manifest pattern (`notes` / `children` /
   `labels` + `AddonData:` relations) from
   [templates@beatlink/_tam_manifest_.json](../templates@beatlink/_tam_manifest_.json) and the richer

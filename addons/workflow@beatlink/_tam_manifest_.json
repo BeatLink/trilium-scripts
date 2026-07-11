@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workflow@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.1.0",
+    "latestVersion": "0.1.1",
     "type": "widget",
     "readme": "develop.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/workflow@beatlink/_tam_manifest_.json",
@@ -45,6 +45,34 @@
                 "sourceUrl": "workflowWindow.css"
             },
             {
+                "id": "setup-page",
+                "title": "Workflow Setup",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "setup",
+                "title": "workflowSetup.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "workflowSetup.jsx"
+            },
+            {
+                "id": "provision",
+                "title": "workflowProvision.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "workflowProvision.js"
+            },
+            {
+                "id": "structure",
+                "title": "workflowStructure.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "workflowStructure.js"
+            },
+            {
                 "id": "readme",
                 "title": "develop.md",
                 "type": "code",
@@ -67,6 +95,22 @@
             },
             {
                 "parent": "root",
+                "child": "setup-page"
+            },
+            {
+                "parent": "setup-page",
+                "child": "setup"
+            },
+            {
+                "parent": "setup",
+                "child": "provision"
+            },
+            {
+                "parent": "provision",
+                "child": "structure"
+            },
+            {
+                "parent": "root",
                 "child": "readme"
             }
         ],
@@ -75,6 +119,11 @@
                 "from": "window-page",
                 "type": "renderNote",
                 "to": "window"
+            },
+            {
+                "from": "setup-page",
+                "type": "renderNote",
+                "to": "setup"
             }
         ],
         "labels": [
@@ -87,6 +136,11 @@
                 "note": "window-page",
                 "name": "iconClass",
                 "value": "bx bx-been-here"
+            },
+            {
+                "note": "setup-page",
+                "name": "iconClass",
+                "value": "bx bx-wrench"
             },
             {
                 "note": "window-css",
