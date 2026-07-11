@@ -125,6 +125,12 @@
         "label": "Table Views",
         "default": {}
     },
+    "sectionState": {
+        "type": "json",
+        "hidden": true,
+        "label": "Section State",
+        "default": {}
+    },
     "profiles": {
         "type": "registry",
         "label": "Profiles",
@@ -414,7 +420,8 @@
                     "thisMonth": { "dateRuleId": "thisMonth", "formatString": "Do" },
                     "thisYear": { "dateRuleId": "thisYear", "formatString": "MMMM" },
                     "future": { "dateRuleId": "future", "formatString": "YYYY" }
-                }
+                },
+                "noValuePrefix": "No Date Set"
             }
         }
     },

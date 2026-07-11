@@ -458,6 +458,22 @@ async function saveTableView({ schemaNoteId, configNoteId }, profileId, state) {
     await saveSettings(schemaNoteId, configNoteId, values)
 }
 
+// Per-profile collapse state for the overview widget's dropdown sections
+// (Sort/Prefix/Color), kept in its own `sectionState` map keyed by profile id
+// for the same reason as `tableViews` above — the profile round-trips through
+// reshape/unshapeProfile, which would drop a field stored on the profile
+// itself. Shape: values.sectionState[profileId] = { sorts: bool, prefixes: bool, colors: bool }
+async function getSectionState({ schemaNoteId, configNoteId }, profileId) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    return (values.sectionState || {})[profileId] || null
+}
+
+async function saveSectionState({ schemaNoteId, configNoteId }, profileId, state) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    values.sectionState = { ...(values.sectionState || {}), [profileId]: state }
+    await saveSettings(schemaNoteId, configNoteId, values)
+}
+
 async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
     api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
         for (let [index, noteId] of notesList.entries()) {
@@ -613,6 +629,8 @@ module.exports = {
     setGroupForNote,
     getTableView,
     saveTableView,
+    getSectionState,
+    saveSectionState,
     sendNotificationForDueTasks,
     rescheduleAllTasks,
     setCalendarEvents

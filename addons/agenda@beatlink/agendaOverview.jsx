@@ -15,7 +15,7 @@ import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, rescheduleAllTasks } = require("libAgendaOverview.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
 
 // Preact Components ------------------------------------------------------
 
@@ -75,15 +75,17 @@ function DropdownSection({
     registryKey,
     registry,
     profile,
-    update
+    update,
+    expanded,
+    onToggle
 }) {
     const section = sectionPath.reduce((o,k)=>o[k], profile)
 
     return (
         <Collapsible
             label={title}
-            expanded={true}
-            onToggle={() => {}}
+            expanded={expanded}
+            onToggle={onToggle}
             className="mainSection"
         >
             <FormDropdownList
@@ -115,6 +117,9 @@ function AgendaOverviewWidgetJSX() {
     const [profileId, setProfileId] = useState(null)
     const [registry, setRegistry] = useState(null)
     const [ids, setIds] = useState(null)
+    // Per-profile collapse state for the dropdown sections (Sort/Prefix/Color),
+    // persisted in the config note's `sectionState` map (see libAgendaOverview).
+    const [sectionState, setSectionState] = useState({})
 
     // Resolve this widget's own relations + settings once — separate from
     // `noteId` above, which is whichever note the user is currently browsing
@@ -169,6 +174,21 @@ function AgendaOverviewWidgetJSX() {
         setProfile(profiles.find(p => p.id === profileId) || null)
     }, [profileId, profiles])
 
+    // Load the selected profile's persisted section collapse state.
+    useEffect(() => {
+        if (!ids || !profileId) return
+        (async () => {
+            setSectionState(await getSectionState(ids.profileContext, profileId) || {})
+        })()
+    }, [profileId, ids])
+
+    // Toggle + persist a dropdown section's collapse state (defaults open).
+    const toggleSection = (key) => (e) => {
+        const next = { ...sectionState, [key]: e.currentTarget.open }
+        setSectionState(next)
+        saveSectionState(ids.profileContext, profileId, next)
+    }
+
     // No profile claims the browsed note -> the widget doesn't appear at all.
     if (!profile || !registry){
         return null
@@ -219,6 +239,8 @@ function AgendaOverviewWidgetJSX() {
                     registry={registry}
                     profile={profile}
                     update={update}
+                    expanded={sectionState.sorts !== false}
+                    onToggle={toggleSection("sorts")}
                 />
 
                 {/* Prefixes */}
@@ -229,6 +251,8 @@ function AgendaOverviewWidgetJSX() {
                     registry={registry}
                     profile={profile}
                     update={update}
+                    expanded={sectionState.prefixes !== false}
+                    onToggle={toggleSection("prefixes")}
                 />
 
 
@@ -240,6 +264,8 @@ function AgendaOverviewWidgetJSX() {
                     registry={registry}
                     profile={profile}
                     update={update}
+                    expanded={sectionState.colors !== false}
+                    onToggle={toggleSection("colors")}
                 />
                 <div>
                     <label>Actions</label>
