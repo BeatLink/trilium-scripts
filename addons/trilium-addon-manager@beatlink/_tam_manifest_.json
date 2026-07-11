@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.2.4",
+    "latestVersion": "5.2.5",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -178,13 +178,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "tam.css"
-            },
-            {
-                "id": "mermaid",
-                "title": "mermaid.min.js (resource)",
-                "type": "code",
-                "mime": "application/javascript",
-                "sourceUrl": "mermaid.min.js"
             },
             {
                 "id": "readme",
@@ -388,10 +381,6 @@
                 "child": "tam-css"
             },
             {
-                "parent": "source-code",
-                "child": "mermaid"
-            },
-            {
                 "parent": "root",
                 "child": "readme"
             }
@@ -541,16 +530,6 @@
             },
             {
                 "note": "tam-css",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "mermaid",
-                "name": "customResourceProvider",
-                "value": "TAMMermaid.js"
-            },
-            {
-                "note": "mermaid",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             }

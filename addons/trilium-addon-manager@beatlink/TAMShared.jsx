@@ -176,11 +176,17 @@ function buildAddonMermaid(addons, addonId) {
 // Trilium's JSX transpiler rewrites every `import(...)` into its own note-module
 // resolver, which then fails with "Could not find module note <url>". So we load
 // the UMD build the classic way, by injecting a <script> tag (a plain runtime DOM
-// call the transpiler leaves alone), which sets globalThis.mermaid. The build is
-// vendored inside TAM itself and served over HTTP by the "mermaid.min.js
-// (resource)" note's #customResourceProvider label (no runtime CDN dependency —
-// see the tam-gotchas rule). Initialized to match Trilium's light/dark theme.
-const MERMAID_URL = "/custom/TAMMermaid.js"
+// call the transpiler leaves alone), which sets globalThis.mermaid.
+//
+// This is TAM's one deliberate runtime CDN dependency: mermaid's build is ~3.5MB,
+// and vendoring it as a note inside TAM's own install ZIP was measured to break
+// the ZIP import (large note silently dropping sibling notes), while shipping it
+// as a separate library addon would give TAM its first-ever addon dependency —
+// something the manager deliberately avoids so a dep failure can't break the one
+// tool that could fix it. The graph views degrade gracefully (an inline error
+// line) when offline; nothing else in TAM depends on this load.
+// Same CDN/version the GitHub Pages catalog uses.
+const MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"
 let mermaidPromise = null
 function loadMermaid() {
     if (mermaidPromise) return mermaidPromise

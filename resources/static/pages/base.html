@@ -9,19 +9,15 @@
 <body>
 {{BODY}}
 <footer><p>Generated from <a href="{{REPO}}" target="_blank">BeatLink/trilium-scripts</a></p></footer>
-<script>
-  // Only pull in mermaid when the page actually contains a diagram. The build is
-  // vendored alongside the site (same file TAM ships), so the catalog stays
-  // self-contained with no runtime CDN dependency.
+<script type="module">
+  // Only pull in mermaid when the page actually contains a diagram.
   if (document.querySelector('pre.mermaid')) {
-    var s = document.createElement('script');
-    s.src = '{{MERMAID}}';
-    s.onload = function () {
-      var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'neutral', securityLevel: 'strict' });
-    };
-    s.onerror = function () { console.error('mermaid failed to load'); };
-    document.head.appendChild(s);
+    import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')
+      .then(({ default: mermaid }) => {
+        const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'neutral', securityLevel: 'strict' });
+      })
+      .catch(e => console.error('mermaid failed to load', e));
   }
 </script>
 </body>
