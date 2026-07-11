@@ -66,6 +66,25 @@ function MainWidget(){
             icon: "bx bx-rocket",
             text: "Start Tomorrow",
             onClick: async () => { await rescheduleByDays(noteId, ids.constants, 1); await afterChange() }
+        },
+        // Built-in Trilium view commands — no task label is touched, so these
+        // deliberately skip afterChange(). Hoist toggles between this note and
+        // root, mirroring hoist-note@beatlink.
+        {
+            key: "zen",
+            icon: "bx bx-expand",
+            text: "Zen Mode",
+            onClick: () => api.triggerCommand("toggleZenMode")
+        },
+        {
+            key: "hoist",
+            icon: "bx bx-move-vertical",
+            text: "Hoist Note",
+            onClick: () => {
+                api.setHoistedNoteId(
+                    api.getActiveContext().hoistedNoteId === noteId ? "root" : noteId
+                )
+            }
         }
     ]
 
