@@ -69,7 +69,7 @@ async function resolveTemplateId(title) {
 // none). Returns { noteId, created, adopted, title }. Runs on the backend — the
 // closure may reference only `api`, so every value is passed in.
 async function provisionNode(parentNoteId, node, templateId) {
-    return api.runOnBackend((parentNoteId, key, title, icon, color, areaValue, templateId, seedLabels, workflowLabel) => {
+    return api.runOnBackend((parentNoteId, key, title, icon, color, areaValue, alwaysExpanded, templateId, seedLabels, workflowLabel) => {
         let note
         let created = false
         let adopted = false
@@ -104,14 +104,16 @@ async function provisionNode(parentNoteId, node, templateId) {
         }
 
         // Derived attributes — re-asserted every run (idempotent) on any of the
-        // three branches above, so icon/color/template/#area are self-healing.
+        // three branches above, so icon/color/template/#area/#alwaysExpanded are
+        // self-healing.
         if (icon) note.setLabel("iconClass", `bx ${icon}`)
         if (color) note.setLabel("color", color)
         if (areaValue) note.setLabel("area", areaValue)
+        if (alwaysExpanded) note.setLabel("alwaysExpanded", "")
         if (templateId) note.setRelation("template", templateId)
 
         return { noteId: note.noteId, created, adopted, title }
-    }, [parentNoteId, node.key, node.title, node.icon, node.color || "", node.areaValue || "", templateId, node.seedLabels || [], WORKFLOW_LABEL])
+    }, [parentNoteId, node.key, node.title, node.icon, node.color || "", node.areaValue || "", !!node.alwaysExpanded, templateId, node.seedLabels || [], WORKFLOW_LABEL])
 }
 
 // Walk the whole STRUCTURE depth-first, provisioning each node under its

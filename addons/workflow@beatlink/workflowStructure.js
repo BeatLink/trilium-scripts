@@ -121,6 +121,9 @@ function buildAreaNode(area, index) {
             // Buckets inherit their area's color; no other seed labels.
             color: area.color,
             template: SPECIAL_TEMPLATE_TITLE,
+            // Pin buckets open so expanded@beatlink keeps their area expanded in
+            // the tree. Derived (re-asserted every run) — see provisionNode.
+            alwaysExpanded: true,
             seedLabels: [],
             children: []
         }))

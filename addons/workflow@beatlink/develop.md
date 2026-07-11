@@ -157,9 +157,10 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
 - **Resolution order per node (idempotent, rename-safe):** (1) a note already tagged
   `#workflowNote=<key>` → adopt as-is; (2) else a same-titled child under the target parent → adopt +
   tag it; (3) else create + tag.
-- **Derived vs. seed attributes.** Icon (`#iconClass`), color (`#color`), the `~template` relation, and
-  an Area note's **`#area` value** are **derived** — re-asserted on *every* run, on adopted and created
-  notes alike, so the structure self-heals and re-running fixes drift. (`#area` on Area roots is derived,
+- **Derived vs. seed attributes.** Icon (`#iconClass`), color (`#color`), the `~template` relation, an
+  Area note's **`#area` value**, and buckets' **`#alwaysExpanded`** are **derived** — re-asserted on
+  *every* run, on adopted and created notes alike, so the structure self-heals and re-running fixes
+  drift. (`#area` on Area roots is derived,
   not a seed, specifically so reordering the areas — which renumbers slugs — updates the root notes on
   the next provision.) Note **content** is written *only* on creation, so user edits survive.
 - **Area-slug migration.** Slugs are `<NN>-<name>` and the number shifts when areas are reordered
@@ -176,9 +177,10 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
   if it's absent): the 15 Area notes → `7. Area`; Inbox/My Day/Agenda and every subtype bucket →
   `8. Special` (the neutral container template). `templates@beatlink` is a declared dependency so TAM
   syncs it first, making the templates resolvable.
-- **Buckets are containers, not items:** the six subtype notes under each area carry only their id,
-  their area's color, and an icon — no `#agendaTaskWidget` (they group actionable notes but aren't
-  actionable themselves).
+- **Buckets are containers, not items:** the six subtype notes under each area carry their id, their
+  area's color, an icon, and **`#alwaysExpanded`** (so [expanded@beatlink](../expanded@beatlink/) keeps
+  their area expanded in the tree) — no `#agendaTaskWidget` (they group actionable notes but aren't
+  actionable themselves). `#alwaysExpanded` is derived (re-asserted every run).
 - **Items are created programmatically, not by inheritance.** When the workflow adds an item into a
   bucket (a Task, Idea, Note, etc. — a later Organize/Collect phase), it sets that item's `~template`
   and `#area` **programmatically at creation**, resolved from the bucket's `#workflowNote` identity.
