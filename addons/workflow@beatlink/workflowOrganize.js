@@ -19,7 +19,7 @@
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
-const { AREA_LIST } = require("workflowStructure.js")
+const { AREA_LIST, BUCKET_TEMPLATES } = require("workflowStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 
@@ -154,6 +154,184 @@ async function getOrganizeCandidates() {
     }, [WORKFLOW_LABEL])
 }
 
+// Find notes whose #area or ~template disagrees with where they're filed. A note
+// under "Home > Projects" implies area=03-home and bucket=projects; it's misfiled
+// if its own #area differs from the ancestor Area, or its ~template isn't one the
+// ancestor bucket accepts. Only notes inside an Area subtree are checked (Inbox
+// notes aren't filed yet). Returns per note:
+//   { noteId, title, path, preview,
+//     areaMisfiled, typeMisfiled,
+//     branchArea, branchBucket, noteArea, noteTemplateTitle,
+//     fixes: { moveTargetNoteId, moveTargetLabel, updateAreaTo, updateAreaColor,
+//              updateTypeToId, updateTypeToTitle } }
+// `fixes.*` are precomputed so the frontend just shows the applicable buttons.
+async function getMisfiledNotes() {
+    return api.runOnBackend((workflowLabel, areaList, bucketTemplates) => {
+        const tagged = api.searchForNotes(`#${workflowLabel}`)
+        const structuralIds = new Set(tagged.map(n => n.noteId))
+
+        // Index the structural notes by their #workflowNote key so we can resolve
+        // "the projects bucket under the home area" -> a real noteId for moves.
+        const byKey = {}
+        for (const n of tagged) byKey[n.getLabelValue(workflowLabel)] = n
+
+        const isAreaRootKey = k => /^area-\d\d-[a-z]+$/.test(k)
+        const areaRootNotes = tagged.filter(n => isAreaRootKey(n.getLabelValue(workflowLabel)))
+
+        // area slug ("03-home") -> its area-root #workflowNote key ("area-03-home")
+        const areaKeyBySlug = {}
+        for (const a of areaList) areaKeyBySlug[a.slug] = `area-${a.slug}`
+        const colorBySlug = {}
+        for (const a of areaList) colorBySlug[a.slug] = a.color
+
+        // template title -> the bucket slug that accepts it (first match wins).
+        const bucketByTemplate = {}
+        for (const bucket of Object.keys(bucketTemplates)) {
+            for (const title of bucketTemplates[bucket]) {
+                if (!(title in bucketByTemplate)) bucketByTemplate[title] = bucket
+            }
+        }
+
+        function pathOf(note) {
+            const parts = []
+            let cur = note.getParentNotes()[0]
+            while (cur && cur.noteId !== "root") {
+                parts.unshift(cur.title)
+                cur = cur.getParentNotes()[0]
+            }
+            return parts.join(" › ")
+        }
+
+        const PREVIEW_MAX = 240
+        function previewOf(note) {
+            if (note.type !== "text") return ""
+            let content
+            try { content = note.getContent() } catch (e) { return "" }
+            if (!content || typeof content !== "string") return ""
+            const text = content
+                .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"').replace(/\s+/g, " ").trim()
+            return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
+        }
+
+        // Nearest ancestor Area's #area, and nearest ancestor bucket's slug. A
+        // bucket key looks like "area-03-home-projects"; the trailing segment is
+        // the bucket slug.
+        function branchContext(note) {
+            let branchArea = ""
+            let branchBucket = ""
+            let cur = note.getParentNotes()[0]
+            while (cur && cur.noteId !== "root") {
+                const key = cur.getLabelValue(workflowLabel)
+                if (key) {
+                    if (!branchBucket) {
+                        const m = key.match(/^area-\d\d-[a-z]+-([a-z]+)$/)
+                        if (m) branchBucket = m[1]
+                    }
+                    if (!branchArea) {
+                        const a = cur.getLabelValue("area")
+                        if (a) branchArea = a
+                    }
+                }
+                cur = cur.getParentNotes()[0]
+            }
+            return { branchArea, branchBucket }
+        }
+
+        const seen = new Set()
+        const out = []
+
+        function visit(note) {
+            for (const child of note.getChildNotes()) {
+                if (seen.has(child.noteId)) continue
+                seen.add(child.noteId)
+                if (!structuralIds.has(child.noteId)) {
+                    const { branchArea, branchBucket } = branchContext(child)
+                    const noteArea = child.getLabelValue("area") || ""
+                    const templateId = child.getRelationValue("template") || ""
+                    const templateNote = templateId ? api.getNote(templateId) : null
+                    const noteTemplateTitle = templateNote ? templateNote.title : ""
+
+                    const areaMisfiled = !!noteArea && !!branchArea && noteArea !== branchArea
+                    const templateBucket = noteTemplateTitle ? bucketByTemplate[noteTemplateTitle] : undefined
+                    const typeMisfiled = !!noteTemplateTitle && !!branchBucket &&
+                        templateBucket !== undefined && templateBucket !== branchBucket
+
+                    if (areaMisfiled || typeMisfiled) {
+                        // Move target: the note's correct Area (by its #area) and,
+                        // if its type maps to a bucket, that bucket under that area.
+                        // Best-effort — fall back to area root, or current area if
+                        // #area is unknown.
+                        let moveTargetNoteId = ""
+                        let moveTargetLabel = ""
+                        const destAreaSlug = noteArea || branchArea
+                        const destBucketSlug = templateBucket || branchBucket
+                        if (destAreaSlug) {
+                            const areaKey = areaKeyBySlug[destAreaSlug]
+                            const bucketKey = destBucketSlug ? `${areaKey}-${destBucketSlug}` : ""
+                            const target = (bucketKey && byKey[bucketKey]) || byKey[areaKey]
+                            if (target) {
+                                moveTargetNoteId = target.noteId
+                                moveTargetLabel = pathOf(target) + (pathOf(target) ? " › " : "") + target.title
+                            }
+                        }
+
+                        const bucketCanonical = branchBucket && bucketTemplates[branchBucket]
+                            ? bucketTemplates[branchBucket][0] : ""
+                        const canonicalNote = bucketCanonical
+                            ? (api.searchForNotes(`#template note.title = "${bucketCanonical}"`)[0] || null)
+                            : null
+
+                        // The branch this note is filed under (its parent in this
+                        // subtree walk) — what a move removes it from.
+                        const currentParentId = note.noteId
+
+                        out.push({
+                            noteId: child.noteId,
+                            title: child.title,
+                            path: pathOf(child),
+                            preview: previewOf(child),
+                            currentParentId,
+                            areaMisfiled,
+                            typeMisfiled,
+                            branchArea,
+                            branchBucket,
+                            noteArea,
+                            noteTemplateTitle,
+                            fixes: {
+                                moveTargetNoteId,
+                                moveTargetLabel,
+                                updateAreaTo: areaMisfiled ? branchArea : "",
+                                updateAreaColor: areaMisfiled ? (colorBySlug[branchArea] || "") : "",
+                                updateTypeToId: typeMisfiled && canonicalNote ? canonicalNote.noteId : "",
+                                updateTypeToTitle: typeMisfiled && canonicalNote ? bucketCanonical : ""
+                            }
+                        })
+                    }
+                }
+                visit(child)
+            }
+        }
+
+        for (const root of areaRootNotes) visit(root)
+        return out
+    }, [WORKFLOW_LABEL, AREA_LIST, BUCKET_TEMPLATES])
+}
+
+// Move a note from one parent branch to another (add to new, remove from old),
+// using Trilium's toggleNoteInParent primitive — the same re-file mechanic
+// libAgendaOverview uses. Only touches the one misfiled branch (fromParentId),
+// leaving any other clones of the note in place.
+async function refileNote(noteId, fromParentId, toParentId) {
+    return api.runOnBackend((noteId, fromParentId, toParentId) => {
+        if (!toParentId || fromParentId === toParentId) return false
+        api.toggleNoteInParent(true, noteId, toParentId, "")
+        if (fromParentId) api.toggleNoteInParent(false, noteId, fromParentId, "")
+        return true
+    }, [noteId, fromParentId, toParentId])
+}
+
 // Assign (or clear, when templateId is "") a note's ~template relation.
 async function assignTemplate(noteId, templateId) {
     return api.runOnBackend((noteId, templateId) => {
@@ -202,7 +380,9 @@ module.exports = {
     getItemTemplates,
     getAreas,
     getOrganizeCandidates,
+    getMisfiledNotes,
     assignTemplate,
     assignArea,
+    refileNote,
     deleteNote
 }

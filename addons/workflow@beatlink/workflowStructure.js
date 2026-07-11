@@ -64,6 +64,22 @@ const SUBTYPES = [
 const AREA_TEMPLATE_TITLE = "7. Area"
 const SPECIAL_TEMPLATE_TITLE = "8. Special"
 
+// Which item templates each Type bucket accepts, keyed by the bucket's slug (the
+// trailing segment of its #workflowNote key, e.g. "projects" in
+// "area-03-legal-projects"). Used by the Misfiled Notes check: a note whose
+// ~template isn't in its bucket's list is type-misfiled. Note the Projects
+// bucket accepts BOTH "5. Project" and "3. Task" — Task-templated notes live
+// under Projects (there is no separate Task bucket). The first title in each
+// list is the bucket's canonical template (what "update type" assigns).
+const BUCKET_TEMPLATES = {
+    ideas:    ["0. Ideas"],
+    goals:    ["1. Goal"],
+    routines: ["2. Routine"],
+    projects: ["5. Project", "3. Task"],
+    future:   ["4. Future"],
+    notes:    ["6. Note"]
+}
+
 // zero-padded area number: 1 -> "01"
 function pad2(n) {
     return String(n).padStart(2, "0")
@@ -119,4 +135,7 @@ const STRUCTURE = [
     ...AREAS.map(buildAreaNode)
 ]
 
-module.exports = { STRUCTURE, AREAS, AREA_LIST, SUBTYPES, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE }
+module.exports = {
+    STRUCTURE, AREAS, AREA_LIST, SUBTYPES,
+    AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE, BUCKET_TEMPLATES
+}

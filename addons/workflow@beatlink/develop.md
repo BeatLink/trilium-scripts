@@ -123,8 +123,18 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
     `#color` (like [area-picker](../area-picker@beatlink/areaPickerPreact.jsx)) via `assignArea`. If the
     note already sits inside an Area subtree, that ancestor area's button is **highlighted** as the
     suggestion (`suggestedArea` = nearest ancestor's `#area`).
-  - Scope for both excludes the structural `#workflowNote` notes (areas/buckets/Inbox themselves) —
-    containers, not items.
+  - **Misfiled Notes** — `getMisfiledNotes()` walks the Area subtrees (not Inbox — unfiled) and flags a
+    note whose **`#area` differs from its ancestor Area**, or whose **`~template` isn't accepted by its
+    ancestor bucket** (per `workflowStructure.js`'s `BUCKET_TEMPLATES`: bucket slug → accepted template
+    titles; the Projects bucket accepts both `5. Project` and `3. Task`, since Tasks live under
+    Projects). A "Misfiled:" reason line explains the mismatch, then up to three fix buttons appear:
+    **Move to <area › bucket>** (`refileNote` = `toggleNoteInParent` add-new + remove-old, like
+    [libAgendaOverview](../libagendaoverview@beatlink/libAgendaOverview.js); best-effort target — area
+    root if type unknown, current area if `#area` unknown), **Set area to <slug>** (retag `#area` to the
+    branch, trusting the tree), and **Set type to <template>** (reset `~template` to the bucket's
+    canonical type). Only the applicable buttons show.
+  - Scope for the two "without" sections excludes the structural `#workflowNote` notes; Misfiled scans
+    only inside Area subtrees.
   - **Wiring gotcha:** `workflowOrganize.js` requires `workflowStructure.js`, so `structure` is cloned
     under `organize` in the manifest (a second `children` entry) — require resolves within the
     requirer's subtree, not globally. `validate` flags this if missed.
@@ -224,8 +234,9 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
       preset + Ideas template. Run `validate`.
 - [~] **Phase 3 — Tab wiring.** Fill in the window's panels.
-      - [x] **Organize** — triage queues (one-at-a-time) for **Notes Without Templates** and **Notes
-        Without Areas**. Next Organize sections: priority, then dates.
+      - [x] **Organize** — one-at-a-time triage sections: **Notes Without Templates**, **Notes Without
+        Areas**, **Misfiled Notes** (area/type mismatch vs branch, with move/relabel fixes). Next
+        Organize sections: priority, then dates.
       - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
       - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance

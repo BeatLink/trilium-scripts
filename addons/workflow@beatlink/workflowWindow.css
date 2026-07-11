@@ -164,6 +164,14 @@
     outline-offset: 1px;
 }
 
+/* Full-width explanation of why a note is misfiled, above the fix buttons. */
+.workflow-organize-reason {
+    flex-basis: 100%;
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
 .workflow-organize-actions {
     display: flex;
     align-items: center;
