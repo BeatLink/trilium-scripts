@@ -1,0 +1,27 @@
+.workflow-window {
+    padding: 8px;
+}
+
+.workflow-window-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.workflow-window-panel {
+    padding: 4px;
+}
+
+.workflow-window-blurb {
+    opacity: 0.85;
+    max-width: 70ch;
+}
+
+.workflow-window-placeholder {
+    opacity: 0.6;
+    padding: 12px;
+    border: 1px dashed var(--main-border-color, currentColor);
+    border-radius: 6px;
+    margin-top: 12px;
+    max-width: 70ch;
+}

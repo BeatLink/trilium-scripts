@@ -6,17 +6,22 @@ manifest, config preset, and templates are built out over the phases in the road
 
 ## 1. Purpose / workflow
 
-An opinionated system that guides a **Capture → Organize → Review → Execute** workflow. Unlike the
+An opinionated system that guides a **Collect → Organize → Review → Execute** workflow. Unlike the
 generic, composable `agenda@beatlink` engine, this addon bakes in a specific taxonomy, notebook
 structure, and review cadence.
 
-### 1. Capture
+The primary UI is a single **Workflow window** — a `render`-type page with four tabs, one per phase
+(Collect / Organize / Review / Execute). Each tab hosts the tools for that phase. The window shell +
+tab scaffolding exist today; each panel is wired to the agenda engine + provisioned notebook over the
+roadmap phases below.
+
+### 1. Collect
 Process your inboxes into the Inbox note: email, bookmarks, digital files, notes, chat messages,
 photos, physical documents, work systems, browser tabs.
 
 ### 2. Organize
-Set the **area** and **type** of each captured item, plus **priority**, **status**, **context**,
-**effort**, and **dates**. (This is where all attributes get set — not during Capture. Capture just
+Set the **area** and **type** of each collected item, plus **priority**, **status**, **context**,
+**effort**, and **dates**. (This is where all attributes get set — not during Collect. Collect just
 gets the raw item into the Inbox.)
 
 - **Areas** — the area of life the item belongs to (see §2).
@@ -69,7 +74,7 @@ carry `#agendaTaskWidget`.
 ### Scope
 - Provisioning addon **+** config/schema preset. The `lib*@beatlink` engines stay generic; this addon
   is the opinionated assembly layer.
-- Capture widgets are **deferred** (Phase 4). Inbox is structure-only in v1.
+- Collect widgets are **deferred** (Phase 5). Inbox is structure-only in v1.
 
 ### Notebook top-level structure
 | Note   | Icon         |
@@ -87,6 +92,15 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
 
 - **`workflow@beatlink`** is a `widget`-type assembly addon depending on `agenda@beatlink` +
   `templates@beatlink`.
+- **UI: the Workflow window.** A `render`-type page note (`Workflow`, manifest id `window-page`) wired
+  via a `renderNote` relation to `workflowWindow.jsx` (manifest id `window`), styled by
+  `workflowWindow.css` (`appCss`). This follows agenda's render-page pattern exactly
+  ([agenda's profile-editor-page → profileEditor.jsx](../agenda@beatlink/_tam_manifest_.json),
+  [taskView.jsx](../agenda@beatlink/taskView.jsx)). The component holds four tabs
+  (`lst-tab`/`lst-tab-active`, matching taskView's mode buttons), one per phase; each phase is a
+  placeholder panel today. As phases are built, each tab composes the relevant agenda pieces (e.g.
+  Review/Execute embed the Task View list; Organize embeds the pickers) rather than reimplementing
+  them.
 - **Notebook provisioning** uses the proven three-array manifest pattern (`notes` / `children` /
   `labels` + `AddonData:` relations) from
   [templates@beatlink/_tam_manifest_.json](../templates@beatlink/_tam_manifest_.json) and the richer
@@ -116,7 +130,7 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
   agenda's widgets. Reconsider only if that proves insufficient.
 - **Area icon:** draft says `bx-circle`; `templates@beatlink` ships `bxs-circle`. Pick one (default to
   the shipped `bxs-circle` for consistency).
-- **Context / Effort filters:** add to `filterGroups` now, or defer alongside Capture. New label
+- **Context / Effort filters:** add to `filterGroups` now, or defer alongside Collect. New label
   conventions (`#context`, `#effort`) — document wherever chosen.
 - **Manifest size:** 15 areas × 6 type-children ≈ 120 note entries. Generate the
   `notes`/`children`/`labels` arrays programmatically (scratch script), then commit the generated JSON.
@@ -127,17 +141,21 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
 
 ## 5. Phased roadmap
 
-- [ ] **Phase 0 — Scaffold (this file).** Create the folder + this `develop.md`.
+- [x] **Phase 0 — Scaffold.** Folder + this `develop.md` + the Workflow window shell:
+      `workflowWindow.jsx` (4-tab render component, placeholder panels), `workflowWindow.css`, and a
+      minimal `_tam_manifest_.json` wiring the `render` page → JSX → CSS. Passes `validate`.
 - [ ] **Phase 1 — Preset.** Author `config.json` (15 areas + Ideas search rule, optionally
-      Context/Effort/Status filters), the Ideas template HTML, and a minimal `_tam_manifest_.json`
-      wiring the preset + Ideas template. Run `validate`.
+      Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
+      preset + Ideas template. Run `validate`.
 - [ ] **Phase 2 — Provisioning.** Generate the `notes`/`children`/`labels` for Inbox / My Day / Agenda
       + 15 Area notes each with their Type children and icons; wire `AddonData:` relations and
       `myDayNoteId`. Run `validate` + `tam_to_zip`.
-- [ ] **Phase 3 — Live wiring.** Install agenda + templates + workflow in a test instance
-      (`nix develop` → `trilium_seed` → `trilium_server start`). Confirm the notebook provisions
-      correctly and the preset drives the 15-area filters/colors/kanban columns. Verify
-      Organize / Review / Execute flows end to end.
-- [ ] **Phase 4 — Capture (deferred).** Build inbox-triage widget(s) for the Capture phase (set
-      area/type/priority/dates and file into the tree from the Inbox).
-- [ ] **Phase 5 — Docs.** README, `generate_pages`, catalog entry.
+- [ ] **Phase 3 — Tab wiring.** Fill in the window's panels: **Review**/**Execute** embed the agenda
+      Task View list (filtered per phase); **Organize** surfaces the area/type/priority/date pickers
+      for the selected item; **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
+- [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance
+      (`nix develop` → `trilium_seed` → `trilium_server start`). Confirm the notebook provisions, the
+      preset drives the 15-area filters/colors/kanban, and each Workflow tab works end to end.
+- [ ] **Phase 5 — Collect widgets (deferred).** Build inbox-triage widget(s) for the Collect phase
+      (set area/type/priority/dates and file into the tree from the Inbox).
+- [ ] **Phase 6 — Docs.** README, `generate_pages`, catalog entry.

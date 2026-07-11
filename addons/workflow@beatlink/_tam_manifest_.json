@@ -1,0 +1,99 @@
+{
+    "id": "workflow@beatlink",
+    "name": "Workflow",
+    "description": "An opinionated GTD-style knowledgebase and task system: a single Workflow window with Collect / Organize / Review / Execute tabs, built on top of the Agenda and Templates addons.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workflow@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.1.0",
+    "type": "widget",
+    "readme": "develop.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/workflow@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "settingsNote": "window-page",
+        "dependencies": [],
+        "exports": {},
+        "notes": [
+            {
+                "id": "root",
+                "title": "workflow@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null,
+                "skipOnUpdate": true
+            },
+            {
+                "id": "window-page",
+                "title": "Workflow",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "window",
+                "title": "workflowWindow.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "workflowWindow.jsx"
+            },
+            {
+                "id": "window-css",
+                "title": "workflowWindow.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "workflowWindow.css"
+            },
+            {
+                "id": "readme",
+                "title": "develop.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "develop.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "window-page"
+            },
+            {
+                "parent": "window-page",
+                "child": "window"
+            },
+            {
+                "parent": "root",
+                "child": "window-css"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "window-page",
+                "type": "renderNote",
+                "to": "window"
+            }
+        ],
+        "labels": [
+            {
+                "note": "root",
+                "name": "iconClass",
+                "value": "bx bx-been-here"
+            },
+            {
+                "note": "window-page",
+                "name": "iconClass",
+                "value": "bx bx-been-here"
+            },
+            {
+                "note": "window-css",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
