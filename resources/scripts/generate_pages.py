@@ -46,11 +46,12 @@ def badge(t):
     return f'<span class="badge" style="background:{color}">{html.escape(t)}</span>'
 
 
-def page(title, body, css="style.css"):
+def page(title, body, css="style.css", mermaid="mermaid.min.js"):
     return (
         BASE_HTML
         .replace("{{TITLE}}", html.escape(title))
         .replace("{{CSS}}", css)
+        .replace("{{MERMAID}}", mermaid)
         .replace("{{BODY}}", body)
         .replace("{{REPO}}", REPO)
     )
@@ -321,7 +322,7 @@ def render_addon(meta, readme_html, metas, edges):
   </div>
 </main>"""
 
-    return page(f"{name} — Trilium Addons", body, css="../style.css")
+    return page(f"{name} — Trilium Addons", body, css="../style.css", mermaid="../mermaid.min.js")
 
 
 # ---------------------------------------------------------------------------
@@ -438,6 +439,14 @@ def main():
 
     (docs_dir / "index.html").write_text(render_index(addons))
     (docs_dir / "style.css").write_text(CSS)
+
+    # Vendor the same mermaid build TAM ships, so diagram pages render with no
+    # runtime CDN dependency (base.html loads docs/mermaid.min.js locally).
+    mermaid_src = addons_dir / "trilium-addon-manager@beatlink" / "mermaid.min.js"
+    if mermaid_src.exists():
+        shutil.copy2(mermaid_src, docs_dir / "mermaid.min.js")
+    else:
+        print("WARNING: mermaid.min.js not found — dependency graphs won't render")
 
     print(f"Generated docs/ for {len(addons)} addons")
 

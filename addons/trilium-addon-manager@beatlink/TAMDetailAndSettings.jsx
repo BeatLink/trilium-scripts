@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
-import { TamButton, Spinner, computeStats } from "TAMShared.jsx"
+import { TamButton, Spinner, computeStats, buildAddonMermaid, MermaidDiagram } from "TAMShared.jsx"
 const { fetchReadmeHtml } = require("libTAM.js")
 
-function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReinstall, onEnable }) {
+function AddonDetail({ addonData, addons, isSelf, onInstall, onDelete, onUpdate, onReinstall, onEnable }) {
+    const depMermaid = buildAddonMermaid(addons, addonData.id)
     const [readmeHtml, setReadmeHtml] = useState(null)
     const [readmeLoading, setReadmeLoading] = useState(false)
 
@@ -75,6 +76,12 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReins
                         Install this addon to view its full README, or{" "}
                         <a href={addonData.homepage} target="_blank">view it on GitHub</a>.
                     </p>
+                )}
+                {depMermaid && (
+                    <div className="dep-graph-section">
+                        <h2>Dependencies</h2>
+                        <MermaidDiagram source={depMermaid} />
+                    </div>
                 )}
             </div>
         </div>

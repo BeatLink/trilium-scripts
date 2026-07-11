@@ -180,6 +180,13 @@
                 "sourceUrl": "tam.css"
             },
             {
+                "id": "mermaid",
+                "title": "mermaid.min.js (resource)",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "mermaid.min.js"
+            },
+            {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
@@ -381,6 +388,10 @@
                 "child": "tam-css"
             },
             {
+                "parent": "source-code",
+                "child": "mermaid"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             }
@@ -530,6 +541,16 @@
             },
             {
                 "note": "tam-css",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "mermaid",
+                "name": "customResourceProvider",
+                "value": "TAMMermaid.js"
+            },
+            {
+                "note": "mermaid",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             }

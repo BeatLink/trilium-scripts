@@ -906,6 +906,36 @@
             color: #64748b !important;
         }
     }
+
+    /* Dependency graph */
+    & .dep-graph-section {
+        margin-top: 28px !important;
+
+        & h2 {
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            margin-bottom: 12px !important;
+            color: #0f172a !important;
+        }
+    }
+
+    & .dep-graph-scroll {
+        overflow-x: auto !important;
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 16px !important;
+    }
+
+    & .TAM-mermaid {
+        display: flex !important;
+        justify-content: center !important;
+
+        & .TAM-mermaid-svg svg {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+    }
 }
 
 @keyframes TAM-spin {
