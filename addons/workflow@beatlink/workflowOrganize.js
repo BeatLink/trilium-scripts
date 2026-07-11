@@ -71,6 +71,33 @@ async function getUntemplatedNotes() {
             return parts.join(" › ")
         }
 
+        // A short plain-text preview of the note's opening content. Only text
+        // notes carry HTML content worth previewing; anything else (code, images,
+        // etc.) gets an empty preview. Strips tags, decodes a few common entities,
+        // collapses whitespace, and truncates.
+        const PREVIEW_MAX = 240
+        function previewOf(note) {
+            if (note.type !== "text") return ""
+            let content
+            try {
+                content = note.getContent()
+            } catch (e) {
+                return ""
+            }
+            if (!content || typeof content !== "string") return ""
+            const text = content
+                .replace(/<[^>]+>/g, " ")
+                .replace(/&nbsp;/g, " ")
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"')
+                .replace(/\s+/g, " ")
+                .trim()
+            return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
+        }
+
         // Collect untemplated descendants of the scope roots, de-duped (a note
         // can be cloned under more than one scope root).
         const seen = new Set()
@@ -82,7 +109,7 @@ async function getUntemplatedNotes() {
                 seen.add(child.noteId)
                 const untemplated = !child.getRelationValue("template")
                 if (untemplated && !structuralIds.has(child.noteId)) {
-                    queue.push({ noteId: child.noteId, title: child.title, path: pathOf(child) })
+                    queue.push({ noteId: child.noteId, title: child.title, path: pathOf(child), preview: previewOf(child) })
                 }
                 visit(child)
             }

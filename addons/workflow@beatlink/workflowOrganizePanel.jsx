@@ -1,24 +1,23 @@
-import { useState, useEffect, FormDropdownList } from "trilium:preact"
+import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 
 const { getItemTemplates, getUntemplatedNotes, assignTemplate } = require("workflowOrganize.js")
 
 // The Organize tab's "assign a template" triage queue. Loads every untemplated
 // note under the Inbox / Area subtrees, then walks the user through them one at a
-// time: each screen shows the note's title + where it lives in the tree and a
-// template picker. Picking a template assigns it and advances; Skip advances
-// without changing anything. See workflowOrganize.js for the backend.
+// time: each screen shows the note's title, where it lives in the tree, a short
+// content preview, and a row of one-click template buttons. Clicking a template
+// assigns it and auto-advances to the next note; Skip advances without changing
+// anything. See workflowOrganize.js for the backend.
 export default function OrganizePanel() {
     const [templates, setTemplates] = useState(null)
     const [queue, setQueue] = useState(null)
     const [index, setIndex] = useState(0)
-    const [choice, setChoice] = useState("none")
     const [busy, setBusy] = useState(false)
 
     async function reload() {
         setQueue(null)
         setIndex(0)
-        setChoice("none")
         const [tpls, notes] = await Promise.all([getItemTemplates(), getUntemplatedNotes()])
         setTemplates(tpls)
         setQueue(notes)
@@ -28,14 +27,12 @@ export default function OrganizePanel() {
 
     const current = queue && index < queue.length ? queue[index] : null
 
-    // Reset the picker each time we land on a new note.
-    useEffect(() => { setChoice("none") }, [current && current.noteId])
-
-    async function apply() {
-        if (!current || choice === "none") return
+    // Assign the clicked template and advance. One click = assign + next.
+    async function pick(templateId) {
+        if (!current || busy) return
         setBusy(true)
         try {
-            await assignTemplate(current.noteId, choice)
+            await assignTemplate(current.noteId, templateId)
         } finally {
             setBusy(false)
         }
@@ -43,6 +40,7 @@ export default function OrganizePanel() {
     }
 
     function skip() {
+        if (busy) return
         setIndex(i => i + 1)
     }
 
@@ -83,11 +81,6 @@ export default function OrganizePanel() {
         )
     }
 
-    const templateOptions = [
-        { noteId: "none", title: "Select a template..." },
-        ...templates.map(t => ({ noteId: t.noteId, title: t.title }))
-    ]
-
     return (
         <div className="workflow-organize">
             <div className="workflow-organize-progress">
@@ -106,25 +99,24 @@ export default function OrganizePanel() {
                     {current.path || "(top level)"}
                 </div>
 
-                <div className="workflow-organize-picker">
-                    <FormDropdownList
-                        values={templateOptions}
-                        currentValue={choice}
-                        onChange={setChoice}
-                        keyProperty="noteId"
-                        titleProperty="title"
-                        class="dropdown-component form-control"
-                    />
+                {current.preview && (
+                    <div className="workflow-organize-preview">{current.preview}</div>
+                )}
+
+                <div className="workflow-organize-templates">
+                    {templates.map(t => (
+                        <button
+                            key={t.noteId}
+                            className="workflow-organize-template-btn"
+                            disabled={busy}
+                            onClick={() => pick(t.noteId)}
+                        >
+                            {t.title}
+                        </button>
+                    ))}
                 </div>
 
                 <div className="workflow-organize-actions">
-                    <button
-                        className="workflow-setup-button"
-                        disabled={busy || choice === "none"}
-                        onClick={apply}
-                    >
-                        {busy ? "Assigning..." : "Assign & next"}
-                    </button>
                     <button className="workflow-organize-skip" disabled={busy} onClick={skip}>
                         Skip
                     </button>

@@ -105,12 +105,13 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
 - **Organize tab — assign-a-template triage queue.** `workflowOrganizePanel.jsx` (id `organize-panel`,
   a child of `window`) + backend helpers in `workflowOrganize.js` (id `organize`). It walks every
   **untemplated** note under the Inbox and Area subtrees one at a time — showing the note's title, its
-  tree-path breadcrumb (via `getParentNotes()` up to root), and an item-type template picker — then
-  assigns the chosen `~template` (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx))
-  and advances; Skip advances without change. Scope excludes the structural `#workflowNote` notes
-  (areas/buckets/Inbox themselves) — containers, not items. The picker offers only the item-type
-  templates (`1. Goal`..`6. Note`; Area/Special excluded), resolved live by title so any missing one
-  (e.g. Ideas until its template ships) is simply omitted.
+  tree-path breadcrumb (via `getParentNotes()` up to root), and a short HTML-stripped **content
+  preview** of its opening text. Each item-type template is a **one-click button**: clicking one
+  assigns that `~template` (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx))
+  and auto-advances to the next note; Skip advances without change. Scope excludes the structural
+  `#workflowNote` notes (areas/buckets/Inbox themselves) — containers, not items. The buttons offer
+  only the item-type templates (`1. Goal`..`6. Note`; Area/Special excluded), resolved live by title
+  so any missing one (e.g. Ideas until its template ships) is simply omitted.
 - **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
   `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
   structure at runtime (see below). Shares `workflowWindow.css`.

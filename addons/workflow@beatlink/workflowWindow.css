@@ -122,9 +122,39 @@
     margin-bottom: 16px;
 }
 
-.workflow-organize-picker {
+.workflow-organize-preview {
+    opacity: 0.8;
+    font-size: 0.9em;
+    line-height: 1.4;
     margin-bottom: 16px;
-    max-width: 320px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--main-border-color, #ccc);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+    border-radius: 0 4px 4px 0;
+}
+
+.workflow-organize-templates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.workflow-organize-template-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    cursor: pointer;
+}
+
+.workflow-organize-template-btn:hover:not(:disabled) {
+    border-color: var(--main-text-color, #333);
+}
+
+.workflow-organize-template-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 
 .workflow-organize-actions {
