@@ -54,16 +54,14 @@ Adds every task in `getTaskList` whose start datetime is exactly now onto `nowNo
 
 Registers `widgetNoteId` as a visible custom-widget launcher named "Agenda Launcher Widget".
 
-## Where should `windowConfig` and the on/off flags come from?
+## Where do `windowConfig` and the on/off flags come from?
 
-The original implementation stored `windowConfig` and several boolean flags (`enableLauncher`,
-`addTasksWhenDue`, `sendDueNotifications`, `launchOnStart`, `enableSounds`) in one JSON blob read via
-a bespoke `libJsonDatabase@beatlink.js` — see the comparison in this repo's history for the full
-writeup, but in short: that library is a schema-less, generic get/save-JSON-content pair with no
-defaults-merging and no settings-form UI, which [libsettings@beatlink](../libsettings@beatlink/)
-already does a strict superset of. The consuming addon (whatever widget decides *when* to call
+The consuming addon (whatever widget decides *when* to call
 `launchAgendaNow`/`addDueTasksToAgendaNow`/etc — this library only implements the actions themselves)
-should source all of these from `libsettings@beatlink`, with `windowConfig`'s fields flattened into
-top-level schema keys (e.g. `windowWidth`, `windowHeight`, `windowGap`, `windowAlwaysOnTop`,
-`windowHideTitlebar`, `windowHideMenubar`) rather than as a nested object, since `libsettings`'
-schema doesn't yet have a nested-group field type (only flat fields and repeatable `list`s).
+sources all of these from [libsettings@beatlink](../libsettings@beatlink/). Because `libsettings`'
+schema has no nested-group field type (only flat fields and repeatable `list`s), `windowConfig`'s
+fields live as flat top-level schema keys (`windowWidth`, `windowHeight`, `windowGap`,
+`windowAlwaysOnTop`, `windowHideTitlebar`, `windowHideMenubar`) rather than a nested object, and the
+consumer reassembles them into the `{ width, height, windowGap, alwaysOnTop, hideTitlebar,
+hideMenubar }` object this library expects. See `agenda@beatlink`'s `schema.json` (the **Agenda Now**
+tab) and `agendaSettings.jsx`'s `getAgendaSettings()` for the reference wiring.

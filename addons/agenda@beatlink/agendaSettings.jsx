@@ -38,5 +38,24 @@ export async function getAgendaSettings() {
 
     const profileContext = { schemaNoteId, configNoteId, profileIds: Object.keys(settings.profiles || {}) }
 
-    return { constants, profileContext, schemaNoteId, configNoteId }
+    // Agenda Now flags + flattened window config (see libagendanow@beatlink's
+    // README: windowConfig's fields are flat top-level schema keys, not a
+    // nested object, since libsettings has no nested-group field type).
+    const agendaNow = {
+        enableSounds: settings.enableSounds,
+        enableLauncher: settings.enableLauncher,
+        addTasksWhenDue: settings.addTasksWhenDue,
+        sendDueNotifications: settings.sendDueNotifications,
+        launchOnStart: settings.launchOnStart,
+        windowConfig: {
+            width: settings.windowWidth,
+            height: settings.windowHeight,
+            windowGap: settings.windowGap,
+            alwaysOnTop: settings.windowAlwaysOnTop,
+            hideTitlebar: settings.windowHideTitlebar,
+            hideMenubar: settings.windowHideMenubar
+        }
+    }
+
+    return { constants, profileContext, agendaNow, schemaNoteId, configNoteId }
 }

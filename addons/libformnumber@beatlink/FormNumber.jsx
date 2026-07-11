@@ -8,7 +8,8 @@ export function FormNumber({ value, min, step, placeholder, onChange }) {
                 step={step}
                 placeholder={placeholder ? placeholder : ""}
                 onInput={(e) => {
-                    onChange(e.target.value);
+                    const raw = e.target.value
+                    onChange(raw === "" ? "" : Number(raw));
                     e.preventDefault()
                 }}
                 className='form-control'

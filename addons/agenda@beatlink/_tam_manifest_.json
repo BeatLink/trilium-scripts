@@ -63,13 +63,6 @@
                 "sourceUrl": null
             },
             {
-                "id": "now-config",
-                "title": "agendaNowConfig.json",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "agendaNowConfig.json"
-            },
-            {
                 "id": "common-css",
                 "title": "agendaCommon.css",
                 "type": "code",
@@ -188,10 +181,6 @@
             },
             {
                 "parent": "root",
-                "child": "now-config"
-            },
-            {
-                "parent": "root",
                 "child": "common-css"
             },
             {
@@ -276,6 +265,10 @@
                 "parent": "now-launcher",
                 "addon": "libagendanow@beatlink",
                 "child": "lib"
+            },
+            {
+                "parent": "now-launcher",
+                "child": "agenda-settings"
             },
             {
                 "parent": "now-window",
@@ -406,13 +399,18 @@
             },
             {
                 "from": "now-launcher",
-                "type": "nowNote",
-                "to": "now-note"
+                "type": "schemaNote",
+                "to": "schema"
             },
             {
                 "from": "now-launcher",
-                "type": "agendaNowConfig",
-                "to": "now-config"
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "now-launcher",
+                "type": "nowNote",
+                "to": "now-note"
             },
             {
                 "from": "now-window",
@@ -428,11 +426,6 @@
                 "from": "now-window",
                 "type": "nowNote",
                 "to": "now-note"
-            },
-            {
-                "from": "now-window",
-                "type": "agendaNowConfig",
-                "to": "now-config"
             },
             {
                 "from": "now-window",

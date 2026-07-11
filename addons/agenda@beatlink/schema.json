@@ -53,6 +53,72 @@
         "default": "rank",
         "tab": "Settings"
     },
+    "enableSounds": {
+        "type": "boolean",
+        "label": "Enable Timer Sounds",
+        "default": true,
+        "tab": "Agenda Now"
+    },
+    "enableLauncher": {
+        "type": "boolean",
+        "label": "Enable Launcher Widget",
+        "default": true,
+        "tab": "Agenda Now"
+    },
+    "addTasksWhenDue": {
+        "type": "boolean",
+        "label": "Add Tasks When Due",
+        "default": false,
+        "tab": "Agenda Now"
+    },
+    "sendDueNotifications": {
+        "type": "boolean",
+        "label": "Send Due Notifications",
+        "default": true,
+        "tab": "Agenda Now"
+    },
+    "launchOnStart": {
+        "type": "boolean",
+        "label": "Launch On Start",
+        "default": false,
+        "tab": "Agenda Now"
+    },
+    "windowWidth": {
+        "type": "number",
+        "label": "Window Width",
+        "default": 300,
+        "tab": "Agenda Now"
+    },
+    "windowHeight": {
+        "type": "number",
+        "label": "Window Height",
+        "default": 150,
+        "tab": "Agenda Now"
+    },
+    "windowGap": {
+        "type": "number",
+        "label": "Window Gap",
+        "default": 12,
+        "tab": "Agenda Now"
+    },
+    "windowAlwaysOnTop": {
+        "type": "boolean",
+        "label": "Always On Top",
+        "default": true,
+        "tab": "Agenda Now"
+    },
+    "windowHideTitlebar": {
+        "type": "boolean",
+        "label": "Hide Titlebar",
+        "default": true,
+        "tab": "Agenda Now"
+    },
+    "windowHideMenubar": {
+        "type": "boolean",
+        "label": "Hide Menubar",
+        "default": true,
+        "tab": "Agenda Now"
+    },
     "tableViews": {
         "type": "json",
         "hidden": true,

@@ -56,9 +56,8 @@ widgets plus a single schema-driven editor page:
 5. Give a note template the `#agendaTaskWidget` label (with no value) to make the Task widget appear
    on notes cloned from it.
 6. (Electron desktop app only) Use the "Agenda Now" launcher buttons to add the current note to the
-   focus window, or launch the window itself. Configure `agendaNowConfig.json`'s content directly
-   (window size/position, which automatic behaviors are enabled) — see below for why this isn't a
-   `libsettings@beatlink` schema-driven screen.
+   focus window, or launch the window itself. Configure it on the Agenda Editor's **Agenda Now** tab
+   (window size/position, which automatic behaviors are enabled).
 7. Each profile's **Task Filing Mode** (Profiles tab) picks how its matching notes are surfaced:
    **"File Tasks as Children"** (default, preserves the original behavior — notes are re-parented
    under **File Tasks Under**, and the Overview widget only shows up when browsing there) or
@@ -73,31 +72,34 @@ widgets plus a single schema-driven editor page:
 
 ## Architecture
 
-This addon owns exactly two things every other `lib*@beatlink` piece explicitly does *not*:
+This addon owns something every other `lib*@beatlink` piece explicitly does *not*:
 
 - **A `libsettings@beatlink` schema** (`schema.json`/`config.json`, rendered wholesale by the Agenda
   Editor) holding *everything* configurable about this addon: the label-name vocabulary
   (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`, `recurrenceLabel`, `rankLabel`, etc),
   every shared `searches`/`filters`/`sorts`/`prefixes`/`colors`/`groupings`/`dateRules` `registry`, a
-  `profiles` `registry` (identity + filing mode + sort/prefix/color/grouping pick), and
+  `profiles` `registry` (identity + filing mode + sort/prefix/color/grouping pick),
   `searchGroups`/`filterGroups` — each its own top-level `registry` (not nested inside `profiles`, so a
   group stays on the same tab as the elements it references), every entry carrying a `profileId` (a
   `reference` → `profiles`) saying which profile it belongs to, and each usage a `reference` into
-  `searches`/`filters` with `inline: true` — see
+  `searches`/`filters` with `inline: true` — and the **Agenda Now** tab's flags
+  (`enableSounds`, `enableLauncher`, `addTasksWhenDue`, `sendDueNotifications`, `launchOnStart`) plus
+  the focus window's geometry as flat scalar keys (`windowWidth`, `windowHeight`, `windowGap`,
+  `windowAlwaysOnTop`, `windowHideTitlebar`, `windowHideMenubar`), which `getAgendaSettings()`
+  reassembles into the `{ width, height, windowGap, alwaysOnTop, hideTitlebar, hideMenubar }`
+  `windowConfig` object `libagendanow@beatlink` expects (flat because `libsettings` has no nested-group
+  field type). See
   [libsettings@beatlink's README](../libsettings@beatlink/README.md) for the full mechanics
   (`registry`/`reference`/`showWhen`/nesting/`autosave`) this schema leans on.
   `agendaSettings.jsx`'s
   `getAgendaSettings()` loads this once per widget and reshapes it into the `constants` object
-  (uppercase keys) and a `profileContext` (`{ schemaNoteId, configNoteId, profileIds }` — every id
-  currently in the `profiles` registry, not a hardcoded single one) every `lib*@beatlink` function
-  expects — those libraries never import settings themselves, they take `constants`/`profileContext`
-  as parameters, so this is the *one* place those label names and profiles are defined, top-down,
-  rather than each library depending on a shared constants module bottom-up.
-- **`agendaNowConfig.json`** — a plain JSON note (not a `libsettings@beatlink` schema), edited as raw
-  JSON directly on its own note rather than through the Agenda Editor. It could be moved to
-  `libsettings@beatlink` later (flattening its one nested `newWindowConfig` object) but wasn't, to
-  keep this addon's scope to the actual widgets rather than also building a second settings screen
-  nobody asked for yet.
+  (uppercase keys), a `profileContext` (`{ schemaNoteId, configNoteId, profileIds }` — every id
+  currently in the `profiles` registry, not a hardcoded single one), and an `agendaNow` object (the
+  flags plus the reassembled `windowConfig`) every `lib*@beatlink` function
+  expects — those libraries never import settings themselves, they take `constants`/`profileContext`/
+  `agendaNow` as parameters, so this is the *one* place those label names, profiles, and Agenda Now
+  behaviors are defined, top-down, rather than each library depending on a shared constants module
+  bottom-up.
 
 A Date Rule's actual `[operator, ...args]` comparison tuple, a Sort's actual libmultisort DSL string,
 and a label-value prefix/color variant's actual flat `{labelValue: display}` map are all decomposed
@@ -107,7 +109,7 @@ back into the shapes the actual matching/sorting/prefix/color logic has always w
 logic never had to change at all; only the schema/config layer feeding it did.
 
 Every widget resolves its own relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `taskViewRenderNote`) once on mount and passes the
+`LauncherWidget`, `profileEditorNote`, `taskViewRenderNote`) once on mount and passes the
 resolved ids/constants down to whichever shared library functions it calls — none of those relations
 live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference notes
 with no way to know which addon is asking. `config.json` is persisted across addon updates via an
@@ -146,8 +148,6 @@ note, via `loadResults.isNoteContentReloaded(configNoteId)`, so unrelated edits 
 - **`#agendaTaskWidget` is a fixed label name**, hardcoded in `agendaTask.jsx`/`agendaNowWindow.jsx`
   rather than sourced from the settings schema — it's a "which notes opt into this widget" gate, not
   a data label, so it wasn't included alongside the other label-name settings.
-- **`agendaNowConfig.json` has no dedicated settings UI** — it's edited as raw JSON directly on its
-  note.
 - **A "Virtual View Only" profile files no tasks under any note** — its tasks stay in place. It is
   surfaced through its **Virtual View Note** instead, which Agenda turns into a `render` note showing
   the Task View. The Overview widget appears when browsing that note (matched by `viewNoteId`), same

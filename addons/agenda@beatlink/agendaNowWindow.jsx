@@ -42,15 +42,17 @@ function AgendaNow() {
         }
     }, [agendaNowNote])
 
-    // This widget's own relations + settings — profile/nowNote/widget/config note ids
+    // This widget's own relations + settings — profile/nowNote/widget note ids
+    // plus the schema-driven Agenda Now config (see getAgendaSettings).
     const [ids, setIds] = useState(null)
+    const [database, setDatabase] = useState({})
     useEffect(() => {
         (async () => {
-            const { constants, profileContext } = await getAgendaSettings()
+            const { constants, profileContext, agendaNow } = await getAgendaSettings()
             const nowNoteId = await startNote.getRelationValue("nowNote")
             const widgetNoteId = await startNote.getRelationValue("LauncherWidget")
-            const configNoteId = await startNote.getRelationValue("agendaNowConfig")
-            setIds({ constants, profileContext, nowNoteId, widgetNoteId, configNoteId })
+            setIds({ constants, profileContext, nowNoteId, widgetNoteId })
+            setDatabase(agendaNow)
         })()
     }, [])
 
@@ -60,17 +62,6 @@ function AgendaNow() {
         () => durationStringToHMS(durationString ?? ""),
         [durationString]
     )
-
-    // Config (raw JSON note, not schema-driven — see libagendanow@beatlink's
-    // README for why this doesn't go through libsettings)
-    const [database, setDatabase] = useState({})
-    useEffect(() => {
-        if (!ids) return
-        (async () => {
-            const content = await (await api.getNote(ids.configNoteId)).getContent()
-            setDatabase(JSON.parse(content))
-        })()
-    }, [ids])
 
     // Add Due Tasks To AgendaNow
     useEffect(() => {
@@ -93,7 +84,7 @@ function AgendaNow() {
     // Launch on Start
     useEffect(() => {
         if (!ids) return
-        database?.launchOnStart && launchAgendaNow(ids.nowNoteId, database.newWindowConfig)
+        database?.launchOnStart && launchAgendaNow(ids.nowNoteId, database.windowConfig)
     }, [database, ids])
 
     // Send Notifications

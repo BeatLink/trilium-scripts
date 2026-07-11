@@ -26,4 +26,4 @@ import { FormNumber } from "FormNumber.jsx"
 | `min`         | number   | Minimum allowed value (optional)       |
 | `step`        | number   | Step increment (optional)              |
 | `placeholder` | string   | Placeholder text (optional)            |
-| `onChange`    | function | Called with the new value (as a string)|
+| `onChange`    | function | Called with the new value (a `Number`, or `""` when the field is cleared) |
