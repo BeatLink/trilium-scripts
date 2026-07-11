@@ -3,8 +3,9 @@ import { activateNote } from "trilium:api"
 
 const {
     getItemTemplates, getAreas, getOrganizeCandidates, getMisfiledNotes,
-    assignTemplate, assignArea, refileNote, deleteNote
+    assignTemplate, assignArea, assignPriority, refileNote, deleteNote
 } = require("workflowOrganize.js")
+const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("workflowStructure.js")
 
 // A one-at-a-time triage section: heading, then a card per item showing the
 // note's title (a link), tree path, content preview, a caller-supplied row of
@@ -160,6 +161,9 @@ export default function OrganizePanel() {
 
     const untemplated = candidates.filter(c => !c.hasTemplate)
     const arealess = candidates.filter(c => !c.hasArea)
+    // Actionable items (Routine/Task/Project/Future) that have no #priority yet.
+    const noPriority = candidates.filter(c =>
+        !c.hasPriority && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
 
     return (
         <div className="workflow-organize">
@@ -208,6 +212,26 @@ export default function OrganizePanel() {
                 }
                 onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
                 emptyMessage="Nothing to organize — every note under your Inbox and Areas already has an area."
+            />
+
+            <QueueSection
+                heading="Tasks Without Priority"
+                items={noPriority}
+                renderActions={(item, act, busy) =>
+                    PRIORITY_OPTIONS.map(p => (
+                        <OptionButton
+                            key={p.value}
+                            opt={{ label: p.label }}
+                            busy={busy}
+                            onClick={() => act(async () => {
+                                await assignPriority(item.noteId, p.value)
+                                patch(item.noteId, { hasPriority: true })
+                            })}
+                        />
+                    ))
+                }
+                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                emptyMessage="Nothing to organize — every routine, task, project, and future item has a priority."
             />
 
             <QueueSection

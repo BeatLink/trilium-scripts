@@ -123,6 +123,12 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
     `#color` (like [area-picker](../area-picker@beatlink/areaPickerPreact.jsx)) via `assignArea`. If the
     note already sits inside an Area subtree, that ancestor area's button is **highlighted** as the
     suggestion (`suggestedArea` = nearest ancestor's `#area`).
+  - **Tasks Without Priority** — actionable items (templated `2. Routine` / `3. Task` / `5. Project` /
+    `4. Future`, per `workflowStructure.js`'s `PRIORITY_TEMPLATE_TITLES`) with no `#priority`. Buttons
+    are the four MoSCoW options (`PRIORITY_OPTIONS`: `4-critical` Must Do … `1-low` Want To Do);
+    clicking sets `#priority` via `assignPriority` (same value convention as
+    [priority-widget](../priority-widget@beatlink/) and agenda). Ideas/Goals/Notes are excluded (not
+    scheduled work). Uses `candidates`' `templateTitle` + `hasPriority` fields.
   - **Misfiled Notes** — `getMisfiledNotes()` walks the Area subtrees (not Inbox — unfiled) and flags a
     note whose **`#area` differs from its ancestor Area**, or whose **`~template` isn't accepted by its
     ancestor bucket** (per `workflowStructure.js`'s `BUCKET_TEMPLATES`: bucket slug → accepted template
@@ -244,8 +250,8 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       preset + Ideas template. Run `validate`.
 - [~] **Phase 3 — Tab wiring.** Fill in the window's panels.
       - [x] **Organize** — one-at-a-time triage sections: **Notes Without Templates**, **Notes Without
-        Areas**, **Misfiled Notes** (area/type mismatch vs branch, with move/relabel fixes). Next
-        Organize sections: priority, then dates.
+        Areas**, **Tasks Without Priority**, **Misfiled Notes** (area/type mismatch vs branch, with
+        move/relabel fixes). Next Organize section: dates.
       - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
       - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance

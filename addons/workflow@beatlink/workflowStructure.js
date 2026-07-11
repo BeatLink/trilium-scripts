@@ -80,6 +80,21 @@ const BUCKET_TEMPLATES = {
     notes:    ["6. Note"]
 }
 
+// The actionable item types that should carry a #priority — Routines, Tasks,
+// Projects, Future. Ideas/Goals/Notes are excluded (not scheduled work). The
+// Organize "Tasks Without Priority" section flags notes on these templates that
+// have no #priority yet.
+const PRIORITY_TEMPLATE_TITLES = ["2. Routine", "3. Task", "5. Project", "4. Future"]
+
+// The #priority vocabulary (MoSCoW), matching agenda's schema and the
+// priority-widget: value -> display, highest first.
+const PRIORITY_OPTIONS = [
+    { value: "4-critical", label: "Must Do" },
+    { value: "3-high",     label: "Should Do" },
+    { value: "2-medium",   label: "Could Do" },
+    { value: "1-low",      label: "Want To Do" }
+]
+
 // zero-padded area number: 1 -> "01"
 function pad2(n) {
     return String(n).padStart(2, "0")
@@ -141,5 +156,6 @@ const STRUCTURE = [
 
 module.exports = {
     STRUCTURE, AREAS, AREA_LIST, SUBTYPES,
-    AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE, BUCKET_TEMPLATES
+    AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE, BUCKET_TEMPLATES,
+    PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS
 }

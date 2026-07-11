@@ -135,13 +135,17 @@ async function getOrganizeCandidates() {
                 if (seen.has(child.noteId)) continue
                 seen.add(child.noteId)
                 if (!structuralIds.has(child.noteId)) {
+                    const templateId = child.getRelationValue("template") || ""
+                    const templateNote = templateId ? api.getNote(templateId) : null
                     out.push({
                         noteId: child.noteId,
                         title: child.title,
                         path: pathOf(child),
                         preview: previewOf(child),
-                        hasTemplate: !!child.getRelationValue("template"),
+                        hasTemplate: !!templateId,
+                        templateTitle: templateNote ? templateNote.title : "",
                         hasArea: !!child.getLabelValue("area"),
+                        hasPriority: !!child.getLabelValue("priority"),
                         suggestedArea: ancestorArea(child)
                     })
                 }
@@ -364,6 +368,18 @@ async function assignArea(noteId, slug, color) {
     }, [noteId, slug, color])
 }
 
+// Assign (or clear, when value is "") a note's #priority label — the MoSCoW
+// value convention (4-critical..1-low), matching the priority-widget/agenda.
+async function assignPriority(noteId, value) {
+    return api.runOnBackend((noteId, value) => {
+        const note = api.getNote(noteId)
+        if (!note) return false
+        if (value) note.setLabel("priority", value)
+        else note.removeLabel("priority")
+        return true
+    }, [noteId, value])
+}
+
 // Delete a note outright (all its clones), used by the Organize queues' Delete
 // action to drop junk captured into the Inbox. deleteNote() is Trilium's own
 // cascade delete, the same call TAM uses to remove notes.
@@ -383,6 +399,7 @@ module.exports = {
     getMisfiledNotes,
     assignTemplate,
     assignArea,
+    assignPriority,
     refileNote,
     deleteNote
 }
