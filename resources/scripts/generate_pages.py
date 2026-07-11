@@ -57,11 +57,93 @@ def page(title, body, css="style.css"):
 
 
 # ---------------------------------------------------------------------------
+# Dependency graph -> Mermaid
+#
+# The mermaid *source* built here is intentionally the same shape TAM's own
+# widget builds in the browser (TAMShared.jsx's buildDependencyMermaid), so the
+# GitHub Pages catalog and the in-Trilium UI render an identical diagram from
+# the same edges — one is fed on-disk manifests, the other the live Database.
+# ---------------------------------------------------------------------------
+
+def _dep_ids(meta):
+    """Bare dependency ids declared by an addon's manifest (string or {id,...})."""
+    deps = (meta.get("manifest") or {}).get("dependencies") or []
+    return [d if isinstance(d, str) else d.get("id") for d in deps if (d if isinstance(d, str) else d.get("id"))]
+
+
+def build_dep_graph(addons):
+    """{id -> meta}, {id -> [dep ids]} (edges kept only when both ends exist)."""
+    metas = {a["meta"]["id"]: a["meta"] for a in addons}
+    edges = {aid: [d for d in _dep_ids(m) if d in metas] for aid, m in metas.items()}
+    return metas, edges
+
+
+def _node_id(addon_id):
+    """A mermaid-safe node id — mermaid chokes on '@' and '-' in bare ids."""
+    return "n_" + "".join(c if c.isalnum() else "_" for c in addon_id)
+
+
+def _mermaid_body(node_ids, edges, metas, focus=None):
+    """Shared node/edge/style emission for a set of node ids to include."""
+    lines = ["flowchart LR"]
+    for aid in node_ids:
+        # Quote the label so names with spaces/punctuation survive; drop any
+        # embedded double-quote, which would otherwise close the mermaid string.
+        label = metas[aid].get("name", aid).replace('"', "'")
+        lines.append(f'    {_node_id(aid)}["{label}"]')
+    for aid in node_ids:
+        for dep in edges.get(aid, []):
+            if dep in node_ids:
+                lines.append(f"    {_node_id(aid)} --> {_node_id(dep)}")
+    # Colour every node by its addon type, matching the catalog badge palette.
+    for aid in node_ids:
+        color = TYPE_COLORS.get(metas[aid].get("type", ""), "#6b7280")
+        lines.append(f"    style {_node_id(aid)} fill:{color},stroke:{color},color:#fff")
+    if focus:
+        lines.append(f"    style {_node_id(focus)} stroke:#0f172a,stroke-width:4px")
+    return "\n".join(lines)
+
+
+def mermaid_full(metas, edges):
+    """Whole-catalog diagram: every addon, every in-catalog dependency edge."""
+    return _mermaid_body(list(metas.keys()), edges, metas)
+
+
+def _closure(seed, adjacency):
+    """Transitive set reachable from seed through adjacency (excludes seed)."""
+    seen, stack = set(), [seed]
+    while stack:
+        cur = stack.pop()
+        for nxt in adjacency.get(cur, []):
+            if nxt not in seen and nxt != seed:
+                seen.add(nxt)
+                stack.append(nxt)
+    return seen
+
+
+def mermaid_for_addon(addon_id, metas, edges):
+    """Focused subgraph: the addon plus its transitive deps and dependents."""
+    # Reverse edges: who depends on X.
+    dependents = {aid: [] for aid in metas}
+    for aid, deps in edges.items():
+        for dep in deps:
+            dependents[dep].append(aid)
+    nodes = {addon_id} | _closure(addon_id, edges) | _closure(addon_id, dependents)
+    return _mermaid_body(nodes, edges, metas, focus=addon_id)
+
+
+def mermaid_block(source):
+    """Wrap mermaid source in the <pre class="mermaid"> the page script renders."""
+    return f'<pre class="mermaid">\n{html.escape(source)}\n</pre>'
+
+
+# ---------------------------------------------------------------------------
 # Index page
 # ---------------------------------------------------------------------------
 
 def render_index(addons):
     types_present = sorted(set(a["meta"].get("type", "") for a in addons if a["meta"].get("type")))
+    metas, edges = build_dep_graph(addons)
 
     cards = []
     for a in addons:
@@ -116,6 +198,12 @@ def render_index(addons):
       {" ".join(filter_btns)}
     </div>
   </div>
+  <details class="dep-graph">
+    <summary>Dependency graph</summary>
+    <div class="dep-graph-scroll">
+      {mermaid_block(mermaid_full(metas, edges))}
+    </div>
+  </details>
   <div class="grid">
 {chr(10).join(cards)}
   </div>
@@ -160,7 +248,7 @@ def render_index(addons):
 # Per-addon page
 # ---------------------------------------------------------------------------
 
-def render_addon(meta, readme_html):
+def render_addon(meta, readme_html, metas, edges):
     aid          = meta["id"]
     name         = meta.get("name", aid)
     version      = meta.get("latestVersion", "—")
@@ -198,6 +286,17 @@ def render_addon(meta, readme_html):
         if readme_html
         else '<p class="no-readme">No README available.</p>'
     )
+
+    # Dependency subgraph — only when this addon actually has a dep or a dependent.
+    has_edge = bool(edges.get(aid)) or any(aid in deps for deps in edges.values())
+    if has_edge:
+        content += (
+            '<div class="dep-graph-section">'
+            '<h2>Dependencies</h2>'
+            '<div class="dep-graph-scroll">'
+            f'{mermaid_block(mermaid_for_addon(aid, metas, edges))}'
+            '</div></div>'
+        )
 
     body = f"""<header>
   <div class="hdr">
@@ -322,6 +421,8 @@ def main():
 
         addons.append({"meta": meta, "readme_html": readme_html, "outer_dir": outer_dir})
 
+    metas, edges = build_dep_graph(addons)
+
     # Per-addon pages
     for a in addons:
         aid      = a["meta"]["id"]
@@ -333,7 +434,7 @@ def main():
             if f.is_file() and f.suffix.lower() in IMAGE_EXTS:
                 shutil.copy2(f, page_dir / f.name)
 
-        (page_dir / "index.html").write_text(render_addon(a["meta"], a["readme_html"]))
+        (page_dir / "index.html").write_text(render_addon(a["meta"], a["readme_html"], metas, edges))
 
     (docs_dir / "index.html").write_text(render_index(addons))
     (docs_dir / "style.css").write_text(CSS)
