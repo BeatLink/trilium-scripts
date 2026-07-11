@@ -425,7 +425,7 @@
             },
             {
                 "note": "addons",
-                "name": "iconClass(inheritable)",
+                "name": "iconClass",
                 "value": "bx bx-customize"
             },
             {
