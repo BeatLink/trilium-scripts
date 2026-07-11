@@ -157,11 +157,18 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
 - **Resolution order per node (idempotent, rename-safe):** (1) a note already tagged
   `#workflowNote=<key>` → adopt as-is; (2) else a same-titled child under the target parent → adopt +
   tag it; (3) else create + tag.
-- **Derived vs. seed attributes.** Icon (`#iconClass`), color (`#color`) and the `~template` relation
-  are **derived** — re-asserted on *every* run, on adopted and created notes alike, so the structure's
-  look self-heals and re-running fixes drift. **Seed** labels (only `#area=<slug>` on Area notes) and
-  note content are written *only* when the note is first created, so user edits survive adoption and
-  re-runs.
+- **Derived vs. seed attributes.** Icon (`#iconClass`), color (`#color`), the `~template` relation, and
+  an Area note's **`#area` value** are **derived** — re-asserted on *every* run, on adopted and created
+  notes alike, so the structure self-heals and re-running fixes drift. (`#area` on Area roots is derived,
+  not a seed, specifically so reordering the areas — which renumbers slugs — updates the root notes on
+  the next provision.) Note **content** is written *only* on creation, so user edits survive.
+- **Area-slug migration.** Slugs are `<NN>-<name>` and the number shifts when areas are reordered
+  (e.g. Fun `14-fun` → `15-fun`), which would otherwise leave notes tagged with a stale `#area` (and
+  make them show as "misfiled" / offer the wrong area). After the structure walk, `migrateAreaSlugs()`
+  re-keys **every** note carrying `#area` by its stable name-part: it looks up the current slug for
+  that name in `AREA_LIST` and rewrites `#area` + `#color` when the number drifted. Names not in
+  `AREA_LIST` are left alone. The Setup page reports how many notes were migrated. Run the Setup
+  provision button after any area reorder to apply it.
 - **Colors** reuse agenda's `colors.area` palette (Legal=red, new). Each Area note gets
   `#color=<area color>`; each subtype bucket inherits its parent area's color. Inbox/My Day/Agenda
   have no color.

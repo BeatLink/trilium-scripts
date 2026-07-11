@@ -107,12 +107,13 @@ function buildAreaNode(area, index) {
         icon: "bxs-circle",
         color: area.color,
         template: AREA_TEMPLATE_TITLE,
-        // The #area value is note-specific (agenda's filters/colors/kanban key
-        // on it) and can't come from the Area template — set on creation only.
+        // The #area value is note-specific (agenda's filters/colors/kanban key on
+        // it) and can't come from the Area template. It's DERIVED (re-asserted
+        // every run), not a seed, so reordering areas (which renumbers slugs)
+        // self-heals the root notes' #area on the next provision run.
         // #viewType/#label:area come from the Area template itself.
-        seedLabels: [
-            { name: "area", value: slug }
-        ],
+        areaValue: slug,
+        seedLabels: [],
         children: SUBTYPES.map(sub => ({
             key: `${key}-${sub.slug}`,
             title: sub.title,

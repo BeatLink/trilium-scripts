@@ -18,9 +18,40 @@
 // notes alike, so the structure's look is self-healing and re-running fixes
 // drift. seedLabels and note content are applied only when the note is created.
 
-const { STRUCTURE, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("workflowStructure.js")
+const { STRUCTURE, AREA_LIST, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("workflowStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
+
+// Migrate stale #area slugs after an area reorder. Slugs are "<NN>-<name>" and
+// the number changes when areas are inserted/reordered (e.g. Fun 14->15), but
+// the name is stable — so we re-key by name: for every note carrying #area, look
+// up the current slug for its name-part in AREA_LIST and rewrite #area + #color
+// when the number drifted. Notes whose #area name isn't a known area are left
+// alone (could be a custom area). Returns the count of notes migrated.
+async function migrateAreaSlugs() {
+    return api.runOnBackend((areaList) => {
+        // name (lowercase) -> { slug, color } for the current vocabulary.
+        const byName = {}
+        for (const a of areaList) {
+            const name = a.slug.replace(/^\d\d-/, "")
+            byName[name] = { slug: a.slug, color: a.color }
+        }
+
+        let migrated = 0
+        for (const note of api.searchForNotes("#area")) {
+            const current = note.getLabelValue("area")
+            if (!current) continue
+            const m = current.match(/^\d\d-(.+)$/)
+            if (!m) continue
+            const target = byName[m[1]]
+            if (!target || target.slug === current) continue
+            note.setLabel("area", target.slug)
+            if (target.color) note.setLabel("color", target.color)
+            migrated++
+        }
+        return migrated
+    }, [AREA_LIST])
+}
 
 // Resolve a templates@beatlink template note id by its title (must carry
 // #template). Returns "" if not found, so provisioning degrades gracefully when
@@ -38,7 +69,7 @@ async function resolveTemplateId(title) {
 // none). Returns { noteId, created, adopted, title }. Runs on the backend — the
 // closure may reference only `api`, so every value is passed in.
 async function provisionNode(parentNoteId, node, templateId) {
-    return api.runOnBackend((parentNoteId, key, title, icon, color, templateId, seedLabels, workflowLabel) => {
+    return api.runOnBackend((parentNoteId, key, title, icon, color, areaValue, templateId, seedLabels, workflowLabel) => {
         let note
         let created = false
         let adopted = false
@@ -73,13 +104,14 @@ async function provisionNode(parentNoteId, node, templateId) {
         }
 
         // Derived attributes — re-asserted every run (idempotent) on any of the
-        // three branches above, so icon/color/template are self-healing.
+        // three branches above, so icon/color/template/#area are self-healing.
         if (icon) note.setLabel("iconClass", `bx ${icon}`)
         if (color) note.setLabel("color", color)
+        if (areaValue) note.setLabel("area", areaValue)
         if (templateId) note.setRelation("template", templateId)
 
         return { noteId: note.noteId, created, adopted, title }
-    }, [parentNoteId, node.key, node.title, node.icon, node.color || "", templateId, node.seedLabels || [], WORKFLOW_LABEL])
+    }, [parentNoteId, node.key, node.title, node.icon, node.color || "", node.areaValue || "", templateId, node.seedLabels || [], WORKFLOW_LABEL])
 }
 
 // Walk the whole STRUCTURE depth-first, provisioning each node under its
@@ -107,7 +139,12 @@ async function provisionStructure() {
     }
 
     await walk(STRUCTURE, "root", 0)
-    return results
+
+    // After the structure notes are in place (area roots' #area re-asserted),
+    // re-key any note still carrying a stale area slug from a prior ordering.
+    const migratedAreaCount = await migrateAreaSlugs()
+
+    return { results, migratedAreaCount }
 }
 
-module.exports = { provisionStructure, WORKFLOW_LABEL }
+module.exports = { provisionStructure, migrateAreaSlugs, WORKFLOW_LABEL }

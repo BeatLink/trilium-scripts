@@ -10,15 +10,15 @@ const { provisionStructure } = require("workflowProvision.js")
 // adopted (tagged) rather than duplicated. See workflowProvision.js.
 export default function WorkflowSetup() {
     const [running, setRunning] = useState(false)
-    const [results, setResults] = useState(null)
+    const [outcome, setOutcome] = useState(null)
     const [error, setError] = useState(null)
 
     async function onProvision() {
         setRunning(true)
         setError(null)
-        setResults(null)
+        setOutcome(null)
         try {
-            setResults(await provisionStructure())
+            setOutcome(await provisionStructure())
         } catch (e) {
             setError(String(e && e.message ? e.message : e))
         } finally {
@@ -26,6 +26,8 @@ export default function WorkflowSetup() {
         }
     }
 
+    const results = outcome ? outcome.results : null
+    const migratedAreaCount = outcome ? outcome.migratedAreaCount : 0
     const created = results ? results.filter(r => r.created).length : 0
     const adopted = results ? results.filter(r => r.adopted).length : 0
     const existing = results ? results.filter(r => !r.created && !r.adopted).length : 0
@@ -38,7 +40,8 @@ export default function WorkflowSetup() {
                 <strong> Agenda</strong>, and one note per Area (each with Ideas / Goals / Routines /
                 Projects / Future / Notes below it). Notes are matched by title at the right level — an
                 existing match is adopted (tagged <code>#workflowNote</code>) rather than duplicated,
-                and anything missing is created. Safe to run more than once.
+                and anything missing is created. Also re-keys any notes left on an old area slug after
+                an area reorder. Safe to run more than once.
             </p>
 
             <button
@@ -58,6 +61,8 @@ export default function WorkflowSetup() {
                     <div className="workflow-setup-summary">
                         {created} created, {adopted} adopted, {existing} already present
                         ({results.length} total).
+                        {migratedAreaCount > 0 &&
+                            ` Migrated ${migratedAreaCount} note${migratedAreaCount === 1 ? "" : "s"} to updated area slugs.`}
                     </div>
                     <ul className="workflow-setup-log">
                         {results.map(r => (
