@@ -65,6 +65,28 @@
             }
         }
     }
+    .time-picker {
+        container-type: inline-size;
+        > div {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            width: 100%;
+            justify-content: space-between;
+            gap: 0.25rem !important;
+            > * {
+                width: 100% !important;
+            }
+        }
+        @container ( inline-size < 12rem ) {
+            > div {
+                flex-direction: column;
+                > * {
+                    width: 100% !important;
+                }
+            }
+        }
+    }
     .stop-picker {
         container-type: inline-size;
         > div {

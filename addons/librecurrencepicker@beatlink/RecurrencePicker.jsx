@@ -33,11 +33,19 @@ const monthOrdinalOptions = [
     { key: "-1", name: "Last" }
 ]
 
+const monthModeOptions = [
+    { key: "day", name: "Day of Month" },
+    { key: "weekday", name: "Weekday" }
+]
+
 const stopOptions = [
     { key: "never", name: "Never" },
     { key: "number", name: "After Count" },
     { key: "date", name: "After Date" }
 ]
+
+// Intervals that recur at most once a day, so pinning a specific time makes sense.
+const timeIntervals = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]
 
 export function RecurrencePicker({ constants, onAfterChange }){
     const { note } = useActiveNoteContext();
@@ -91,6 +99,34 @@ export function RecurrencePicker({ constants, onAfterChange }){
                 </div>
             )}
 
+            {recurrenceObj.enabled && timeIntervals.includes(recurrenceObj.interval) && (
+                <div className="time-picker">
+                    <label>At Time</label>
+                    <div>
+                        <FormNumber
+                            min="0" max="23" step="1" placeholder="Hour"
+                            value={recurrenceObj.time.hour}
+                            onChange={value => {
+                                updateRecurrence({
+                                    ...recurrenceObj,
+                                    time: { ...recurrenceObj.time, hour: value }
+                                })
+                            }}
+                        />
+                        <FormNumber
+                            min="0" max="59" step="1" placeholder="Minute"
+                            value={recurrenceObj.time.minute}
+                            onChange={value => {
+                                updateRecurrence({
+                                    ...recurrenceObj,
+                                    time: { ...recurrenceObj.time, minute: value }
+                                })
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
             {recurrenceObj.enabled && recurrenceObj.interval === "WEEKLY" && (
                 <div className="weekdays-picker">
                     <label>Weekdays</label>
@@ -113,9 +149,32 @@ export function RecurrencePicker({ constants, onAfterChange }){
             )}
             {recurrenceObj.enabled && recurrenceObj.interval === "MONTHLY" && (
                 <div className="month-picker">
-                    <label>Day of Month</label>
+                    <label>On</label>
                     <div>
-                        {recurrenceObj.month.weekday !== "" && (
+                        <FormDropdownList
+                            values={monthModeOptions}
+                            currentValue={recurrenceObj.month.mode}
+                            onChange={value => {
+                                const month = { ...recurrenceObj.month, mode: value }
+                                if (value === "day" && month.day === "") month.day = "1"
+                                if (value === "weekday" && month.weekday === "") month.weekday = "MO"
+                                updateRecurrence({ ...recurrenceObj, month })
+                            }}
+                            keyProperty="key" titleProperty="name"
+                        />
+                        {recurrenceObj.month.mode === "day" && (
+                            <FormNumber
+                                min="1" max="31" step="1" placeholder="Day"
+                                value={recurrenceObj.month.day}
+                                onChange={value => {
+                                    updateRecurrence({
+                                        ...recurrenceObj,
+                                        month: { ...recurrenceObj.month, day: value }
+                                    })
+                                }}
+                            />
+                        )}
+                        {recurrenceObj.month.mode === "weekday" && (
                             <FormDropdownList
                                 values={monthOrdinalOptions}
                                 currentValue={recurrenceObj.month.ordinal}
@@ -128,17 +187,19 @@ export function RecurrencePicker({ constants, onAfterChange }){
                                 keyProperty="key" titleProperty="name"
                             />
                         )}
-                        <FormDropdownList
-                            values={[{key: "", name: "None"}, ...weekdayOptions]}
-                            currentValue={recurrenceObj.month.weekday}
-                            onChange={value => {
-                                updateRecurrence({
-                                    ...recurrenceObj,
-                                    month: { ...recurrenceObj.month, weekday: value }
-                                })
-                            }}
-                            keyProperty="key" titleProperty="name"
-                        />
+                        {recurrenceObj.month.mode === "weekday" && (
+                            <FormDropdownList
+                                values={weekdayOptions}
+                                currentValue={recurrenceObj.month.weekday}
+                                onChange={value => {
+                                    updateRecurrence({
+                                        ...recurrenceObj,
+                                        month: { ...recurrenceObj.month, weekday: value }
+                                    })
+                                }}
+                                keyProperty="key" titleProperty="name"
+                            />
+                        )}
                     </div>
                 </div>
             )}

@@ -172,6 +172,45 @@
     margin-bottom: 4px;
 }
 
+/* --- No-due-date date+time picker --- */
+
+.workflow-duedate {
+    flex-basis: 100%;
+}
+
+.workflow-duedate-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.workflow-duedate-label {
+    min-width: 48px;
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.workflow-duedate-time {
+    opacity: 0.55;
+    font-size: 0.85em;
+}
+
+.workflow-duedate-input {
+    padding: 5px 8px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.workflow-duedate-preview {
+    margin-top: 4px;
+    font-weight: bold;
+    opacity: 0.85;
+}
+
 .workflow-organize-actions {
     display: flex;
     align-items: center;

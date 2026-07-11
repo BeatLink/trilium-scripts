@@ -1,11 +1,112 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
+import { loadSettings } from "libSettingsUI.jsx"
 
 const {
     getItemTemplates, getAreas, getOrganizeCandidates, getMisfiledNotes,
-    assignTemplate, assignArea, assignPriority, refileNote, deleteNote
+    assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
 } = require("workflowOrganize.js")
 const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("workflowStructure.js")
+
+// Compute the YYYY-MM-DD for each quick date option, relative to today, using
+// api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
+function quickDates() {
+    const now = api.dayjs()
+    const fmt = d => d.format("YYYY-MM-DD")
+    // Days until the next Saturday (day 6); if today is Saturday, jump a week.
+    const daysToSat = ((6 - now.day()) + 7) % 7 || 7
+    return [
+        { key: "today",        label: "Today",         date: fmt(now) },
+        { key: "tomorrow",     label: "Tomorrow",      date: fmt(now.add(1, "day")) },
+        { key: "nextWeek",     label: "Next Week",     date: fmt(now.add(1, "week")) },
+        { key: "nextWeekend",  label: "Next Weekend",  date: fmt(now.add(daysToSat, "day")) },
+        { key: "nextMonth",    label: "Next Month",    date: fmt(now.add(1, "month")) }
+    ]
+}
+
+// The two-step date+time picker for the "No Due Date" section. The user picks a
+// date (quick button or custom) AND a time (morning/noon/evening/night from
+// settings, or custom); once BOTH are set the note's start date is written and
+// it auto-advances (the note leaves the filtered list). A preview shows the
+// combined datetime as it's built.
+function DueDatePicker({ item, act, busy, times, onAssigned }) {
+    const [date, setDate] = useState("")
+    const [time, setTime] = useState("")
+
+    // Reset the picks each time we land on a new note.
+    useEffect(() => { setDate(""); setTime("") }, [item.noteId])
+
+    // When both are chosen, write the start date and drop the note from the queue.
+    useEffect(() => {
+        if (date && time && !busy) {
+            act(async () => {
+                await assignStartDate(item.noteId, date, time)
+                onAssigned(item.noteId)
+            })
+        }
+        // eslint-disable-next-line
+    }, [date, time])
+
+    const dates = quickDates()
+    const timeOptions = [
+        { key: "morning", label: "Morning", value: times.morning },
+        { key: "noon",    label: "Noon",    value: times.noon },
+        { key: "evening", label: "Evening", value: times.evening },
+        { key: "night",   label: "Night",   value: times.night }
+    ]
+
+    return (
+        <div className="workflow-duedate">
+            <div className="workflow-duedate-row">
+                <span className="workflow-duedate-label">Date:</span>
+                {dates.map(d => (
+                    <button
+                        key={d.key}
+                        className={"workflow-organize-option-btn" + (date === d.date ? " workflow-organize-option-suggested" : "")}
+                        disabled={busy}
+                        onClick={() => setDate(d.date)}
+                    >
+                        {d.label}
+                    </button>
+                ))}
+                <input
+                    type="date"
+                    className="workflow-duedate-input"
+                    value={date}
+                    disabled={busy}
+                    onChange={e => setDate(e.target.value)}
+                />
+            </div>
+
+            <div className="workflow-duedate-row">
+                <span className="workflow-duedate-label">Time:</span>
+                {timeOptions.map(t => (
+                    <button
+                        key={t.key}
+                        className={"workflow-organize-option-btn" + (time === t.value ? " workflow-organize-option-suggested" : "")}
+                        disabled={busy}
+                        onClick={() => setTime(t.value)}
+                    >
+                        {t.label} <span className="workflow-duedate-time">{t.value}</span>
+                    </button>
+                ))}
+                <input
+                    type="time"
+                    className="workflow-duedate-input"
+                    value={time}
+                    disabled={busy}
+                    onChange={e => setTime(e.target.value)}
+                />
+            </div>
+
+            <div className="workflow-duedate-preview">
+                {date && time
+                    ? `Starts ${date} at ${time}`
+                    : `Pick a date and a time${date ? ` (date: ${date})` : ""}${time ? ` (time: ${time})` : ""}.`}
+            </div>
+        </div>
+    )
+}
 
 // A one-at-a-time triage section: heading, then a card per item showing the
 // note's title (a link), tree path, content preview, a caller-supplied row of
@@ -122,6 +223,27 @@ function OptionButton({ opt, busy, onClick }) {
     )
 }
 
+// Resolve the workflow settings (morning/noon/evening/night times) via the
+// render note's own schemaNote/configNote relations (see manifest), falling back
+// to the shipped defaults if settings can't be resolved (e.g. libsettings absent).
+async function loadTimeSettings() {
+    const DEFAULTS = { morning: "08:00", noon: "12:00", evening: "17:00", night: "20:00" }
+    try {
+        const schemaNoteId = await api.startNote.getRelationValue("schemaNote")
+        const configNoteId = await api.startNote.getRelationValue("configNote")
+        if (!schemaNoteId || !configNoteId) return DEFAULTS
+        const s = await loadSettings(schemaNoteId, configNoteId)
+        return {
+            morning: s.morningTime || DEFAULTS.morning,
+            noon: s.noonTime || DEFAULTS.noon,
+            evening: s.eveningTime || DEFAULTS.evening,
+            night: s.nightTime || DEFAULTS.night
+        }
+    } catch (e) {
+        return DEFAULTS
+    }
+}
+
 // The Organize tab. Loads the candidate notes, the misfiled notes, and the
 // template/area vocabularies once, then renders the triage sections. Mutations
 // update the in-memory lists in place so an acted-on note leaves its queue.
@@ -130,22 +252,24 @@ export default function OrganizePanel() {
     const [areas, setAreas] = useState(null)
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
+    const [times, setTimes] = useState(null)
 
     async function reload() {
         setCandidates(null)
         setMisfiled(null)
-        const [tpls, ars, cands, mis] = await Promise.all([
-            getItemTemplates(), getAreas(), getOrganizeCandidates(), getMisfiledNotes()
+        const [tpls, ars, cands, mis, tms] = await Promise.all([
+            getItemTemplates(), getAreas(), getOrganizeCandidates(), getMisfiledNotes(), loadTimeSettings()
         ])
         setTemplates(tpls)
         setAreas(ars)
         setCandidates(cands)
         setMisfiled(mis)
+        setTimes(tms)
     }
 
     useEffect(() => { reload() }, [])
 
-    if (candidates === null || templates === null || areas === null || misfiled === null) {
+    if (candidates === null || templates === null || areas === null || misfiled === null || times === null) {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
@@ -164,6 +288,9 @@ export default function OrganizePanel() {
     // Actionable items (Routine/Task/Project/Future) that have no #priority yet.
     const noPriority = candidates.filter(c =>
         !c.hasPriority && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
+    // Actionable items with no start date (#startDateTime) yet.
+    const noStartDate = candidates.filter(c =>
+        !c.hasStartDate && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
 
     return (
         <div className="workflow-organize">
@@ -232,6 +359,22 @@ export default function OrganizePanel() {
                 }
                 onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
                 emptyMessage="Nothing to organize — every routine, task, project, and future item has a priority."
+            />
+
+            <QueueSection
+                heading="Tasks Without a Start Date"
+                items={noStartDate}
+                renderActions={(item, act, busy) => (
+                    <DueDatePicker
+                        item={item}
+                        act={act}
+                        busy={busy}
+                        times={times}
+                        onAssigned={(noteId) => patch(noteId, { hasStartDate: true })}
+                    />
+                )}
+                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                emptyMessage="Nothing to organize — every routine, task, project, and future item has a start date."
             />
 
             <QueueSection

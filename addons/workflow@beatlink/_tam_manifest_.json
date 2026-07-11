@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workflow@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.3.0",
+    "latestVersion": "0.4.0",
     "type": "widget",
     "readme": "develop.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/workflow@beatlink/_tam_manifest_.json",
@@ -13,7 +13,8 @@
         "root": "root",
         "settingsNote": "window-page",
         "dependencies": [
-            "templates@beatlink"
+            "templates@beatlink",
+            "libsettings@beatlink"
         ],
         "exports": {},
         "notes": [
@@ -89,6 +90,35 @@
                 "sourceUrl": "workflowStructure.js"
             },
             {
+                "id": "schema",
+                "title": "workflowSchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "workflowSchema.json"
+            },
+            {
+                "id": "config",
+                "title": "workflowConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "workflowConfig.json",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "settings-page",
+                "title": "Workflow Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "workflowSettings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "workflowSettings.jsx"
+            },
+            {
                 "id": "readme",
                 "title": "develop.md",
                 "type": "code",
@@ -142,6 +172,32 @@
                 "child": "structure"
             },
             {
+                "parent": "organize-panel",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
+                "parent": "root",
+                "child": "schema"
+            },
+            {
+                "parent": "root",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             }
@@ -153,9 +209,34 @@
                 "to": "window"
             },
             {
+                "from": "window-page",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "window-page",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
                 "from": "setup-page",
                 "type": "renderNote",
                 "to": "setup"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "AddonData:config",
+                "to": "config"
             }
         ],
         "labels": [
@@ -173,6 +254,11 @@
                 "note": "setup-page",
                 "name": "iconClass",
                 "value": "bx bx-wrench"
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
             },
             {
                 "note": "window-css",

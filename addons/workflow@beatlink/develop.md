@@ -129,6 +129,14 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
     clicking sets `#priority` via `assignPriority` (same value convention as
     [priority-widget](../priority-widget@beatlink/) and agenda). Ideas/Goals/Notes are excluded (not
     scheduled work). Uses `candidates`' `templateTitle` + `hasPriority` fields.
+  - **Tasks Without a Start Date** — same actionable types with no `#startDateTime`. A two-step
+    `DueDatePicker`: a **date** row (Today / Tomorrow / Next Week / Next Weekend = upcoming Saturday /
+    Next Month, computed with `api.dayjs`, plus a native date input) and a **time** row (Morning / Noon
+    / Evening / Night from settings, plus a native time input). The note stays until **both** date and
+    time are chosen; then `assignStartDate` writes the three coordinated labels agenda reads —
+    `#startDateTime` (`YYYY-MM-DDTHH:mm`), `#startDate`, `#startTime` (agenda's default label names) —
+    and it auto-advances. A running preview shows the combined datetime. Uses `candidates`'
+    `hasStartDate`.
   - **Misfiled Notes** — `getMisfiledNotes()` walks the Area subtrees (not Inbox — unfiled) and flags a
     note whose **`#area` differs from its ancestor Area**, or whose **`~template` isn't accepted by its
     ancestor bucket** (per `workflowStructure.js`'s `BUCKET_TEMPLATES`: bucket slug → accepted template
@@ -147,6 +155,16 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
 - **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
   `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
   structure at runtime (see below). Shares `workflowWindow.css`.
+- **UI + infra: the Settings page.** `Workflow Settings` (`render`, id `settings-page`) →
+  `workflowSettings.jsx` (id `settings`) drops in libsettings' `SettingsForm` over
+  `workflowSchema.json` (id `schema`) + `workflowConfig.json` (id `config`) — same minimal pattern as
+  [area-picker's settings](../area-picker@beatlink/settings.jsx). Today it holds the configurable
+  **morning / noon / evening / night** times (defaults 08:00 / 12:00 / 17:00 / 20:00) used by the No
+  Due Date section. `config` persists via a `settings → AddonData:config → config` relation. The main
+  `window-page` also carries `schemaNote` + `configNote` relations so the Organize panel's
+  `loadTimeSettings()` (via `api.startNote`) can read the times; it falls back to the defaults if
+  libsettings/settings can't be resolved. Adds `libsettings@beatlink` as a dependency, wired as a
+  `child: "ui"` under both `settings` and `organize-panel` (both import `libSettingsUI.jsx`).
 
 ### Provisioning model — runtime find-or-create, not manifest clone-in
 
@@ -250,8 +268,9 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       preset + Ideas template. Run `validate`.
 - [~] **Phase 3 — Tab wiring.** Fill in the window's panels.
       - [x] **Organize** — one-at-a-time triage sections: **Notes Without Templates**, **Notes Without
-        Areas**, **Tasks Without Priority**, **Misfiled Notes** (area/type mismatch vs branch, with
-        move/relabel fixes). Next Organize section: dates.
+        Areas**, **Tasks Without Priority**, **Tasks Without a Start Date** (date+time picker,
+        configurable times), **Misfiled Notes** (area/type mismatch vs branch, with move/relabel
+        fixes).
       - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
       - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance

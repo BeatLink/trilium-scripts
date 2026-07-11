@@ -1,11 +1,11 @@
 {
     "id": "librecurrencepicker@beatlink",
     "name": "Recurrence Picker",
-    "description": "Reusable Preact component rendering a full RRULE recurrence-editing form (interval, weekdays, day-of-month, stop condition) for TriliumNext widget UIs.",
+    "description": "Reusable Preact component rendering a full RRULE recurrence-editing form (interval, weekdays, day-of-month, weekday-of-month, time-of-day, stop condition) for TriliumNext widget UIs.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/librecurrencepicker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/librecurrencepicker@beatlink/_tam_manifest_.json",

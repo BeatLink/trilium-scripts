@@ -17,8 +17,16 @@ function createDefaultRecurrenceObj() {
             WE: false, TH: false, FR: false, SA: false
         },
         month: {
+            mode: "day",
+            day: "",
             ordinal: "1",
             weekday: ""
+        },
+        // Fixed time-of-day the rule fires at, independent of the anchor
+        // date's clock. "" means "keep the anchor date's time".
+        time: {
+            hour: "",
+            minute: ""
         },
         stop: {
             type: "never",
@@ -45,9 +53,18 @@ function RRuleToObj(string){
                 newState.weeks[weekdays[day["weekday"]]] = true
             }
         } else if (newState.interval === 'MONTHLY' && options.byweekday){
+            newState.month.mode = "weekday"
             newState.month.ordinal = String(options.byweekday[0]["n"])
             newState.month.weekday = weekdays[options.byweekday[0]["weekday"]]
+        } else if (newState.interval === 'MONTHLY' && options.bymonthday != null){
+            const monthday = Array.isArray(options.bymonthday) ? options.bymonthday[0] : options.bymonthday
+            newState.month.mode = "day"
+            newState.month.day = String(monthday)
         }
+        const byhour = Array.isArray(options.byhour) ? options.byhour[0] : options.byhour
+        const byminute = Array.isArray(options.byminute) ? options.byminute[0] : options.byminute
+        if (byhour != null) newState.time.hour = String(byhour)
+        if (byminute != null) newState.time.minute = String(byminute)
         if (options.until){
             newState.stop.type = 'date'
             newState.stop.date = dayjs(options.until).format("YYYY-MM-DDTHH:mm")
@@ -77,8 +94,18 @@ function ObjToRRule(state){
                 .filter(([weekday, enabled]) => (enabled))
                 .map(([weekday, enabled]) => libRRule.RRule[weekday])
         }
-        if (state.interval === "MONTHLY" &&  state.month.weekday){
-            recurrenceData['byweekday'].push(libRRule.RRule[state.month.weekday].nth(Number(state.month.ordinal)))
+        if (state.interval === "MONTHLY") {
+            if (state.month.mode === "weekday" && state.month.weekday) {
+                recurrenceData['byweekday'].push(libRRule.RRule[state.month.weekday].nth(Number(state.month.ordinal)))
+            } else if (state.month.mode === "day" && state.month.day !== "" && state.month.day != null) {
+                recurrenceData['bymonthday'] = Number(state.month.day)
+            }
+        }
+        if (state.time.hour !== "" && state.time.hour != null) {
+            recurrenceData['byhour'] = Number(state.time.hour)
+        }
+        if (state.time.minute !== "" && state.time.minute != null) {
+            recurrenceData['byminute'] = Number(state.time.minute)
         }
         if (state.stop.type === "number"){
             recurrenceData['count'] = Number(state.stop.count)

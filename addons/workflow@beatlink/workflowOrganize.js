@@ -146,6 +146,7 @@ async function getOrganizeCandidates() {
                         templateTitle: templateNote ? templateNote.title : "",
                         hasArea: !!child.getLabelValue("area"),
                         hasPriority: !!child.getLabelValue("priority"),
+                        hasStartDate: !!child.getLabelValue("startDateTime"),
                         suggestedArea: ancestorArea(child)
                     })
                 }
@@ -368,6 +369,23 @@ async function assignArea(noteId, slug, color) {
     }, [noteId, slug, color])
 }
 
+// Assign a note's start date. Writes the three coordinated labels agenda reads:
+// #startDateTime (master, "YYYY-MM-DDTHH:mm") plus derived #startDate
+// ("YYYY-MM-DD") and #startTime ("HH:mm"), using agenda's default label names.
+// dateStr is "YYYY-MM-DD", timeStr is "HH:mm".
+async function assignStartDate(noteId, dateStr, timeStr) {
+    return api.runOnBackend((noteId, dateStr, timeStr) => {
+        const note = api.getNote(noteId)
+        if (!note) return false
+        if (dateStr && timeStr) {
+            note.setLabel("startDateTime", `${dateStr}T${timeStr}`)
+            note.setLabel("startDate", dateStr)
+            note.setLabel("startTime", timeStr)
+        }
+        return true
+    }, [noteId, dateStr, timeStr])
+}
+
 // Assign (or clear, when value is "") a note's #priority label — the MoSCoW
 // value convention (4-critical..1-low), matching the priority-widget/agenda.
 async function assignPriority(noteId, value) {
@@ -400,6 +418,7 @@ module.exports = {
     assignTemplate,
     assignArea,
     assignPriority,
+    assignStartDate,
     refileNote,
     deleteNote
 }

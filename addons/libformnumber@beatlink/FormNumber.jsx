@@ -1,10 +1,11 @@
-export function FormNumber({ value, min, step, placeholder, onChange }) {
+export function FormNumber({ value, min, max, step, placeholder, onChange }) {
     return (
         <div>
             <input
                 type="number"
                 value={value}
                 min={min}
+                max={max}
                 step={step}
                 placeholder={placeholder ? placeholder : ""}
                 onInput={(e) => {
