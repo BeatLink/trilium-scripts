@@ -38,7 +38,7 @@ function LaunchBarWidget() {
                 title="Launch Agenda Now"
                 className="
                     launcher-button
-                    bxs-star-half
+                    bx bxs-star-half
                 "
                 onClick={handleLaunch}
                 />
