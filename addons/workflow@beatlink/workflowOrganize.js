@@ -134,4 +134,16 @@ async function assignTemplate(noteId, templateId) {
     }, [noteId, templateId])
 }
 
-module.exports = { getItemTemplates, getUntemplatedNotes, assignTemplate }
+// Delete a note outright (all its clones), used by the Organize queue's Delete
+// action to drop junk captured into the Inbox. deleteNote() is Trilium's own
+// cascade delete, the same call TAM uses to remove notes.
+async function deleteNote(noteId) {
+    return api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId)
+        if (!note) return false
+        note.deleteNote()
+        return true
+    }, [noteId])
+}
+
+module.exports = { getItemTemplates, getUntemplatedNotes, assignTemplate, deleteNote }

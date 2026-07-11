@@ -163,15 +163,39 @@
     gap: 12px;
 }
 
-.workflow-organize-skip {
-    background: none;
-    border: none;
-    opacity: 0.7;
-    cursor: pointer;
-    text-decoration: underline;
+.workflow-organize-heading {
+    margin: 0 0 12px;
 }
 
-.workflow-organize-skip:hover {
+.workflow-organize-nav {
+    background: none;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    padding: 6px 12px;
+    opacity: 0.85;
+    cursor: pointer;
+}
+
+.workflow-organize-nav:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.workflow-organize-nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.workflow-organize-delete {
+    background: none;
+    border: none;
+    color: var(--error-color, crimson);
+    opacity: 0.8;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: auto;
+}
+
+.workflow-organize-delete:hover:not(:disabled) {
     opacity: 1;
 }
 
