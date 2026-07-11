@@ -103,19 +103,31 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
   (see below); Collect / Review / Execute are placeholders. As those are built, each tab composes the
   relevant agenda pieces (e.g. Review/Execute embed the Task View list) rather than reimplementing them.
 - **Organize tab.** `workflowOrganizePanel.jsx` (id `organize-panel`, a child of `window`) + backend
-  helpers in `workflowOrganize.js` (id `organize`). The tab holds one section today, **Notes Without
-  Templates** (under its own `<h3>` heading — more Organize mechanisms are planned as sibling
-  sections). That section is a triage queue over every **untemplated** note under the Inbox and Area
-  subtrees, walked one at a time — showing the note's title, its tree-path breadcrumb (via
-  `getParentNotes()` up to root), and a short HTML-stripped **content preview** of its opening text.
-  Each item-type template is a **one-click button**: clicking one assigns that `~template`
-  (`setRelation`, like [template-picker](../template-picker@beatlink/templatePickerPreact.jsx)) and
-  auto-advances. **Back/Forward** move through the queue without changing anything; **Delete** removes
-  the note (guarded by `window.confirm`, `note.deleteNote()` on the backend). Scope excludes the
-  structural `#workflowNote` notes (areas/buckets/Inbox themselves) — containers, not items. The
-  buttons offer only the item-type templates (`0. Ideas`, `1. Goal`..`6. Note`; Area/Special
-  excluded), resolved live by title so any that don't resolve are simply omitted. The note title is a
-  link (click to open the note) — there's no separate "go to note" button.
+  helpers in `workflowOrganize.js` (id `organize`). The tab is a stack of triage sections, each under
+  its own `<h3>` — more are planned. Both current sections share a **generic `TriageQueue` component**:
+  it walks its items one at a time, showing the note's title (a link — click to open it), its tree-path
+  breadcrumb (via `getParentNotes()` up to root), a short HTML-stripped **content preview**, and a row
+  of **one-click option buttons**. Clicking an option auto-advances; **Back/Forward** move without
+  changing anything; **Delete** removes the note (guarded by `window.confirm`, `note.deleteNote()`).
+  - **Data flow:** `getOrganizeCandidates()` collects every non-structural note under the Inbox / Area
+    subtrees **once** (a single backend round-trip; `runOnBackend` closures can't share helpers, so one
+    walk feeds both queues), each tagged `hasTemplate` / `hasArea` / `suggestedArea` / `path` /
+    `preview`. The panel keeps that list in state and filters it per section; a mutation patches the
+    shared list in place so the acted-on note leaves the relevant queue.
+  - **Notes Without Templates** — items with no `~template`. Buttons are the item-type templates
+    (`0. Ideas`, `1. Goal`..`6. Note`; Area/Special excluded), resolved live by title
+    (`getItemTemplates`); clicking assigns `~template` (`setRelation`, like
+    [template-picker](../template-picker@beatlink/templatePickerPreact.jsx)).
+  - **Notes Without Areas** — items with no `#area`. Buttons are the 15 areas from
+    `workflowStructure.js`'s `AREA_LIST` (single source of truth), color-coded; clicking sets `#area` +
+    `#color` (like [area-picker](../area-picker@beatlink/areaPickerPreact.jsx)) via `assignArea`. If the
+    note already sits inside an Area subtree, that ancestor area's button is **highlighted** as the
+    suggestion (`suggestedArea` = nearest ancestor's `#area`).
+  - Scope for both excludes the structural `#workflowNote` notes (areas/buckets/Inbox themselves) —
+    containers, not items.
+  - **Wiring gotcha:** `workflowOrganize.js` requires `workflowStructure.js`, so `structure` is cloned
+    under `organize` in the manifest (a second `children` entry) — require resolves within the
+    requirer's subtree, not globally. `validate` flags this if missed.
 - **UI: the Setup page.** A second `render` page (`Workflow Setup`, id `setup-page`) →
   `workflowSetup.jsx` (id `setup`), separate from the main window. One button provisions the notebook
   structure at runtime (see below). Shares `workflowWindow.css`.
@@ -212,8 +224,8 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
       preset + Ideas template. Run `validate`.
 - [~] **Phase 3 — Tab wiring.** Fill in the window's panels.
-      - [x] **Organize** — assign-a-template triage queue (untemplated notes under Inbox/Areas, one at
-        a time). Next for Organize: after type, prompt for area/priority/dates.
+      - [x] **Organize** — triage queues (one-at-a-time) for **Notes Without Templates** and **Notes
+        Without Areas**. Next Organize sections: priority, then dates.
       - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
       - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance

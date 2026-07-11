@@ -134,6 +134,10 @@
                 "child": "structure"
             },
             {
+                "parent": "organize",
+                "child": "structure"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             }

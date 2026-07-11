@@ -1,44 +1,34 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 
-const { getItemTemplates, getUntemplatedNotes, assignTemplate, deleteNote } = require("workflowOrganize.js")
+const {
+    getItemTemplates, getAreas, getOrganizeCandidates,
+    assignTemplate, assignArea, deleteNote
+} = require("workflowOrganize.js")
 
-// The Organize tab's "Notes Without Templates" section — a triage queue over
-// every untemplated note under the Inbox / Area subtrees, walked one at a time.
-// Each screen shows the note's title, where it lives in the tree, a short content
-// preview, and a row of one-click template buttons; clicking a template assigns
-// it and auto-advances. Back/Forward move through the queue without changing
-// anything; Delete removes the note (with a confirm). This is the first of
-// several planned Organize mechanisms, so it lives under its own heading. See
-// workflowOrganize.js for the backend.
-export default function OrganizePanel() {
-    const [templates, setTemplates] = useState(null)
-    const [queue, setQueue] = useState(null)
+// A generic one-at-a-time triage queue: shows each item's title (a link to the
+// note), tree path, content preview, and a row of one-click option buttons.
+// Clicking an option calls onPick and auto-advances; Back/Forward move without
+// changing anything; Delete removes the note (with a confirm). Used for both the
+// "Notes Without Templates" and "Notes Without Areas" sections.
+function TriageQueue({ heading, items, options, onPick, onDelete, emptyMessage }) {
     const [index, setIndex] = useState(0)
     const [busy, setBusy] = useState(false)
 
-    async function reload() {
-        setQueue(null)
-        setIndex(0)
-        const [tpls, notes] = await Promise.all([getItemTemplates(), getUntemplatedNotes()])
-        setTemplates(tpls)
-        setQueue(notes)
-    }
+    // Clamp the cursor when the item list shrinks (an action removes an item).
+    const current = index < items.length ? items[index] : null
 
-    useEffect(() => { reload() }, [])
-
-    const current = queue && index < queue.length ? queue[index] : null
-
-    // Assign the clicked template and advance. One click = assign + next.
-    async function pick(templateId) {
+    async function pick(optionKey) {
         if (!current || busy) return
         setBusy(true)
         try {
-            await assignTemplate(current.noteId, templateId)
+            await onPick(current, optionKey)
         } finally {
             setBusy(false)
         }
-        setIndex(i => i + 1)
+        // The acted-on item leaves the list, so the same index now points at the
+        // next item — don't advance. If it was the last, index falls off the end
+        // and the done state shows.
     }
 
     function back() {
@@ -51,115 +41,166 @@ export default function OrganizePanel() {
         setIndex(i => i + 1)
     }
 
-    // Delete is destructive, so confirm first (window.confirm is the same guard
-    // TAM uses). On success, advance past the now-gone note.
     async function remove() {
         if (!current || busy) return
         if (!window.confirm(`Delete note "${current.title || "(untitled)"}"? This cannot be undone.`)) return
         setBusy(true)
         try {
-            await deleteNote(current.noteId)
+            await onDelete(current)
         } finally {
             setBusy(false)
         }
-        setIndex(i => i + 1)
     }
 
-    function body() {
-        if (queue === null || templates === null) {
-            return <div>Loading...</div>
-        }
+    return (
+        <section className="workflow-organize-section">
+            <h3 className="workflow-organize-heading">{heading}</h3>
+            {items.length === 0 ? (
+                <div className="workflow-organize-done">{emptyMessage}</div>
+            ) : !current ? (
+                <div className="workflow-organize-done">
+                    Done — worked through all {items.length} note{items.length === 1 ? "" : "s"}.
+                    <button className="workflow-organize-restart" onClick={() => setIndex(0)}>
+                        Start over
+                    </button>
+                </div>
+            ) : (
+                <>
+                    <div className="workflow-organize-progress">
+                        Note {index + 1} of {items.length}
+                    </div>
+                    <div className="workflow-organize-card">
+                        <div
+                            className="workflow-organize-title"
+                            title="Open this note"
+                            onClick={() => activateNote(current.noteId)}
+                        >
+                            {current.title || "(untitled)"}
+                        </div>
+                        <div className="workflow-organize-path">
+                            {current.path || "(top level)"}
+                        </div>
 
-        if (templates.length === 0) {
-            return (
+                        {current.preview && (
+                            <div className="workflow-organize-preview">{current.preview}</div>
+                        )}
+
+                        <div className="workflow-organize-options">
+                            {options(current).map(opt => (
+                                <button
+                                    key={opt.key}
+                                    className={
+                                        "workflow-organize-option-btn" +
+                                        (opt.highlighted ? " workflow-organize-option-suggested" : "")
+                                    }
+                                    style={opt.color ? { borderLeft: `4px solid ${opt.color}` } : undefined}
+                                    disabled={busy}
+                                    onClick={() => pick(opt.key)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="workflow-organize-actions">
+                            <button
+                                className="workflow-organize-nav"
+                                disabled={busy || index === 0}
+                                onClick={back}
+                            >
+                                ‹ Back
+                            </button>
+                            <button className="workflow-organize-nav" disabled={busy} onClick={forward}>
+                                Forward ›
+                            </button>
+                            <button className="workflow-organize-delete" disabled={busy} onClick={remove}>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+        </section>
+    )
+}
+
+// The Organize tab. Loads the candidate notes + the template/area vocabularies
+// once, then renders two triage sections over the same candidate list: notes
+// missing a ~template, and notes missing an #area. Mutations update the shared
+// candidate list in place so an acted-on note leaves the relevant queue.
+export default function OrganizePanel() {
+    const [templates, setTemplates] = useState(null)
+    const [areas, setAreas] = useState(null)
+    const [candidates, setCandidates] = useState(null)
+
+    async function reload() {
+        setCandidates(null)
+        const [tpls, ars, cands] = await Promise.all([
+            getItemTemplates(), getAreas(), getOrganizeCandidates()
+        ])
+        setTemplates(tpls)
+        setAreas(ars)
+        setCandidates(cands)
+    }
+
+    useEffect(() => { reload() }, [])
+
+    if (candidates === null || templates === null || areas === null) {
+        return (
+            <div className="workflow-organize">
+                <div>Loading...</div>
+            </div>
+        )
+    }
+
+    function patch(noteId, changes) {
+        setCandidates(cs => cs.map(c => c.noteId === noteId ? { ...c, ...changes } : c))
+    }
+    function drop(noteId) {
+        setCandidates(cs => cs.filter(c => c.noteId !== noteId))
+    }
+
+    const untemplated = candidates.filter(c => !c.hasTemplate)
+    const arealess = candidates.filter(c => !c.hasArea)
+
+    return (
+        <div className="workflow-organize">
+            {templates.length === 0 && (
                 <div className="workflow-window-placeholder">
                     No item templates found. Install the Templates addon (templates@beatlink) so there
                     are types to assign.
                 </div>
-            )
-        }
+            )}
 
-        if (queue.length === 0) {
-            return (
-                <div>
-                    <div className="workflow-organize-done">
-                        Nothing to organize — every note under your Inbox and Areas already has a template.
-                    </div>
-                    <button className="workflow-setup-button" onClick={reload}>Re-scan</button>
-                </div>
-            )
-        }
+            <TriageQueue
+                heading="Notes Without Templates"
+                items={untemplated}
+                options={() => templates.map(t => ({ key: t.noteId, label: t.title }))}
+                onPick={async (item, templateId) => {
+                    await assignTemplate(item.noteId, templateId)
+                    patch(item.noteId, { hasTemplate: true })
+                }}
+                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                emptyMessage="Nothing to organize — every note under your Inbox and Areas already has a template."
+            />
 
-        if (!current) {
-            return (
-                <div>
-                    <div className="workflow-organize-done">
-                        Done — worked through all {queue.length} note{queue.length === 1 ? "" : "s"}.
-                    </div>
-                    <button className="workflow-setup-button" onClick={reload}>Re-scan</button>
-                </div>
-            )
-        }
-
-        return (
-            <>
-                <div className="workflow-organize-progress">
-                    Note {index + 1} of {queue.length}
-                </div>
-
-                <div className="workflow-organize-card">
-                    <div
-                        className="workflow-organize-title"
-                        title="Open this note"
-                        onClick={() => activateNote(current.noteId)}
-                    >
-                        {current.title || "(untitled)"}
-                    </div>
-                    <div className="workflow-organize-path">
-                        {current.path || "(top level)"}
-                    </div>
-
-                    {current.preview && (
-                        <div className="workflow-organize-preview">{current.preview}</div>
-                    )}
-
-                    <div className="workflow-organize-templates">
-                        {templates.map(t => (
-                            <button
-                                key={t.noteId}
-                                className="workflow-organize-template-btn"
-                                disabled={busy}
-                                onClick={() => pick(t.noteId)}
-                            >
-                                {t.title}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="workflow-organize-actions">
-                        <button
-                            className="workflow-organize-nav"
-                            disabled={busy || index === 0}
-                            onClick={back}
-                        >
-                            ‹ Back
-                        </button>
-                        <button className="workflow-organize-nav" disabled={busy} onClick={forward}>
-                            Forward ›
-                        </button>
-                        <button className="workflow-organize-delete" disabled={busy} onClick={remove}>
-                            Delete
-                        </button>
-                    </div>
-                </div>
-            </>
-        )
-    }
-
-    return (
-        <div className="workflow-organize">
-            <h3 className="workflow-organize-heading">Notes Without Templates</h3>
-            {body()}
+            <TriageQueue
+                heading="Notes Without Areas"
+                items={arealess}
+                options={(item) => areas.map(a => ({
+                    key: a.slug,
+                    label: a.name,
+                    color: a.color,
+                    highlighted: a.slug === item.suggestedArea
+                }))}
+                onPick={async (item, slug) => {
+                    const area = areas.find(a => a.slug === slug)
+                    await assignArea(item.noteId, slug, area ? area.color : "")
+                    patch(item.noteId, { hasArea: true })
+                }}
+                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                emptyMessage="Nothing to organize — every note under your Inbox and Areas already has an area."
+            />
         </div>
     )
 }

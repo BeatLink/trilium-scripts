@@ -133,14 +133,14 @@
     border-radius: 0 4px 4px 0;
 }
 
-.workflow-organize-templates {
+.workflow-organize-options {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 12px;
 }
 
-.workflow-organize-template-btn {
+.workflow-organize-option-btn {
     padding: 6px 14px;
     border: 1px solid var(--main-border-color, #ccc);
     border-radius: 6px;
@@ -148,13 +148,20 @@
     cursor: pointer;
 }
 
-.workflow-organize-template-btn:hover:not(:disabled) {
+.workflow-organize-option-btn:hover:not(:disabled) {
     border-color: var(--main-text-color, #333);
 }
 
-.workflow-organize-template-btn:disabled {
+.workflow-organize-option-btn:disabled {
     opacity: 0.5;
     cursor: default;
+}
+
+/* The area a note already sits under is pre-suggested. */
+.workflow-organize-option-suggested {
+    font-weight: bold;
+    outline: 2px solid var(--main-text-color, #333);
+    outline-offset: 1px;
 }
 
 .workflow-organize-actions {
@@ -202,4 +209,23 @@
 .workflow-organize-done {
     padding: 12px 0;
     margin-bottom: 8px;
+}
+
+.workflow-organize-section + .workflow-organize-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--main-border-color, #ccc);
+}
+
+.workflow-organize-restart {
+    background: none;
+    border: none;
+    opacity: 0.75;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 8px;
+}
+
+.workflow-organize-restart:hover {
+    opacity: 1;
 }

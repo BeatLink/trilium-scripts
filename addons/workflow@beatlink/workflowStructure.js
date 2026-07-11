@@ -69,9 +69,21 @@ function pad2(n) {
     return String(n).padStart(2, "0")
 }
 
+// The #area label value for an area at a given 0-based index: "03-legal".
+function areaSlug(area, index) {
+    return `${pad2(index + 1)}-${area.name.toLowerCase()}`
+}
+
+// Flat area vocabulary { slug, name, color } — the single source used both to
+// provision Area notes and to offer areas in the Organize "assign area" queue.
+const AREA_LIST = AREAS.map((area, i) => ({
+    slug: areaSlug(area, i),
+    name: area.name,
+    color: area.color
+}))
+
 function buildAreaNode(area, index) {
-    const num = pad2(index + 1)
-    const slug = `${num}-${area.name.toLowerCase()}`
+    const slug = areaSlug(area, index)
     const key = `area-${slug}`
     return {
         key,
@@ -107,4 +119,4 @@ const STRUCTURE = [
     ...AREAS.map(buildAreaNode)
 ]
 
-module.exports = { STRUCTURE, AREAS, SUBTYPES, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE }
+module.exports = { STRUCTURE, AREAS, AREA_LIST, SUBTYPES, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE }

@@ -3,22 +3,29 @@
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by the Workflow window's Organize tab).
 //
-// Backend helpers for the Organize phase's "assign a template" triage queue:
-//   - getItemTemplates(): the item-type templates the picker offers.
-//   - getUntemplatedNotes(): every note under the Inbox or an Area subtree that
-//     has no ~template yet, each with its tree-path breadcrumb, as a work queue.
-//   - assignTemplate(noteId, templateId): set (or clear) a note's ~template.
+// Backend helpers for the Organize phase's triage queues:
+//   - getItemTemplates(): the item-type templates the "assign a template" queue offers.
+//   - getAreas(): the area vocabulary the "assign an area" queue offers.
+//   - getOrganizeCandidates(): every note under the Inbox or an Area subtree, with
+//     the flags each queue filters on (hasTemplate / hasArea), plus its tree path,
+//     a content preview, and a suggested area (nearest ancestor's #area).
+//   - assignTemplate / assignArea / deleteNote: the per-note mutations.
 //
 // Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
 // structural notes themselves (anything carrying #workflowNote — the areas, the
 // buckets, Inbox/My Day/Agenda) are excluded; they're containers, not items.
+//
+// One backend round-trip collects the candidate list once (runOnBackend closures
+// are isolated and can't share helpers), and the frontend filters it into each
+// queue — cheaper and simpler than a separate walk per queue.
+
+const { AREA_LIST } = require("workflowStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 
-// The item-type templates offered during Organize, in workflow order. Structural
-// templates (Area / Special) are intentionally excluded. Resolved live by title;
-// a title with no matching #template note (e.g. Ideas, until its template ships)
-// is simply omitted from the picker.
+// The item-type templates offered by the "Notes Without Templates" queue, in
+// workflow order. Structural templates (Area / Special) are excluded. Resolved
+// live by title; a title with no matching #template note is simply omitted.
 const ITEM_TEMPLATE_TITLES = [
     "0. Ideas",
     "1. Goal",
@@ -42,10 +49,17 @@ async function getItemTemplates() {
     }, [ITEM_TEMPLATE_TITLES])
 }
 
-// Build the triage queue: untemplated descendants of the Inbox note and every
-// Area root, each as { noteId, title, path } where `path` is the ancestor
-// breadcrumb ("Root > Area > ..."). Excludes structural #workflowNote notes.
-async function getUntemplatedNotes() {
+// The area vocabulary the "Notes Without Areas" queue offers: [{ slug, name,
+// color }], straight from workflowStructure's single source of truth.
+async function getAreas() {
+    return AREA_LIST
+}
+
+// Collect every non-structural note under the Inbox / Area subtrees, each with:
+//   { noteId, title, path, preview, hasTemplate, hasArea, suggestedArea }
+// The frontend filters this into the per-queue work lists (untemplated, or
+// no-area). `suggestedArea` is the nearest ancestor's #area value ("" if none).
+async function getOrganizeCandidates() {
     return api.runOnBackend((workflowLabel) => {
         // Scope roots: the Inbox note + every Area root. Area roots have a
         // #workflowNote value like "area-03-legal" (no trailing bucket slug);
@@ -70,6 +84,18 @@ async function getUntemplatedNotes() {
                 cur = cur.getParentNotes()[0]
             }
             return parts.join(" › ")
+        }
+
+        // Nearest ancestor's #area value ("" if none) — used to pre-suggest the
+        // area for a note already filed inside an Area subtree.
+        function ancestorArea(note) {
+            let cur = note.getParentNotes()[0]
+            while (cur && cur.noteId !== "root") {
+                const a = cur.getLabelValue("area")
+                if (a) return a
+                cur = cur.getParentNotes()[0]
+            }
+            return ""
         }
 
         // A short plain-text preview of the note's opening content. Only text
@@ -99,25 +125,32 @@ async function getUntemplatedNotes() {
             return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
         }
 
-        // Collect untemplated descendants of the scope roots, de-duped (a note
-        // can be cloned under more than one scope root).
+        // Collect descendants of the scope roots, de-duped (a note can be cloned
+        // under more than one scope root).
         const seen = new Set()
-        const queue = []
+        const out = []
 
         function visit(note) {
             for (const child of note.getChildNotes()) {
                 if (seen.has(child.noteId)) continue
                 seen.add(child.noteId)
-                const untemplated = !child.getRelationValue("template")
-                if (untemplated && !structuralIds.has(child.noteId)) {
-                    queue.push({ noteId: child.noteId, title: child.title, path: pathOf(child), preview: previewOf(child) })
+                if (!structuralIds.has(child.noteId)) {
+                    out.push({
+                        noteId: child.noteId,
+                        title: child.title,
+                        path: pathOf(child),
+                        preview: previewOf(child),
+                        hasTemplate: !!child.getRelationValue("template"),
+                        hasArea: !!child.getLabelValue("area"),
+                        suggestedArea: ancestorArea(child)
+                    })
                 }
                 visit(child)
             }
         }
 
         for (const root of rootNotes) visit(root)
-        return queue
+        return out
     }, [WORKFLOW_LABEL])
 }
 
@@ -135,7 +168,25 @@ async function assignTemplate(noteId, templateId) {
     }, [noteId, templateId])
 }
 
-// Delete a note outright (all its clones), used by the Organize queue's Delete
+// Assign a note's #area + #color, matching area-picker's convention (set both;
+// clear both when slug is ""). color may be "" to leave color unset.
+async function assignArea(noteId, slug, color) {
+    return api.runOnBackend((noteId, slug, color) => {
+        const note = api.getNote(noteId)
+        if (!note) return false
+        if (slug) {
+            note.setLabel("area", slug)
+            if (color) note.setLabel("color", color)
+            else note.removeLabel("color")
+        } else {
+            note.removeLabel("area")
+            note.removeLabel("color")
+        }
+        return true
+    }, [noteId, slug, color])
+}
+
+// Delete a note outright (all its clones), used by the Organize queues' Delete
 // action to drop junk captured into the Inbox. deleteNote() is Trilium's own
 // cascade delete, the same call TAM uses to remove notes.
 async function deleteNote(noteId) {
@@ -147,4 +198,11 @@ async function deleteNote(noteId) {
     }, [noteId])
 }
 
-module.exports = { getItemTemplates, getUntemplatedNotes, assignTemplate, deleteNote }
+module.exports = {
+    getItemTemplates,
+    getAreas,
+    getOrganizeCandidates,
+    assignTemplate,
+    assignArea,
+    deleteNote
+}
