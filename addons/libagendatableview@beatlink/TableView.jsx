@@ -49,7 +49,9 @@ const BLANK = "  "
 const ROW_ACTIONS = [
     { action: "complete", icon: "bx bx-check", title: "Complete Task" },
     { action: "today", icon: "bx bx-rocket", title: "Start Today" },
-    { action: "tomorrow", icon: "bx bx-rocket", title: "Start Tomorrow" }
+    { action: "tomorrow", icon: "bx bx-rocket", title: "Start Tomorrow" },
+    { action: "zen", icon: "bx bx-expand", title: "Zen Mode" },
+    { action: "hoist", icon: "bx bx-move-vertical", title: "Hoist Note" }
 ]
 
 // Builds the Actions-cell formatter, bound to a ref holding the latest
@@ -167,7 +169,7 @@ async function buildRows(noteIds, titles, colorDict, constants) {
 //     with the new state to persist
 //   - onRowClick(noteId): row activation
 //   - onAction(noteId, action): an Actions-column button was clicked; `action`
-//     is one of "complete" | "today" | "tomorrow" (see ROW_ACTIONS)
+//     is one of "complete" | "today" | "tomorrow" | "zen" | "hoist" (see ROW_ACTIONS)
 export function TableView({ noteIds, titles, colorDict, constants, columnState, onColumnState, onRowClick, onAction }) {
     const containerRef = useRef(null)
     const tableRef = useRef(null)
@@ -226,7 +228,7 @@ export function TableView({ noteIds, titles, colorDict, constants, columnState, 
             field: "_actions",
             headerSort: false,
             hozAlign: "center",
-            width: 120,
+            width: 190,
             formatter: actionsFormatter
         })
 

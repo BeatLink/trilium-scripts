@@ -142,6 +142,19 @@ export default function TaskView() {
     // libAgendaTask, then refreshes the overview lists + ical export (the config
     // note reload then bumps reloadTick, re-pulling the task list here).
     async function onTableAction(noteId, action) {
+        // "zen"/"hoist" are built-in Trilium view commands that touch no task
+        // label, so they dispatch directly and skip the overview refresh below.
+        // Hoist toggles between this note and root, mirroring hoist-note@beatlink.
+        if (action === "zen") {
+            api.triggerCommand("toggleZenMode")
+            return
+        }
+        if (action === "hoist") {
+            api.setHoistedNoteId(
+                api.getActiveContext().hoistedNoteId === noteId ? "root" : noteId
+            )
+            return
+        }
         if (action === "complete") {
             await complete(noteId, ids.constants)
         } else if (action === "today") {
