@@ -68,8 +68,10 @@ The 7 from `templates@beatlink` — Goal, Routine, Task, Future, Project, Note, 
 | Notes    | `bx-note`         | Non-actionable reference material. |
 | Area     | `bxs-circle`      | Structural container for an area of life (list view). |
 
-Ideas and Notes are non-actionable (no task widget). Task/Routine/Future/Project are actionable and
-carry `#agendaTaskWidget`.
+Ideas and Notes are non-actionable (no task widget). The Task/Routine/Future/Project *templates* are
+actionable and carry `#agendaTaskWidget`. (Note: the subtype *bucket* notes provisioned under each
+area are containers, not items, so they do **not** carry `#agendaTaskWidget` — only the actual
+task/routine/etc. notes filed inside them do, via their template.)
 
 ### Scope
 - Provisioning addon **+** config/schema preset. The `lib*@beatlink` engines stay generic; this addon
@@ -119,16 +121,27 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
   scoped to this addon so it never collides with TAM's uninstall sweep.
 - **Resolution order per node (idempotent, rename-safe):** (1) a note already tagged
   `#workflowNote=<key>` → adopt as-is; (2) else a same-titled child under the target parent → adopt +
-  tag it; (3) else create + tag. Adoption never overwrites content or existing labels; a node's
-  `#area`/`#iconClass`/`#agendaTaskWidget` labels are applied only on creation.
+  tag it; (3) else create + tag.
+- **Derived vs. seed attributes.** Icon (`#iconClass`), color (`#color`) and the `~template` relation
+  are **derived** — re-asserted on *every* run, on adopted and created notes alike, so the structure's
+  look self-heals and re-running fixes drift. **Seed** labels (only `#area=<slug>` on Area notes) and
+  note content are written *only* when the note is first created, so user edits survive adoption and
+  re-runs.
+- **Colors** reuse agenda's `colors.area` palette (Legal=red, new). Each Area note gets
+  `#color=<area color>`; each subtype bucket inherits its parent area's color. Inbox/My Day/Agenda
+  have no color.
+- **Templates** (resolved live by title from `templates@beatlink`, so provisioning degrades gracefully
+  if it's absent): the 15 Area notes → `7. Area`; Inbox/My Day/Agenda and every subtype bucket →
+  `8. Special` (the neutral container template). `templates@beatlink` is a declared dependency so TAM
+  syncs it first, making the templates resolvable.
+- **Buckets are containers, not items:** the six subtype notes under each area carry only their id,
+  their area's color, and an icon — no `#agendaTaskWidget` (they group actionable notes but aren't
+  actionable themselves).
 - `.js` libs (`workflowStructure.js`, `workflowProvision.js`) are plain CommonJS
   (`module.exports`/`require`), `env=frontend`; the backend work runs inside `api.runOnBackend`
   closures (which may reference only `api`), mirroring
-  [web-preview's saveUrlToInbox](../web-preview@beatlink/libWebPreview.js).
-- **Notebook provisioning** uses the proven three-array manifest pattern (`notes` / `children` /
-  `labels` + `AddonData:` relations) from
-  [templates@beatlink/_tam_manifest_.json](../templates@beatlink/_tam_manifest_.json) and the richer
-  cross-addon wiring in [agenda@beatlink/_tam_manifest_.json](../agenda@beatlink/_tam_manifest_.json).
+  [web-preview's saveUrlToInbox](../web-preview@beatlink/libWebPreview.js) and area-picker's
+  [saveArea](../area-picker@beatlink/areaPickerPreact.jsx) (`#area` + `#color`).
 - **Config preset over schema fork.** Ship a tuned `config.json` that agenda's `libsettings`
   `loadSettings` merges against schema defaults. Every registry is add/remove/reconcile, so the preset
   only overrides what differs from
@@ -168,12 +181,13 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
 - [x] **Phase 0 — Scaffold.** Folder + this `develop.md` + the Workflow window shell:
       `workflowWindow.jsx` (4-tab render component, placeholder panels), `workflowWindow.css`, and a
       minimal `_tam_manifest_.json` wiring the `render` page → JSX → CSS. Passes `validate`.
+- [x] **Phase 2 (moved up) — Provisioning via Setup page.** `workflowStructure.js` (the layout data),
+      `workflowProvision.js` (runtime find-or-create-by-title + `#workflowNote` tagging under `root`),
+      and the `Workflow Setup` render page (`workflowSetup.jsx`) with a Provision button + result log.
+      Passes `validate` + `tam_to_zip`. Not yet live-tested (Phase 4).
 - [ ] **Phase 1 — Preset.** Author `config.json` (15 areas + Ideas search rule, optionally
       Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
       preset + Ideas template. Run `validate`.
-- [ ] **Phase 2 — Provisioning.** Generate the `notes`/`children`/`labels` for Inbox / My Day / Agenda
-      + 15 Area notes each with their Type children and icons; wire `AddonData:` relations and
-      `myDayNoteId`. Run `validate` + `tam_to_zip`.
 - [ ] **Phase 3 — Tab wiring.** Fill in the window's panels: **Review**/**Execute** embed the agenda
       Task View list (filtered per phase); **Organize** surfaces the area/type/priority/date pickers
       for the selected item; **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.

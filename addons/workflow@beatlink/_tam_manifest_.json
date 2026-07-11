@@ -12,7 +12,9 @@
     "manifest": {
         "root": "root",
         "settingsNote": "window-page",
-        "dependencies": [],
+        "dependencies": [
+            "templates@beatlink"
+        ],
         "exports": {},
         "notes": [
             {

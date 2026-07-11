@@ -9,66 +9,102 @@
 // #workflowNote=<key> so the addon can resolve it later (see develop.md).
 //
 // A node:
-//   key        stable identity written as #workflowNote=<key>
-//   title      the note title matched on / created with
-//   icon       BoxIcons class (without the leading "bx ")
-//   labels     [{ name, value }] extra labels set only when the note is CREATED
-//              (never overwritten on an adopted, already-existing note)
-//   children   nested nodes provisioned under this one
+//   key         stable identity written as #workflowNote=<key>
+//   title       the note title matched on / created with
+//   icon        BoxIcons class (without the leading "bx "); re-asserted every run
+//   color       CSS color for the note's #color label; re-asserted every run
+//               (area-picker convention). Omitted -> no #color managed.
+//   template    title of a templates@beatlink template to set as a ~template
+//               relation, resolved live at provision time; re-asserted every run.
+//   seedLabels  [{ name, value }] labels set ONLY when the note is first CREATED
+//               (never re-asserted, so user edits to them survive adoption/re-runs)
+//   children    nested nodes provisioned under this one
+//
+// Idempotency: icon, color and template are DERIVED — re-asserted (setLabel /
+// setRelation overwrite) on every provision run, including on adopted pre-existing
+// notes. seedLabels and note content are only touched at creation.
 
-// The 15 areas of life, in the order fixed in develop.md, numbered 01-15.
+// The 15 areas of life, in the order fixed in develop.md, numbered 01-15, each
+// with its #color. Colors reuse agenda's colors.area palette for the 14 shared
+// areas; Legal (new here) = red, grouping it with Career/Finances.
 const AREAS = [
-    "Career", "Finances", "Legal", "Home", "Car", "Tech", "Fitness", "Grooming",
-    "Sexual", "Social", "Health", "Mental", "Identity", "Fun", "Productivity"
+    { name: "Career",       color: "red" },
+    { name: "Finances",     color: "red" },
+    { name: "Legal",        color: "red" },
+    { name: "Home",         color: "darkorange" },
+    { name: "Car",          color: "darkorange" },
+    { name: "Tech",         color: "cyan" },
+    { name: "Fitness",      color: "gold" },
+    { name: "Grooming",     color: "gold" },
+    { name: "Sexual",       color: "gold" },
+    { name: "Social",       color: "lime" },
+    { name: "Health",       color: "lime" },
+    { name: "Mental",       color: "lime" },
+    { name: "Identity",     color: "lime" },
+    { name: "Fun",          color: "magenta" },
+    { name: "Productivity", color: "lime" }
 ]
 
 // The six Type buckets provisioned under every Area (draft's non-structural,
 // non-Task set). Task is filed within these by agenda; Area is the container.
-// `taskWidget: true` marks buckets whose notes are actionable.
+// Buckets are groupings OF actionable notes, not actionable themselves, so they
+// carry no #agendaTaskWidget — just their id, their area's color, and an icon.
 const SUBTYPES = [
-    { slug: "ideas",    title: "Ideas",    icon: "bx-bulb",         taskWidget: false },
-    { slug: "goals",    title: "Goals",    icon: "bxs-star-half",   taskWidget: false },
-    { slug: "routines", title: "Routines", icon: "bx-sync",         taskWidget: true },
-    { slug: "projects", title: "Projects", icon: "bx-check-double", taskWidget: true },
-    { slug: "future",   title: "Future",   icon: "bx-hourglass",    taskWidget: true },
-    { slug: "notes",    title: "Notes",    icon: "bx-note",         taskWidget: false }
+    { slug: "ideas",    title: "Ideas",    icon: "bx-bulb" },
+    { slug: "goals",    title: "Goals",    icon: "bxs-star-half" },
+    { slug: "routines", title: "Routines", icon: "bx-sync" },
+    { slug: "projects", title: "Projects", icon: "bx-check-double" },
+    { slug: "future",   title: "Future",   icon: "bx-hourglass" },
+    { slug: "notes",    title: "Notes",    icon: "bx-note" }
 ]
+
+// Template titles shipped by templates@beatlink. Areas use the Area template;
+// the structural container notes (Inbox/My Day/Agenda + every bucket) use the
+// neutral Special container template.
+const AREA_TEMPLATE_TITLE = "7. Area"
+const SPECIAL_TEMPLATE_TITLE = "8. Special"
 
 // zero-padded area number: 1 -> "01"
 function pad2(n) {
     return String(n).padStart(2, "0")
 }
 
-function buildAreaNode(name, index) {
+function buildAreaNode(area, index) {
     const num = pad2(index + 1)
-    const slug = `${num}-${name.toLowerCase()}`
+    const slug = `${num}-${area.name.toLowerCase()}`
     const key = `area-${slug}`
     return {
         key,
-        title: name,
+        title: area.name,
         icon: "bxs-circle",
-        // Created area notes get their #area value + list view, matching the
-        // Area template convention. Not reapplied to adopted notes.
-        labels: [
-            { name: "area", value: slug },
-            { name: "viewType", value: "list" }
+        color: area.color,
+        template: AREA_TEMPLATE_TITLE,
+        // The #area value is note-specific (agenda's filters/colors/kanban key
+        // on it) and can't come from the Area template — set on creation only.
+        // #viewType/#label:area come from the Area template itself.
+        seedLabels: [
+            { name: "area", value: slug }
         ],
         children: SUBTYPES.map(sub => ({
             key: `${key}-${sub.slug}`,
             title: sub.title,
             icon: sub.icon,
-            labels: sub.taskWidget ? [{ name: "agendaTaskWidget", value: "" }] : [],
+            // Buckets inherit their area's color; no other seed labels.
+            color: area.color,
+            template: SPECIAL_TEMPLATE_TITLE,
+            seedLabels: [],
             children: []
         }))
     }
 }
 
-// The full structure: three top-level singletons, then one node per area.
+// The full structure: three top-level container singletons, then one node per
+// area. Singletons use the Special container template.
 const STRUCTURE = [
-    { key: "inbox",  title: "Inbox",  icon: "bx-inbox",    labels: [], children: [] },
-    { key: "my-day", title: "My Day", icon: "bx-task",     labels: [], children: [] },
-    { key: "agenda", title: "Agenda", icon: "bx-calendar", labels: [], children: [] },
+    { key: "inbox",  title: "Inbox",  icon: "bx-inbox",    template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+    { key: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+    { key: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
     ...AREAS.map(buildAreaNode)
 ]
 
-module.exports = { STRUCTURE, AREAS, SUBTYPES }
+module.exports = { STRUCTURE, AREAS, SUBTYPES, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE }

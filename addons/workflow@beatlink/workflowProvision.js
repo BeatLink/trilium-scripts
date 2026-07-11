@@ -12,63 +12,93 @@
 //   1. an existing note already tagged #workflowNote=<key>  -> adopt as-is
 //   2. else a child of the target parent whose title matches -> adopt + tag it
 //   3. else create the note under the parent and tag it
-// Adopting never overwrites the note's content or its existing labels; the
-// node's `labels`/`icon` are applied only when the note is newly created.
 //
-// Top-level nodes (Inbox / My Day / Agenda / the 15 Areas) are provisioned
-// under Trilium's "root"; each area's subtype notes under that area.
+// Derived attributes — the note's icon (#iconClass), color (#color) and the
+// ~template relation — are RE-ASSERTED on every run, on adopted and created
+// notes alike, so the structure's look is self-healing and re-running fixes
+// drift. seedLabels and note content are applied only when the note is created.
 
-const { STRUCTURE } = require("workflowStructure.js")
+const { STRUCTURE, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("workflowStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 
-// Resolve-or-create one node under `parentNoteId`. Returns { noteId, created,
-// adopted, title }. Runs entirely on the backend — the closure may reference
-// only `api`, so every value it needs is passed in the args array.
-async function provisionNode(parentNoteId, key, title, icon, labels) {
-    return api.runOnBackend((parentNoteId, key, title, icon, labels, workflowLabel) => {
+// Resolve a templates@beatlink template note id by its title (must carry
+// #template). Returns "" if not found, so provisioning degrades gracefully when
+// the Templates addon isn't installed — the note is still created/tagged, just
+// without a template relation.
+async function resolveTemplateId(title) {
+    return api.runOnBackend((title) => {
+        const results = api.searchForNotes(`#template note.title = "${title}"`)
+        return results.length > 0 ? results[0].noteId : ""
+    }, [title])
+}
+
+// Resolve-or-create one node under `parentNoteId`, then (re)assert its derived
+// attributes. `templateId` is the pre-resolved real id for node.template ("" if
+// none). Returns { noteId, created, adopted, title }. Runs on the backend — the
+// closure may reference only `api`, so every value is passed in.
+async function provisionNode(parentNoteId, node, templateId) {
+    return api.runOnBackend((parentNoteId, key, title, icon, color, templateId, seedLabels, workflowLabel) => {
+        let note
+        let created = false
+        let adopted = false
+
         // 1. Already tagged by us? Trust the tag over the title (survives renames).
         const tagged = api.searchForNotes(`#${workflowLabel} = "${key}"`)
         if (tagged.length > 0) {
-            return { noteId: tagged[0].noteId, created: false, adopted: false, title }
+            note = api.getNote(tagged[0].noteId)
+        } else {
+            // 2. A same-titled child already under the parent — adopt it in place.
+            const parent = api.getNote(parentNoteId)
+            const existing = parent
+                ? parent.getChildNotes().find(child => child.title === title)
+                : null
+            if (existing) {
+                note = existing
+                adopted = true
+                note.setLabel(workflowLabel, key)
+            } else {
+                // 3. Create it, tag it, and apply the creation-only seed labels.
+                note = api.createNewNote({
+                    parentNoteId,
+                    title,
+                    type: "text",
+                    content: "",
+                    mime: "text/html"
+                }).note
+                created = true
+                note.setLabel(workflowLabel, key)
+                for (const label of seedLabels) note.setLabel(label.name, label.value)
+            }
         }
 
-        // 2. A same-titled child already under the parent — adopt it in place.
-        const parent = api.getNote(parentNoteId)
-        const existing = parent
-            ? parent.getChildNotes().find(child => child.title === title)
-            : null
-        if (existing) {
-            existing.setLabel(workflowLabel, key)
-            return { noteId: existing.noteId, created: false, adopted: true, title }
-        }
-
-        // 3. Create it, tag it, and apply the node's creation-only labels + icon.
-        const { note } = api.createNewNote({
-            parentNoteId,
-            title,
-            type: "text",
-            content: "",
-            mime: "text/html"
-        })
-        note.setLabel(workflowLabel, key)
+        // Derived attributes — re-asserted every run (idempotent) on any of the
+        // three branches above, so icon/color/template are self-healing.
         if (icon) note.setLabel("iconClass", `bx ${icon}`)
-        for (const label of labels) note.setLabel(label.name, label.value)
-        return { noteId: note.noteId, created: true, adopted: false, title }
-    }, [parentNoteId, key, title, icon, labels, WORKFLOW_LABEL])
+        if (color) note.setLabel("color", color)
+        if (templateId) note.setRelation("template", templateId)
+
+        return { noteId: note.noteId, created, adopted, title }
+    }, [parentNoteId, node.key, node.title, node.icon, node.color || "", templateId, node.seedLabels || [], WORKFLOW_LABEL])
 }
 
 // Walk the whole STRUCTURE depth-first, provisioning each node under its
 // resolved parent. Top-level nodes go under "root". Returns a flat result log
 // [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
 async function provisionStructure() {
+    // Resolve the two templates once up front, then map each node's template
+    // title to a real id inside the walk.
+    const templateIds = {
+        [AREA_TEMPLATE_TITLE]: await resolveTemplateId(AREA_TEMPLATE_TITLE),
+        [SPECIAL_TEMPLATE_TITLE]: await resolveTemplateId(SPECIAL_TEMPLATE_TITLE)
+    }
+
     const results = []
 
     async function walk(nodes, parentNoteId, depth) {
         for (const node of nodes) {
-            const res = await provisionNode(
-                parentNoteId, node.key, node.title, node.icon, node.labels || []
-            )
+            const templateId = node.template ? (templateIds[node.template] || "") : ""
+            const res = await provisionNode(parentNoteId, node, templateId)
             results.push({ ...res, key: node.key, depth })
             if (node.children && node.children.length > 0) {
                 await walk(node.children, res.noteId, depth + 1)
