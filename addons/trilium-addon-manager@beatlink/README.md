@@ -92,12 +92,7 @@ itself would risk taking down the one thing that could otherwise fix it.
   sidebar with the addon's metadata table and full action set (Home Page, Install/Delete,
   Enable/Disable, Settings, Update), and a main panel with the description and — for
   installed addons that declare a `readmeNote` — the addon's own README rendered from its locally
-  installed note (see [`readmeNote`](#readmenote-optional)), no network fetch required. When the
-  addon has any dependency or dependent, a focused **Dependencies** subgraph is rendered below the
-  README (see [Dependency graph](#dependency-graph)).
-- **Dependency graph view** — reached via the **Dependency Graph** link in the list header: a Mermaid
-  flowchart of every installed addon and the dependency edges wired between them, coloured by type
-  (see [Dependency graph](#dependency-graph)).
+  installed note (see [`readmeNote`](#readmenote-optional)), no network fetch required.
 - **Settings view** — TAM's own housekeeping page, built manually (no `libsettings@beatlink`
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
   data, addons with an update available), catalog management (each catalog's row has **Browse**,
@@ -109,29 +104,16 @@ itself would risk taking down the one thing that could otherwise fix it.
 
 ## Dependency graph
 
-TAM renders a [Mermaid](https://mermaid.js.org/) flowchart of the dependency edges between addons,
-in two places, both driven from the same edge set (every addon's `manifest.dependencies`):
+The **GitHub Pages catalog** (`docs/`) renders a [Mermaid](https://mermaid.js.org/) flowchart of the
+dependency edges between addons (every addon's `manifest.dependencies`): a collapsible whole-catalog
+graph on the index page, and a focused per-addon subgraph (the addon plus its transitive dependencies
+and dependents) on each addon's detail page. Built at generate time by `generate_pages.py`
+(`build_dep_graph` + `mermaid_full`/`mermaid_for_addon`) and rendered client-side by the Mermaid ESM
+build loaded from a CDN in `base.html`, only on pages that actually contain a diagram. Arrows point
+from an addon to what it depends on; nodes are coloured by the type palette as the catalog badges
+(`TYPE_COLORS`).
 
-- **In the GitHub Pages catalog** (`docs/`) — a collapsible whole-catalog graph on the index page,
-  and a focused per-addon subgraph (the addon plus its transitive dependencies and dependents) on
-  each addon's detail page. Built at generate time by `generate_pages.py` (`build_dep_graph` +
-  `mermaid_full`/`mermaid_for_addon`) and rendered client-side by the Mermaid ESM build loaded from a
-  CDN in `base.html`, only on pages that actually contain a diagram.
-- **In TAM's own widget** — the same two views, built live from the Database instead of on-disk
-  manifests: `TAMShared.jsx`'s `buildCatalogMermaid`/`buildAddonMermaid` produce the *identical*
-  Mermaid source shape as the Python side, and the `MermaidDiagram` component renders it. Arrows
-  point from an addon to what it depends on; nodes are coloured by the same type palette as the
-  catalog badges (`TYPE_COLORS`, kept in sync between `TAMShared.jsx` and `generate_pages.py`).
-
-**Mermaid loading is TAM's one deliberate runtime CDN dependency.** `MermaidDiagram` injects a
-`<script>` tag for Mermaid's UMD build from jsDelivr (which sets `globalThis.mermaid`), memoized so it
-loads at most once. It cannot use a bare ES `import()` — Trilium's JSX transpiler rewrites every
-`import(...)` into its own note-module resolver, which fails with "Could not find module note <url>".
-Vendoring Mermaid as a note inside TAM's own install ZIP was measured to break the ZIP import (its
-~3.5MB size silently drops sibling notes), and shipping it as a separate library addon would give TAM
-its first-ever addon dependency — something the manager deliberately avoids (see [The UI](#the-ui)).
-The graph views degrade gracefully to an inline error line when the CDN is unreachable; nothing else
-in TAM depends on this load.
+The in-Trilium TAM widget does not render dependency graphs.
 
 ---
 

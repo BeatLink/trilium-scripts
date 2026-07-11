@@ -13,7 +13,7 @@ import {
     currentNote
 } from "trilium:api"
 
-import { Badge, BackLink, TamButton, Spinner, commandLabel, TAM_ID, buildCatalogMermaid, MermaidDiagram } from "TAMShared.jsx"
+import { Badge, BackLink, TamButton, Spinner, commandLabel, TAM_ID } from "TAMShared.jsx"
 import { ListView, CatalogBrowseView } from "TAMListViews.jsx"
 import { AddonDetail, SettingsView } from "TAMDetailAndSettings.jsx"
 import { PromptReview, ExternalReferenceWarning } from "TAMDialogs.jsx"
@@ -132,18 +132,6 @@ export default function RepoManager() {
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />
         )
-    } else if (view.type === "graph") {
-        bodyContent = (
-            <div className="dep-graph-section">
-                <p className="TAM-addon-description">
-                    Every installed addon and the dependencies wired between them.
-                    Nodes are coloured by type; arrows point from an addon to what it depends on.
-                </p>
-                <div className="dep-graph-scroll">
-                    <MermaidDiagram source={buildCatalogMermaid(addons)} />
-                </div>
-            </div>
-        )
     } else if (view.type === "catalog") {
         const installedIds = new Set(Object.keys(addons))
         bodyContent = (
@@ -165,7 +153,6 @@ export default function RepoManager() {
             bodyContent = (
                 <AddonDetail
                     addonData={addonData}
-                    addons={addons}
                     isSelf={view.addonId === TAM_ID}
                     onInstall={handleInstall}
                     onDelete={addonId => dispatch({ command: "request-uninstall", addon: addonId })}
@@ -203,7 +190,6 @@ export default function RepoManager() {
                 <div className="hdr-right">
                     <div className="hdr-links">
                         <a onClick={() => dispatch({ command: "check-updates" })}>Check for Updates</a>
-                        <a onClick={() => setView({ type: "graph" })}>Dependency Graph</a>
                         <a onClick={() => setView({ type: "settings" })}>Settings</a>
                     </div>
                     {anyUpdateAvailable && (
