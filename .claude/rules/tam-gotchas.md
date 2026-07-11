@@ -2,6 +2,14 @@
 
 - No `env=hybrid`: a JS/JSX note is `env=frontend` or `env=backend` and can only `require()` notes
   of the same environment. Needed in both? Ship as two notes sharing one `sourceUrl`.
+- A bare ES `import("https://...")` inside a `.jsx`/code note does NOT reach the network — Trilium's
+  transpiler rewrites every `import(...)` into its own note-module resolver, which then throws
+  "Could not find module note <url>". To load a real remote (or `custom/`-served) script at runtime,
+  inject a `<script>` tag (`document.createElement("script")`, a plain DOM call the transpiler leaves
+  alone) and read the global it sets. TAM's `MermaidDiagram` (`TAMShared.jsx`) does exactly this for
+  Mermaid's UMD build (sets `globalThis.mermaid`); a large third-party lib like Mermaid (~3.5MB) can't
+  instead be vendored as a note inside an addon's own install ZIP — that size was measured to silently
+  break the ZIP import (drops sibling notes).
 - A `#customResourceProvider` JS note served over HTTP (`<script src="custom/x.js">`) must use a
   plain `application/javascript` mime with NO `;env=frontend` suffix. Trilium's `downloadData` sets
   `Content-Type` verbatim from the note mime, and browsers refuse to execute a script whose type
