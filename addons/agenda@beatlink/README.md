@@ -8,15 +8,18 @@ widgets plus a single schema-driven editor page:
    get re-filed as children of that note, and a calendar feed gets exported automatically.
 2. **Task** (`agendaTask.jsx`, right-pane) — edit a task's start/due dates, duration, recurrence,
    rank, and quick actions (complete, start today/tomorrow).
-3. **Agenda Now** (`agendaNowLauncher.jsx` + `agendaNowWindow.jsx`, Electron-only) — an
-   always-on-top focus window with a countdown timer, showing whichever tasks you've added to it.
+3. **My Day** (`myDayWidget.jsx`, `note-detail-pane`) — a focus strip (a manual countdown timer) that
+   appears inline at the top of one note's detail pane: whichever note you designate as your **My Day
+   Note** in settings. It renders nothing on any other note. While that note is open it also runs the
+   optional background loops (append due tasks to the note, send due notifications).
 4. **Agenda Editor** (`profileEditor.jsx`, a `render`-type page reachable from TAM's **Settings**
    button or the Overview widget) — `libsettings@beatlink`'s `SettingsForm` dropped in as-is, rendering
    one tab per top-level `schema.json` field's `tab`: **Settings** (the label-name vocabulary),
    **Profiles** (every profile's identity, its filing mode, and its sort/prefix/color/grouping pick),
    **Searches** (the shared search element library *and* every profile's Search Groups, tagged with
-   which profile they belong to), **Filters** (same, for Filter Groups), and a flat **Sorts / Prefixes
-   / Colors / Groupings / Date Rules** element library, one tab each. A group's usages reference
+   which profile they belong to), **Filters** (same, for Filter Groups), a flat **Sorts / Prefixes
+   / Colors / Groupings / Date Rules** element library, one tab each, and **My Day** (the My Day note
+   picker plus its timer/due-task/notification flags). A group's usages reference
    elements from the Searches/Filters library by id, each folded to the actual referenced
    search/filter's fields inline via a `reference` field's `inline: true` — so a group and the elements
    it uses live on the same tab, nested, rather than a group living under a separate Profiles tab
@@ -55,9 +58,11 @@ widgets plus a single schema-driven editor page:
    sorted/prefixed/colored per the profile's rules.
 5. Give a note template the `#agendaTaskWidget` label (with no value) to make the Task widget appear
    on notes cloned from it.
-6. (Electron desktop app only) Use the "Agenda Now" launcher buttons to add the current note to the
-   focus window, or launch the window itself. Configure it on the Agenda Editor's **Agenda Now** tab
-   (window size/position, which automatic behaviors are enabled).
+6. On the Agenda Editor's **My Day** tab, point **My Day Note** at whichever note you use as your
+   daily focus note (defaults to the shipped "My Day" note). Open that note and the My Day focus strip
+   (a manual countdown timer) appears at the top of its detail pane. The tab's flags control the
+   timer's sounds and the two background loops (**Add Tasks When Due**, **Send Due Notifications**),
+   which run only while that note is open.
 7. Each profile's **Task Filing Mode** (Profiles tab) picks how its matching notes are surfaced:
    **"File Tasks as Children"** (default, preserves the original behavior — notes are re-parented
    under **File Tasks Under**, and the Overview widget only shows up when browsing there) or
@@ -82,24 +87,20 @@ This addon owns something every other `lib*@beatlink` piece explicitly does *not
   `searchGroups`/`filterGroups` — each its own top-level `registry` (not nested inside `profiles`, so a
   group stays on the same tab as the elements it references), every entry carrying a `profileId` (a
   `reference` → `profiles`) saying which profile it belongs to, and each usage a `reference` into
-  `searches`/`filters` with `inline: true` — and the **Agenda Now** tab's flags
-  (`enableSounds`, `enableLauncher`, `addTasksWhenDue`, `sendDueNotifications`, `launchOnStart`) plus
-  the focus window's geometry as flat scalar keys (`windowWidth`, `windowHeight`, `windowGap`,
-  `windowAlwaysOnTop`, `windowHideTitlebar`, `windowHideMenubar`), which `getAgendaSettings()`
-  reassembles into the `{ width, height, windowGap, alwaysOnTop, hideTitlebar, hideMenubar }`
-  `windowConfig` object `libagendanow@beatlink` expects (flat because `libsettings` has no nested-group
-  field type). See
+  `searches`/`filters` with `inline: true` — and the **My Day** tab's fields (`myDayNoteId`, a
+  `type: "note"` picker naming the note the My Day widget attaches to, plus the `enableSounds`,
+  `addTasksWhenDue`, `sendDueNotifications` flags). See
   [libsettings@beatlink's README](../libsettings@beatlink/README.md) for the full mechanics
   (`registry`/`reference`/`showWhen`/nesting/`autosave`) this schema leans on.
   `agendaSettings.jsx`'s
   `getAgendaSettings()` loads this once per widget and reshapes it into the `constants` object
   (uppercase keys), a `profileContext` (`{ schemaNoteId, configNoteId, profileIds }` — every id
-  currently in the `profiles` registry, not a hardcoded single one), and an `agendaNow` object (the
-  flags plus the reassembled `windowConfig`) every `lib*@beatlink` function
-  expects — those libraries never import settings themselves, they take `constants`/`profileContext`/
-  `agendaNow` as parameters, so this is the *one* place those label names, profiles, and Agenda Now
-  behaviors are defined, top-down, rather than each library depending on a shared constants module
-  bottom-up.
+  currently in the `profiles` registry, not a hardcoded single one), and a `myDay` object
+  (`{ myDayNoteId, enableSounds, addTasksWhenDue, sendDueNotifications }`) every `lib*@beatlink`
+  function expects — those libraries never import settings themselves, they take
+  `constants`/`profileContext` as parameters, so this is the *one* place those label names, profiles,
+  and My Day behaviors are defined, top-down, rather than each library depending on a shared constants
+  module bottom-up.
 
 A Date Rule's actual `[operator, ...args]` comparison tuple, a Sort's actual libmultisort DSL string,
 and a label-value prefix/color variant's actual flat `{labelValue: display}` map are all decomposed
@@ -109,7 +110,7 @@ back into the shapes the actual matching/sorting/prefix/color logic has always w
 logic never had to change at all; only the schema/config layer feeding it did.
 
 Every widget resolves its own relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`LauncherWidget`, `profileEditorNote`, `taskViewRenderNote`) once on mount and passes the
+`profileEditorNote`, `taskViewRenderNote`) once on mount and passes the
 resolved ids/constants down to whichever shared library functions it calls — none of those relations
 live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference notes
 with no way to know which addon is asking. `config.json` is persisted across addon updates via an
@@ -145,9 +146,9 @@ note, via `loadResults.isNoteContentReloaded(configNoteId)`, so unrelated edits 
 
 ## Known limitations
 
-- **`#agendaTaskWidget` is a fixed label name**, hardcoded in `agendaTask.jsx`/`agendaNowWindow.jsx`
-  rather than sourced from the settings schema — it's a "which notes opt into this widget" gate, not
-  a data label, so it wasn't included alongside the other label-name settings.
+- **`#agendaTaskWidget` is a fixed label name**, hardcoded in `agendaTask.jsx` rather than sourced
+  from the settings schema — it's a "which notes opt into this widget" gate, not a data label, so it
+  wasn't included alongside the other label-name settings.
 - **A "Virtual View Only" profile files no tasks under any note** — its tasks stay in place. It is
   surfaced through its **Virtual View Note** instead, which Agenda turns into a `render` note showing
   the Task View. The Overview widget appears when browsing that note (matched by `viewNoteId`), same

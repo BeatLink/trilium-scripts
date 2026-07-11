@@ -1,11 +1,11 @@
 {
     "id": "libagendanow@beatlink",
     "name": "Agenda Now",
-    "description": "Electron-only 'focus window' actions for an agenda/task-management system: launch/focus an always-on-top popup window showing a target note, append due tasks to it as to-dos, and register its launcher widget. Note ids, window geometry, and label-name constants are all injected by the caller.",
+    "description": "'My Day' task-filing actions for an agenda/task-management system: append a note to a target 'My Day' note as a to-do, and append every task that is due right now. Note ids and label-name constants are all injected by the caller.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendanow@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "1.1.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libagendanow@beatlink/_tam_manifest_.json",

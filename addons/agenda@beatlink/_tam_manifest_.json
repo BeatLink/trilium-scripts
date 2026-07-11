@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed, or leave notes in place for a virtual-only profile), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and an Electron always-on-top 'Agenda Now' focus window with a countdown timer. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed, or leave notes in place for a virtual-only profile), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.6.1",
+    "latestVersion": "2.7.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -57,7 +57,7 @@
             },
             {
                 "id": "now-note",
-                "title": "Agenda Now",
+                "title": "My Day",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -70,11 +70,11 @@
                 "sourceUrl": "agendaCommon.css"
             },
             {
-                "id": "now-css",
-                "title": "agendaNow.css",
+                "id": "my-day-css",
+                "title": "myDay.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "agendaNow.css"
+                "sourceUrl": "myDay.css"
             },
             {
                 "id": "overview",
@@ -91,18 +91,11 @@
                 "sourceUrl": "agendaTask.jsx"
             },
             {
-                "id": "now-launcher",
-                "title": "agendaNowLauncher.jsx",
+                "id": "my-day",
+                "title": "myDayWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "agendaNowLauncher.jsx"
-            },
-            {
-                "id": "now-window",
-                "title": "agendaNowWindow.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "agendaNowWindow.jsx"
+                "sourceUrl": "myDayWidget.jsx"
             },
             {
                 "id": "profile-editor-page",
@@ -185,7 +178,7 @@
             },
             {
                 "parent": "root",
-                "child": "now-css"
+                "child": "my-day-css"
             },
             {
                 "parent": "root",
@@ -197,11 +190,7 @@
             },
             {
                 "parent": "root",
-                "child": "now-launcher"
-            },
-            {
-                "parent": "root",
-                "child": "now-window"
+                "child": "my-day"
             },
             {
                 "parent": "task",
@@ -262,35 +251,21 @@
                 "child": "lib"
             },
             {
-                "parent": "now-launcher",
-                "addon": "libagendanow@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "now-launcher",
+                "parent": "my-day",
                 "child": "agenda-settings"
             },
             {
-                "parent": "now-window",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "now-window",
+                "parent": "my-day",
                 "addon": "libtimer@beatlink",
                 "child": "lib"
             },
             {
-                "parent": "now-window",
+                "parent": "my-day",
                 "addon": "libagendaoverview@beatlink",
                 "child": "lib"
             },
             {
-                "parent": "now-window",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "now-window",
+                "parent": "my-day",
                 "addon": "libagendanow@beatlink",
                 "child": "lib"
             },
@@ -398,39 +373,19 @@
                 "to": "ical"
             },
             {
-                "from": "now-launcher",
+                "from": "my-day",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "now-launcher",
+                "from": "my-day",
                 "type": "settingsNote",
                 "to": "settings"
             },
             {
-                "from": "now-launcher",
+                "from": "my-day",
                 "type": "nowNote",
                 "to": "now-note"
-            },
-            {
-                "from": "now-window",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "now-window",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "now-window",
-                "type": "nowNote",
-                "to": "now-note"
-            },
-            {
-                "from": "now-window",
-                "type": "LauncherWidget",
-                "to": "now-launcher"
             },
             {
                 "from": "profile-editor-page",
@@ -490,7 +445,7 @@
                 "value": ""
             },
             {
-                "note": "now-css",
+                "note": "my-day-css",
                 "name": "appCss",
                 "value": ""
             },
@@ -515,7 +470,7 @@
                 "value": ""
             },
             {
-                "note": "now-window",
+                "note": "my-day",
                 "name": "widget",
                 "value": ""
             }
