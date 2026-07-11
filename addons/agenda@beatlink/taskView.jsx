@@ -1,4 +1,4 @@
-import { useState, useEffect, FormDropdownList, useTriliumEvent } from "trilium:preact"
+import { useState, useEffect, useRef, FormDropdownList, useTriliumEvent } from "trilium:preact"
 import { activateNote, startNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { KanbanView } from "KanbanView.jsx"
@@ -51,11 +51,42 @@ export default function TaskView() {
         })()
     }, [])
 
-    // Refresh whenever the config note the sidebar just saved reloads on the
-    // frontend — Trilium fires entitiesReloaded with a LoadResults describing
-    // exactly which notes changed, so we only react to our own config note.
+    // Keep the currently-displayed task-note ids in a ref so the
+    // entitiesReloaded handler (below) can tell whether a change touched a note
+    // we're showing without re-subscribing on every list change.
+    const noteIdsRef = useRef(noteIds)
+    noteIdsRef.current = noteIds
+
+    // Refresh whenever a relevant entity reloads on the frontend — Trilium fires
+    // entitiesReloaded with a LoadResults describing exactly which notes and
+    // attributes changed. We reload on:
+    //   - our own config note reloading (a sidebar profile edit), and
+    //   - any task change: an attribute added/changed/removed (task labels drive
+    //     search matching, sort, prefix/color), or a displayed note's content or
+    //     the note itself reloading.
+    // Without the task-change cases, editing a task's dates/rank/etc (via the
+    // right-panel widget or directly in Trilium) left this web view stale, since
+    // those edits never touch the config note.
     useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
-        if (ids && loadResults.isNoteContentReloaded(ids.profileContext.configNoteId)) {
+        if (!ids) return
+
+        if (loadResults.isNoteContentReloaded(ids.profileContext.configNoteId)) {
+            setReloadTick(t => t + 1)
+            return
+        }
+
+        // Any attribute change can add or remove a task from the search, or
+        // change how a shown task sorts/renders — cheapest correct signal is to
+        // reload on any attribute change at all.
+        if (loadResults.getAttributeRows().length > 0) {
+            setReloadTick(t => t + 1)
+            return
+        }
+
+        // A shown task's title/content changed with no attribute change.
+        const shown = noteIdsRef.current
+        if (shown && shown.some(noteId =>
+            loadResults.isNoteReloaded(noteId) || loadResults.isNoteContentReloaded(noteId))) {
             setReloadTick(t => t + 1)
         }
     })

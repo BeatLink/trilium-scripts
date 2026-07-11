@@ -45,7 +45,7 @@ export function KanbanView({
                         e.preventDefault()
                         setDragOverKey(null)
                         const noteId = e.dataTransfer.getData("text/plain")
-                        if (noteId && column.key !== UNGROUPED_KEY) onCardMove?.(noteId, column.key)
+                        if (noteId && column.key !== UNGROUPED_KEY && column.droppable !== false) onCardMove?.(noteId, column.key)
                     }) : undefined}
                 >
                     <div

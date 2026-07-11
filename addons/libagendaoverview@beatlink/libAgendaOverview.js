@@ -79,13 +79,17 @@ function criteriaToString(rows) {
 // `getPrefixes`/`getColors` actually index into.
 function reshapeVariant(variant) {
     if (!variant) return variant
+    // `noValuePrefix`/`noValueColor` (optional, "" = off) is the bucket for
+    // notes whose label is missing/unmatched or whose date matched no interval;
+    // carried through both shapes so getPrefixes/getColors can fall back to it.
+    const noValue = variant.noValuePrefix ?? variant.noValueColor ?? ""
     if (variant.type === "label") {
         const children = Object.fromEntries(
             Object.values(variant.children || {}).map(entry => [entry.labelValue, entry.display])
         )
-        return { name: variant.name, type: "label", label: variant.label, children }
+        return { name: variant.name, type: "label", label: variant.label, children, noValue }
     }
-    return { name: variant.name, type: "dayjs", intervals: variant.intervals || {} }
+    return { name: variant.name, type: "dayjs", intervals: variant.intervals || {}, noValue }
 }
 
 // A grouping variant is shaped like a prefix/color variant, but each
@@ -97,13 +101,17 @@ function reshapeVariant(variant) {
 // `labelValue`).
 function reshapeGrouping(grouping) {
     if (!grouping) return grouping
+    // Optional named/colored bucket for notes matching no column ("" name = off,
+    // fall back to KanbanView's generic "Ungrouped"). Kept on both shapes so
+    // getGroupColumns can emit it as a real column and getGroups can target it.
+    const noValue = { display: grouping.noValueDisplay || "", color: grouping.noValueColor || "" }
     if (grouping.type === "label") {
         const children = Object.fromEntries(
             Object.values(grouping.children || {}).map(entry => [entry.labelValue, { display: entry.display, color: entry.color }])
         )
-        return { name: grouping.name, type: "label", label: grouping.label, children }
+        return { name: grouping.name, type: "label", label: grouping.label, children, noValue }
     }
-    return { name: grouping.name, type: "dayjs", intervals: grouping.intervals || {} }
+    return { name: grouping.name, type: "dayjs", intervals: grouping.intervals || {}, noValue }
 }
 
 // `searchGroups`/`filterGroups` are their own top-level registries in the
@@ -320,10 +328,11 @@ async function getPrefixes(dateRules, prefixInfo, notesList) {
                     break
                 }
             }
-            if (!(note in prefixDict)) prefixDict[note] = "No Date Set"
+            if (!(note in prefixDict)) prefixDict[note] = prefixInfo.noValue || ""
         } else if (prefixInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(prefixInfo["label"])
-            prefixDict[note] = prefixInfo.children ? prefixInfo.children[noteLabel] : noteLabel
+            let mapped = prefixInfo.children ? prefixInfo.children[noteLabel] : noteLabel
+            prefixDict[note] = mapped ?? (prefixInfo.noValue || "")
         } else {
             prefixDict[note] = ""
         }
@@ -347,10 +356,11 @@ async function getColors(dateRules, colorInfo, notesList) {
                     break
                 }
             }
-            if (!(note in colorDict)) colorDict[note] = ""
+            if (!(note in colorDict)) colorDict[note] = colorInfo.noValue || ""
         } else if (colorInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(colorInfo["label"])
-            colorDict[note] = colorInfo.children ? colorInfo.children[noteLabel] : noteLabel
+            let mapped = colorInfo.children ? colorInfo.children[noteLabel] : noteLabel
+            colorDict[note] = mapped ?? (colorInfo.noValue || "")
         } else {
             colorDict[note] = ""
         }
@@ -362,8 +372,15 @@ async function getColors(dateRules, colorInfo, notesList) {
 // (label value, or dayjs interval's own registry id) instead of a resolved
 // display string — the caller looks the key up in getGroupColumns' output
 // for display, and passes it back into setGroupForNote on drop.
+// When a grouping defines a no-value bucket (noValue.display set), unmatched
+// notes are keyed to NO_VALUE_KEY so getGroupColumns' matching column catches
+// them; otherwise they stay `null` and fall into KanbanView's generic
+// "Ungrouped" column.
+const NO_VALUE_KEY = "__novalue__"
+
 async function getGroups(dateRules, groupingInfo, notesList) {
     let groupDict = {}
+    const unmatchedKey = groupingInfo?.noValue?.display ? NO_VALUE_KEY : null
     for (let note of notesList) {
         if (!groupingInfo) {
             groupDict[note] = null
@@ -378,10 +395,10 @@ async function getGroups(dateRules, groupingInfo, notesList) {
                     break
                 }
             }
-            if (!(note in groupDict)) groupDict[note] = null
+            if (!(note in groupDict)) groupDict[note] = unmatchedKey
         } else if (groupingInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(groupingInfo["label"])
-            groupDict[note] = noteLabel || null
+            groupDict[note] = (noteLabel && groupingInfo.children?.[noteLabel]) ? noteLabel : unmatchedKey
         } else {
             groupDict[note] = null
         }
@@ -394,13 +411,20 @@ async function getGroups(dateRules, groupingInfo, notesList) {
 // prefixes/colors already rely on.
 function getGroupColumns(groupingInfo) {
     if (!groupingInfo) return []
+    let columns
     if (groupingInfo.type === "label") {
-        return Object.entries(groupingInfo.children || {}).map(([key, v]) => ({ key, display: v.display, color: v.color }))
+        columns = Object.entries(groupingInfo.children || {}).map(([key, v]) => ({ key, display: v.display, color: v.color }))
+    } else if (groupingInfo.type === "dayjs") {
+        columns = Object.entries(groupingInfo.intervals || {}).map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
+    } else {
+        return []
     }
-    if (groupingInfo.type === "dayjs") {
-        return Object.entries(groupingInfo.intervals || {}).map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
+    // Explicit no-value bucket column (read-only: droppable=false so a drag
+    // can't write the sentinel key as a label). Matches getGroups' NO_VALUE_KEY.
+    if (groupingInfo.noValue?.display) {
+        columns.push({ key: NO_VALUE_KEY, display: groupingInfo.noValue.display, color: groupingInfo.noValue.color || null, droppable: false })
     }
-    return []
+    return columns
 }
 
 // The write side of a kanban drag-drop: only meaningful for type:"label"

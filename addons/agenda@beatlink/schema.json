@@ -305,7 +305,8 @@
                     "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
                     "formatString": { "type": "string", "label": "Format String", "default": "" }
                 }
-            }
+            },
+            "noValuePrefix": { "type": "string", "label": "No-Value Prefix", "default": "" }
         },
         "default": {
             "priority": {
@@ -379,7 +380,8 @@
                     "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
                     "color": { "type": "color", "label": "Color", "default": "gray" }
                 }
-            }
+            },
+            "noValueColor": { "type": "color", "label": "No-Value Color", "default": "" }
         },
         "default": {
             "priority": {
@@ -455,7 +457,9 @@
                     "display": { "type": "string", "label": "Column Name", "default": "" },
                     "color": { "type": "color", "label": "Column Color", "default": "gray" }
                 }
-            }
+            },
+            "noValueDisplay": { "type": "string", "label": "No-Value Column Name", "default": "" },
+            "noValueColor": { "type": "color", "label": "No-Value Column Color", "default": "" }
         },
         "default": {
             "priority": {
