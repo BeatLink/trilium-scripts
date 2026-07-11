@@ -33,7 +33,8 @@ const AREAS = [
     { name: "Legal",        color: "red" },
     { name: "Home",         color: "darkorange" },
     { name: "Car",          color: "darkorange" },
-    { name: "Tech",         color: "cyan" },
+    { name: "Tech",         color: "darkorange" },
+    { name: "Productivity", color: "darkorange" },
     { name: "Fitness",      color: "gold" },
     { name: "Grooming",     color: "gold" },
     { name: "Sexual",       color: "gold" },
@@ -41,8 +42,7 @@ const AREAS = [
     { name: "Health",       color: "lime" },
     { name: "Mental",       color: "lime" },
     { name: "Identity",     color: "lime" },
-    { name: "Fun",          color: "magenta" },
-    { name: "Productivity", color: "lime" }
+    { name: "Fun",          color: "magenta" }
 ]
 
 // The six Type buckets provisioned under every Area (draft's non-structural,

@@ -15,52 +15,67 @@
                 "color": "red"
             },
             {
-                "key": "03-home",
+                "key": "03-legal",
+                "title": "Legal",
+                "color": "red"
+            },
+            {
+                "key": "04-home",
                 "title": "Home",
                 "color": "darkorange"
             },
             {
-                "key": "04-car",
+                "key": "05-car",
                 "title": "Car",
                 "color": "darkorange"
             },
             {
-                "key": "05-tech",
+                "key": "06-tech",
                 "title": "Tech",
                 "color": "darkorange"
             },
             {
-                "key": "06-fitness",
+                "key": "07-productivity",
+                "title": "Productivity",
+                "color": "darkorange"
+            },
+            {
+                "key": "08-fitness",
                 "title": "Fitness",
                 "color": "gold"
             },
             {
-                "key": "07-grooming",
+                "key": "09-grooming",
                 "title": "Grooming",
                 "color": "gold"
             },
             {
-                "key": "08-sexual",
+                "key": "10-sexual",
                 "title": "Sexual",
                 "color": "gold"
             },
             {
-                "key": "09-social",
+                "key": "11-social",
                 "title": "Social",
                 "color": "lime"
             },
             {
-                "key": "10-health",
+                "key": "12-health",
                 "title": "Health",
                 "color": "lime"
             },
             {
-                "key": "11-mental",
+                "key": "13-mental",
                 "title": "Mental",
                 "color": "lime"
             },
             {
-                "key": "12-fun",
+                "key": "14-identity",
+                "title": "Identity",
+                "color": "lime"
+            },
+            {
+                "key": "15-fun",
                 "title": "Fun",
                 "color": "magenta"
             }
