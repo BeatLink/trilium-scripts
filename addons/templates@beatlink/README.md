@@ -31,11 +31,15 @@ Each task-type template receives these labels at install time:
 | Label | Value | Purpose |
 |-------|-------|---------|
 | `#template` | *(empty)* | Marks the note as a Trilium template |
-| `#agendaTaskWidget` | *(empty)* | Enables the Agenda Next task display widget |
+| `#agendaTaskWidget` | *(empty)* | Enables the Agenda Next task display widget (task-type templates only) |
 | `#label:area` | `single` | Restricts the `area` label to a single value |
+| `#label:priority` | `single,text` | Restricts the `priority` label (task-type templates only) |
+| `#type` | `<N>-<name>` | The note's type, matching the template number (see below) |
 | `#iconClass` | *(varies)* | Sets the tree icon |
 
-The `7. Area` template additionally has `#viewType=list` to default new area notes to list view.
+Every template carries a `#type` label so Agenda Next can sort/group by type: `0-ideas`, `1-goal`,
+`2-routine`, `3-task`, `4-future`, `5-project`, `6-note`, `7-area`, `8-special`. The `7. Area` template
+additionally has `#viewType=list` to default new area notes to list view.
 
 ## Installation
 
