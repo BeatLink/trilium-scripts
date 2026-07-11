@@ -55,7 +55,7 @@ const SUBTYPES = [
     { slug: "routines", title: "Routines", icon: "bx-sync" },
     { slug: "projects", title: "Projects", icon: "bx-check-double" },
     { slug: "future",   title: "Future",   icon: "bx-hourglass" },
-    { slug: "notes",    title: "Notes",    icon: "bx-note" }
+    { slug: "notes",    title: "Notes",    icon: "bx-notepad" }
 ]
 
 // Template titles shipped by templates@beatlink. Areas use the Area template;

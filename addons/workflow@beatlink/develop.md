@@ -65,7 +65,7 @@ The 7 from `templates@beatlink` — Goal, Routine, Task, Future, Project, Note, 
 | Projects | `bx-check-double` | One-off outcomes; comprise subprojects + tasks; usually dated. |
 | Task     | `bx-check`        | Standard single task (agenda's core actionable unit). |
 | Future   | `bx-hourglass`    | Deferred / someday-maybe / blocked items. |
-| Notes    | `bx-note`         | Non-actionable reference material. |
+| Notes    | `bx-notepad`      | Non-actionable reference material. |
 | Area     | `bxs-circle`      | Structural container for an area of life (list view). |
 
 Ideas and Notes are non-actionable (no task widget). The Task/Routine/Future/Project *templates* are
@@ -137,6 +137,16 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
 - **Buckets are containers, not items:** the six subtype notes under each area carry only their id,
   their area's color, and an icon — no `#agendaTaskWidget` (they group actionable notes but aren't
   actionable themselves).
+- **Items are created programmatically, not by inheritance.** When the workflow adds an item into a
+  bucket (a Task, Idea, Note, etc. — a later Organize/Collect phase), it sets that item's `~template`
+  and `#area` **programmatically at creation**, resolved from the bucket's `#workflowNote` identity.
+  We deliberately rejected `~child:template` + inheritable `#area` on the buckets: Trilium/TAM support
+  both (`(inheritable)` suffix → real `isInheritable`; `~child:template` templates children), but
+  attribute *inheritance is tied to tree position* — a note moved out of its bucket's subtree would
+  silently lose its inherited type/area, and an inheritable `#area` on a container risks double-counting
+  in agenda's area views. Programmatic assignment has neither failure mode and keeps the item's
+  identity self-contained wherever it's later filed. Consequence: **no changes to `templates@beatlink`
+  are needed** for bucket auto-typing — buckets stay on `8. Special`.
 - `.js` libs (`workflowStructure.js`, `workflowProvision.js`) are plain CommonJS
   (`module.exports`/`require`), `env=frontend`; the backend work runs inside `api.runOnBackend`
   closures (which may reference only `api`), mirroring
