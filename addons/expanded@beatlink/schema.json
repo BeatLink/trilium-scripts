@@ -1,0 +1,3 @@
+{
+    "labelName": {"type": "string", "label": "Label Name", "description": "The note label that marks a note as always expanded. Notes carrying this label (as #<name>) are kept expanded in the tree.", "default": "alwaysExpanded"}
+}
