@@ -22,14 +22,24 @@ const { STRUCTURE, AREA_LIST, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = re
 
 const WORKFLOW_LABEL = "workflowNote"
 
-// Migrate stale #area slugs after an area reorder. Slugs are "<NN>-<name>" and
-// the number changes when areas are inserted/reordered (e.g. Fun 14->15), but
-// the name is stable — so we re-key by name: for every note carrying #area, look
-// up the current slug for its name-part in AREA_LIST and rewrite #area + #color
-// when the number drifted. Notes whose #area name isn't a known area are left
-// alone (could be a custom area). Returns the count of notes migrated.
+// Removed/renamed areas that fold into a surviving one: old name -> surviving
+// name (both lowercase). When an area is dropped (e.g. Health folded into
+// Fitness), its name no longer appears in AREA_LIST, so migrateAreaSlugs can't
+// re-key it by name alone — this alias points the old name at the survivor.
+const AREA_ALIASES = {
+    health: "fitness",
+    productivity: "tech"
+}
+
+// Migrate stale #area slugs after an area reorder OR a fold. Slugs are
+// "<NN>-<name>"; the number changes when areas are inserted/reordered/removed,
+// but names are stable, so we re-key by name: for every note carrying #area,
+// resolve its name-part (via AREA_ALIASES first, for folded areas) to the current
+// slug in AREA_LIST and rewrite #area + #color when it differs. Notes whose name
+// is neither a current area nor an alias are left alone (could be custom).
+// Returns the count of notes migrated.
 async function migrateAreaSlugs() {
-    return api.runOnBackend((areaList) => {
+    return api.runOnBackend((areaList, aliases) => {
         // name (lowercase) -> { slug, color } for the current vocabulary.
         const byName = {}
         for (const a of areaList) {
@@ -43,14 +53,15 @@ async function migrateAreaSlugs() {
             if (!current) continue
             const m = current.match(/^\d\d-(.+)$/)
             if (!m) continue
-            const target = byName[m[1]]
+            const name = aliases[m[1]] || m[1]
+            const target = byName[name]
             if (!target || target.slug === current) continue
             note.setLabel("area", target.slug)
             if (target.color) note.setLabel("color", target.color)
             migrated++
         }
         return migrated
-    }, [AREA_LIST])
+    }, [AREA_LIST, AREA_ALIASES])
 }
 
 // Resolve a templates@beatlink template note id by its title (must carry

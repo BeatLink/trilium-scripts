@@ -34,12 +34,10 @@ const AREAS = [
     { name: "Home",         color: "darkorange" },
     { name: "Car",          color: "darkorange" },
     { name: "Tech",         color: "darkorange" },
-    { name: "Productivity", color: "darkorange" },
     { name: "Fitness",      color: "gold" },
     { name: "Grooming",     color: "gold" },
     { name: "Sexual",       color: "gold" },
     { name: "Social",       color: "lime" },
-    { name: "Health",       color: "lime" },
     { name: "Mental",       color: "lime" },
     { name: "Identity",     color: "lime" },
     { name: "Fun",          color: "magenta" }

@@ -34,7 +34,7 @@ gets the raw item into the Inbox.)
 
 ### 3. Review
 - **Daily review** — filter to Must Do plus anything overdue, sorted by date. The day's worklist.
-- **Weekly review** — sweep by Area, to catch drift in quiet areas (e.g. Legal, Health) that never
+- **Weekly review** — sweep by Area, to catch drift in quiet areas (e.g. Legal) that never
   surface in the Must-Do list on their own.
 - **Review views** — All Tasks / By Type / By Priority / By Date.
 
@@ -48,11 +48,14 @@ unblocked. Update Status as work progresses.
 
 Decided with the user during planning.
 
-### Areas (15)
-Career, Finances, Legal, Home, Car, Tech, Fitness, Grooming, Sexual, Social, Health, Mental, Identity,
-Fun, **and Productivity** (added on top of the draft's 14). `#area` values are renumbered `01-…`
-through `15-…`. This differs from `agenda@beatlink`'s shipped 14 (which omits Legal); the preset here
-overrides the area enumeration everywhere it appears.
+### Areas (13)
+Career, Finances, Legal, Home, Car, Tech, Fitness, Grooming, Sexual, Social, Mental, Identity, Fun.
+`#area` values are `01-career` … `13-fun`. Legal was added on top of the original draft; **Health was
+folded into Fitness and Productivity into Tech** (both removed). The same 13-area list is kept in sync
+across `workflowStructure.js` (`AREAS`), `area-picker@beatlink/schema.json`, and `agenda@beatlink`'s
+four area registries (filterGroups/prefixes/colors/groupings) — edit all three when areas change. Folds
+are handled at migration time by `AREA_ALIASES` in `workflowProvision.js` (`health`→`fitness`,
+`productivity`→`tech`), so existing notes re-tag on the next Setup provision.
 
 ### Types (8)
 The 7 from `templates@beatlink` — Goal, Routine, Task, Future, Project, Note, Area — **plus Ideas**.
@@ -118,7 +121,7 @@ Followed by one note per Area (`bxs-circle`), each containing a child per releva
     (`0. Ideas`, `1. Goal`..`6. Note`; Area/Special excluded), resolved live by title
     (`getItemTemplates`); clicking assigns `~template` (`setRelation`, like
     [template-picker](../template-picker@beatlink/templatePickerPreact.jsx)).
-  - **Notes Without Areas** — items with no `#area`. Buttons are the 15 areas from
+  - **Notes Without Areas** — items with no `#area`. Buttons are the 13 areas from
     `workflowStructure.js`'s `AREA_LIST` (single source of truth), color-coded; clicking sets `#area` +
     `#color` (like [area-picker](../area-picker@beatlink/areaPickerPreact.jsx)) via `assignArea`. If the
     note already sits inside an Area subtree, that ancestor area's button is **highlighted** as the
@@ -172,7 +175,7 @@ Unlike agenda/templates (which clone their notes in via the manifest), the noteb
 provisioned by a **button on the Setup page**, so it merges with notes the user already created by
 hand. The structure is data (`workflowStructure.js`), the logic is `workflowProvision.js`:
 
-- **Anchor:** top-level notes (Inbox, My Day, Agenda, 15 Areas) are direct children of Trilium
+- **Anchor:** top-level notes (Inbox, My Day, Agenda, 13 Areas) are direct children of Trilium
   `root`; each Area's six subtype notes (Ideas / Goals / Routines / Projects / Future / Notes) are
   children of that Area.
 - **Identity:** each note is tagged **`#workflowNote=<key>`** (e.g. `inbox`, `area-03-legal`,
@@ -198,7 +201,7 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
   `#color=<area color>`; each subtype bucket inherits its parent area's color. Inbox/My Day/Agenda
   have no color.
 - **Templates** (resolved live by title from `templates@beatlink`, so provisioning degrades gracefully
-  if it's absent): the 15 Area notes → `7. Area`; Inbox/My Day/Agenda and every subtype bucket →
+  if it's absent): the 13 Area notes → `7. Area`; Inbox/My Day/Agenda and every subtype bucket →
   `8. Special` (the neutral container template). `templates@beatlink` is a declared dependency so TAM
   syncs it first, making the templates resolvable.
 - **Buckets are containers, not items:** the six subtype notes under each area carry their id, their
@@ -247,7 +250,7 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
   the shipped `bxs-circle` for consistency).
 - **Context / Effort filters:** add to `filterGroups` now, or defer alongside Collect. New label
   conventions (`#context`, `#effort`) — document wherever chosen.
-- **Manifest size:** 15 areas × 6 type-children ≈ 120 note entries. Generate the
+- **Manifest size:** 13 areas × 6 type-children ≈ 100 note entries. Generate the
   `notes`/`children`/`labels` arrays programmatically (scratch script), then commit the generated JSON.
   Use stable manifest ids (`area-01-career`, `area-01-career-ideas`, …).
 - **Status attribute:** the workflow defines Todo/In progress/Blocked/Done but agenda's shipped schema
@@ -263,7 +266,7 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       `workflowProvision.js` (runtime find-or-create-by-title + `#workflowNote` tagging under `root`),
       and the `Workflow Setup` render page (`workflowSetup.jsx`) with a Provision button + result log.
       Passes `validate` + `tam_to_zip`. Not yet live-tested (Phase 4).
-- [ ] **Phase 1 — Preset.** Author `config.json` (15 areas + Ideas search rule, optionally
+- [ ] **Phase 1 — Preset.** Author `config.json` (13 areas + Ideas search rule, optionally
       Context/Effort/Status filters), the Ideas template HTML, and extend the manifest to wire the
       preset + Ideas template. Run `validate`.
 - [~] **Phase 3 — Tab wiring.** Fill in the window's panels.

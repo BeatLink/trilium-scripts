@@ -35,47 +35,37 @@
                 "color": "darkorange"
             },
             {
-                "key": "07-productivity",
-                "title": "Productivity",
-                "color": "darkorange"
-            },
-            {
-                "key": "08-fitness",
+                "key": "07-fitness",
                 "title": "Fitness",
                 "color": "gold"
             },
             {
-                "key": "09-grooming",
+                "key": "08-grooming",
                 "title": "Grooming",
                 "color": "gold"
             },
             {
-                "key": "10-sexual",
+                "key": "09-sexual",
                 "title": "Sexual",
                 "color": "gold"
             },
             {
-                "key": "11-social",
+                "key": "10-social",
                 "title": "Social",
                 "color": "lime"
             },
             {
-                "key": "12-health",
-                "title": "Health",
-                "color": "lime"
-            },
-            {
-                "key": "13-mental",
+                "key": "11-mental",
                 "title": "Mental",
                 "color": "lime"
             },
             {
-                "key": "14-identity",
+                "key": "12-identity",
                 "title": "Identity",
                 "color": "lime"
             },
             {
-                "key": "15-fun",
+                "key": "13-fun",
                 "title": "Fun",
                 "color": "magenta"
             }
