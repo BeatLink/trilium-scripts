@@ -8,7 +8,6 @@
 .lst-panel {
     box-sizing: border-box !important;
     background-color: var(--main-background-color) !important;
-    padding: 1rem !important;
 
     & *, & *::before, & *::after {
         box-sizing: border-box !important;

@@ -173,6 +173,11 @@
                 "note": "backend",
                 "name": "customRequestHandler",
                 "value": "emailToTrilium"
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
             }
         ],
         "dependencies": [
