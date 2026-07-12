@@ -288,9 +288,11 @@ export default function OrganizePanel() {
     // Actionable items (Routine/Task/Project/Future) that have no #priority yet.
     const noPriority = candidates.filter(c =>
         !c.hasPriority && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
-    // Actionable items with no start date (#startDateTime) yet.
+    // Actionable items with no start date (#startDateTime) yet. Subtasks (a task
+    // filed under a parent task) are excluded — they're scheduled with their
+    // parent, not on their own.
     const noStartDate = candidates.filter(c =>
-        !c.hasStartDate && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
+        !c.hasStartDate && !c.isSubtask && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
 
     return (
         <div className="workflow-organize">

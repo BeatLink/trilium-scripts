@@ -150,24 +150,24 @@
                 "name": "Note Type",
                 "profileId": "default",
                 "children": {
-                    "all": { "name": "All Tasks", "rule": "#startDateTime != \"\" OR #dueDateTime != \"\"", "enabled": false },
-                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal')", "enabled": true },
-                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine')", "enabled": true },
+                    "all": { "name": "All Tasks", "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')", "enabled": false },
+                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
+                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
                     "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
-                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future')", "enabled": true },
-                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project')", "enabled": true }
+                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
+                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task')", "enabled": true }
                 }
             },
             "typeDated": {
                 "name": "Note Type (Dated)",
                 "profileId": "default",
                 "children": {
-                    "all": { "name": "All Tasks", "rule": "#startDateTime != \"\" OR #dueDateTime != \"\"", "enabled": false },
-                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
+                    "all": { "name": "All Tasks", "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')", "enabled": false },
+                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
+                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
                     "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false }
+                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
+                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false }
                 }
             }
         }

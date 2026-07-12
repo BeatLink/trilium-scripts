@@ -22,6 +22,9 @@
 const { AREA_LIST, BUCKET_TEMPLATES } = require("workflowStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
+// Title of the Task item template; a note whose primary parent carries this
+// template is a subtask (see getOrganizeCandidates' parentIsTask).
+const TASK_TEMPLATE_TITLE = "3. Task"
 
 // The item-type templates offered by the "Notes Without Templates" queue, in
 // workflow order. Structural templates (Area / Special) are excluded. Resolved
@@ -56,11 +59,14 @@ async function getAreas() {
 }
 
 // Collect every non-structural note under the Inbox / Area subtrees, each with:
-//   { noteId, title, path, preview, hasTemplate, hasArea, suggestedArea }
+//   { noteId, title, path, preview, hasTemplate, hasArea, hasPriority,
+//     hasStartDate, isSubtask, suggestedArea }
 // The frontend filters this into the per-queue work lists (untemplated, or
 // no-area). `suggestedArea` is the nearest ancestor's #area value ("" if none).
+// `isSubtask` marks a note whose primary parent is a Task (excluded from the
+// no-start-date queue).
 async function getOrganizeCandidates() {
-    return api.runOnBackend((workflowLabel) => {
+    return api.runOnBackend((workflowLabel, taskTemplateTitle) => {
         // Scope roots: the Inbox note + every Area root. Area roots have a
         // #workflowNote value like "area-03-legal" (no trailing bucket slug);
         // buckets look like "area-03-legal-goals" and are NOT scope roots (but
@@ -125,6 +131,20 @@ async function getOrganizeCandidates() {
             return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
         }
 
+        // A note is a subtask when its primary parent is itself a Task-templated
+        // note. Subtasks are managed under their parent Task, so they're excluded
+        // from the "no start date" queue (they don't need their own start date).
+        function templateTitleOf(note) {
+            const tId = note.getRelationValue("template")
+            if (!tId) return ""
+            const t = api.getNote(tId)
+            return t ? t.title : ""
+        }
+        function parentIsTask(note) {
+            const parent = note.getParentNotes()[0]
+            return !!parent && templateTitleOf(parent) === taskTemplateTitle
+        }
+
         // Collect descendants of the scope roots, de-duped (a note can be cloned
         // under more than one scope root).
         const seen = new Set()
@@ -147,6 +167,7 @@ async function getOrganizeCandidates() {
                         hasArea: !!child.getLabelValue("area"),
                         hasPriority: !!child.getLabelValue("priority"),
                         hasStartDate: !!child.getLabelValue("startDateTime"),
+                        isSubtask: parentIsTask(child),
                         suggestedArea: ancestorArea(child)
                     })
                 }
@@ -156,7 +177,7 @@ async function getOrganizeCandidates() {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL])
+    }, [WORKFLOW_LABEL, TASK_TEMPLATE_TITLE])
 }
 
 // Find notes whose #area or ~template disagrees with where they're filed. A note
