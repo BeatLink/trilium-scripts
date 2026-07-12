@@ -2,7 +2,7 @@
 import {
     RightPanelWidget,
     defineWidget,
-    FormCheckbox,
+    ActionButton,
     useActiveNoteContext,
     useNoteLabelBoolean,
     useNoteRelationTarget,
@@ -17,7 +17,7 @@ import {
 import { loadSettings } from "libSettingsUI.jsx"
 
 // Main Widget ---------------------------------------------------------------------------
-// Rendered once the configured label name is loaded; the checkbox lives in the panel
+// Rendered once the configured label name is loaded; a pin toggle lives in the panel
 // header (the `buttons` slot) rather than the body.
 function ExpandedPanel({ note, labelName }) {
     const [expanded, setExpanded] = useNoteLabelBoolean(note, labelName)
@@ -27,10 +27,12 @@ function ExpandedPanel({ note, labelName }) {
         <RightPanelWidget
             title="Always Expanded"
             buttons={
-                <FormCheckbox
-                    currentValue={!!expanded}
-                    onChange={value => {
-                        setExpanded(value ? true : null)
+                <ActionButton
+                    icon={expanded ? "bx bxs-pin" : "bx bx-pin"}
+                    text={expanded ? "Unpin (stop keeping expanded)" : "Pin (keep always expanded)"}
+                    titlePosition="top"
+                    onClick={() => {
+                        setExpanded(expanded ? null : true)
                         if (scriptNote) { scriptNote.executeScript() }
                     }}
                 />
