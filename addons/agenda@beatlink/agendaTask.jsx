@@ -13,7 +13,6 @@ import { startNote } from "trilium:api"
 import { DatesDurationPicker } from "DatesDurationPicker.jsx"
 import { RecurrencePicker } from "RecurrencePicker.jsx"
 import { ActionBar } from "ActionBar.jsx"
-import { RankPicker } from "RankPicker.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { updateTaskLists } = require("libAgendaOverview.js")
@@ -102,10 +101,6 @@ function MainWidget(){
                 <div>
                     <label>Actions</label>
                     <ActionBar actions={actions}/>
-                </div>
-                <div>
-                    <label>Rank</label>
-                    <RankPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </div>
             </div>
         </RightPanelWidget>

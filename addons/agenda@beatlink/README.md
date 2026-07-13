@@ -7,7 +7,7 @@ widgets plus a single schema-driven editor page:
    pick the sort/prefix/color for whichever note your profile is filing tasks into; matching notes
    get re-filed as children of that note, and a calendar feed gets exported automatically.
 2. **Task** (`agendaTask.jsx`, right-pane) — edit a task's start/due dates, duration, recurrence,
-   rank, and quick actions (complete, start today/tomorrow).
+   and quick actions (complete, start today/tomorrow).
 3. **My Day** (`myDayWidget.jsx`, `note-detail-pane`) — a focus strip (a manual countdown timer) that
    appears inline at the top of one note's detail pane: whichever note you designate as your **My Day
    Note** in settings. It renders nothing on any other note. While that note is open it also runs the
@@ -35,7 +35,7 @@ widgets plus a single schema-driven editor page:
 
 1. Use TAM's **Settings** button (or navigate to this addon's "Agenda Editor" note) to open the
    Agenda Editor. Its Settings tab lets you override any of the label names (`startDateTime`,
-   `dueDateTime`, `duration`, `recurrence`, `rank`, etc — defaults match the original system).
+   `dueDateTime`, `duration`, `recurrence`, etc — defaults match the original system).
 2. On the Agenda Editor's Settings tab, point **Overview Note** at the single note you want the
    agenda filed into (shared across all profiles), and set the **Active Profile**. On the Profiles
    tab, pick each profile's **Collection View** (list/grid/table/board/calendar/geoMap/dashboard/
@@ -72,9 +72,9 @@ This addon owns something every other `lib*@beatlink` piece explicitly does *not
 
 - **A `libsettings@beatlink` schema** (`schema.json`/`config.json`, rendered wholesale by the Agenda
   Editor) holding *everything* configurable about this addon: the label-name vocabulary
-  (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`, `recurrenceLabel`, `rankLabel`, etc),
+  (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`, `recurrenceLabel`, etc),
   every shared `searches`/`filters`/`sorts`/`prefixes`/`colors`/`groupings`/`dateRules` `registry`, a
-  `profiles` `registry` (identity + filing mode + sort/prefix/color/grouping pick),
+  `profiles` `registry` (identity + collection view + sort/prefix/color/grouping pick),
   `searchGroups`/`filterGroups` — each its own top-level `registry` (not nested inside `profiles`, so a
   group stays on the same tab as the elements it references), every entry carrying a `profileId` (a
   `reference` → `profiles`) saying which profile it belongs to, and each usage a `reference` into

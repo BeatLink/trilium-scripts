@@ -47,12 +47,6 @@
         "default": "recurrence",
         "tab": "Settings"
     },
-    "rankLabel": {
-        "type": "string",
-        "label": "Rank Label",
-        "default": "rank",
-        "tab": "Settings"
-    },
     "overviewNoteId": {
         "type": "note",
         "label": "Overview Note",

@@ -1,7 +1,7 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file the active profile's matching notes under a single shared overview note shown as a built-in Trilium collection view, and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file the active profile's matching notes under a single shared overview note shown as a built-in Trilium collection view, and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions), and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
@@ -184,11 +184,6 @@
             {
                 "parent": "task",
                 "addon": "libactionbar@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task",
-                "addon": "librankpicker@beatlink",
                 "child": "lib"
             },
             {
@@ -398,8 +393,7 @@
             "libsettings@beatlink",
             "libdatesdurationpicker@beatlink",
             "librecurrencepicker@beatlink",
-            "libactionbar@beatlink",
-            "librankpicker@beatlink"
+            "libactionbar@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"
