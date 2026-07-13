@@ -16,7 +16,7 @@
     "profiles": {
         "default": {
             "name": "default",
-            "parentNoteId": "",
+            "viewType": "list",
             "searchGroups": {
                 "expanded": true,
                 "children": {

@@ -1,7 +1,7 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed, or leave notes in place for a virtual-only profile), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
+    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file the active profile's matching notes under a single shared overview note shown as a built-in Trilium collection view, and export an iCal feed), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
@@ -117,27 +117,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "profileEditor.css"
-            },
-            {
-                "id": "task-view",
-                "title": "taskView.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "taskView.jsx"
-            },
-            {
-                "id": "task-view-css",
-                "title": "taskView.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "taskView.css"
-            },
-            {
-                "id": "calendar-view",
-                "title": "agendaCalendarView.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "agendaCalendarView.jsx"
             },
             {
                 "id": "readme",
@@ -292,47 +271,6 @@
             },
             {
                 "parent": "root",
-                "child": "task-view"
-            },
-            {
-                "parent": "root",
-                "child": "task-view-css"
-            },
-            {
-                "parent": "task-view",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "task-view",
-                "child": "calendar-view"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendakanbanview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendatableview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "calendar-view",
-                "addon": "libcalendarwidget@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "root",
                 "child": "readme"
             }
         ],
@@ -411,26 +349,6 @@
                 "from": "overview",
                 "type": "profileEditorNote",
                 "to": "profile-editor-page"
-            },
-            {
-                "from": "task-view",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "task-view",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "task-view",
-                "type": "icalNote",
-                "to": "ical"
-            },
-            {
-                "from": "overview",
-                "type": "taskViewRenderNote",
-                "to": "task-view"
             }
         ],
         "labels": [
@@ -451,11 +369,6 @@
             },
             {
                 "note": "profile-editor-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "task-view-css",
                 "name": "appCss",
                 "value": ""
             },
@@ -486,10 +399,7 @@
             "libdatesdurationpicker@beatlink",
             "librecurrencepicker@beatlink",
             "libactionbar@beatlink",
-            "librankpicker@beatlink",
-            "libcalendarwidget@beatlink",
-            "libagendakanbanview@beatlink",
-            "libagendatableview@beatlink"
+            "librankpicker@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"

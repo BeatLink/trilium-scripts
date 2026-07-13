@@ -36,7 +36,13 @@ export async function getAgendaSettings() {
         RANK_LABEL: settings.rankLabel
     }
 
-    const profileContext = { schemaNoteId, configNoteId, profileIds: Object.keys(settings.profiles || {}) }
+    const profileContext = {
+        schemaNoteId,
+        configNoteId,
+        profileIds: Object.keys(settings.profiles || {}),
+        overviewNoteId: settings.overviewNoteId || "",
+        activeProfileId: settings.activeProfileId || ""
+    }
 
     // My Day flags + the note the My Day focus widget attaches to. The widget
     // renders its controls (timer, mark done) only while browsing myDayNoteId.

@@ -78,19 +78,22 @@ references one shared `dateRuleId` (a libsettings `reference` field) so editing 
 which note-label it tests, and whether it uses whole-day (`useNumberOfDays`) granularity updates every
 place that means the same thing at once.
 
-**Multiple profiles are supported** — `updateTaskLists` refreshes every profile in
-`profileContext.profileIds`, and `getMatchingProfile` finds whichever one claims a given overview
-widget instance's target note (its `parentNoteId` for a reparent profile, its `viewNoteId` for a
-virtual profile). `getTaskList` (and everything built on it — due
-notifications, reschedule-all, iCal export) still only ever processes the *first* matching profile,
-by design — those are inherently single-profile-at-a-time operations (a notification/reschedule/iCal
-export has to pick one task list to act on).
+**Multiple profiles, one active at a time** — profiles all share a single overview note (the
+top-level `overviewNoteId` setting) and the `activeProfileId` setting names which one currently
+populates it. `updateTaskLists` processes only the active profile: it files that profile's matching
+tasks as children of the shared overview note (making it a `book`/collection with the profile's
+`viewType`) and refreshes the iCal feed. `getMatchingProfile` returns the active profile while the
+user is browsing the shared overview note (and nothing on any other note). `getActiveProfile`
+resolves the active profile object directly; `setActiveProfile` persists a new choice.
+`getTaskList`/`getSortedTaskList` (and everything built on them — due notifications, reschedule-all,
+iCal export) act on the active profile too.
 
 ## Usage
 
 ```js
 const {
-    loadData, getMatchingProfile, saveProfile, updateTaskLists, getTaskList, getSortedTaskList,
+    loadData, getMatchingProfile, getActiveProfile, setActiveProfile, saveProfile,
+    updateTaskLists, getTaskList, getSortedTaskList,
     getGroups, getGroupColumns, setGroupForNote,
     sendNotificationForDueTasks, rescheduleAllTasks, setCalendarEvents
 } = require("libAgendaOverview.js")
@@ -107,11 +110,21 @@ the decomposed fields described above. Returns `{searches, filters, sorts, prefi
 groupings, dateRules, profiles}` in the shape the rest of this module (and this README's older
 revisions) has always worked with.
 
-### `getMatchingProfile(profileContext, overviewNoteId)`
+### `getMatchingProfile(profileContext, browsedNoteId)`
 
-Returns the parsed profile object (with `id`/`schemaNoteId`/`configNoteId` set) that claims
-`overviewNoteId` — a reparent profile via its `parentNoteId`, a virtual profile via its `viewNoteId`.
-Used by the overview widget to find its own profile among all of them.
+Returns the active profile object (with `id`/`schemaNoteId`/`configNoteId` set) when `browsedNoteId`
+is the shared overview note (`profileContext.overviewNoteId`); returns nothing on any other note. The
+overview widget uses this to decide whether to show, and which profile to seed as the initial pick.
+
+### `getActiveProfile(profileContext)`
+
+Resolves the profile named by `profileContext.activeProfileId`, falling back to the first profile if
+that's unset or stale. Returns `null` when there are no profiles.
+
+### `setActiveProfile(profileContext, profileId)`
+
+Persists `activeProfileId` to the config note. Used by the sidebar widget's profile dropdown (the
+settings page writes the same field through its own schema-driven form).
 
 ### `saveProfile(profile)`
 
@@ -122,34 +135,25 @@ carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: id
 `mergeProfileGroups` (preserving every other profile's groups untouched) before calling
 `libSettingsUI.jsx`'s `saveSettings`.
 
-### `updateTaskLists(profileContext, constants, icalNoteId, taskViewNoteId)`
+### `updateTaskLists(profileContext, constants, icalNoteId)`
 
-For every profile: runs its searches/filters/sort/prefix/color rules. If `profile.fileMode` isn't
-`"virtual"`, re-files the resulting notes as children of `profile.parentNoteId` (the default,
-preserving pre-`fileMode` behavior for every existing profile). If it *is* `"virtual"`, instead calls
-`configureViewNote(profile.viewNoteId, taskViewNoteId)` to turn that note into the profile's Task View
-(no-op when either id is absent — e.g. callers like `rescheduleAllTasks` that don't pass
-`taskViewNoteId`). Refreshes the iCal feed unconditionally either way, so a virtual-mode profile's
-calendar export still works.
-
-### `configureViewNote(viewNoteId, taskViewNoteId)`
-
-Makes `viewNoteId` a `render` note whose `~renderNote` relation points at `taskViewNoteId` (the
-shipped `taskView.jsx` code note), so opening it shows the Task View. Find-or-set and idempotent —
-only writes when the note's type/relation isn't already correct. No-op if either id is falsy.
+Runs the active profile's searches/filters/sort/prefix/color rules and re-files the resulting notes
+as children of the shared overview note (`profileContext.overviewNoteId`), making that note a
+`book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`).
+`loadNotes` removes children that no longer match, so switching the active profile re-populates the
+note with the new profile's tasks. Refreshes the iCal feed unconditionally. No-op on the overview
+note when `overviewNoteId` is unset, but the iCal refresh still runs.
 
 ### `getTaskList(profileContext)`
 
-Returns the filtered (searched + filtered, not yet sorted) note id list for the first matching
-profile only — see the single-profile-at-a-time caveat above.
+Returns the filtered (searched + filtered, not yet sorted) note id list for the active profile.
 
 ### `getSortedTaskList(profileContext, profileId = null)`
 
-Like `getTaskList`, but also runs the result through `sortNoteIds` (this exists as a separate
-function rather than a change to `getTaskList` so no existing caller's behavior changes). Pass
-`profileId` to pick a specific profile among `profileContext.profileIds` instead of always taking the
-first match — for a caller (like a tree/kanban/calendar view page) that lets the user switch between
-profiles.
+Like `getTaskList`, but also runs the result through `sortNoteIds`. Pass `profileId` to pick a
+specific profile among `profileContext.profileIds` — for a caller (like a tree/kanban/calendar view
+page) with its own profile switcher; when omitted it falls back to the active profile, matching
+`getTaskList`.
 
 ### `getGroups(dateRules, groupingInfo, notesList)`
 

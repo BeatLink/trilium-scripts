@@ -15,7 +15,20 @@ import { Collapsible } from "Collapsible.jsx"
 import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
+
+// Trilium collection view types the overview note can be set to. Keep in sync
+// with the `viewType` field's options in schema.json.
+const VIEW_TYPES = [
+    { key: "list", title: "List" },
+    { key: "grid", title: "Grid" },
+    { key: "table", title: "Table" },
+    { key: "board", title: "Board" },
+    { key: "calendar", title: "Calendar" },
+    { key: "geoMap", title: "Geo Map" },
+    { key: "dashboard", title: "Dashboard" },
+    { key: "presentation", title: "Presentation" }
+]
 
 // Preact Components ------------------------------------------------------
 
@@ -127,8 +140,7 @@ function AgendaOverviewWidgetJSX() {
         (async () => {
             const { constants, profileContext } = await getAgendaSettings()
             const icalNoteId = await startNote.getRelationValue("icalNote")
-            const taskViewNoteId = await startNote.getRelationValue("taskViewRenderNote")
-            setIds({ constants, profileContext, icalNoteId, taskViewNoteId })
+            setIds({ constants, profileContext, icalNoteId })
         })()
     }, [])
 
@@ -139,20 +151,30 @@ function AgendaOverviewWidgetJSX() {
         setProfile(newProfile)
         setProfiles(ps => (ps || []).map(p => p.id === newProfile.id ? newProfile : p))
         saveProfile(newProfile)
-        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
+        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
-    // The widget only appears when the browsed note is claimed by a profile
-    // (its `parentNoteId` in reparent mode, its `viewNoteId` in virtual mode);
-    // on any other note it renders nothing at all. When claimed, the dropdown
-    // still lets the user edit *any* profile, but the initial pick is the one
-    // that claims this note. `claimed` gates rendering (see the early return
-    // below); `profileId` drives which profile is edited.
+    // Switch which profile is active: persist `activeProfileId`, update local
+    // state, and re-populate the shared overview note for the new profile.
+    // Keeps `ids.profileContext` in sync so subsequent updates (e.g. editing a
+    // section) file the profile just selected, and threads the new id straight
+    // into the updateTaskLists call rather than relying on that state landing.
+    const switchProfile = async (id) => {
+        setProfileId(id)
+        await setActiveProfile(ids.profileContext, id)
+        ids.profileContext.activeProfileId = id
+        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+    }
+
+    // The widget only appears while browsing the single shared overview note;
+    // on any other note it renders nothing. When shown, `getMatchingProfile`
+    // returns the active profile, which seeds the initial dropdown pick; the
+    // dropdown then lets the user switch the active profile.
     useEffect(() => {
         if (!ids || !noteId) return
         (async () => {
-            const claimed = await getMatchingProfile(ids.profileContext, noteId)
-            if (!claimed) {
+            const active = await getMatchingProfile(ids.profileContext, noteId)
+            if (!active) {
                 setProfiles(null)
                 setProfile(null)
                 setProfileId(null)
@@ -162,8 +184,8 @@ function AgendaOverviewWidgetJSX() {
             setRegistry(data)
             const allProfiles = await getAllProfiles(ids.profileContext)
             setProfiles(allProfiles)
-            setProfileId(claimed.id)
-            await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId, ids.taskViewNoteId)
+            setProfileId(active.id)
+            await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
         })()
     }, [noteId, ids])
 
@@ -198,21 +220,35 @@ function AgendaOverviewWidgetJSX() {
         <RightPanelWidget title="Agenda">
             <div id="x-agenda-overview-widget" className="agenda-widget">
 
-                {/* Profile selector — edit any profile, not just the one that
-                    claims the current note */}
+                {/* Active profile selector — switches which profile populates
+                    the shared overview note (persisted as activeProfileId) */}
                 {profiles && profiles.length > 1 && (
                     <div className="agenda-profile-selector">
                         <label>Profile</label>
                         <FormDropdownList
                             values={profiles.map(p => ({ key: p.id, title: p.name }))}
                             currentValue={profileId}
-                            onChange={setProfileId}
+                            onChange={switchProfile}
                             keyProperty="key"
                             titleProperty="title"
                             class="dropdown-component form-control"
                         />
                     </div>
                 )}
+
+                {/* Collection View — sets the overview note's #viewType, so
+                    it renders as the chosen built-in Trilium collection view */}
+                <div className="agenda-viewtype-selector">
+                    <label>Collection View</label>
+                    <FormDropdownList
+                        values={VIEW_TYPES}
+                        currentValue={profile.viewType || "list"}
+                        onChange={value => update(p => { p.viewType = value })}
+                        keyProperty="key"
+                        titleProperty="title"
+                        class="dropdown-component form-control"
+                    />
+                </div>
 
                 {/* Search */}
                 <CheckboxSection

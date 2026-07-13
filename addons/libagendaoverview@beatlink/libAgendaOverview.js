@@ -159,9 +159,7 @@ function mergeProfileGroups(allGroups, profileId, ownGroups) {
 function reshapeProfile(profile, searchGroups, filterGroups, profileId) {
     return {
         name: profile.name,
-        parentNoteId: profile.parentNoteId,
-        viewNoteId: profile.viewNoteId,
-        fileMode: profile.fileMode,
+        viewType: profile.viewType,
         searchGroups: { children: groupsForProfile(searchGroups, profileId) },
         filterGroups: { children: groupsForProfile(filterGroups, profileId) },
         sorts: { selected: profile.sortSelected },
@@ -179,9 +177,7 @@ function reshapeProfile(profile, searchGroups, filterGroups, profileId) {
 function unshapeProfile(profile) {
     return {
         name: profile.name,
-        parentNoteId: profile.parentNoteId,
-        viewNoteId: profile.viewNoteId,
-        fileMode: profile.fileMode,
+        viewType: profile.viewType,
         sortSelected: profile.sorts?.selected,
         prefixSelected: profile.prefixes?.selected,
         colorSelected: profile.colors?.selected,
@@ -238,25 +234,34 @@ async function getAllProfiles({ schemaNoteId, configNoteId, profileIds }) {
         .map(id => ({ id, schemaNoteId, configNoteId, ...data.profiles[id] }))
 }
 
-// The overview widget binds to whichever note the user is browsing. A
-// reparent profile claims its `parentNoteId` (the note its tasks are filed
-// under); a virtual profile claims its `viewNoteId` (the render note that
-// hosts its Task View). Either identifies the profile that "owns" the note.
-async function getMatchingProfile({ schemaNoteId, configNoteId, profileIds }, overviewNoteId) {
-    for (let profile of await getAllProfiles({ schemaNoteId, configNoteId, profileIds })) {
-        const claimedNoteId = profile.fileMode === "virtual" ? profile.viewNoteId : profile.parentNoteId
-        if (claimedNoteId && claimedNoteId == overviewNoteId) {
-            return profile
-        }
-    }
+// Resolves the profile that currently owns the shared overview note: the one
+// named by the `activeProfileId` setting, or the first profile if that's
+// unset/stale. All task-list operations (populating the overview note,
+// calendar/ical export, notifications) act on this single profile.
+async function getActiveProfile(profileContext) {
+    const profiles = await getAllProfiles(profileContext)
+    return profiles.find(p => p.id === profileContext.activeProfileId) || profiles[0] || null
 }
 
-async function deleteChildBranches(parentNoteId) {
-    api.runOnBackend((parentNoteId) => {
-        for (let note of api.getNote(parentNoteId).getChildNotes()) {
-            api.toggleNoteInParent(false, note.noteId, parentNoteId)
-        }
-    }, [parentNoteId])
+// Persists which profile is active. Both the sidebar widget's profile
+// dropdown and the settings page write this; the settings page does it
+// through its own schema-driven form, so this is the widget's path.
+async function setActiveProfile({ schemaNoteId, configNoteId }, profileId) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    values.activeProfileId = profileId
+    await saveSettings(schemaNoteId, configNoteId, values)
+}
+
+// The overview widget binds only to the single shared overview note (the
+// `overviewNoteId` top-level setting). When the user is browsing that note,
+// this returns the currently active profile (`activeProfileId`), falling back
+// to the first profile if none is set; on any other note it returns nothing
+// so the widget doesn't appear.
+async function getMatchingProfile(profileContext, browsedNoteId) {
+    const { schemaNoteId, configNoteId, profileIds, overviewNoteId, activeProfileId } = profileContext
+    if (!overviewNoteId || browsedNoteId != overviewNoteId) return
+    const profiles = await getAllProfiles({ schemaNoteId, configNoteId, profileIds })
+    return profiles.find(p => p.id === activeProfileId) || profiles[0]
 }
 
 async function getNotesForSearchGroups(data, searchGroupsChildren) {
@@ -374,8 +379,7 @@ async function getColors(dateRules, colorInfo, notesList) {
 // for display, and passes it back into setGroupForNote on drop.
 // When a grouping defines a no-value bucket (noValue.display set), unmatched
 // notes are keyed to NO_VALUE_KEY so getGroupColumns' matching column catches
-// them; otherwise they stay `null` and fall into KanbanView's generic
-// "Ungrouped" column.
+// them; otherwise they stay `null` and fall into a generic "Ungrouped" column.
 const NO_VALUE_KEY = "__novalue__"
 
 async function getGroups(dateRules, groupingInfo, notesList) {
@@ -441,28 +445,11 @@ async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
     }, [noteId, groupingInfo.label, targetGroupKey])
 }
 
-// Per-profile Table View state (which columns are shown + the sort order) is
-// stored in its own `tableViews` map in the config note, keyed by profile id,
-// rather than as a field on the profile itself — the profile editor's autosave
-// round-trips profiles through reshape/unshapeProfile, which would drop an
-// unrecognised field, so keeping this separate keeps it durable. Shape:
-//   values.tableViews[profileId] = { visible: {field: bool}, sort: [{column, dir}] }
-async function getTableView({ schemaNoteId, configNoteId }, profileId) {
-    const values = await loadSettings(schemaNoteId, configNoteId)
-    return (values.tableViews || {})[profileId] || null
-}
-
-async function saveTableView({ schemaNoteId, configNoteId }, profileId, state) {
-    const values = await loadSettings(schemaNoteId, configNoteId)
-    values.tableViews = { ...(values.tableViews || {}), [profileId]: state }
-    await saveSettings(schemaNoteId, configNoteId, values)
-}
-
 // Per-profile collapse state for the overview widget's dropdown sections
 // (Sort/Prefix/Color), kept in its own `sectionState` map keyed by profile id
-// for the same reason as `tableViews` above — the profile round-trips through
-// reshape/unshapeProfile, which would drop a field stored on the profile
-// itself. Shape: values.sectionState[profileId] = { sorts: bool, prefixes: bool, colors: bool }
+// so it stays durable — the profile round-trips through reshape/unshapeProfile,
+// which would drop a field stored on the profile itself. Shape:
+// values.sectionState[profileId] = { sorts: bool, prefixes: bool, colors: bool }
 async function getSectionState({ schemaNoteId, configNoteId }, profileId) {
     const values = await loadSettings(schemaNoteId, configNoteId)
     return (values.sectionState || {})[profileId] || null
@@ -509,72 +496,72 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 
-// Turns a virtual profile's user-chosen `viewNoteId` into a live Task View:
-// makes that note a `render` note and points its `~renderNote` relation at
-// the addon's shipped task-view code note (`taskViewNoteId`), so opening the
-// note renders taskView.jsx. Find-or-set — safe to call every update; only
-// touches the note when its type/relation is not already what we want.
-async function configureViewNote(viewNoteId, taskViewNoteId) {
-    if (!viewNoteId || !taskViewNoteId) return
-    await api.runOnBackend((viewNoteId, taskViewNoteId) => {
-        const note = api.getNote(viewNoteId)
+// Makes the shared overview note a Trilium collection: sets its type to
+// `book` and its `#viewType` label to the active profile's chosen view
+// (list/grid/table/board/calendar/geoMap/dashboard/presentation), so opening
+// the note shows the built-in collection view of its child tasks. Find-or-set
+// — safe to call every update; only touches the note when its type or
+// viewType is not already what we want.
+async function configureOverviewNote(overviewNoteId, viewType) {
+    if (!overviewNoteId || !viewType) return
+    await api.runOnBackend((overviewNoteId, viewType) => {
+        const note = api.getNote(overviewNoteId)
         if (!note) return
-        if (note.type !== "render" || note.mime !== "text/html") {
-            note.type = "render"
-            note.mime = "text/html"
+        if (note.type !== "book") {
+            note.type = "book"
             note.save()
         }
-        if (note.getRelationValue("renderNote") !== taskViewNoteId) {
-            note.setRelation("renderNote", taskViewNoteId)
+        if (note.getLabelValue("viewType") !== viewType) {
+            note.setLabel("viewType", viewType)
         }
-    }, [viewNoteId, taskViewNoteId])
+    }, [overviewNoteId, viewType])
 }
 
-async function updateTaskLists(profileContext, constants, icalNoteId, taskViewNoteId) {
+// Files the active profile's matching tasks into the single shared overview
+// note and refreshes the calendar/ical export. Only the active profile is
+// processed — switching the active profile re-populates the shared note with
+// that profile's tasks (loadNotes removes children that no longer match).
+async function updateTaskLists(profileContext, constants, icalNoteId) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
-    let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)) {
-        //await deleteChildBranches(profile.parentNoteId)
+    const profile = await getActiveProfile(profileContext)
+    if (!profile) return
+    const overviewNoteId = profileContext.overviewNoteId
+    if (overviewNoteId) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
-        if (profile.fileMode === "virtual") {
-            await configureViewNote(profile.viewNoteId, taskViewNoteId)
-        } else {
-            let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
-            let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
-            await loadNotes(profile["parentNoteId"], sortedNotes, prefixDict, colorDict)
-        }
-        await setCalendarEvents(profileContext, constants, icalNoteId)
+        await configureOverviewNote(overviewNoteId, profile.viewType || "list")
+        let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
+        let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
+        await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)
     }
+    await setCalendarEvents(profileContext, constants, icalNoteId)
 }
 
 async function getTaskList(profileContext) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
-    let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)) {
-        let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
-        let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
-        return filteredNotes
-    }
-    return []
+    const profile = await getActiveProfile(profileContext)
+    if (!profile) return []
+    let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
+    return await getFilteredNotes(data, profile.filterGroups.children, allNotes)
 }
 
-// Like getTaskList, but sorted (getTaskList is intentionally left
-// untouched — its existing callers don't need order, and this keeps their
-// behavior/blast-radius unchanged). `profileId` lets a caller with more
-// than one profile (e.g. a view page with a profile switcher) pick a
-// specific one instead of always taking the first match.
+// Like getTaskList, but sorted. `profileId` lets a caller with its own
+// profile switcher (e.g. the Task View page) pick a specific profile; when
+// omitted it falls back to the active profile, matching getTaskList.
 async function getSortedTaskList(profileContext, profileId = null) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
-    let profiles = await getAllProfiles(profileContext)
-    for (let profile of Object.values(profiles)) {
-        if (profileId && profile.id !== profileId) continue
-        let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
-        let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
-        return await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
+    let profile
+    if (profileId) {
+        const profiles = await getAllProfiles(profileContext)
+        profile = profiles.find(p => p.id === profileId)
+    } else {
+        profile = await getActiveProfile(profileContext)
     }
-    return []
+    if (!profile) return []
+    let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
+    let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
+    return await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
 }
 
 async function sendNotificationForDueTasks(profileContext, constants) {
@@ -617,18 +604,15 @@ module.exports = {
     loadData,
     getMatchingProfile,
     getAllProfiles,
+    getActiveProfile,
+    setActiveProfile,
     saveProfile,
     updateTaskLists,
-    configureViewNote,
     getTaskList,
     getSortedTaskList,
     getGroups,
-    getPrefixes,
-    getColors,
     getGroupColumns,
     setGroupForNote,
-    getTableView,
-    saveTableView,
     getSectionState,
     saveSectionState,
     sendNotificationForDueTasks,

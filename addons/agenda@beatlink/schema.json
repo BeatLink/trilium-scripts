@@ -53,6 +53,21 @@
         "default": "rank",
         "tab": "Settings"
     },
+    "overviewNoteId": {
+        "type": "note",
+        "label": "Overview Note",
+        "description": "The single shared collection note the active profile's matching tasks are filed under. Opening it shows the active profile's tasks in the chosen collection view.",
+        "default": "",
+        "tab": "Settings"
+    },
+    "activeProfileId": {
+        "type": "reference",
+        "registry": "profiles",
+        "label": "Active Profile",
+        "description": "Which profile currently populates the shared Overview Note. Switchable here or from the Agenda sidebar widget.",
+        "default": "default",
+        "tab": "Settings"
+    },
     "myDayNoteId": {
         "type": "note",
         "label": "My Day Note",
@@ -78,12 +93,6 @@
         "default": true,
         "tab": "My Day"
     },
-    "tableViews": {
-        "type": "json",
-        "hidden": true,
-        "label": "Table Views",
-        "default": {}
-    },
     "sectionState": {
         "type": "json",
         "hidden": true,
@@ -97,15 +106,19 @@
         "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Profile" },
-            "fileMode": {
-                "type": "select", "label": "Task Filing Mode", "default": "reparent",
+            "viewType": {
+                "type": "select", "label": "Collection View", "default": "list",
                 "options": [
-                    { "value": "reparent", "label": "File Tasks as Children" },
-                    { "value": "virtual", "label": "Virtual View Only" }
+                    { "value": "list", "label": "List" },
+                    { "value": "grid", "label": "Grid" },
+                    { "value": "table", "label": "Table" },
+                    { "value": "board", "label": "Board" },
+                    { "value": "calendar", "label": "Calendar" },
+                    { "value": "geoMap", "label": "Geo Map" },
+                    { "value": "dashboard", "label": "Dashboard" },
+                    { "value": "presentation", "label": "Presentation" }
                 ]
             },
-            "parentNoteId": { "type": "note", "label": "File Tasks Under", "default": "", "showWhen": { "fileMode": "reparent" } },
-            "viewNoteId": { "type": "note", "label": "Virtual View Note", "default": "", "showWhen": { "fileMode": "virtual" } },
             "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
             "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
             "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
@@ -116,9 +129,7 @@
         "default": {
             "default": {
                 "name": "default",
-                "parentNoteId": "",
-                "viewNoteId": "",
-                "fileMode": "reparent",
+                "viewType": "list",
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",
                 "colorSelected": "priority",
