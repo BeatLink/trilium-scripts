@@ -139,7 +139,12 @@ carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: id
 
 Runs the active profile's searches/filters/sort/prefix/color rules and re-files the resulting notes
 as children of the shared overview note (`profileContext.overviewNoteId`), making that note a
-`book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`). When that
+`book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`). It also
+promotes the task attributes named in `constants` (start/due date+time, duration, recurrence) as
+`#label:<name>=promoted,...` definitions on the overview note (`promotedAttributesForConstants`), so
+the `table` and `grid` views render them as columns; a signature label suppresses re-stamping on
+routine refreshes, and definitions no longer wanted are removed so a renamed label can't leave a
+stale column. When that
 view is `board`, the profile's selected Kanban Grouping drives Trilium's built-in board columns via a
 single `#status` helper label. `computeStatuses` projects any grouping type (label / dayjs date-window
 / recurrence-frequency) onto each task's bucket display name; `configureOverviewNote` always sets

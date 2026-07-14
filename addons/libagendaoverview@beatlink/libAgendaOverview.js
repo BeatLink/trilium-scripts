@@ -523,14 +523,35 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 // `#agendaBoardColumns` signature) so routine refreshes don't flip/flicker; the
 // status stamp (step 2) always runs. Trilium orders the rebuilt columns by
 // discovery among the present `#status` values (empty columns don't appear).
-async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "", statusByNote = {}, boardColumns = []) {
+async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "", statusByNote = {}, boardColumns = [], promotedAttributes = []) {
     if (!overviewNoteId || !viewType) return
-    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns) => {
+    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes) => {
         const note = api.getNote(overviewNoteId)
         if (!note) return
         if (note.type !== "book") {
             note.type = "book"
             note.save()
+        }
+
+        // Promote the task attributes so the table/grid collection view can show
+        // them as columns. Each entry is a `#label:<name>` definition whose value
+        // is the Trilium promoted-attribute-definition grammar (e.g.
+        // `promoted,single,date,alias=Due`). Definitions we set that are no longer
+        // wanted get removed so a renamed/removed label doesn't leave a stale
+        // column; a signature label keeps routine refreshes from re-stamping.
+        const promotedSignature = promotedAttributes.map(a => `${a.name}=${a.definition}`).join("|")
+        if (note.getLabelValue("agendaPromotedAttributes") !== promotedSignature) {
+            const wanted = new Set(promotedAttributes.map(a => `label:${a.name}`))
+            for (const label of note.getOwnedAttributes("label")) {
+                if (label.name.startsWith("label:") && !wanted.has(label.name)) {
+                    note.removeLabel(label.name)
+                }
+            }
+            for (const attr of promotedAttributes) {
+                const defName = `label:${attr.name}`
+                if (note.getLabelValue(defName) !== attr.definition) note.setLabel(defName, attr.definition)
+            }
+            note.setLabel("agendaPromotedAttributes", promotedSignature)
         }
 
         if (boardGroupBy) {
@@ -572,7 +593,26 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
-    }, [overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns])
+    }, [overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes])
+}
+
+// The task attributes to promote on the overview note so a table/grid collection
+// view can render them as columns. Names come from the injected `constants`
+// (they're user-configurable label names), each paired with its Trilium
+// promoted-attribute-definition string and a display alias. Undefined constants
+// (an unconfigured label) are skipped.
+function promotedAttributesForConstants(constants = {}) {
+    const specs = [
+        [constants.START_DATE_LABEL, "promoted,single,date", "Start Date"],
+        [constants.START_TIME_LABEL, "promoted,single,time", "Start Time"],
+        [constants.DUE_DATE_LABEL, "promoted,single,date", "Due Date"],
+        [constants.DUE_TIME_LABEL, "promoted,single,time", "Due Time"],
+        [constants.DURATION_LABEL, "promoted,single,number", "Duration"],
+        [constants.RECURRENCE_LABEL, "promoted,single,text", "Recurrence"]
+    ]
+    return specs
+        .filter(([name]) => name)
+        .map(([name, definition, alias]) => ({ name, definition: `${definition},alias=${alias}` }))
 }
 
 // Every board grouping is projected onto the single `#status` helper label
@@ -631,7 +671,8 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         if (boardGroupBy === "status") {
             ({ statusByNote, columns: boardColumns } = await computeStatuses(data.dateRules, grouping, sortedNotes))
         }
-        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns)
+        const promotedAttributes = promotedAttributesForConstants(constants)
+        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes)
         let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
         let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)
