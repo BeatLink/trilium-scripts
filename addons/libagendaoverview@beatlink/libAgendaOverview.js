@@ -509,17 +509,19 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 // Find-or-set — safe to call every update; only touches the note when its
 // type/viewType/board:groupBy isn't already what we want.
 //
-// When board:groupBy actually changes, the note's persisted board state (a
-// `board.json` / role `viewConfig` attachment Trilium writes, holding the
-// previous field's `{ columns: [{ value }] }` list) is reset to empty columns
-// so Trilium rebuilds them from the new field — otherwise it keeps the old
-// field's (now phantom) columns, since getBoardData preserves every persisted
-// column unconditionally (board/data.ts). We overwrite its content rather than
-// delete the attachment (deleting it here throws). Only reset on a real
-// change, so a user's manual column reordering under a stable field survives.
-async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "") {
+// `boardColumns` is the column list (`[{ value }]`) for the new field, from
+// the selected grouping. When board:groupBy changes, the note's persisted
+// board state (a `board.json` / role `viewConfig` attachment) still holds the
+// PREVIOUS field's columns, and Trilium's getBoardData preserves persisted
+// columns unconditionally (board/data.ts) — so without intervention the old
+// field's now-phantom columns stay on screen. We rewrite `board.json` with the
+// new field's columns (see the ORDER MATTERS note in the body for why this
+// must happen before the label change, and why we write the real columns
+// rather than blank). Only rewritten on a real change, so manual column
+// reordering under a stable field survives.
+async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "", boardColumns = []) {
     if (!overviewNoteId || !viewType) return
-    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
+    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy, boardColumns) => {
         const note = api.getNote(overviewNoteId)
         if (!note) return
         if (note.type !== "book") {
@@ -529,7 +531,30 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
+
+        // ORDER MATTERS. Setting `#board:groupBy` triggers the open board's
+        // `entitiesReloaded` handler, which calls `refresh()` reading its
+        // *stale in-memory* viewConfig and re-persisting it — a race that
+        // reintroduces the previous field's columns. So write `board.json`
+        // FIRST (before the label change fires that refresh) and with the
+        // CORRECT columns for the new field (not empty), so even a stale
+        // re-save converges to the right columns instead of clobbering them.
+        // `forceFullSave` saves the BAttachment row (so the change shows up in
+        // the frontend's attachmentRows and useViewModeConfig re-reads it);
+        // `forceFrontendReload` stops the board treating it as its own echo.
         const prevGroupBy = note.getLabelValue("board:groupBy")
+        const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
+        if (groupByChanged) {
+            const boardConfig = note.getAttachmentByTitle("board.json")
+            if (boardConfig) {
+                boardConfig.setContent(JSON.stringify({ columns: boardColumns }), {
+                    forceSave: true,
+                    forceFullSave: true,
+                    forceFrontendReload: true
+                })
+            }
+        }
+
         if (boardGroupBy) {
             if (prevGroupBy !== boardGroupBy) {
                 note.setLabel("board:groupBy", boardGroupBy)
@@ -537,24 +562,7 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
         } else if (note.hasLabel("board:groupBy")) {
             note.removeLabel("board:groupBy")
         }
-        const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
-        const boardConfig = groupByChanged ? note.getAttachmentByTitle("board.json") : null
-        if (boardConfig) {
-            // Blank the persisted columns so Trilium regenerates them for the
-            // new field; keep the attachment (title/role/mime) intact.
-            // `forceFullSave` also saves the BAttachment row (not just its
-            // blob) so the change appears in the frontend's attachmentRows and
-            // the open board's useViewModeConfig re-reads it; `forceFrontendReload`
-            // stops the board from mistaking it for an echo of its own save.
-            // Without both, the board keeps its stale in-memory columns and
-            // re-persists them, leaving the old columns on screen.
-            boardConfig.setContent(JSON.stringify({ columns: [] }), {
-                forceSave: true,
-                forceFullSave: true,
-                forceFrontendReload: true
-            })
-        }
-    }, [overviewNoteId, viewType, boardGroupBy])
+    }, [overviewNoteId, viewType, boardGroupBy, boardColumns])
 }
 
 // Derives Trilium's `#board:groupBy` field from a profile's selected Kanban
@@ -567,6 +575,20 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
 function boardGroupByForProfile(viewType, grouping) {
     if (viewType !== "board" || !grouping || grouping.type !== "label") return ""
     return grouping.label || ""
+}
+
+// The exact column list Trilium's `board.json` persists (`{ columns: [{ value }] }`)
+// for a `type:"label"` grouping: the grouping's own defined columns, in its
+// registry order, each column's `value` being the note label value that lands
+// in it. The addon-internal NO_VALUE_KEY sentinel is excluded — it's not a
+// real label value any note carries. Returns [] for anything that has no
+// stable set of columns (no/other grouping), letting Trilium derive columns
+// from the notes itself.
+function boardColumnsForProfile(viewType, grouping) {
+    if (viewType !== "board" || !grouping || grouping.type !== "label") return []
+    return getGroupColumns(grouping)
+        .filter(col => col.key !== NO_VALUE_KEY)
+        .map(col => ({ value: col.key }))
 }
 
 // Files the active profile's matching tasks into the single shared overview
@@ -583,8 +605,10 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
         const viewType = profile.viewType || "list"
-        const boardGroupBy = boardGroupByForProfile(viewType, data.groupings[profile.groupings.selected])
-        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy)
+        const grouping = data.groupings[profile.groupings.selected]
+        const boardGroupBy = boardGroupByForProfile(viewType, grouping)
+        const boardColumns = boardColumnsForProfile(viewType, grouping)
+        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, boardColumns)
         let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
         let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)
