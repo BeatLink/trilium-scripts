@@ -511,10 +511,12 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 //
 // When board:groupBy actually changes, the note's persisted board state (a
 // `board.json` / role `viewConfig` attachment Trilium writes, holding the
-// previous field's `{ columns: [{ value }] }` list) is deleted so Trilium
-// rebuilds the columns from the new field — otherwise it keeps showing the old
-// field's columns. Only deleted on a real change, so a user's manual column
-// reordering under a stable field survives.
+// previous field's `{ columns: [{ value }] }` list) is reset to empty columns
+// so Trilium rebuilds them from the new field — otherwise it keeps the old
+// field's (now phantom) columns, since getBoardData preserves every persisted
+// column unconditionally (board/data.ts). We overwrite its content rather than
+// delete the attachment (deleting it here throws). Only reset on a real
+// change, so a user's manual column reordering under a stable field survives.
 async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "") {
     if (!overviewNoteId || !viewType) return
     await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
@@ -536,12 +538,16 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
             note.removeLabel("board:groupBy")
         }
         const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
-        if (groupByChanged) {
-            // Trilium keys the board's persisted state by title "board.json"
-            // under the "viewConfig" attachment role (view_mode_storage.ts).
-            for (const att of note.getAttachmentsByRole("viewConfig")) {
-                if (att.title === "board.json") att.markAsDeleted()
-            }
+        if (groupByChanged && note.getAttachmentByTitle("board.json")) {
+            // Blank the persisted columns so Trilium regenerates them for the
+            // new field; keep the attachment (title/role/mime) intact.
+            note.saveAttachment({
+                title: "board.json",
+                role: "viewConfig",
+                mime: "application/json",
+                content: JSON.stringify({ columns: [] }),
+                position: 0
+            }, "title")
         }
     }, [overviewNoteId, viewType, boardGroupBy])
 }
