@@ -33,5 +33,6 @@ ci               # validate then build every addon's ZIP
 
 zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
 tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP
-generate_pages            # build GitHub Pages site into docs/ and regenerate README.md
+generate_pages            # build GitHub Pages site into docs/ (incl. catalog.json)
+generate_readme           # regenerate README.md's addon table from manifests
 ```

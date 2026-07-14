@@ -337,68 +337,15 @@ def generate_catalog(addons, docs_dir):
 
 
 # ---------------------------------------------------------------------------
-# README generator
+# Addon loading (shared with generate_readme.py)
 # ---------------------------------------------------------------------------
 
-README_START = "<!-- GENERATED:START -->"
-README_END   = "<!-- GENERATED:END -->"
-
-
-def generate_readme(addons):
-    base_path = Path("README_base.md")
-    if not base_path.exists():
-        print("WARNING: README_base.md not found — skipping README generation")
-        return
-
-    base = base_path.read_text()
-
-    rows = []
-    for a in sorted(addons, key=lambda x: x["meta"].get("name", x["meta"]["id"]).lower()):
-        m    = a["meta"]
-        aid  = m["id"]
-        name = m.get("name", aid)
-        t    = m.get("type", "")
-        # Escape raw HTML (GitHub's markdown renderer embeds it, so an
-        # unclosed tag like a literal "<details>" in a description would
-        # swallow the rest of the table) and markdown table pipes.
-        desc = html.escape(m.get("description", "").split("\n")[0]).replace("|", "\\|")
-        ver  = m.get("latestVersion", "")
-        link = f"[{name}](addons/{a['outer_dir'].name}/)"
-        rows.append(f"| {link} | {t} | {desc} | {ver} |")
-
-    table = "\n".join([
-        "| Name | Type | Description | Version |",
-        "|------|------|-------------|---------|",
-        *rows,
-    ])
-
-    start_idx = base.find(README_START)
-    end_idx   = base.find(README_END)
-
-    if start_idx == -1 or end_idx == -1:
-        print("WARNING: README_base.md missing GENERATED markers — skipping README generation")
-        return
-
-    after_start = start_idx + len(README_START)
-    new_readme  = base[:after_start] + "\n" + table + "\n" + base[end_idx:]
-
-    Path("README.md").write_text(new_readme)
-    print(f"Generated README.md with {len(rows)} addons")
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-def main():
+def load_addons():
+    """Parse every addon manifest under addons/ into {meta, readme_html, outer_dir}."""
     addons_dir = Path("addons")
-    docs_dir   = Path("docs")
-
     if not addons_dir.is_dir():
         print("ERROR: no 'addons/' directory — run from repo root")
         sys.exit(1)
-
-    docs_dir.mkdir(exist_ok=True)
 
     addons = []
     for meta_file in sorted(addons_dir.glob("*/_tam_manifest_.json")):
@@ -421,6 +368,18 @@ def main():
 
         addons.append({"meta": meta, "readme_html": readme_html, "outer_dir": outer_dir})
 
+    return addons
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    docs_dir = Path("docs")
+    docs_dir.mkdir(exist_ok=True)
+
+    addons = load_addons()
     metas, edges = build_dep_graph(addons)
 
     # Per-addon pages
@@ -442,7 +401,6 @@ def main():
     print(f"Generated docs/ for {len(addons)} addons")
 
     generate_catalog(addons, docs_dir)
-    generate_readme(addons)
 
 
 if __name__ == "__main__":

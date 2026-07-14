@@ -679,13 +679,21 @@ Generates the static GitHub Pages catalog site at `docs/`. For each addon:
 - Author names link to their GitHub profiles.
 - Download buttons: **Download ZIP** (Trilium import), **View Manifest** (the addon's own `manifestSourceUrl`, if set), **Source** (GitHub homepage).
 
-Also generates `docs/catalog.json` — the `{"tam-addons": [...]}` list of every addon's own `manifestSourceUrl` (addons missing one are skipped) — this is what TAM's "add catalog" action consumes; see [Catalog Format](#catalog-format). And regenerates `README.md` from `README_base.md` by injecting an addon table between `<!-- GENERATED:START -->` and `<!-- GENERATED:END -->` markers.
+Also generates `docs/catalog.json` — the `{"tam-addons": [...]}` list of every addon's own `manifestSourceUrl` (addons missing one are skipped) — this is what TAM's "add catalog" action consumes; see [Catalog Format](#catalog-format).
 
 ```
 python resources/scripts/generate_pages.py
 ```
 
 Requires the `markdown` package (`pip install markdown`).
+
+### `generate_readme.py`
+
+Regenerates `README.md` from `README_base.md` by injecting an addon table (name, type, description, version) between the `<!-- GENERATED:START -->` and `<!-- GENERATED:END -->` markers. Shares manifest loading with `generate_pages.py`.
+
+```
+python resources/scripts/generate_readme.py
+```
 
 ### `publish_release.py` *(CI-only)*
 

@@ -58,7 +58,6 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 | [Notification Library](addons/libnotification@beatlink/) | library | Shared library for sending desktop notifications from TriliumNext scripts. | 2.0.0 |
 | [Notifications](addons/notifications@beatlink/) | script | Polls for notes matching a date label and sends desktop notifications for past-due items. | 1.1.2 |
 | [Priority Widget](addons/priority-widget@beatlink/) | widget | A widget to set the priority of a note | 1.0.3 |
-| [Rank Picker](addons/librankpicker@beatlink/) | library | Reusable Preact component rendering a numeric rank editor for a note, for TriliumNext widget UIs that need a manual sort order. | 1.0.0 |
 | [Recurrence](addons/librecurrence@beatlink/) | library | Converts between an RRULE string and a plain object shaped for a recurrence-picker UI, on top of the vendored rrule.js library. | 1.3.0 |
 | [Recurrence](addons/recurrence@beatlink/) | widget | Adds an RRULE recurrence picker and a Mark Done launcher button to any note, with configurable date/recurrence label names. | 1.0.1 |
 | [Recurrence Picker](addons/librecurrencepicker@beatlink/) | library | Reusable Preact component rendering a full RRULE recurrence-editing form (interval, weekdays, day-of-month, weekday-of-month, time-of-day, stop condition) for TriliumNext widget UIs. | 1.2.0 |
@@ -89,5 +88,6 @@ ci               # validate then build every addon's ZIP
 
 zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
 tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP
-generate_pages            # build GitHub Pages site into docs/ and regenerate README.md
+generate_pages            # build GitHub Pages site into docs/ (incl. catalog.json)
+generate_readme           # regenerate README.md's addon table from manifests
 ```
