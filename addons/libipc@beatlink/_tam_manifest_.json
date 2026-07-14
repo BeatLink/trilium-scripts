@@ -1,0 +1,44 @@
+{
+    "id": "libipc@beatlink",
+    "name": "IPC Library",
+    "description": "Cross-plugin live event bus for TriliumNext frontend addons: broadcast events between addons with no shared config or persistence.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libipc@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libipc@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "lib",
+        "notes": [
+            {
+                "id": "lib",
+                "title": "libIpc.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libipc.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "lib",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [],
+        "dependencies": [],
+        "exports": {
+            "lib": "lib"
+        },
+        "readmeNote": "readme"
+    }
+}
