@@ -250,6 +250,22 @@ function AgendaOverviewWidgetJSX() {
                     />
                 </div>
 
+                {/* Board Columns — only meaningful for the board view, where
+                    the picked grouping's field drives the built-in board's
+                    columns (#board:groupBy). Sits right under Collection View. */}
+                {profile.viewType === "board" && (
+                    <DropdownSection
+                        title="Board Columns"
+                        sectionPath={["groupings"]}
+                        registryKey="groupings"
+                        registry={registry}
+                        profile={profile}
+                        update={update}
+                        expanded={sectionState.groupings !== false}
+                        onToggle={toggleSection("groupings")}
+                    />
+                )}
+
                 {/* Search */}
                 <CheckboxSection
                     title="Searches"
@@ -304,21 +320,6 @@ function AgendaOverviewWidgetJSX() {
                     onToggle={toggleSection("colors")}
                 />
 
-                {/* Board Grouping — only meaningful for the board view, where
-                    the picked grouping's field drives the built-in board's
-                    columns (#board:groupBy) */}
-                {profile.viewType === "board" && (
-                    <DropdownSection
-                        title="Board Columns"
-                        sectionPath={["groupings"]}
-                        registryKey="groupings"
-                        registry={registry}
-                        profile={profile}
-                        update={update}
-                        expanded={sectionState.groupings !== false}
-                        onToggle={toggleSection("groupings")}
-                    />
-                )}
                 <div>
                     <label>Actions</label>
                     <div>
