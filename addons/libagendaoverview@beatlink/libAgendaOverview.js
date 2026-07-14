@@ -538,16 +538,21 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
             note.removeLabel("board:groupBy")
         }
         const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
-        if (groupByChanged && note.getAttachmentByTitle("board.json")) {
+        const boardConfig = groupByChanged ? note.getAttachmentByTitle("board.json") : null
+        if (boardConfig) {
             // Blank the persisted columns so Trilium regenerates them for the
             // new field; keep the attachment (title/role/mime) intact.
-            note.saveAttachment({
-                title: "board.json",
-                role: "viewConfig",
-                mime: "application/json",
-                content: JSON.stringify({ columns: [] }),
-                position: 0
-            }, "title")
+            // `forceFullSave` also saves the BAttachment row (not just its
+            // blob) so the change appears in the frontend's attachmentRows and
+            // the open board's useViewModeConfig re-reads it; `forceFrontendReload`
+            // stops the board from mistaking it for an echo of its own save.
+            // Without both, the board keeps its stale in-memory columns and
+            // re-persists them, leaving the old columns on screen.
+            boardConfig.setContent(JSON.stringify({ columns: [] }), {
+                forceSave: true,
+                forceFullSave: true,
+                forceFrontendReload: true
+            })
         }
     }, [overviewNoteId, viewType, boardGroupBy])
 }
