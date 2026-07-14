@@ -139,10 +139,13 @@ carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: id
 
 Runs the active profile's searches/filters/sort/prefix/color rules and re-files the resulting notes
 as children of the shared overview note (`profileContext.overviewNoteId`), making that note a
-`book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`).
-`loadNotes` removes children that no longer match, so switching the active profile re-populates the
-note with the new profile's tasks. Refreshes the iCal feed unconditionally. No-op on the overview
-note when `overviewNoteId` is unset, but the iCal refresh still runs.
+`book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`). When that
+view is `board`, the profile's selected Kanban Grouping also drives Trilium's built-in board columns:
+a `type:"label"` grouping's label is written as `#board:groupBy` (a `type:"dayjs"` grouping can't map
+to a single field, so no `board:groupBy` is set and Trilium uses its default columns). `loadNotes`
+removes children that no longer match, so switching the active profile re-populates the note with the
+new profile's tasks. Refreshes the iCal feed unconditionally. No-op on the overview note when
+`overviewNoteId` is unset, but the iCal refresh still runs.
 
 ### `getTaskList(profileContext)`
 

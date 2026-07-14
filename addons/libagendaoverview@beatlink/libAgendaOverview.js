@@ -499,12 +499,18 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 // Makes the shared overview note a Trilium collection: sets its type to
 // `book` and its `#viewType` label to the active profile's chosen view
 // (list/grid/table/board/calendar/geoMap/dashboard/presentation), so opening
-// the note shows the built-in collection view of its child tasks. Find-or-set
-// — safe to call every update; only touches the note when its type or
-// viewType is not already what we want.
-async function configureOverviewNote(overviewNoteId, viewType) {
+// the note shows the built-in collection view of its child tasks.
+// `boardGroupBy` is Trilium's own `#board:groupBy` field for the built-in
+// board (Kanban) view — the note field whose values become the board columns,
+// bare for a label (`priority`) or `~`-prefixed for a relation. It's set only
+// when there is one to apply (derived from the profile's selected Kanban
+// Grouping), and removed otherwise, so a non-board view or a grouping that
+// can't map to a single field leaves Trilium's default column behavior alone.
+// Find-or-set — safe to call every update; only touches the note when its
+// type/viewType/board:groupBy isn't already what we want.
+async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "") {
     if (!overviewNoteId || !viewType) return
-    await api.runOnBackend((overviewNoteId, viewType) => {
+    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
         const note = api.getNote(overviewNoteId)
         if (!note) return
         if (note.type !== "book") {
@@ -514,7 +520,26 @@ async function configureOverviewNote(overviewNoteId, viewType) {
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
-    }, [overviewNoteId, viewType])
+        if (boardGroupBy) {
+            if (note.getLabelValue("board:groupBy") !== boardGroupBy) {
+                note.setLabel("board:groupBy", boardGroupBy)
+            }
+        } else if (note.hasLabel("board:groupBy")) {
+            note.removeLabel("board:groupBy")
+        }
+    }, [overviewNoteId, viewType, boardGroupBy])
+}
+
+// Derives Trilium's `#board:groupBy` field from a profile's selected Kanban
+// Grouping (`data.groupings[id]`, as reshaped by `reshapeGrouping`). A
+// `type:"label"` grouping names a single note label, which maps directly to
+// the board's grouping field; a `type:"dayjs"` grouping groups by computed
+// date windows, which the native board can't express, so it yields "" (no
+// board:groupBy — Trilium falls back to its default columns). Returns "" when
+// no grouping is selected or the view isn't `board`.
+function boardGroupByForProfile(viewType, grouping) {
+    if (viewType !== "board" || !grouping || grouping.type !== "label") return ""
+    return grouping.label || ""
 }
 
 // Files the active profile's matching tasks into the single shared overview
@@ -530,7 +555,9 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let allNotes = await getNotesForSearchGroups(data, profile.searchGroups.children)
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
-        await configureOverviewNote(overviewNoteId, profile.viewType || "list")
+        const viewType = profile.viewType || "list"
+        const boardGroupBy = boardGroupByForProfile(viewType, data.groupings[profile.groupings.selected])
+        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy)
         let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
         let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)

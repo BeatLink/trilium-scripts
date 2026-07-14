@@ -59,12 +59,14 @@ widgets plus a single schema-driven editor page:
    which run only while that note is open.
 7. Each profile's **Collection View** (Profiles tab) picks which built-in Trilium view the shared
    Overview Note is shown as (list/grid/table/board/calendar/geoMap/dashboard/presentation) once that
-   profile's tasks are filed under it. A profile's **Kanban Grouping** (also Profiles tab, referencing
-   a **Groupings** tab entry) drives the addon's own column-grouping registry — build one there the
-   same way you build a Prefix or Color entry (by label value, or by date rule), except each column
-   also gets its own display name and color. Three groupings ship by default, mirroring the
-   Prefix/Color defaults — **By Priority** (the "default" profile's initial pick), **By Area**, and
-   **By Interval** (date windows).
+   profile's tasks are filed under it. When the view is **board**, the profile's **Kanban Grouping**
+   (also Profiles tab, referencing a **Groupings** tab entry — and editable inline from the Overview
+   widget's **Board Columns** dropdown) picks which note field generates the board's columns: a
+   label-type grouping's label is written to the Overview Note as Trilium's own `#board:groupBy`.
+   Build a grouping the same way you build a Prefix or Color entry (by label value, or by date rule);
+   only label-type groupings map to native board columns, since a date-window grouping isn't a single
+   settable field. Three groupings ship by default — **By Priority** (the "default" profile's initial
+   pick), **By Area**, and **By Interval** (date windows).
 
 ## Architecture
 
