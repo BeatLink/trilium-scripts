@@ -18,12 +18,12 @@ jobs:
           python-version: "3.11"
 
       - name: Validate
-        run: python resources/scripts/validate.py
+        run: python resources/scripts/tamhelper.py validate
 
       - name: Build addon ZIPs
-        run: python resources/scripts/tam_to_zip.py --all
+        run: python resources/scripts/tamhelper.py tam-to-zip --all
 
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python resources/scripts/publish_release.py
+        run: python resources/scripts/tamhelper.py publish-release

@@ -8,16 +8,17 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    validate()             { python3 resources/scripts/validate.py "$@"; }
+    tamhelper()            { python3 resources/scripts/tamhelper.py "$@"; }
+    validate()             { tamhelper validate "$@"; }
     ci()                   { validate && tam_to_zip --all; }
-    generate_pages()       { python3 resources/scripts/generate_pages.py "$@"; }
-    generate_readme()      { python3 resources/scripts/generate_readme.py "$@"; }
-    zip_to_tam()           { python3 resources/scripts/zip_to_tam.py "$@"; }
-    tam_to_zip()           { python3 resources/scripts/tam_to_zip.py "$@"; }
-    publish_release()      { python3 resources/scripts/publish_release.py "$@"; }
-    backfill_manifest_source_url() { python3 resources/scripts/backfill_manifest_source_url.py "$@"; }
+    generate_pages()       { tamhelper generate-pages "$@"; }
+    generate_readme()      { tamhelper generate-readme "$@"; }
+    zip_to_tam()           { tamhelper zip-to-tam "$@"; }
+    tam_to_zip()           { tamhelper tam-to-zip "$@"; }
+    publish_release()      { tamhelper publish-release "$@"; }
+    backfill_manifest_source_url() { tamhelper backfill-source-url "$@"; }
 
-    export -f validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
+    export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
 
     # playwright-driver.browsers ships prebuilt browser binaries matching the
     # exact revision the pinned `playwright` Python package expects -- point
