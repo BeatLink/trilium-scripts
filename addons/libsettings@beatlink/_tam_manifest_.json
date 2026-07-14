@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libsettings@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.17.0",
+    "latestVersion": "1.17.1",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libsettings@beatlink/_tam_manifest_.json",
@@ -63,8 +63,8 @@
             },
             {
                 "parent": "ui",
-                "addon": "libcolorpicker@beatlink",
-                "child": "lib"
+                "addon": "libformcontrols@beatlink",
+                "child": "colorpicker"
             },
             {
                 "parent": "root",
@@ -80,7 +80,7 @@
             }
         ],
         "dependencies": [
-            "libcolorpicker@beatlink"
+            "libformcontrols@beatlink"
         ],
         "exports": {
             "backend": "backend",
