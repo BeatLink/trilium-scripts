@@ -30,7 +30,9 @@ function MyDay() {
     const [ids, setIds] = useState(null)
     useEffect(() => {
         (async () => {
-            const { constants, profileContext, myDay } = await getAgendaSettings()
+            const settings = await getAgendaSettings()
+            if (!settings) return
+            const { constants, profileContext, myDay } = settings
             const defaultNoteId = await startNote.getRelationValue("nowNote")
             setIds({ constants, profileContext, myDay, defaultNoteId })
         })()

@@ -1,0 +1,80 @@
+{
+    "id": "agenda-task@beatlink",
+    "name": "Agenda Task",
+    "description": "The task-editing half of the Agenda system: a right-pane widget for editing a task's start/due dates, duration, recurrence, and quick actions (complete, start today/tomorrow). Appears on any note carrying the #agendaTaskWidget label. Reads the shared Agenda configuration owned by agenda-overview@beatlink (discovered at runtime by its #agendaConfig label), so label names and profiles stay in sync across the Agenda addons; install Agenda Overview for this widget to have a configuration to read.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "agenda-task@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "agenda-settings",
+                "title": "agendaSettings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "agendaSettings.jsx"
+            },
+            {
+                "id": "common-css",
+                "title": "agendaCommon.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "agendaCommon.css"
+            },
+            {
+                "id": "task",
+                "title": "agendaTask.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "agendaTask.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            { "parent": "root", "child": "agenda-settings" },
+            { "parent": "root", "child": "common-css" },
+            { "parent": "root", "child": "task" },
+            { "parent": "task", "child": "agenda-settings" },
+            { "parent": "task", "addon": "libdatesdurationpicker@beatlink", "child": "lib" },
+            { "parent": "task", "addon": "librecurrencepicker@beatlink", "child": "lib" },
+            { "parent": "task", "addon": "libactionbar@beatlink", "child": "lib" },
+            { "parent": "task", "addon": "libagendatask@beatlink", "child": "lib" },
+            { "parent": "task", "addon": "libagendaoverview@beatlink", "child": "lib" },
+            { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
+            { "parent": "root", "child": "readme" }
+        ],
+        "relations": [],
+        "labels": [
+            { "note": "common-css", "name": "appCss", "value": "" },
+            { "note": "task", "name": "widget", "value": "" }
+        ],
+        "dependencies": [
+            "libdatesdurationpicker@beatlink",
+            "librecurrencepicker@beatlink",
+            "libactionbar@beatlink",
+            "libagendatask@beatlink",
+            "libagendaoverview@beatlink",
+            "libsettings@beatlink"
+        ],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}

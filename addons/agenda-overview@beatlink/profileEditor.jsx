@@ -15,9 +15,10 @@ export default function ProfileEditor() {
 
     useEffect(() => {
         (async () => {
-            const { schemaNoteId, configNoteId } = await getAgendaSettings()
-            setSchemaNoteId(schemaNoteId)
-            setConfigNoteId(configNoteId)
+            const settings = await getAgendaSettings()
+            if (!settings) return
+            setSchemaNoteId(settings.schemaNoteId)
+            setConfigNoteId(settings.configNoteId)
         })()
     }, [])
 

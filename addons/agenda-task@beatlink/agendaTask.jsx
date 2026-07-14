@@ -8,8 +8,6 @@ import {
     useState
 } from "trilium:preact";
 
-import { startNote } from "trilium:api"
-
 import { DatesDurationPicker } from "DatesDurationPicker.jsx"
 import { RecurrencePicker } from "RecurrencePicker.jsx"
 import { ActionBar } from "ActionBar.jsx"
@@ -29,8 +27,9 @@ function MainWidget(){
     // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
-            const { constants, profileContext } = await getAgendaSettings()
-            const icalNoteId = await startNote.getRelationValue("icalNote")
+            const settings = await getAgendaSettings()
+            if (!settings) return
+            const { constants, profileContext, icalNoteId } = settings
             setIds({ constants, profileContext, icalNoteId })
         })()
     }, [])

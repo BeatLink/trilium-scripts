@@ -1,0 +1,144 @@
+{
+    "id": "agenda-overview@beatlink",
+    "name": "Agenda Overview",
+    "description": "The overview half of the Agenda system, and the owner of its shared configuration. A right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a single shared overview note shown as a built-in Trilium collection view, exporting an iCal feed. Ships the schema-driven, multi-profile config (label-name vocabulary, profiles, searches/filters/sorts/prefixes/colors/groupings/date-rules) and the Agenda Editor page that edits it. Its settings-anchor note is tagged #agendaConfig so the separate Agenda Task and Agenda My Day addons discover and read the same live config.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-overview@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "settingsNote": "profile-editor-page",
+        "notes": [
+            {
+                "id": "root",
+                "title": "agenda-overview@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "agenda-settings",
+                "title": "agendaSettings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "agendaSettings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config.json"
+            },
+            {
+                "id": "settings",
+                "title": "Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "ical",
+                "title": "calendarEvents.ical",
+                "type": "code",
+                "mime": "text/plain",
+                "sourceUrl": "calendarEvents.ical"
+            },
+            {
+                "id": "common-css",
+                "title": "agendaCommon.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "agendaCommon.css"
+            },
+            {
+                "id": "overview",
+                "title": "agendaOverview.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "agendaOverview.jsx"
+            },
+            {
+                "id": "profile-editor-page",
+                "title": "Agenda Editor",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "profile-editor",
+                "title": "profileEditor.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "profileEditor.jsx"
+            },
+            {
+                "id": "profile-editor-css",
+                "title": "profileEditor.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "profileEditor.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            { "parent": "root", "child": "agenda-settings" },
+            { "parent": "root", "child": "schema" },
+            { "parent": "root", "child": "config" },
+            { "parent": "root", "child": "settings" },
+            { "parent": "root", "child": "ical" },
+            { "parent": "root", "child": "common-css" },
+            { "parent": "root", "child": "overview" },
+            { "parent": "overview", "child": "agenda-settings" },
+            { "parent": "overview", "addon": "libagendaoverview@beatlink", "child": "lib" },
+            { "parent": "overview", "addon": "libcollapsible@beatlink", "child": "lib" },
+            { "parent": "overview", "addon": "libformcheckboxgroup@beatlink", "child": "lib" },
+            { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
+            { "parent": "root", "child": "profile-editor-page" },
+            { "parent": "profile-editor-page", "child": "profile-editor" },
+            { "parent": "root", "child": "profile-editor-css" },
+            { "parent": "profile-editor", "child": "agenda-settings" },
+            { "parent": "profile-editor", "addon": "libsettings@beatlink", "child": "ui" },
+            { "parent": "root", "child": "readme" }
+        ],
+        "relations": [
+            { "from": "settings", "type": "AddonData:config", "to": "config" },
+            { "from": "settings", "type": "schemaNote", "to": "schema" },
+            { "from": "settings", "type": "icalNote", "to": "ical" },
+            { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
+            { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" }
+        ],
+        "labels": [
+            { "note": "ical", "name": "customResourceProvider", "value": "agendaCalendar.ical" },
+            { "note": "common-css", "name": "appCss", "value": "" },
+            { "note": "profile-editor-css", "name": "appCss", "value": "" },
+            { "note": "overview", "name": "widget", "value": "" },
+            { "note": "settings", "name": "agendaConfig", "value": "" }
+        ],
+        "dependencies": [
+            "libagendaoverview@beatlink",
+            "libcollapsible@beatlink",
+            "libformcheckboxgroup@beatlink",
+            "libsettings@beatlink"
+        ],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}
