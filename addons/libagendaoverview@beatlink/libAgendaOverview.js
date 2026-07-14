@@ -508,6 +508,13 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 // can't map to a single field leaves Trilium's default column behavior alone.
 // Find-or-set — safe to call every update; only touches the note when its
 // type/viewType/board:groupBy isn't already what we want.
+//
+// When board:groupBy actually changes, the note's persisted board state (a
+// `board.json` / role `viewConfig` attachment Trilium writes, holding the
+// previous field's `{ columns: [{ value }] }` list) is deleted so Trilium
+// rebuilds the columns from the new field — otherwise it keeps showing the old
+// field's columns. Only deleted on a real change, so a user's manual column
+// reordering under a stable field survives.
 async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "") {
     if (!overviewNoteId || !viewType) return
     await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
@@ -520,12 +527,21 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
+        const prevGroupBy = note.getLabelValue("board:groupBy")
         if (boardGroupBy) {
-            if (note.getLabelValue("board:groupBy") !== boardGroupBy) {
+            if (prevGroupBy !== boardGroupBy) {
                 note.setLabel("board:groupBy", boardGroupBy)
             }
         } else if (note.hasLabel("board:groupBy")) {
             note.removeLabel("board:groupBy")
+        }
+        const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
+        if (groupByChanged) {
+            // Trilium keys the board's persisted state by title "board.json"
+            // under the "viewConfig" attachment role (view_mode_storage.ts).
+            for (const att of note.getAttachmentsByRole("viewConfig")) {
+                if (att.title === "board.json") att.markAsDeleted()
+            }
         }
     }, [overviewNoteId, viewType, boardGroupBy])
 }
