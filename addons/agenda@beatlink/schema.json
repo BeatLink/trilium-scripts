@@ -474,12 +474,13 @@
                 "type": "select", "label": "Type", "default": "label",
                 "options": [
                     { "value": "label", "label": "By Label Value" },
-                    { "value": "dayjs", "label": "By Date" }
+                    { "value": "dayjs", "label": "By Date" },
+                    { "value": "recurrence", "label": "By Recurrence" }
                 ]
             },
-            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": "label" } },
+            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": ["label", "recurrence"] } },
             "children": {
-                "type": "registry", "label": "Columns", "default": {}, "showWhen": { "type": "label" },
+                "type": "registry", "label": "Columns", "default": {}, "showWhen": { "type": ["label", "recurrence"] },
                 "itemSchema": {
                     "labelValue": { "type": "string", "label": "Label Value", "default": "" },
                     "display": { "type": "string", "label": "Column Name", "default": "" },
@@ -536,6 +537,17 @@
                     "thisMonth": { "dateRuleId": "thisMonth", "display": "This Month", "color": "lightgray" },
                     "thisYear": { "dateRuleId": "thisYear", "display": "This Year", "color": "lightgray" },
                     "future": { "dateRuleId": "future", "display": "Future", "color": "lightgray" }
+                }
+            },
+            "recurrence": {
+                "name": "By Recurrence", "type": "recurrence", "label": "recurrence",
+                "children": {
+                    "HOURLY": { "labelValue": "HOURLY", "display": "Hourly", "color": "red" },
+                    "DAILY": { "labelValue": "DAILY", "display": "Daily", "color": "gold" },
+                    "WEEKLY": { "labelValue": "WEEKLY", "display": "Weekly", "color": "lime" },
+                    "MONTHLY": { "labelValue": "MONTHLY", "display": "Monthly", "color": "cyan" },
+                    "YEARLY": { "labelValue": "YEARLY", "display": "Yearly", "color": "magenta" },
+                    "NONE": { "labelValue": "NONE", "display": "One-off", "color": "gray" }
                 }
             }
         }

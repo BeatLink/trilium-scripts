@@ -105,11 +105,11 @@ function reshapeGrouping(grouping) {
     // fall back to KanbanView's generic "Ungrouped"). Kept on both shapes so
     // getGroupColumns can emit it as a real column and getGroups can target it.
     const noValue = { display: grouping.noValueDisplay || "", color: grouping.noValueColor || "" }
-    if (grouping.type === "label") {
+    if (grouping.type === "label" || grouping.type === "recurrence") {
         const children = Object.fromEntries(
             Object.values(grouping.children || {}).map(entry => [entry.labelValue, { display: entry.display, color: entry.color }])
         )
-        return { name: grouping.name, type: "label", label: grouping.label, children, noValue }
+        return { name: grouping.name, type: grouping.type, label: grouping.label, children, noValue }
     }
     return { name: grouping.name, type: "dayjs", intervals: grouping.intervals || {}, noValue }
 }
@@ -403,6 +403,12 @@ async function getGroups(dateRules, groupingInfo, notesList) {
         } else if (groupingInfo["type"] == "label") {
             let noteLabel = (await api.getNote(note)).getLabelValue(groupingInfo["label"])
             groupDict[note] = (noteLabel && groupingInfo.children?.[noteLabel]) ? noteLabel : unmatchedKey
+        } else if (groupingInfo["type"] == "recurrence") {
+            // Bucket by the RRULE frequency token (from `#recurrence`, whose
+            // label name the grouping carries in `label`), not the raw rule.
+            const rrule = (await api.getNote(note)).getLabelValue(groupingInfo["label"])
+            const freq = task.frequencyOf(rrule)
+            groupDict[note] = groupingInfo.children?.[freq] ? freq : unmatchedKey
         } else {
             groupDict[note] = null
         }
@@ -416,7 +422,7 @@ async function getGroups(dateRules, groupingInfo, notesList) {
 function getGroupColumns(groupingInfo) {
     if (!groupingInfo) return []
     let columns
-    if (groupingInfo.type === "label") {
+    if (groupingInfo.type === "label" || groupingInfo.type === "recurrence") {
         columns = Object.entries(groupingInfo.children || {}).map(([key, v]) => ({ key, display: v.display, color: v.color }))
     } else if (groupingInfo.type === "dayjs") {
         columns = Object.entries(groupingInfo.intervals || {}).map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
@@ -496,75 +502,109 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 
 
 
-// Makes the shared overview note a Trilium collection: sets its type to
-// `book` and its `#viewType` label to the active profile's chosen view
-// (list/grid/table/board/calendar/geoMap/dashboard/presentation), so opening
-// the note shows the built-in collection view of its child tasks.
-// `boardGroupBy` is Trilium's own `#board:groupBy` field for the built-in
-// board (Kanban) view — the note field whose values become the board columns,
-// bare for a label (`priority`) or `~`-prefixed for a relation. It's set only
-// when there is one to apply (derived from the profile's selected Kanban
-// Grouping), and removed otherwise.
+// Makes the shared overview note a Trilium collection: sets its type to `book`
+// and its `#viewType` label to the active profile's chosen view. For a board,
+// `boardGroupBy` is `"status"` (the single helper label every grouping projects
+// onto), `statusByNote` maps each filed task to its `#status` value ("" clears
+// it), and `boardColumns` is the ordered column display list (a change
+// signature).
 //
-// Switching board:groupBy on an OPEN board would otherwise leave the previous
-// field's columns behind: Trilium's board keeps its column list in an
-// in-memory `viewConfig` (persisted as a `board.json` / role `viewConfig`
-// attachment) and `getBoardData` (board/data.ts) preserves those columns
-// unconditionally, re-appending them to the new field's and re-saving. So when
-// the grouping field changes and the target view is `board`, we first flip
-// `#viewType` to `list` (which UNMOUNTS the board widget, discarding its stale
-// in-memory columns), then change `#board:groupBy` and clear the stale
-// `board.json`, then flip `#viewType` back to `board` so it remounts fresh and
-// regenerates its columns from the new field. All in one backend batch — no
-// timing/echo games needed (verified against a live board).
-async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "") {
+// The board keeps its column list in an in-memory `viewConfig` (a `board.json`
+// attachment) that `getBoardData` (board/data.ts) preserves unconditionally, so
+// changing a task's `#status` while the board is MOUNTED makes it re-persist the
+// old columns, merging them with the new (verified live). The reliable sequence,
+// all in one backend batch:
+//   1. flip `#viewType` to `list` — UNMOUNTS the board, so nothing reacts to
+//      the status changes below,
+//   2. stamp the new `#status` values,
+//   3. DELETE `board.json` so the board rebuilds columns from those values,
+//   4. flip `#viewType` back to `board` — remounts fresh.
+// Steps 1/3/4 run only when the column set changed (tracked by the
+// `#agendaBoardColumns` signature) so routine refreshes don't flip/flicker; the
+// status stamp (step 2) always runs. Trilium orders the rebuilt columns by
+// discovery among the present `#status` values (empty columns don't appear).
+async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "", statusByNote = {}, boardColumns = []) {
     if (!overviewNoteId || !viewType) return
-    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
+    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns) => {
         const note = api.getNote(overviewNoteId)
         if (!note) return
         if (note.type !== "book") {
             note.type = "book"
             note.save()
         }
-        const prevGroupBy = note.getLabelValue("board:groupBy") || ""
-        const groupByChanged = prevGroupBy !== (boardGroupBy || "")
-        const remountBoard = viewType === "board" && groupByChanged
-
-        // Unmount the board first so no stale in-memory column list survives to
-        // be re-merged when board:groupBy changes below.
-        if (remountBoard && note.getLabelValue("viewType") !== "list") {
-            note.setLabel("viewType", "list")
-        }
 
         if (boardGroupBy) {
-            if (prevGroupBy !== boardGroupBy) note.setLabel("board:groupBy", boardGroupBy)
+            if (note.getLabelValue("board:groupBy") !== boardGroupBy) note.setLabel("board:groupBy", boardGroupBy)
         } else if (note.hasLabel("board:groupBy")) {
             note.removeLabel("board:groupBy")
         }
 
-        // Clear the persisted board columns so the remounted board rebuilds
-        // them from the new field instead of restoring the old ones.
-        if (remountBoard) {
-            const att = note.getAttachmentByTitle("board.json")
-            if (att) att.markAsDeleted()
+        // Column set changed since we last configured the board? Tracked in a
+        // signature label so we only flip/remount when it genuinely differs.
+        const signature = boardColumns.join(" ")
+        const columnsChanged = viewType === "board" && note.getLabelValue("agendaBoardColumns") !== signature
+
+        // 1. Unmount before restamping so the mounted board can't re-persist.
+        if (columnsChanged && note.getLabelValue("viewType") !== "list") {
+            note.setLabel("viewType", "list")
         }
 
+        // 2. Stamp #status (always; a task can change bucket without the column
+        //    set changing, e.g. its priority label was edited).
+        for (const [noteId, status] of Object.entries(statusByNote)) {
+            const child = api.getNote(noteId)
+            if (!child) continue
+            if (status) {
+                if (child.getLabelValue("status") !== status) child.setLabel("status", status)
+            } else if (child.hasLabel("status")) {
+                child.removeLabel("status")
+            }
+        }
+
+        // 3. Drop board.json so the remount rebuilds columns from the new values.
+        if (columnsChanged) {
+            const att = note.getAttachmentByTitle("board.json")
+            if (att) att.markAsDeleted()
+            note.setLabel("agendaBoardColumns", signature)
+        }
+
+        // 4. Restore the target viewType (remounts the board when it was flipped).
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
-    }, [overviewNoteId, viewType, boardGroupBy])
+    }, [overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns])
 }
 
-// Derives Trilium's `#board:groupBy` field from a profile's selected Kanban
-// Grouping (`data.groupings[id]`, as reshaped by `reshapeGrouping`). A
-// `type:"label"` grouping names a single note label, which maps directly to
-// the board's grouping field; a `type:"dayjs"` grouping groups by computed
-// date windows, which the native board can't express, so it yields "" (no
-// board:groupBy — Trilium falls back to its default columns). Returns "" when
-// no grouping is selected or the view isn't `board`.
+// Every board grouping is projected onto the single `#status` helper label
+// (computed by computeStatuses, stamped by configureOverviewNote), so the board
+// always groups on `status` regardless of the grouping's type (label/dayjs/recurrence) —
+// which also means `#board:groupBy` stays constant across grouping switches.
+// Returns "" only when the view isn't `board` or no grouping is selected, so
+// the board falls back to its default columns.
 function boardGroupByForProfile(viewType, grouping) {
-    if (viewType !== "board" || !grouping || grouping.type !== "label") return ""
-    return grouping.label || ""
+    if (viewType !== "board" || !grouping) return ""
+    return "status"
+}
+
+// Every board grouping — regardless of type — is projected onto ONE helper
+// label, `#status`, which the board always groups on (`#board:groupBy=status`).
+// This computes each filed task's bucket for the active grouping (via getGroups,
+// which already handles label, dayjs-interval, and recurrence-frequency
+// grouping) and resolves it to the bucket's DISPLAY name, so the board's column
+// headers read nicely. Returns `{ statusByNote, columns }` — the per-note
+// `#status` values to stamp ("" = clear), and the ordered column display list.
+// It does NOT stamp here: the stamping has to happen inside configureOverviewNote's
+// batch, after the board is unmounted, or an open board re-persists stale columns.
+async function computeStatuses(dateRules, groupingInfo, noteIds) {
+    const groups = await getGroups(dateRules, groupingInfo, noteIds)
+    const columns = getGroupColumns(groupingInfo)
+    const displayByKey = Object.fromEntries(columns.map(c => [c.key, c.display]))
+    const statusByNote = {}
+    for (const noteId of noteIds) {
+        const key = groups[noteId]
+        statusByNote[noteId] = (key != null && displayByKey[key]) ? displayByKey[key] : ""
+    }
+    return { statusByNote, columns: columns.map(c => c.display) }
 }
 
 // Files the active profile's matching tasks into the single shared overview
@@ -581,8 +621,17 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let filteredNotes = await getFilteredNotes(data, profile.filterGroups.children, allNotes)
         let sortedNotes = await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
         const viewType = profile.viewType || "list"
-        const boardGroupBy = boardGroupByForProfile(viewType, data.groupings[profile.groupings.selected])
-        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy)
+        const grouping = data.groupings[profile.groupings.selected]
+        const boardGroupBy = boardGroupByForProfile(viewType, grouping)
+        // For a board, project the active grouping onto each task's `#status`
+        // (the field the board groups on) and derive the ordered column list.
+        // The actual stamping happens inside configureOverviewNote (it must run
+        // while the board is unmounted); here we only compute the values.
+        let statusByNote = {}, boardColumns = []
+        if (boardGroupBy === "status") {
+            ({ statusByNote, columns: boardColumns } = await computeStatuses(data.dateRules, grouping, sortedNotes))
+        }
+        await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns)
         let prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
         let colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)

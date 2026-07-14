@@ -1,5 +1,20 @@
 const libRecurrence = require("libRecurrence.js")
 
+// The clean recurrence-frequency token for a task's `#recurrence` RRULE
+// string — one of HOURLY/DAILY/WEEKLY/MONTHLY/YEARLY, or "NONE" when there's
+// no (enabled) recurrence. Used to bucket tasks into a Kanban board's columns
+// (a raw RRULE string like "FREQ=WEEKLY;INTERVAL=1;..." is unique per task and
+// can't be grouped on directly). Returns "NONE" for empty/unparseable input.
+function frequencyOf(recurrence) {
+    if (!recurrence) return "NONE"
+    try {
+        const obj = libRecurrence.RRuleToObj(recurrence)
+        return (obj && obj.enabled && obj.interval) ? obj.interval : "NONE"
+    } catch (e) {
+        return "NONE"
+    }
+}
+
 // Regular expression to capture hours, minutes, seconds
 function durationStringToHMS(duration){
     const durationObj = api.dayjs.duration(duration)
@@ -125,6 +140,7 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0){
 
 module.exports = {
     durationStringToHMS,
+    frequencyOf,
     complete,
     rescheduleByDays,
     updateDependentAttributes

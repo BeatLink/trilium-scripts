@@ -61,13 +61,13 @@ widgets plus a single schema-driven editor page:
    Overview Note is shown as (list/grid/table/board/calendar/geoMap/dashboard/presentation) once that
    profile's tasks are filed under it. When the view is **board**, the profile's **Kanban Grouping**
    (also Profiles tab, referencing a **Groupings** tab entry — and editable inline from the Overview
-   widget's **Board Columns** dropdown) picks which note field generates the board's columns: a
-   label-type grouping's label is written to the Overview Note as Trilium's own `#board:groupBy`.
-   Build a grouping the same way you build a Prefix or Color entry (by label value, or by date rule);
-   only label-type groupings map to native board columns, since a date-window grouping isn't a single
-   settable field. Three groupings ship by default — **By Priority** (the "default" profile's initial
-   pick), **By Area**, and **By Interval** (date windows). Switching the board's grouping field
-   updates the columns live, even on an already-open board.
+   widget's **Board Columns** dropdown) picks how the board's columns are generated. Every grouping
+   type — by label value, by date window, or by recurrence frequency — is projected onto a single
+   `#status` helper label the board groups on, so all three work as board columns. Build a grouping
+   the same way you build a Prefix or Color entry. Four groupings ship by default — **By Priority**
+   (the "default" profile's initial pick), **By Area**, **By Interval** (date windows), and **By
+   Recurrence** (Hourly/Daily/Weekly/Monthly/Yearly/One-off). Switching the board's grouping updates
+   the columns live, even on an already-open board.
 
 ## Architecture
 

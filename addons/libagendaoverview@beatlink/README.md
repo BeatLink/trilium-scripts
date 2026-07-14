@@ -140,12 +140,14 @@ carrying its own `id`/`schemaNoteId`/`configNoteId` — back into the schema: id
 Runs the active profile's searches/filters/sort/prefix/color rules and re-files the resulting notes
 as children of the shared overview note (`profileContext.overviewNoteId`), making that note a
 `book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`). When that
-view is `board`, the profile's selected Kanban Grouping also drives Trilium's built-in board columns:
-a `type:"label"` grouping's label is written as `#board:groupBy` (a `type:"dayjs"` grouping can't map
-to a single field, so no `board:groupBy` is set and Trilium uses its default columns). To make the
-columns refresh live even on an already-open board, `configureOverviewNote` briefly flips `#viewType`
-to `list` and back around the change so the board remounts fresh instead of restoring its old
-columns — see its comment. `loadNotes`
+view is `board`, the profile's selected Kanban Grouping drives Trilium's built-in board columns via a
+single `#status` helper label. `computeStatuses` projects any grouping type (label / dayjs date-window
+/ recurrence-frequency) onto each task's bucket display name; `configureOverviewNote` always sets
+`#board:groupBy=status` and stamps those `#status` values. Because the board keeps its columns in an
+in-memory config that it re-persists on any `#status` change, `configureOverviewNote` — when the
+column set changes — flips `#viewType` to `list` (unmounting the board) *before* restamping, deletes
+the `board.json` attachment, then flips back to `board` so it remounts fresh; a signature label
+suppresses this flip on routine refreshes. See its comment for the exact ordering. `loadNotes`
 removes children that no longer match, so switching the active profile re-populates the note with the
 new profile's tasks. Refreshes the iCal feed unconditionally. No-op on the overview note when
 `overviewNoteId` is unset, but the iCal refresh still runs.
