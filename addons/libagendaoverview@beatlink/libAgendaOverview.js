@@ -504,26 +504,29 @@ async function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
 // board (Kanban) view — the note field whose values become the board columns,
 // bare for a label (`priority`) or `~`-prefixed for a relation. It's set only
 // when there is one to apply (derived from the profile's selected Kanban
-// Grouping), and removed otherwise, so a non-board view or a grouping that
-// can't map to a single field leaves Trilium's default column behavior alone.
-// Find-or-set — safe to call every update; only touches the note when its
-// type/viewType/board:groupBy isn't already what we want.
+// Grouping), and removed otherwise. `boardColumns` is the exact column list
+// (`[{ value }]`) that new field should show.
 //
-// `boardColumns` is the column list (`[{ value }]`) for the new field, from
-// the selected grouping. When board:groupBy changes, the note's persisted
-// board state (a `board.json` / role `viewConfig` attachment) still holds the
-// PREVIOUS field's columns, and Trilium's getBoardData preserves persisted
-// columns unconditionally (board/data.ts) — so without intervention the old
-// field's now-phantom columns stay on screen. We rewrite `board.json` with the
-// new field's columns (see the ORDER MATTERS note in the body for why this
-// must happen before the label change, and why we write the real columns
-// rather than blank). Only rewritten on a real change, so manual column
-// reordering under a stable field survives.
+// Switching board:groupBy on an OPEN board is a two-step dance because of how
+// Trilium's board persists columns. The board keeps its column list in an
+// in-memory `viewConfig` (a `board.json` / role `viewConfig` attachment) and
+// `getBoardData` (board/data.ts) preserves those columns unconditionally,
+// re-appending them to the new field's — so just changing board:groupBy leaves
+// the previous field's columns behind (the board's own entitiesReloaded
+// handler re-saves its stale in-memory list, beating any attachment write made
+// in the SAME batch as the label change). The fix, verified against a live
+// board: (1) change board:groupBy, then (2) in a SEPARATE backend write (no
+// label change in it) overwrite board.json with the new columns. That second
+// write arrives as a pure attachment change, so `useViewModeConfig`
+// (NoteList.tsx) replaces the board's in-memory config via `restoreIfChanged`
+// before the next refresh — no merge. `forceFullSave` makes the change appear
+// in the frontend's attachmentRows (so it re-reads); `forceFrontendReload`
+// stops the board treating it as its own echo.
 async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = "", boardColumns = []) {
     if (!overviewNoteId || !viewType) return
-    await api.runOnBackend((overviewNoteId, viewType, boardGroupBy, boardColumns) => {
+    const groupByChanged = await api.runOnBackend((overviewNoteId, viewType, boardGroupBy) => {
         const note = api.getNote(overviewNoteId)
-        if (!note) return
+        if (!note) return false
         if (note.type !== "book") {
             note.type = "book"
             note.save()
@@ -531,38 +534,37 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
         if (note.getLabelValue("viewType") !== viewType) {
             note.setLabel("viewType", viewType)
         }
-
-        // ORDER MATTERS. Setting `#board:groupBy` triggers the open board's
-        // `entitiesReloaded` handler, which calls `refresh()` reading its
-        // *stale in-memory* viewConfig and re-persisting it — a race that
-        // reintroduces the previous field's columns. So write `board.json`
-        // FIRST (before the label change fires that refresh) and with the
-        // CORRECT columns for the new field (not empty), so even a stale
-        // re-save converges to the right columns instead of clobbering them.
-        // `forceFullSave` saves the BAttachment row (so the change shows up in
-        // the frontend's attachmentRows and useViewModeConfig re-reads it);
-        // `forceFrontendReload` stops the board treating it as its own echo.
-        const prevGroupBy = note.getLabelValue("board:groupBy")
-        const groupByChanged = (prevGroupBy || "") !== (boardGroupBy || "")
-        if (groupByChanged) {
-            const boardConfig = note.getAttachmentByTitle("board.json")
-            if (boardConfig) {
-                boardConfig.setContent(JSON.stringify({ columns: boardColumns }), {
-                    forceSave: true,
-                    forceFullSave: true,
-                    forceFrontendReload: true
-                })
-            }
-        }
-
+        const prev = note.getLabelValue("board:groupBy") || ""
         if (boardGroupBy) {
-            if (prevGroupBy !== boardGroupBy) {
-                note.setLabel("board:groupBy", boardGroupBy)
-            }
+            if (prev !== boardGroupBy) note.setLabel("board:groupBy", boardGroupBy)
         } else if (note.hasLabel("board:groupBy")) {
             note.removeLabel("board:groupBy")
         }
-    }, [overviewNoteId, viewType, boardGroupBy, boardColumns])
+        return prev !== (boardGroupBy || "")
+    }, [overviewNoteId, viewType, boardGroupBy])
+
+    // Second, separate write: only when the grouping field actually changed and
+    // we have an explicit column set for it. Kept out of the batch above so the
+    // board picks up the new columns instead of re-merging its old ones — and
+    // delayed ~1s so the board's own merge-and-resave (triggered by the
+    // board:groupBy change above) has landed FIRST; otherwise this clean write
+    // races ahead of it and gets clobbered by the late merge (verified: 0ms
+    // merges, >=0.5s is clean — 1s for margin on slower machines). This runs on
+    // the frontend, so the wait is real wall-clock time.
+    if (groupByChanged && boardGroupBy && boardColumns.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        await api.runOnBackend((overviewNoteId, boardColumns) => {
+            const note = api.getNote(overviewNoteId)
+            if (!note) return
+            let att = note.getAttachmentByTitle("board.json")
+            const content = JSON.stringify({ columns: boardColumns })
+            if (att) {
+                att.setContent(content, { forceSave: true, forceFullSave: true, forceFrontendReload: true })
+            } else {
+                note.saveAttachment({ title: "board.json", role: "viewConfig", mime: "application/json", content, position: 0 }, "title")
+            }
+        }, [overviewNoteId, boardColumns])
+    }
 }
 
 // Derives Trilium's `#board:groupBy` field from a profile's selected Kanban
@@ -577,13 +579,11 @@ function boardGroupByForProfile(viewType, grouping) {
     return grouping.label || ""
 }
 
-// The exact column list Trilium's `board.json` persists (`{ columns: [{ value }] }`)
-// for a `type:"label"` grouping: the grouping's own defined columns, in its
-// registry order, each column's `value` being the note label value that lands
-// in it. The addon-internal NO_VALUE_KEY sentinel is excluded — it's not a
-// real label value any note carries. Returns [] for anything that has no
-// stable set of columns (no/other grouping), letting Trilium derive columns
-// from the notes itself.
+// The column list Trilium's `board.json` persists (`[{ value }]`) for a
+// `type:"label"` grouping: the grouping's own defined columns in registry
+// order, each `value` being the note label value that lands in it. The
+// internal NO_VALUE_KEY sentinel is excluded (no note carries it as a real
+// label value). Returns [] when there's no stable column set to assert.
 function boardColumnsForProfile(viewType, grouping) {
     if (viewType !== "board" || !grouping || grouping.type !== "label") return []
     return getGroupColumns(grouping)

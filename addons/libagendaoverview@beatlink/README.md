@@ -141,8 +141,10 @@ Runs the active profile's searches/filters/sort/prefix/color rules and re-files 
 as children of the shared overview note (`profileContext.overviewNoteId`), making that note a
 `book`/collection whose `#viewType` is the profile's chosen view (`configureOverviewNote`). When that
 view is `board`, the profile's selected Kanban Grouping also drives Trilium's built-in board columns:
-a `type:"label"` grouping's label is written as `#board:groupBy` (a `type:"dayjs"` grouping can't map
-to a single field, so no `board:groupBy` is set and Trilium uses its default columns). `loadNotes`
+a `type:"label"` grouping's label is written as `#board:groupBy`, and the grouping's columns are
+written into the board's `board.json` so they refresh live even on an already-open board (a
+`type:"dayjs"` grouping can't map to a single field, so no `board:groupBy` is set and Trilium uses
+its default columns). See `configureOverviewNote` for the two-write dance this requires. `loadNotes`
 removes children that no longer match, so switching the active profile re-populates the note with the
 new profile's tasks. Refreshes the iCal feed unconditionally. No-op on the overview note when
 `overviewNoteId` is unset, but the iCal refresh still runs.

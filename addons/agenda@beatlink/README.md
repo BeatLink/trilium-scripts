@@ -66,7 +66,8 @@ widgets plus a single schema-driven editor page:
    Build a grouping the same way you build a Prefix or Color entry (by label value, or by date rule);
    only label-type groupings map to native board columns, since a date-window grouping isn't a single
    settable field. Three groupings ship by default — **By Priority** (the "default" profile's initial
-   pick), **By Area**, and **By Interval** (date windows).
+   pick), **By Area**, and **By Interval** (date windows). Switching the board's grouping field
+   updates the columns live, even on an already-open board.
 
 ## Architecture
 
