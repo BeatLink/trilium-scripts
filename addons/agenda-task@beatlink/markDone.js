@@ -1,12 +1,15 @@
 /*
-    Launcher target: advances the active note's configured date label to its
-    next recurrence, or archives the note (and un-archives its children, for
-    a checklist-style to-do) if it doesn't recur or its recurrence is
-    exhausted.
+    Launcher target: advances the active note's start date to its next
+    recurrence, or archives the note (and un-archives its children, for a
+    checklist-style to-do) if it doesn't recur or its recurrence is exhausted.
+
+    Uses the shared Agenda configuration (owned by agenda-overview@beatlink,
+    discovered via #agendaConfig) for the start-date and recurrence label names,
+    so it stays in sync with the rest of the Agenda system.
 */
 const libRecurrence = require("libRecurrence.js")
 const { markDone, markUndone } = require("libAgendaTask.js")
-const { loadSettings } = require("libSettingsUI.jsx")
+const { getAgendaSettings } = require("agendaSettings.jsx")
 
 function formatDate(date) {
     const pad = (n) => n.toString().padStart(2, '0')
@@ -14,12 +17,10 @@ function formatDate(date) {
 }
 
 async function run_script() {
-    const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
-    const settingsNoteId = await api.currentNote.getRelationValue("settingsNote")
-    const configNoteId = await api.runOnBackend((settingsNoteId) => {
-        return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
-    }, [settingsNoteId])
-    const { dateLabel, recurrenceLabel } = await loadSettings(schemaNoteId, configNoteId)
+    const settings = await getAgendaSettings()
+    if (!settings) return
+    const dateLabel = settings.constants.START_DATETIME_LABEL
+    const recurrenceLabel = settings.constants.RECURRENCE_LABEL
 
     const note = await api.getActiveContextNote()
     const startDatetime = note.getLabelValue(dateLabel)

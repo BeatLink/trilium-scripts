@@ -1,11 +1,11 @@
 {
     "id": "agenda-task@beatlink",
     "name": "Agenda Task",
-    "description": "The task-editing half of the Agenda system: a right-pane widget for editing a task's start/due dates, duration, recurrence, and quick actions (complete, start today/tomorrow). Appears on any note carrying the #agendaTaskWidget label. Reads the shared Agenda configuration owned by agenda-overview@beatlink (discovered at runtime by its #agendaConfig label), so label names and profiles stay in sync across the Agenda addons; install Agenda Overview for this widget to have a configuration to read.",
+    "description": "The task-editing half of the Agenda system: a right-pane widget for editing a task's start/due dates, duration, recurrence, and quick actions (complete, start today/tomorrow). Appears on any note carrying the #agendaTaskWidget label. Also adds a global 'Mark Done' launcher button that advances the active note to its next recurrence (or archives it when the recurrence is exhausted). Reads the shared Agenda configuration owned by agenda-overview@beatlink (discovered at runtime by its #agendaConfig label), so label names and profiles stay in sync across the Agenda addons; install Agenda Overview for this widget to have a configuration to read.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
@@ -41,6 +41,41 @@
                 "sourceUrl": "agendaTask.jsx"
             },
             {
+                "id": "dates-picker",
+                "title": "DatesDurationPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "DatesDurationPicker.jsx"
+            },
+            {
+                "id": "recurrence-picker",
+                "title": "RecurrencePicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "RecurrencePicker.jsx"
+            },
+            {
+                "id": "recurrence-picker-css",
+                "title": "RecurrencePicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "RecurrencePicker.css"
+            },
+            {
+                "id": "mark-done",
+                "title": "markDone.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "markDone.js"
+            },
+            {
+                "id": "startup",
+                "title": "startup.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "startup.js"
+            },
+            {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
@@ -53,22 +88,38 @@
             { "parent": "root", "child": "common-css" },
             { "parent": "root", "child": "task" },
             { "parent": "task", "child": "agenda-settings" },
-            { "parent": "task", "addon": "libdatesdurationpicker@beatlink", "child": "lib" },
-            { "parent": "task", "addon": "librecurrencepicker@beatlink", "child": "lib" },
+            { "parent": "task", "child": "dates-picker" },
+            { "parent": "task", "child": "recurrence-picker" },
             { "parent": "task", "addon": "libactionbar@beatlink", "child": "lib" },
             { "parent": "task", "addon": "libagendatask@beatlink", "child": "lib" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
+            { "parent": "dates-picker", "addon": "libformcontrols@beatlink", "child": "datetime" },
+            { "parent": "dates-picker", "addon": "libagendatask@beatlink", "child": "lib" },
+            { "parent": "recurrence-picker", "child": "recurrence-picker-css" },
+            { "parent": "recurrence-picker", "addon": "libformcontrols@beatlink", "child": "togglebutton" },
+            { "parent": "recurrence-picker", "addon": "libformcontrols@beatlink", "child": "number" },
+            { "parent": "recurrence-picker", "addon": "libformcontrols@beatlink", "child": "datetime" },
+            { "parent": "recurrence-picker", "addon": "librecurrence@beatlink", "child": "lib" },
+            { "parent": "root", "child": "mark-done" },
+            { "parent": "root", "child": "startup" },
+            { "parent": "mark-done", "child": "agenda-settings" },
+            { "parent": "mark-done", "addon": "librecurrence@beatlink", "child": "lib" },
+            { "parent": "mark-done", "addon": "libagendatask@beatlink", "child": "lib" },
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
             { "parent": "root", "child": "readme" }
         ],
-        "relations": [],
+        "relations": [
+            { "from": "startup", "type": "markDoneScript", "to": "mark-done" }
+        ],
         "labels": [
             { "note": "common-css", "name": "appCss", "value": "" },
-            { "note": "task", "name": "widget", "value": "" }
+            { "note": "recurrence-picker-css", "name": "appCss", "value": "" },
+            { "note": "task", "name": "widget", "value": "" },
+            { "note": "startup", "name": "run", "value": "frontendStartup" }
         ],
         "dependencies": [
-            "libdatesdurationpicker@beatlink",
-            "librecurrencepicker@beatlink",
+            "libformcontrols@beatlink",
+            "librecurrence@beatlink",
             "libactionbar@beatlink",
             "libagendatask@beatlink",
             "libipc@beatlink",

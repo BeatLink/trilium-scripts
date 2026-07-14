@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.1.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-overview@beatlink/_tam_manifest_.json",
@@ -109,7 +109,7 @@
             { "parent": "overview", "child": "agenda-settings" },
             { "parent": "overview", "addon": "libagendaoverview@beatlink", "child": "lib" },
             { "parent": "overview", "addon": "libcollapsible@beatlink", "child": "lib" },
-            { "parent": "overview", "addon": "libformcheckboxgroup@beatlink", "child": "lib" },
+            { "parent": "overview", "addon": "libformcontrols@beatlink", "child": "checkboxgroup" },
             { "parent": "overview", "addon": "libipc@beatlink", "child": "lib" },
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
             { "parent": "root", "child": "profile-editor-page" },
@@ -136,7 +136,7 @@
         "dependencies": [
             "libagendaoverview@beatlink",
             "libcollapsible@beatlink",
-            "libformcheckboxgroup@beatlink",
+            "libformcontrols@beatlink",
             "libipc@beatlink",
             "libsettings@beatlink"
         ],

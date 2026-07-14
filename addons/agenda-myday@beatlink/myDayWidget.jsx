@@ -12,7 +12,7 @@ import { Timer } from "Timer.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { sendNotificationForDueTasks } = require("libAgendaOverview.js")
-const { addDueTasksToAgendaNow } = require("libAgendaNow.js")
+const { addDueTasksToAgendaNow } = require("agendaNow.js")
 
 // My Day focus controls — a manual countdown timer, shown inline in the
 // note-detail pane, but only while the current note is the note the user picked

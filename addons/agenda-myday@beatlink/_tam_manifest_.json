@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
@@ -48,6 +48,13 @@
                 "sourceUrl": "myDayWidget.jsx"
             },
             {
+                "id": "agenda-now",
+                "title": "agendaNow.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "agendaNow.js"
+            },
+            {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
@@ -63,7 +70,8 @@
             { "parent": "my-day", "child": "agenda-settings" },
             { "parent": "my-day", "addon": "libtimer@beatlink", "child": "lib" },
             { "parent": "my-day", "addon": "libagendaoverview@beatlink", "child": "lib" },
-            { "parent": "my-day", "addon": "libagendanow@beatlink", "child": "lib" },
+            { "parent": "my-day", "child": "agenda-now" },
+            { "parent": "agenda-now", "addon": "libagendaoverview@beatlink", "child": "lib" },
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
             { "parent": "root", "child": "readme" }
         ],
@@ -77,7 +85,6 @@
         "dependencies": [
             "libtimer@beatlink",
             "libagendaoverview@beatlink",
-            "libagendanow@beatlink",
             "libsettings@beatlink"
         ],
         "exports": {},

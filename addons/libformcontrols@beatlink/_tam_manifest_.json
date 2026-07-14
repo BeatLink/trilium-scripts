@@ -1,0 +1,98 @@
+{
+    "id": "libformcontrols@beatlink",
+    "name": "Form Controls",
+    "description": "Reusable Preact form-control components for TriliumNext widget UIs: a datetime-local input, a number input, a toggle button (checkbox styled as a pill), a labeled collapsible checkbox group, and a curated color-swatch picker. Each control is exported separately so a consumer pulls in only the ones it uses.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformcontrols@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "library",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libformcontrols@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "libformcontrols@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "datetime",
+                "title": "FormDatetime.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormDatetime.jsx"
+            },
+            {
+                "id": "number",
+                "title": "FormNumber.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormNumber.jsx"
+            },
+            {
+                "id": "togglebutton",
+                "title": "FormToggleButton.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormToggleButton.jsx"
+            },
+            {
+                "id": "checkboxgroup",
+                "title": "FormCheckboxGroup.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormCheckboxGroup.jsx"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "ColorPicker.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            { "parent": "root", "child": "datetime" },
+            { "parent": "root", "child": "number" },
+            { "parent": "root", "child": "togglebutton" },
+            { "parent": "root", "child": "checkboxgroup" },
+            { "parent": "root", "child": "colorpicker" },
+            { "parent": "root", "child": "readme" },
+            { "parent": "checkboxgroup", "addon": "libcollapsible@beatlink", "child": "lib" },
+            { "parent": "colorpicker", "child": "colorpicker-css" }
+        ],
+        "relations": [],
+        "labels": [
+            { "note": "colorpicker-css", "name": "appCss", "value": "" }
+        ],
+        "dependencies": [
+            "libcollapsible@beatlink"
+        ],
+        "exports": {
+            "datetime": "datetime",
+            "number": "number",
+            "togglebutton": "togglebutton",
+            "checkboxgroup": "checkboxgroup",
+            "colorpicker": "colorpicker"
+        },
+        "readmeNote": "readme"
+    }
+}

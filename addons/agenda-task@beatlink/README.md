@@ -14,6 +14,13 @@ Overview Note itself — the Agenda Overview widget owns the profile context and
 subscribes to that event and refreshes the overview live. That keeps this addon free of any
 dependency on `libagendaoverview@beatlink`.
 
+## Mark Done launcher
+
+On install this addon also creates a global **Mark Done** launcher button. Pressing it advances the
+active note's start date to its next recurrence (using the shared config's start-date and recurrence
+labels), or archives the note when it doesn't recur or its recurrence is exhausted. It reads the same
+`#agendaConfig` shared configuration, so it needs Agenda Overview installed just like the widget.
+
 ## Requires Agenda Overview
 
 This addon reads the **shared Agenda configuration** owned by `agenda-overview@beatlink` — it does
