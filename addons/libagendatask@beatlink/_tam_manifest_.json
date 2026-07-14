@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libagendatask@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "1.1.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libagendatask@beatlink/_tam_manifest_.json",

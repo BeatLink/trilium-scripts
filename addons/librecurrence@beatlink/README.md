@@ -54,6 +54,12 @@ Given an RRULE string and the date it's currently anchored to, returns
 [`libagendatask@beatlink`](../libagendatask@beatlink/)'s `complete()` and
 [`recurrence@beatlink`](../recurrence@beatlink/)'s `markDone.js` for two independent consumers.
 
+### `humanize(rruleString)`
+
+A human-readable sentence for an RRULE string (`"FREQ=WEEKLY"` -> `"Every week"`), via rrule's own
+`toText` humanizer, with the first letter capitalized. Returns `""` for empty/unparseable input, so it
+can be used directly as a display label value.
+
 ### `rrule`
 
 The underlying [rrule.js](../librrule@jkbrzt/) module (`RRule`, `RRuleSet`, `rrulestr`, etc), for

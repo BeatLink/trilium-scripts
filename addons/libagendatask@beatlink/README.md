@@ -45,6 +45,11 @@ await complete(noteId, constants)
 Converts an ISO-8601 duration string (e.g. `"PT1H30M"`) into `{ hours, minutes, seconds }`. Doesn't
 need `constants` — it's a pure string/duration conversion.
 
+### `humanizeDuration(duration)`
+
+Formats an ISO-8601 duration string into a human-readable string (`"PT1H30M"` -> `"1h 30m"`), showing
+only non-zero components. Returns `""` for empty input. Used to fill the `#durationDisplay` label.
+
 ### `complete(noteId, constants)`
 
 If the note has both a start datetime and a recurrence rule, advances it to the next occurrence
@@ -59,6 +64,15 @@ then re-syncs dependent attributes.
 ### `updateDependentAttributes(noteId, constants)`
 
 Recomputes the due datetime from start + duration, the split date/time labels used for calendar
-export, and the duration suffix shown on the note's title. Called automatically by `complete` and
-`rescheduleByDays`, but exported separately for callers that only change one label at a time (e.g. a
-picker UI reacting to a single field's `onChange`).
+export, the duration suffix shown on the note's title, and the human-readable `#durationDisplay` /
+`#recurrenceDisplay` labels (used by the overview's table/grid columns). Called automatically by
+`complete` and `rescheduleByDays`, but exported separately for callers that only change one label at a
+time (e.g. a picker UI reacting to a single field's `onChange`).
+
+### `refreshDisplayLabels(noteId, constants)`
+
+Stamps only the human-readable `#durationDisplay` / `#recurrenceDisplay` labels (from the note's
+`#duration` / `#recurrence`), without touching the title/due-date/calendar labels the way
+`updateDependentAttributes` does. Used by the overview to backfill these labels on filed tasks that
+were never edited through the picker. No-op writes are skipped, so calling it on every refresh is
+cheap.

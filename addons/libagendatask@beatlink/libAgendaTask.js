@@ -24,12 +24,34 @@ function durationStringToHMS(duration){
     return {hours, minutes, seconds}
 }
 
+// A human-readable duration ("1h 30m", "45m", "2h") from an ISO 8601 duration
+// (`PT1H30M`). Returns "" for empty input so it can be used directly as a
+// display label value. Only shows non-zero components; falls back to "0m".
+function humanizeDuration(duration){
+    if (!duration) return ""
+    const { hours, minutes, seconds } = durationStringToHMS(duration)
+    const parts = []
+    if (hours) parts.push(`${hours}h`)
+    if (minutes) parts.push(`${minutes}m`)
+    if (seconds) parts.push(`${seconds}s`)
+    return parts.length ? parts.join(" ") : "0m"
+}
+
 // Keeps the derived date/time labels (and the duration suffix on the title) in
 // sync whenever the note's own start/due/duration labels change
 async function updateDependentAttributes(noteId, constants) {
     if (noteId) {
+        // Compute the human-readable display strings up front (frontend): the
+        // recurrence humanizer needs the rrule library, which isn't reachable
+        // inside the serialized runOnBackend closure. These are stamped as
+        // `#durationDisplay`/`#recurrenceDisplay` so the overview's table/grid
+        // columns show readable values instead of the raw `PT1H30M` / RRULE.
+        const frontNote = await api.getNote(noteId)
+        const durationDisplay = humanizeDuration(frontNote.getLabelValue(constants.DURATION_LABEL))
+        const recurrenceDisplay = libRecurrence.humanize(frontNote.getLabelValue(constants.RECURRENCE_LABEL))
+
         await api.runOnBackend(
-            (noteId, constants) => {
+            (noteId, constants, durationDisplay, recurrenceDisplay) => {
             // Get Required Variables
             const note = api.getNote(noteId)
             let startDatetime = note.getLabelValue(constants.START_DATETIME_LABEL)
@@ -41,6 +63,12 @@ async function updateDependentAttributes(noteId, constants) {
             let durationString = duration ? ` (${duration.substring(2).toLowerCase()})` : ""
             note.title = `${title}${durationString}`
             note.save()
+
+            // Human-readable display labels for the overview's table/grid columns.
+            if (durationDisplay) note.setLabel("durationDisplay", durationDisplay)
+            else note.removeLabel("durationDisplay")
+            if (recurrenceDisplay) note.setLabel("recurrenceDisplay", recurrenceDisplay)
+            else note.removeLabel("recurrenceDisplay")
 
             // Update the Due Datetime if both start datetime and duration is present
             if (startDatetime && duration) {
@@ -68,7 +96,7 @@ async function updateDependentAttributes(noteId, constants) {
                 note.removeLabel(constants.DUE_DATE_LABEL)
                 note.removeLabel(constants.DUE_TIME_LABEL)
             }
-        }, [noteId, constants]);
+        }, [noteId, constants, durationDisplay, recurrenceDisplay]);
     }
 }
 
@@ -138,10 +166,39 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0){
 }
 
 
+// Stamps ONLY the human-readable display labels (`#durationDisplay`/
+// `#recurrenceDisplay`) used by the overview's table/grid columns, without
+// touching the title/due-date/calendar labels the way updateDependentAttributes
+// does. Used by the overview to backfill these labels on tasks it files that
+// were never edited through the picker (existing tasks, imports). No-op writes
+// are skipped so it doesn't churn notes on routine refreshes.
+async function refreshDisplayLabels(noteId, constants) {
+    if (!noteId) return
+    const note = await api.getNote(noteId)
+    if (!note) return
+    const durationDisplay = humanizeDuration(note.getLabelValue(constants.DURATION_LABEL))
+    const recurrenceDisplay = libRecurrence.humanize(note.getLabelValue(constants.RECURRENCE_LABEL))
+    // An absent label reads as null; treat that as "" so an empty display
+    // (nothing to show) doesn't count as a change needing a write.
+    if ((note.getLabelValue("durationDisplay") || "") === durationDisplay
+        && (note.getLabelValue("recurrenceDisplay") || "") === recurrenceDisplay) return
+    await api.runOnBackend((noteId, durationDisplay, recurrenceDisplay) => {
+        const note = api.getNote(noteId)
+        if (!note) return
+        if (durationDisplay) note.setLabel("durationDisplay", durationDisplay)
+        else note.removeLabel("durationDisplay")
+        if (recurrenceDisplay) note.setLabel("recurrenceDisplay", recurrenceDisplay)
+        else note.removeLabel("recurrenceDisplay")
+    }, [noteId, durationDisplay, recurrenceDisplay])
+}
+
+
 module.exports = {
     durationStringToHMS,
+    humanizeDuration,
     frequencyOf,
     complete,
     rescheduleByDays,
-    updateDependentAttributes
+    updateDependentAttributes,
+    refreshDisplayLabels
 }

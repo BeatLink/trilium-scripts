@@ -597,18 +597,26 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
 }
 
 // The task attributes to promote on the overview note so a table/grid collection
-// view can render them as columns. Names come from the injected `constants`
-// (they're user-configurable label names), each paired with its Trilium
-// promoted-attribute-definition string and a display alias. Undefined constants
-// (an unconfigured label) are skipped.
+// view can render them as columns. Two sources:
+//   - user-configurable label names from `constants` (start/due are promoted as
+//     the COMBINED `#...DateTime` labels, one `datetime` column each, not the
+//     four split date/time labels which exist only for calendar internals),
+//   - fixed-name task labels the agenda always uses (`priority`/`area`/`type`).
+// Duration and recurrence are promoted via the human-readable display labels
+// (`#durationDisplay`/`#recurrenceDisplay`, stamped by libAgendaTask's
+// `updateDependentAttributes`), because Trilium renders a promoted attribute's
+// RAW value with no formatter — the stored `#duration` (ISO `PT1H30M`) and
+// `#recurrence` (raw RRULE) would otherwise show as machine strings.
+// Undefined constants (an unconfigured label) are skipped.
 function promotedAttributesForConstants(constants = {}) {
     const specs = [
-        [constants.START_DATE_LABEL, "promoted,single,date", "Start Date"],
-        [constants.START_TIME_LABEL, "promoted,single,time", "Start Time"],
-        [constants.DUE_DATE_LABEL, "promoted,single,date", "Due Date"],
-        [constants.DUE_TIME_LABEL, "promoted,single,time", "Due Time"],
-        [constants.DURATION_LABEL, "promoted,single,number", "Duration"],
-        [constants.RECURRENCE_LABEL, "promoted,single,text", "Recurrence"]
+        [constants.START_DATETIME_LABEL, "promoted,single,datetime", "Start"],
+        [constants.DUE_DATETIME_LABEL, "promoted,single,datetime", "Due"],
+        ["durationDisplay", "promoted,single,text", "Duration"],
+        ["recurrenceDisplay", "promoted,single,text", "Recurrence"],
+        ["priority", "promoted,single,text", "Priority"],
+        ["area", "promoted,single,text", "Area"],
+        ["type", "promoted,single,text", "Type"]
     ]
     return specs
         .filter(([name]) => name)
@@ -670,6 +678,13 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         let statusByNote = {}, boardColumns = []
         if (boardGroupBy === "status") {
             ({ statusByNote, columns: boardColumns } = await computeStatuses(data.dateRules, grouping, sortedNotes))
+        }
+        // Backfill the human-readable display labels (#durationDisplay /
+        // #recurrenceDisplay) on every filed task so the table/grid columns
+        // aren't blank for tasks never edited through the picker. No-op writes
+        // are skipped inside refreshDisplayLabels, so routine refreshes are cheap.
+        for (const noteId of sortedNotes) {
+            await task.refreshDisplayLabels(noteId, constants)
         }
         const promotedAttributes = promotedAttributesForConstants(constants)
         await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes)

@@ -136,10 +136,25 @@ function nextOccurrence(recurrenceString, start) {
     return { nextDate, recurrence }
 }
 
+// A human-readable sentence for an RRULE string ("every week", "every 2 days on
+// Monday"), via rrule's own `toText` humanizer. Returns "" for empty/unparseable
+// input so callers can use it directly as a display label value.
+function humanize(recurrenceString) {
+    if (!recurrenceString) return ""
+    try {
+        const options = libRRule.RRule.parseString(recurrenceString)
+        const text = new libRRule.RRule(options).toText()
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : ""
+    } catch (e) {
+        return ""
+    }
+}
+
 module.exports = {
     cleanRRuleString,
     RRuleToObj,
     ObjToRRule,
     nextOccurrence,
+    humanize,
     rrule: libRRule
 }
