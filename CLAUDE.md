@@ -93,7 +93,8 @@ Inside `nix-shell`:
 validate                       # lint all manifests — closest thing to a test suite; run after any manifest/source edit
 tam_to_zip <manifest-dir>      # manifest -> Trilium-importable ZIP
 zip_to_tam <zip>                # Trilium export ZIP -> starting manifest + source files
-generate_pages                 # rebuild docs/ + README.md
+generate_pages                 # rebuild docs/ (incl. catalog.json)
+generate_readme                # regenerate README.md's addon table
 ```
 
 ## Adding/editing an addon
