@@ -1,5 +1,23 @@
 const { loadSettings } = require("libSettings.js")
-const { sendNotification } = require("libNotificationBackend.js")
+
+// The Notification API only exists in the frontend, so this backend handler
+// hops over via a self-contained runOnFrontend closure (no outer references).
+function sendNotification(title, body, noteId) {
+    api.runOnFrontend((title, body, noteId) => {
+        let notification = new window.Notification(
+            title,
+            {
+                body: body,
+                icon: "icon.png",
+                tag: "trilium-notifications"
+            }
+        );
+        notification.onclick = (event) => {
+            event.preventDefault();
+            api.activateNote(noteId);
+        };
+    }, [title, body, noteId])
+}
 
 let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 let settingsNoteId = api.currentNote.getRelationValue("settingsNote")

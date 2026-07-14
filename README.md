@@ -37,7 +37,7 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 | [Calendar Widget](addons/libcalendarwidget@beatlink/) | library | Reusable Preact component wrapping FullCalendar for TriliumNext widget UIs — renders a day/week/month grid from a plain events array, a raw ics string, or any ics feed URL. | 1.2.0 |
 | [Cinnamon Applet Agenda](addons/cinnamon-applet-agenda@beatlink/) | script | Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the earliest (or latest) past-due task matched by a configurable date label. | 1.4.3 |
 | [Cinnamon Applet First Child](addons/cinnamon-applet-first-child@beatlink/) | script | Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first child (in Trilium sort order) of a configured parent note. | 1.1.3 |
-| [Cinnamon Applet Inbox](addons/cinnamon-applet-inbox@beatlink/) | script | Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first line of a designated inbox note, with an optional embedded countdown timer and desktop notification. | 1.5.3 |
+| [Cinnamon Applet Inbox](addons/cinnamon-applet-inbox@beatlink/) | script | Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first line of a designated inbox note, with an optional embedded countdown timer and desktop notification. | 1.5.4 |
 | [Collapsible](addons/libcollapsible@beatlink/) | library | Reusable Preact collapsible section component (a styled native &lt;details&gt;/&lt;summary&gt;) for TriliumNext widget UIs. | 1.0.2 |
 | [Color Picker](addons/libcolorpicker@beatlink/) | library | Reusable Preact component rendering a curated color-swatch grid (with a custom CSS-color fallback) for TriliumNext widget UIs. | 1.1.0 |
 | [Dates Duration Picker](addons/libdatesdurationpicker@beatlink/) | library | Reusable Preact component rendering a start date, due date, and duration editor (auto-deriving due date from start + duration) for TriliumNext widget UIs. | 1.0.0 |
@@ -55,7 +55,7 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 | [Mobile View](addons/mobile-view@beatlink/) | widget | These set of scripts allow you to use the full capabilities of the Trilium desktop interface while on a mobile device. | 0.0.4 |
 | [MultiSort](addons/multisort@beatlink/) | script | Sorts note children by multiple attributes and criteria using the #multiSorted label. | 1.1.2 |
 | [MultiSort Library](addons/libmultisort@beatlink/) | library | Shared library for sorting TriliumNext notes by multiple attributes and criteria. | 1.1.2 |
-| [Notification Library](addons/libnotification@beatlink/) | library | Shared library for sending desktop notifications from TriliumNext scripts, with both a frontend export and a backend-callable export. | 1.2.2 |
+| [Notification Library](addons/libnotification@beatlink/) | library | Shared library for sending desktop notifications from TriliumNext scripts. | 2.0.0 |
 | [Notifications](addons/notifications@beatlink/) | script | Polls for notes matching a date label and sends desktop notifications for past-due items. | 1.1.2 |
 | [Priority Widget](addons/priority-widget@beatlink/) | widget | A widget to set the priority of a note | 1.0.3 |
 | [Rank Picker](addons/librankpicker@beatlink/) | library | Reusable Preact component rendering a numeric rank editor for a note, for TriliumNext widget UIs that need a manual sort order. | 1.0.0 |

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.3",
+    "latestVersion": "1.5.4",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-inbox@beatlink/_tam_manifest_.json",
@@ -84,11 +84,6 @@
                 "child": "ui"
             },
             {
-                "parent": "script",
-                "addon": "libnotification@beatlink",
-                "child": "backend"
-            },
-            {
                 "parent": "root",
                 "child": "readme"
             }
@@ -128,8 +123,7 @@
             }
         ],
         "dependencies": [
-            "libsettings@beatlink",
-            "libnotification@beatlink"
+            "libsettings@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"
