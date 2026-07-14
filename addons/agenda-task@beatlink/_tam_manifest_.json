@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
@@ -57,7 +57,7 @@
             { "parent": "task", "addon": "librecurrencepicker@beatlink", "child": "lib" },
             { "parent": "task", "addon": "libactionbar@beatlink", "child": "lib" },
             { "parent": "task", "addon": "libagendatask@beatlink", "child": "lib" },
-            { "parent": "task", "addon": "libagendaoverview@beatlink", "child": "lib" },
+            { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
             { "parent": "root", "child": "readme" }
         ],
@@ -71,7 +71,7 @@
             "librecurrencepicker@beatlink",
             "libactionbar@beatlink",
             "libagendatask@beatlink",
-            "libagendaoverview@beatlink",
+            "libipc@beatlink",
             "libsettings@beatlink"
         ],
         "exports": {},

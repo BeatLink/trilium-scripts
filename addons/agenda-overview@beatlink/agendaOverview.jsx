@@ -14,6 +14,7 @@ import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
+const { subscribe } = require("libIpc.js")
 
 // Trilium collection view types the overview note can be set to. Keep in sync
 // with the `viewType` field's options in schema.json.
@@ -187,6 +188,20 @@ function AgendaOverviewWidgetJSX() {
             await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
         })()
     }, [noteId, ids])
+
+    // A task mutation happened elsewhere (e.g. the Agenda Task widget completed
+    // or rescheduled a task, broadcasting agenda:tasksChanged over libipc).
+    // This widget owns the profile context and iCal note, so it is the one
+    // that re-files the overview note in response — the Task widget itself has
+    // no dependency on libAgendaOverview. Only active while the overview note
+    // is shown (ids + a matched profile), and torn down via the returned
+    // unsubscribe.
+    useEffect(() => {
+        if (!ids || !profile) return
+        return subscribe("agenda:tasksChanged", () => {
+            updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+        })
+    }, [ids, profile])
 
     // Load the selected profile's editable object whenever the dropdown pick
     // (or the underlying profile list) changes.

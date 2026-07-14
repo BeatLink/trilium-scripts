@@ -13,8 +13,8 @@ import { RecurrencePicker } from "RecurrencePicker.jsx"
 import { ActionBar } from "ActionBar.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { updateTaskLists } = require("libAgendaOverview.js")
 const { complete, rescheduleByDays } = require("libAgendaTask.js")
+const { publish } = require("libIpc.js")
 
 // Main Widget ---------------------------------------------------------------------------
 function MainWidget(){
@@ -29,21 +29,23 @@ function MainWidget(){
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
-            const { constants, profileContext, icalNoteId } = settings
-            setIds({ constants, profileContext, icalNoteId })
+            const { constants } = settings
+            setIds({ constants })
         })()
     }, [])
 
     if (agendaTaskWidget !== '') {return null;}
     if (!ids) return null
 
-    // Every picker below mutates a task-related label — each needs the
-    // overview lists (and ical export) refreshed afterward. Owned here,
-    // once, rather than each picker requiring libAgendaOverview.js itself,
-    // so this widget is the only thing that knows the four pickers are
-    // being used in an Agenda-task context at all.
-    async function afterChange() {
-        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+    // Every picker and quick action below mutates a task-related label. This
+    // widget doesn't refresh the overview note itself — it just broadcasts
+    // `agenda:tasksChanged` over libipc@beatlink. The Agenda Overview widget
+    // (a separate addon) owns the profile context and iCal note, so it is the
+    // one that subscribes and re-files the overview note. That keeps this
+    // addon free of any dependency on libAgendaOverview; if Overview isn't
+    // installed there's no overview note to keep fresh anyway.
+    function afterChange() {
+        publish("agenda:tasksChanged")
     }
 
     const actions = [
