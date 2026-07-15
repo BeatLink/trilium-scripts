@@ -37,12 +37,11 @@ export default defineWidget({
             <RightPanelWidget id="x-template-picker" title="Template">
                 <div id="x-template-picker-widget">
                     <FormDropdownList
-                        class="dropdown-component"
+                        class="dropdown-component form-control"
                         values={existingTemplates}
                         currentValue={dropdownValue}
                         onChange={value => { saveTemplate(value) }}
                         keyProperty="noteId" titleProperty="title"
-                        class="form-control"
                     />
                 </div>
             </RightPanelWidget>

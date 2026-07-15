@@ -75,12 +75,11 @@ export default defineWidget({
                     <RightPanelWidget id="x-area-picker" title="Area">
                         <div id="x-area-picker-widget">
                             <FormDropdownList
-                                class="dropdown-component"
+                                class="dropdown-component form-control"
                                 values={existingAreas}
                                 currentValue={dropdownValue}
                                 onChange={value => { saveArea(value, areaColors[value]) }}
                                 keyProperty="label" titleProperty="title"
-                                class="form-control"
                             />
                         </div>
                     </RightPanelWidget>
