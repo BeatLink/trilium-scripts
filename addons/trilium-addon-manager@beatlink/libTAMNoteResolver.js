@@ -43,14 +43,6 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
         }
     }
 
-    // A persisted note (AddonData: relation target) must never have its
-    // content overwritten here — see connectAddonPersistence below for why.
-    const persistedLocalIds = new Set(
-        (m.relations || [])
-            .filter(r => r.type.startsWith("AddonData:"))
-            .map(r => r.to)
-    )
-
     const noteIds = (scopeLocalIds ? m.notes.filter(n => scopeLocalIds.has(n.id)) : m.notes).map(n => n.id)
     const sortedIds = topologicalSort(noteIds, effectiveParent)
 
@@ -72,7 +64,6 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
         const mime = noteDef.mime ?? "text/html"
         const isBinary = noteDef.binary ?? false
         const tamFileId = `${addonId}/${localId}`
-        const isPersisted = persistedLocalIds.has(localId)
         // TAM's own root note lives wherever the user manually ZIP-imported
         // it — an ancestor of the Addons tree, not a sibling under it. Never
         // touch its parent when found already existing (which, in practice,
@@ -116,7 +107,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
         let realNoteId
         try {
             realNoteId = await api.runAsyncOnBackendWithManualTransactionHandling(
-                async (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, isPersisted, skipParenting) => {
+                async (tamFileIdLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, skipParenting) => {
                     // Duplicated rather than shared with the module-level fetchWithRetry —
                     // this callback runs in a separate backend context that can't close over it.
                     async function fetchWithRetry(url, maxRetries = 5) {
@@ -134,7 +125,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
                     let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
                     if (existing && existing.isDeleted) existing = null
 
-                    const willWriteContent = !existing || !(skipOnUpdate || promptOnUpdate || isPersisted)
+                    const willWriteContent = !existing || !(skipOnUpdate || promptOnUpdate)
 
                     let finalContent = null
                     if (willWriteContent) {
@@ -174,7 +165,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
                     return note.noteId
                 },
                 [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, effectiveType, effectiveMime, sourceUrlForBackend, explicitContent, isBinary,
-                    !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, isPersisted, skipParenting]
+                    !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, skipParenting]
             )
         } catch (e) {
             console.error(`TAM: failed to resolve note '${localId}' of ${addonId}`, e)

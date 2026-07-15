@@ -2,7 +2,7 @@
 // references that would dangle, and the recursive "uninstall unused dependencies too" logic.
 // Companion to libTAMSync.js's install/update path.
 
-const { tamFileIdLabel, TAM_ID, loadDatabase, saveDatabase, getAddonRootNoteId } = require("libTAMDatabase.js")
+const { tamFileIdLabel, tamDataIdLabel, TAM_ID, loadDatabase, saveDatabase, getAddonRootNoteId } = require("libTAMDatabase.js")
 const { resolveStoredNoteId, dependencyId, getDependents } = require("libTAMManifestUtils.js")
 
 // User-triggered maintenance sweep: deletes any #TAMFILEID-tagged note with zero parents
@@ -30,12 +30,19 @@ async function sweepOrphanedNotes() {
 async function detachAddonOwnedBranches(addonId) {
     const anchorIds = [await getAddonRootNoteId()].filter(Boolean)
 
-    await api.runOnBackend((tamFileIdLabel, addonId, anchorIds) => {
+    await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, anchorIds) => {
         const prefix = `${addonId}/`
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             const tamFileId = note.getLabelValue(tamFileIdLabel)
             if (!tamFileId || !tamFileId.startsWith(prefix)) continue
+
+            // A persisted (AddonData:) note must survive uninstall. It normally carries only
+            // #TAMDATAID and so never reaches this #TAMFILEID scan, but a legacy clone from the
+            // old design can still carry a copied #TAMFILEID until its first re-sync migrates it —
+            // guard against deleting one here regardless.
+            const dataId = note.getLabelValue(tamDataIdLabel)
+            if (dataId && dataId.startsWith(prefix)) continue
 
             const parentsToDetach = []
             let keepsAnyParent = false
@@ -68,7 +75,7 @@ async function detachAddonOwnedBranches(addonId) {
                 api.ensureNoteIsAbsentFromParent(note.noteId, parentNote.noteId)
             }
         }
-    }, [tamFileIdLabel, addonId, anchorIds])
+    }, [tamFileIdLabel, tamDataIdLabel, addonId, anchorIds])
 }
 
 async function deleteAddon(addonId) {

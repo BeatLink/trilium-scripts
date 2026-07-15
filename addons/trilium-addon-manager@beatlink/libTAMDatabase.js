@@ -7,6 +7,10 @@ const databaseLabel = "database"
 const addonRootLabel = "addonRoot"
 const addonPersistenceLabel = "addonPersistence"
 const tamFileIdLabel = "TAMFILEID"
+// Identity of a persisted (AddonData:) note living under "Addon Data". Deliberately a
+// SEPARATE namespace from tamFileIdLabel: every uninstall/prune sweep scans by #TAMFILEID,
+// so a persisted note tagged only with this can never be caught by them. Value: `addonId/key`.
+const tamDataIdLabel = "TAMDATAID"
 const TAM_ID = "trilium-addon-manager@beatlink"
 const addonLabels = [
     "widget",
@@ -63,6 +67,7 @@ module.exports.databaseLabel = databaseLabel
 module.exports.addonRootLabel = addonRootLabel
 module.exports.addonPersistenceLabel = addonPersistenceLabel
 module.exports.tamFileIdLabel = tamFileIdLabel
+module.exports.tamDataIdLabel = tamDataIdLabel
 module.exports.TAM_ID = TAM_ID
 module.exports.addonLabels = addonLabels
 module.exports.getDatabaseNoteId = getDatabaseNoteId

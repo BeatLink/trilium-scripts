@@ -1,7 +1,7 @@
 // Enable/disable, read-only addon listing, update-checking, and database validation —
 // the "query and toggle" surface the UI reads/calls outside of an actual install/uninstall.
 
-const { tamFileIdLabel, addonLabels, loadDatabase, saveDatabase } = require("libTAMDatabase.js")
+const { tamFileIdLabel, tamDataIdLabel, addonLabels, loadDatabase, saveDatabase } = require("libTAMDatabase.js")
 const { resolveStoredNoteId, dependencyId, getDependents } = require("libTAMManifestUtils.js")
 const { versionCompare, fetchManifest } = require("libTAMNetwork.js")
 const { cleanupEmptyPersistenceRoots } = require("libTAMPersistence.js")
@@ -120,21 +120,31 @@ async function validateDatabase() {
     const database = await loadDatabase()
     const issues = []
 
-    const duplicateTamFileIds = await api.runOnBackend((tamFileIdLabel) => {
-        const byValue = {}
-        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
-            if (note.isDeleted) continue
-            const value = note.getLabelValue(tamFileIdLabel)
-            byValue[value] = byValue[value] || []
-            byValue[value].push(note.noteId)
+    const duplicateIds = await api.runOnBackend((tamFileIdLabel, tamDataIdLabel) => {
+        function duplicatesOf(label) {
+            const byValue = {}
+            for (const note of api.getNotesWithLabel(label)) {
+                if (note.isDeleted) continue
+                const value = note.getLabelValue(label)
+                byValue[value] = byValue[value] || []
+                byValue[value].push(note.noteId)
+            }
+            return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
         }
-        return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
-    }, [tamFileIdLabel])
+        return { tamFileId: duplicatesOf(tamFileIdLabel), tamDataId: duplicatesOf(tamDataIdLabel) }
+    }, [tamFileIdLabel, tamDataIdLabel])
 
-    for (const [tamFileId, noteIds] of duplicateTamFileIds) {
+    for (const [tamFileId, noteIds] of duplicateIds.tamFileId) {
         issues.push({
             addonId: tamFileId.split("/")[0],
             message: `TAMFILEID '${tamFileId}' is duplicated across notes ${noteIds.join(", ")}`
+        })
+    }
+
+    for (const [tamDataId, noteIds] of duplicateIds.tamDataId) {
+        issues.push({
+            addonId: tamDataId.split("/")[0],
+            message: `TAMDATAID '${tamDataId}' is duplicated across notes ${noteIds.join(", ")} (persisted data note has a conflicting copy)`
         })
     }
 
@@ -146,7 +156,7 @@ async function validateDatabase() {
         const persistence = addon.persistence || {}
         const manifest = addon.manifest || {}
 
-        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot) => {
+        const backendIssues = await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot) => {
             const found = []
 
             function noteExists(noteId) {
@@ -176,8 +186,19 @@ async function validateDatabase() {
             }
 
             for (const [key, realId] of Object.entries(persistence.persistenceNotes || {})) {
-                if (!noteExists(realId)) {
+                const note = noteExists(realId) ? api.getNote(realId) : null
+                if (!note) {
                     found.push(`persisted note '${key}' (${realId}) is missing`)
+                    continue
+                }
+                // A persisted note must live purely in the #TAMDATAID namespace: carrying
+                // #TAMFILEID means it is still entangled with the addon's structural tree and
+                // an uninstall/prune sweep could delete it (the hazard this model removes).
+                if (note.getLabelValue(tamFileIdLabel)) {
+                    found.push(`persisted note '${key}' (${realId}) still carries a #TAMFILEID label — not migrated to the #TAMDATAID model; re-sync ${addonId} to fix`)
+                }
+                if (note.getLabelValue(tamDataIdLabel) !== `${addonId}/${key}`) {
+                    found.push(`persisted note '${key}' (${realId}) is missing its #TAMDATAID '${addonId}/${key}'`)
                 }
             }
 
@@ -202,7 +223,7 @@ async function validateDatabase() {
             }
 
             return found
-        }, [tamFileIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot])
+        }, [tamFileIdLabel, tamDataIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot])
 
         for (const message of backendIssues) {
             issues.push({ addonId, message })

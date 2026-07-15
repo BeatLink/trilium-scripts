@@ -6,7 +6,7 @@ const { fetchManifest } = require("libTAMNetwork.js")
 const { normalizeManifest, stripManifestForStorage, dependencyId, resolveDependencyUrl, computeLocalClosure, applyLabels } = require("libTAMManifestUtils.js")
 const { resolveNotes, pruneRemovedNotes } = require("libTAMNoteResolver.js")
 const { enableAddon } = require("libTAMLifecycle.js")
-const { connectAddonPersistence } = require("libTAMPersistence.js")
+const { migrateLegacyPersistence, connectAddonPersistence } = require("libTAMPersistence.js")
 
 // Metadata-only fetch for a dependency — prefers an installed manifestSourceUrl, else
 // falls back to ctx.dependencyEntries. Cached in ctx.depMetaCache per sync.
@@ -184,6 +184,10 @@ async function syncAddon(addonId, options = {}) {
         database.installedAddons[addonId].persistence.pendingPrompts = pendingPrompts
         await saveDatabase(database)
     }
+
+    // Migrate any legacy persisted clone to the #TAMDATAID model BEFORE resolveNotes runs —
+    // otherwise its find-by-#TAMFILEID would adopt the clone and overwrite user data (see there).
+    await migrateLegacyPersistence(addonId)
 
     // A directly-installed addon always resolves its whole manifest, unscoped, under the
     // "Addons" anchor; transitive dependencies resolve lazily/scoped instead (ensureDependencyExport).
