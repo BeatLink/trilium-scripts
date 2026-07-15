@@ -4,73 +4,77 @@ const { loadData, getActiveProfile, getAllProfiles } = require("libAgendaConfig.
 
 const NO_VALUE_KEY = "__novalue__"
 
+// Evaluates a dayjs date rule (e.g. ["isBefore", "endOfToday"]) against a date
+// string. Named moments in the rule are resolved relative to now.
 function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays) {
-    let now = api.dayjs()
-    let startOfToday = now.startOf("day")
-    let dateVars = {
-        "now": now,
-        "startOfToday": startOfToday,
-        "endOfToday": now.endOf("day"),
-        "endOfTomorrow": now.endOf("day").add(1, "day"),
-        "endOfThisWeek": useNumberOfDays ? startOfToday.add(7, "day") : now.endOf("week"),
-        "endOfThisMonth": useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("month"),
-        "endOfThisYear": useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year"),
+    const now = api.dayjs()
+    const startOfToday = now.startOf("day")
+    const namedMoments = {
+        now,
+        startOfToday,
+        endOfToday: now.endOf("day"),
+        endOfTomorrow: now.endOf("day").add(1, "day"),
+        endOfThisWeek: useNumberOfDays ? startOfToday.add(7, "day") : now.endOf("week"),
+        endOfThisMonth: useNumberOfDays ? startOfToday.add(30, "day") : now.endOf("month"),
+        endOfThisYear: useNumberOfDays ? startOfToday.add(365, "day") : now.endOf("year"),
     }
-    let dateCriteria = [...dateCriteriaList]
-    let dateFunction = dateCriteria.shift()
-    let dateParameters = dateCriteria
-    for (const [index, parameter] of dateParameters.entries()) {
-        dateParameters[index] = parameter in dateVars ? dateVars[parameter] : dateParameters[index]
-    }
-    let date = api.dayjs(dateString)
-    if (dateFunction === "isNull") {
-        return !dateString
-    } else {
-        return date[dateFunction](...dateParameters) ? true : false
-    }
+
+    const [dayjsMethod, ...rawParameters] = dateCriteriaList
+    const parameters = rawParameters.map(parameter =>
+        parameter in namedMoments ? namedMoments[parameter] : parameter)
+
+    if (dayjsMethod === "isNull") return !dateString
+    return Boolean(api.dayjs(dateString)[dayjsMethod](...parameters))
 }
 
+// Collects note ids from every enabled search rule across all search groups.
 async function getNotesForSearchGroups(searchGroupsChildren) {
-    let allNotes = []
+    const noteIds = []
     for (const group of Object.values(searchGroupsChildren)) {
         for (const usage of Object.values(group.children)) {
             if (usage.enabled && usage.rule) {
-                let noteIds = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
-                allNotes = allNotes.concat(noteIds)
+                const matches = await api.searchForNotes(usage.rule)
+                noteIds.push(...matches.map(note => note.noteId))
             }
         }
     }
-    return allNotes
+    return noteIds
 }
 
-async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
-    let filterGroups = {}
-    for (const [groupId, group] of Object.entries(filterGroupsChildren)) {
-        filterGroups[groupId] = []
-        for (const usage of Object.values(group.children)) {
-            if (usage.enabled) {
-                if (usage.type == "search" && usage.rule) {
-                    let notes = (await api.searchForNotes(usage.rule)).map(note => note.noteId)
-                    filterGroups[groupId] = filterGroups[groupId].concat(notes)
-                }
-                if (usage.type == "dayjs") {
-                    const dateRule = dateRules[usage.dateRuleId]
-                    if (dateRule) {
-                        for (let note of notesList) {
-                            let noteDate = (await api.getNote(note)).getLabelValue(dateRule.dateLabel)
-                            if (matchesDayJsCriteria(noteDate, dateRule.rule, dateRule.useNumberOfDays)) {
-                                filterGroups[groupId].push(note)
-                            }
-                        }
-                    }
-                }
+// Resolves an enabled filter usage to the set of note ids it permits.
+async function noteIdsMatchingFilter(usage, dateRules, candidateNoteIds) {
+    if (usage.type === "search" && usage.rule) {
+        const matches = await api.searchForNotes(usage.rule)
+        return matches.map(note => note.noteId)
+    }
+    if (usage.type === "dayjs") {
+        const dateRule = dateRules[usage.dateRuleId]
+        if (!dateRule) return []
+        const passing = []
+        for (const noteId of candidateNoteIds) {
+            const noteDate = (await api.getNote(noteId)).getLabelValue(dateRule.dateLabel)
+            if (matchesDayJsCriteria(noteDate, dateRule.rule, dateRule.useNumberOfDays)) {
+                passing.push(noteId)
             }
         }
+        return passing
     }
-    let finalNotesList = notesList.filter(
-        noteId => Object.values(filterGroups).every(
-            filter => filter.includes(noteId)))
-    return finalNotesList
+    return []
+}
+
+// Keeps only notes that pass every filter group (each group is an AND).
+async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
+    const allowedByGroup = {}
+    for (const [groupId, group] of Object.entries(filterGroupsChildren)) {
+        allowedByGroup[groupId] = []
+        for (const usage of Object.values(group.children)) {
+            if (!usage.enabled) continue
+            const matches = await noteIdsMatchingFilter(usage, dateRules, notesList)
+            allowedByGroup[groupId].push(...matches)
+        }
+    }
+    return notesList.filter(noteId =>
+        Object.values(allowedByGroup).every(allowed => allowed.includes(noteId)))
 }
 
 async function sortNoteIds(sortString, noteIds) {
@@ -79,77 +83,98 @@ async function sortNoteIds(sortString, noteIds) {
     return sorted.map(note => note.noteId)
 }
 
-async function matchNotes(dateRules, info, notesList, resolve, unmatched) {
-    const result = {}
-    for (const note of notesList) {
-        if (!info) {
-            result[note] = unmatched
-            continue
-        }
-        if (info.type == "dayjs") {
-            const noteObj = await api.getNote(note)
-            let matched = false
-            for (const [intervalId, interval] of Object.entries(info.intervals || {})) {
-                const dateRule = dateRules[interval.dateRuleId]
-                if (!dateRule) continue
-                const date = noteObj.getLabelValue(dateRule.dateLabel)
-                if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)) {
-                    result[note] = resolve({ interval, intervalId, date })
-                    matched = true
-                    break
-                }
+// Classifies a single note against grouping/prefix/color "info" config and
+// returns a descriptor the caller can turn into its own value. Returns null
+// when the note does not match, letting callers apply their own fallback.
+async function classifyNote(noteId, info, dateRules) {
+    if (info.type === "dayjs") {
+        const note = await api.getNote(noteId)
+        for (const [intervalId, interval] of Object.entries(info.intervals || {})) {
+            const dateRule = dateRules[interval.dateRuleId]
+            if (!dateRule) continue
+            const date = note.getLabelValue(dateRule.dateLabel)
+            if (date && matchesDayJsCriteria(date, dateRule.rule, dateRule.useNumberOfDays)) {
+                return { kind: "dayjs", intervalId, interval, date }
             }
-            if (!matched) result[note] = unmatched
-        } else if (info.type == "label") {
-            const noteLabel = (await api.getNote(note)).getLabelValue(info.label)
-            result[note] = resolve({ noteLabel })
-        } else if (info.type == "recurrence") {
-            const rrule = (await api.getNote(note)).getLabelValue(info.label)
-            result[note] = resolve({ freq: task.frequencyOf(rrule) })
-        } else {
-            result[note] = unmatched
         }
+        return null
+    }
+    if (info.type === "label") {
+        const labelValue = (await api.getNote(noteId)).getLabelValue(info.label)
+        return { kind: "label", labelValue }
+    }
+    if (info.type === "recurrence") {
+        const recurrence = (await api.getNote(noteId)).getLabelValue(info.label)
+        return { kind: "recurrence", frequency: task.frequencyOf(recurrence) }
+    }
+    return null
+}
+
+// Builds a { noteId -> value } map by classifying each note and passing its
+// descriptor (or null) to toValue.
+async function mapNotes(noteIds, info, dateRules, toValue) {
+    const result = {}
+    for (const noteId of noteIds) {
+        const match = info ? await classifyNote(noteId, info, dateRules) : null
+        result[noteId] = toValue(match)
     }
     return result
 }
 
 async function getPrefixes(dateRules, prefixInfo, notesList) {
-    return matchNotes(dateRules, prefixInfo, notesList, (m) => {
-        if ("date" in m) return api.dayjs(m.date).format(m.interval.formatString)
-        const mapped = prefixInfo.children ? prefixInfo.children[m.noteLabel] : m.noteLabel
-        return mapped ?? (prefixInfo.noValue || "")
-    }, prefixInfo ? (prefixInfo.noValue || "") : "")
+    const noValue = prefixInfo ? (prefixInfo.noValue || "") : ""
+    return mapNotes(notesList, prefixInfo, dateRules, (match) => {
+        if (!match) return noValue
+        if (match.kind === "dayjs") return api.dayjs(match.date).format(match.interval.formatString)
+        // label and recurrence matches both fall back to the label-value lookup;
+        // recurrence has no labelValue, so it resolves to noValue.
+        const mapped = prefixInfo.children ? prefixInfo.children[match.labelValue] : match.labelValue
+        return mapped ?? noValue
+    })
 }
 
 async function getColors(dateRules, colorInfo, notesList) {
-    return matchNotes(dateRules, colorInfo, notesList, (m) => {
-        if ("date" in m) return m.interval.color
-        const mapped = colorInfo.children ? colorInfo.children[m.noteLabel] : m.noteLabel
-        return mapped ?? (colorInfo.noValue || "")
-    }, colorInfo ? (colorInfo.noValue || "") : "")
+    const noValue = colorInfo ? (colorInfo.noValue || "") : ""
+    return mapNotes(notesList, colorInfo, dateRules, (match) => {
+        if (!match) return noValue
+        if (match.kind === "dayjs") return match.interval.color
+        const mapped = colorInfo.children ? colorInfo.children[match.labelValue] : match.labelValue
+        return mapped ?? noValue
+    })
 }
 
 async function getGroups(dateRules, groupingInfo, notesList) {
     const unmatchedKey = groupingInfo?.noValue?.display ? NO_VALUE_KEY : null
-    return matchNotes(dateRules, groupingInfo, notesList, (m) => {
-        if ("intervalId" in m) return m.intervalId
-        if ("freq" in m) return groupingInfo.children?.[m.freq] ? m.freq : unmatchedKey
-        return (m.noteLabel && groupingInfo.children?.[m.noteLabel]) ? m.noteLabel : unmatchedKey
-    }, unmatchedKey)
+    const hasChild = (key) => Boolean(groupingInfo.children?.[key])
+    return mapNotes(notesList, groupingInfo, dateRules, (match) => {
+        if (!match) return unmatchedKey
+        if (match.kind === "dayjs") return match.intervalId
+        if (match.kind === "recurrence") return hasChild(match.frequency) ? match.frequency : unmatchedKey
+        return (match.labelValue && hasChild(match.labelValue)) ? match.labelValue : unmatchedKey
+    })
 }
 
 function getGroupColumns(groupingInfo) {
     if (!groupingInfo) return []
+
     let columns
     if (groupingInfo.type === "label" || groupingInfo.type === "recurrence") {
-        columns = Object.entries(groupingInfo.children || {}).map(([key, v]) => ({ key, display: v.display, color: v.color }))
+        columns = Object.entries(groupingInfo.children || {})
+            .map(([key, child]) => ({ key, display: child.display, color: child.color }))
     } else if (groupingInfo.type === "dayjs") {
-        columns = Object.entries(groupingInfo.intervals || {}).map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
+        columns = Object.entries(groupingInfo.intervals || {})
+            .map(([key, interval]) => ({ key, display: interval.display, color: interval.color }))
     } else {
         return []
     }
+
     if (groupingInfo.noValue?.display) {
-        columns.push({ key: NO_VALUE_KEY, display: groupingInfo.noValue.display, color: groupingInfo.noValue.color || null, droppable: false })
+        columns.push({
+            key: NO_VALUE_KEY,
+            display: groupingInfo.noValue.display,
+            color: groupingInfo.noValue.color || null,
+            droppable: false
+        })
     }
     return columns
 }
@@ -165,23 +190,26 @@ async function getTaskList(profileContext) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     const profile = await getActiveProfile(profileContext)
     if (!profile) return []
-    let allNotes = await getNotesForSearchGroups(profile.searchGroups.children)
-    return await getFilteredNotes(data.dateRules, profile.filterGroups.children, allNotes)
+    const searchedNotes = await getNotesForSearchGroups(profile.searchGroups.children)
+    return getFilteredNotes(data.dateRules, profile.filterGroups.children, searchedNotes)
 }
 
 async function getSortedTaskList(profileContext, profileId = null) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
+
     let profile
     if (profileId) {
         const profiles = await getAllProfiles(profileContext)
-        profile = profiles.find(p => p.id === profileId)
+        profile = profiles.find(candidate => candidate.id === profileId)
     } else {
         profile = await getActiveProfile(profileContext)
     }
     if (!profile) return []
-    let allNotes = await getNotesForSearchGroups(profile.searchGroups.children)
-    let filteredNotes = await getFilteredNotes(data.dateRules, profile.filterGroups.children, allNotes)
-    return await sortNoteIds(data.sorts[profile.sorts.selected]?.rule || "", filteredNotes)
+
+    const searchedNotes = await getNotesForSearchGroups(profile.searchGroups.children)
+    const filteredNotes = await getFilteredNotes(data.dateRules, profile.filterGroups.children, searchedNotes)
+    const sortRule = data.sorts[profile.sorts.selected]?.rule || ""
+    return sortNoteIds(sortRule, filteredNotes)
 }
 
 module.exports = {

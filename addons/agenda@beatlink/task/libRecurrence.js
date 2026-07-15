@@ -1,130 +1,158 @@
 const libRRule = require("rrule.min.js")
 const dayjs = api.dayjs
 
-function cleanRRuleString(str) {
-    return str
+const WEEKDAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+
+function cleanRRuleString(rruleString) {
+    return rruleString
         .replace(/;$/, '')
-        .replace("RRULE:", "");
+        .replace("RRULE:", "")
 }
 
-function RRuleToObj(string){
-    function createDefaultRecurrenceObj() {
-        return {
-            enabled: false,
-            intervalCount: 1,
-            interval: "DAILY",
-            weeks: {
-                SU: false, MO: false, TU: false,
-                WE: false, TH: false, FR: false, SA: false
-            },
-            month: {
-                mode: "day",
-                day: "",
-                ordinal: "1",
-                weekday: ""
-            },
-            time: {
-                hour: "",
-                minute: ""
-            },
-            stop: {
-                type: "never",
-                date: dayjs().format("YYYY-MM-DDTHH:mm"),
-                count: 1
-            },
-            loaded: false
-        };
+// Maps an rrule numeric frequency (e.g. RRule.WEEKLY) back to its name string.
+function frequencyName(frequencyNumber) {
+    return Object.keys(libRRule.RRule)
+        .filter(key => typeof libRRule.RRule[key] === 'number')
+        .find(key => libRRule.RRule[key] === frequencyNumber)
+}
+
+function firstOf(value) {
+    return Array.isArray(value) ? value[0] : value
+}
+
+function createDefaultRecurrenceState() {
+    return {
+        enabled: false,
+        intervalCount: 1,
+        interval: "DAILY",
+        weeks: {
+            SU: false, MO: false, TU: false,
+            WE: false, TH: false, FR: false, SA: false
+        },
+        month: {
+            mode: "day",
+            day: "",
+            ordinal: "1",
+            weekday: ""
+        },
+        time: {
+            hour: "",
+            minute: ""
+        },
+        stop: {
+            type: "never",
+            date: dayjs().format("YYYY-MM-DDTHH:mm"),
+            count: 1
+        },
+        loaded: false
     }
-    let newState = createDefaultRecurrenceObj()
-    const weekdays = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-    if (string){
-        let options = libRRule.RRule.parseString(string)
-        newState.enabled = true
-        newState.intervalCount = options.interval || 1
-        newState.interval =
-            Object.keys(libRRule.RRule)
-            .filter(k => typeof libRRule.RRule[k] === 'number')
-            .find(k => libRRule.RRule[k] === options.freq)
-        if (newState.interval === 'WEEKLY' && options.byweekday){
-            for (const day of options.byweekday) {
-                newState.weeks[weekdays[day["weekday"]]] = true
-            }
-        } else if (newState.interval === 'MONTHLY' && options.byweekday){
-            newState.month.mode = "weekday"
-            newState.month.ordinal = String(options.byweekday[0]["n"])
-            newState.month.weekday = weekdays[options.byweekday[0]["weekday"]]
-        } else if (newState.interval === 'MONTHLY' && options.bymonthday != null){
-            const monthday = Array.isArray(options.bymonthday) ? options.bymonthday[0] : options.bymonthday
-            newState.month.mode = "day"
-            newState.month.day = String(monthday)
-        }
-        const byhour = Array.isArray(options.byhour) ? options.byhour[0] : options.byhour
-        const byminute = Array.isArray(options.byminute) ? options.byminute[0] : options.byminute
-        if (byhour != null) newState.time.hour = String(byhour)
-        if (byminute != null) newState.time.minute = String(byminute)
-        if (options.until){
-            newState.stop.type = 'date'
-            newState.stop.date = dayjs(options.until).format("YYYY-MM-DDTHH:mm")
-        } else if (options.count){
-            newState.stop.type = 'number'
-            newState.stop.count = options.count
-        } else {
-            newState.stop.type = 'never'
-        }
+}
+
+function applyWeeklyOptions(state, options) {
+    if (!options.byweekday) return
+    for (const day of options.byweekday) {
+        state.weeks[WEEKDAY_CODES[day.weekday]] = true
+    }
+}
+
+function applyMonthlyOptions(state, options) {
+    if (options.byweekday) {
+        state.month.mode = "weekday"
+        state.month.ordinal = String(options.byweekday[0].n)
+        state.month.weekday = WEEKDAY_CODES[options.byweekday[0].weekday]
+    } else if (options.bymonthday != null) {
+        state.month.mode = "day"
+        state.month.day = String(firstOf(options.bymonthday))
+    }
+}
+
+function applyTimeOptions(state, options) {
+    const hour = firstOf(options.byhour)
+    const minute = firstOf(options.byminute)
+    if (hour != null) state.time.hour = String(hour)
+    if (minute != null) state.time.minute = String(minute)
+}
+
+function applyStopOptions(state, options) {
+    if (options.until) {
+        state.stop.type = "date"
+        state.stop.date = dayjs(options.until).format("YYYY-MM-DDTHH:mm")
+    } else if (options.count) {
+        state.stop.type = "number"
+        state.stop.count = options.count
     } else {
-        newState.enabled = false
+        state.stop.type = "never"
     }
-    return newState
 }
 
-function ObjToRRule(state){
-    let string = ""
-    if (state.enabled) {
-        let recurrenceData = {
-            freq: libRRule.RRule[state.interval],
-            interval: state.intervalCount,
-            byweekday: []
-        }
-        if (state.interval === "WEEKLY"){
-            recurrenceData['byweekday'] =
-                Object.entries(state.weeks)
-                .filter(([weekday, enabled]) => (enabled))
-                .map(([weekday, enabled]) => libRRule.RRule[weekday])
-        }
-        if (state.interval === "MONTHLY") {
-            if (state.month.mode === "weekday" && state.month.weekday) {
-                recurrenceData['byweekday'].push(libRRule.RRule[state.month.weekday].nth(Number(state.month.ordinal)))
-            } else if (state.month.mode === "day" && state.month.day !== "" && state.month.day != null) {
-                recurrenceData['bymonthday'] = Number(state.month.day)
-            }
-        }
-        if (state.time.hour !== "" && state.time.hour != null) {
-            recurrenceData['byhour'] = Number(state.time.hour)
-        }
-        if (state.time.minute !== "" && state.time.minute != null) {
-            recurrenceData['byminute'] = Number(state.time.minute)
-        }
-        if (state.stop.type === "number"){
-            recurrenceData['count'] = Number(state.stop.count)
-        }
-        if (state.stop.type === "date" && state.stop.date) {
-            recurrenceData["until"] = dayjs(state.stop.date).utc().toDate()
-        }
-        string = cleanRRuleString(libRRule.RRule.optionsToString(recurrenceData))
-    }
-    return string ? string : null
+function RRuleToObj(rruleString) {
+    const state = createDefaultRecurrenceState()
+    if (!rruleString) return state
+
+    const options = libRRule.RRule.parseString(rruleString)
+    state.enabled = true
+    state.intervalCount = options.interval || 1
+    state.interval = frequencyName(options.freq)
+
+    if (state.interval === "WEEKLY") applyWeeklyOptions(state, options)
+    if (state.interval === "MONTHLY") applyMonthlyOptions(state, options)
+    applyTimeOptions(state, options)
+    applyStopOptions(state, options)
+
+    return state
 }
 
-function nextOccurrence(recurrenceString, start) {
+function buildRRuleOptions(state) {
+    const options = {
+        freq: libRRule.RRule[state.interval],
+        interval: state.intervalCount,
+        byweekday: []
+    }
+
+    if (state.interval === "WEEKLY") {
+        options.byweekday = Object.entries(state.weeks)
+            .filter(([, enabled]) => enabled)
+            .map(([weekday]) => libRRule.RRule[weekday])
+    }
+
+    if (state.interval === "MONTHLY") {
+        const usesWeekday = state.month.mode === "weekday" && state.month.weekday
+        const usesMonthDay = state.month.mode === "day" && state.month.day !== "" && state.month.day != null
+        if (usesWeekday) {
+            options.byweekday.push(libRRule.RRule[state.month.weekday].nth(Number(state.month.ordinal)))
+        } else if (usesMonthDay) {
+            options.bymonthday = Number(state.month.day)
+        }
+    }
+
+    if (state.time.hour !== "" && state.time.hour != null) options.byhour = Number(state.time.hour)
+    if (state.time.minute !== "" && state.time.minute != null) options.byminute = Number(state.time.minute)
+
+    if (state.stop.type === "number") options.count = Number(state.stop.count)
+    if (state.stop.type === "date" && state.stop.date) options.until = dayjs(state.stop.date).utc().toDate()
+
+    return options
+}
+
+function ObjToRRule(state) {
+    if (!state.enabled) return null
+    const options = buildRRuleOptions(state)
+    const rruleString = cleanRRuleString(libRRule.RRule.optionsToString(options))
+    return rruleString || null
+}
+
+function nextOccurrence(recurrenceString, startDate) {
     const options = libRRule.RRule.parseString(recurrenceString)
-    options.dtstart = start
+    options.dtstart = startDate
     const rule = new libRRule.RRule(options)
-    const nextDate = rule.after(start, false)
+    const nextDate = rule.after(startDate, false)
     if (!nextDate) return null
 
-    const updatedOptions = libRRule.RRule.parseString(recurrenceString)
-    if (updatedOptions.count) updatedOptions.count -= 1
-    const recurrence = cleanRRuleString(libRRule.RRule.optionsToString(updatedOptions))
+    // Rebuild the recurrence with a decremented count so a bounded series
+    // shrinks by one each time an occurrence is consumed.
+    const remainingOptions = libRRule.RRule.parseString(recurrenceString)
+    if (remainingOptions.count) remainingOptions.count -= 1
+    const recurrence = cleanRRuleString(libRRule.RRule.optionsToString(remainingOptions))
 
     return { nextDate, recurrence }
 }
@@ -135,7 +163,7 @@ function humanize(recurrenceString) {
         const options = libRRule.RRule.parseString(recurrenceString)
         const text = new libRRule.RRule(options).toText()
         return text ? text.charAt(0).toUpperCase() + text.slice(1) : ""
-    } catch (e) {
+    } catch (error) {
         return ""
     }
 }

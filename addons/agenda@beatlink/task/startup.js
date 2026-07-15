@@ -1,14 +1,16 @@
-async function setupButton() {
-    let markDone = await api.currentNote.getRelationValue("markDoneScript")
-    await api.runOnBackend((markDone) => {
+async function createMarkDoneLauncher() {
+    const markDoneScriptNoteId = await api.currentNote.getRelationValue("markDoneScript")
+
+    await api.runOnBackend((markDoneScriptNoteId) => {
         api.createOrUpdateLauncher({
             id: "recurrenceMarkDoneButton",
             title: "Mark Done",
             icon: "bx bx-calendar-check",
             type: "script",
-            scriptNoteId: markDone,
+            scriptNoteId: markDoneScriptNoteId,
             isVisible: true
         })
-    }, [markDone])
+    }, [markDoneScriptNoteId])
 }
-setupButton()
+
+createMarkDoneLauncher()

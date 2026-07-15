@@ -1,34 +1,33 @@
 const query = require("libAgendaQuery.js")
 
-async function addTaskToAgendaNow(nowNoteId, noteId, todoEnabled) {
-    api.runOnBackend((nowNoteId, currentNoteId, todoEnabled) => {
-        const currentNote = api.getNote(currentNoteId)
-        let currentNoteString = `<a class="reference-link" href="#root/${currentNoteId}">${currentNote.title}</a>`
+async function addTaskToAgendaNow(nowNoteId, taskNoteId, renderAsTodo) {
+    api.runOnBackend((nowNoteId, taskNoteId, renderAsTodo) => {
+        const taskNote = api.getNote(taskNoteId)
+        const taskLink = `<a class="reference-link" href="#root/${taskNoteId}">${taskNote.title}</a>`
+
         const nowNote = api.getNote(nowNoteId)
         const nowNoteContent = nowNote.getContent()
+        if (nowNoteContent.includes(taskLink)) return
 
-        if (!nowNoteContent.includes(currentNoteString)){
-            if (todoEnabled) {
-                currentNoteString = `<ul class="todo-list"><li data-list-item-id="${api.randomString(32)}"><label class="todo-list__label"><input type="checkbox" disabled="disabled"><span class="todo-list__label__description">${currentNoteString}</span></label></li></ul>`
-            } else {
-                currentNoteString = `<p>${currentNoteString}</p>`
-            }
-            const newNoteContent = nowNoteContent.concat(currentNoteString)
-            nowNote.setContent(newNoteContent)
-            nowNote.save()
-        }
-    }, [nowNoteId, noteId, todoEnabled])
+        const todoListItem =
+            `<ul class="todo-list"><li data-list-item-id="${api.randomString(32)}">` +
+            `<label class="todo-list__label"><input type="checkbox" disabled="disabled">` +
+            `<span class="todo-list__label__description">${taskLink}</span></label></li></ul>`
+        const entry = renderAsTodo ? todoListItem : `<p>${taskLink}</p>`
+
+        nowNote.setContent(nowNoteContent.concat(entry))
+        nowNote.save()
+    }, [nowNoteId, taskNoteId, renderAsTodo])
 }
 
-async function addDueTasksToAgendaNow(profileContext, constants, nowNoteId){
-    const taskList = await query.getTaskList(profileContext)
-    for (const taskId of taskList){
+async function addDueTasksToAgendaNow(profileContext, constants, nowNoteId) {
+    const taskIds = await query.getTaskList(profileContext)
+    for (const taskId of taskIds) {
         const task = await api.getNote(taskId)
-        const startDate = task.getLabelValue(constants.START_DATETIME_LABEL)
-        if (startDate) {
-            if (api.dayjs().isSame(startDate, "minute")) {
-                await addTaskToAgendaNow(nowNoteId, taskId, true)
-            }
+        const startDatetime = task.getLabelValue(constants.START_DATETIME_LABEL)
+        const isDueNow = startDatetime && api.dayjs().isSame(startDatetime, "minute")
+        if (isDueNow) {
+            await addTaskToAgendaNow(nowNoteId, taskId, true)
         }
     }
 }
