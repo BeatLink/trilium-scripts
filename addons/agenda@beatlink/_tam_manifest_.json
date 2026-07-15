@@ -1,0 +1,154 @@
+{
+    "id": "agenda@beatlink",
+    "name": "Agenda",
+    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets that share one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions, plus a global Mark Done launcher), and My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open). The config lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "settingsNote": "profile-editor-page",
+        "notes": [
+            { "id": "root", "title": "agenda@beatlink", "type": "text", "mime": "text/html", "sourceUrl": null },
+            { "id": "agenda-settings", "title": "agendaSettings.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "agendaSettings.jsx" },
+            { "id": "common-css", "title": "agendaCommon.css", "type": "code", "mime": "text/css", "sourceUrl": "agendaCommon.css" },
+            { "id": "schema", "title": "schema.json", "type": "code", "mime": "application/json", "sourceUrl": "schema.json" },
+            { "id": "config", "title": "config.json", "type": "code", "mime": "application/json", "sourceUrl": "config.json" },
+            { "id": "settings", "title": "Settings", "type": "text", "mime": "text/html", "sourceUrl": null },
+            { "id": "ical", "title": "calendarEvents.ical", "type": "code", "mime": "text/plain", "sourceUrl": "calendarEvents.ical" },
+
+            { "id": "lib-overview", "title": "libAgendaOverview.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaOverview.js" },
+            { "id": "lib-config", "title": "libAgendaConfig.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaConfig.js" },
+            { "id": "lib-query", "title": "libAgendaQuery.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaQuery.js" },
+            { "id": "lib-task", "title": "libAgendaTask.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libAgendaTask.js" },
+            { "id": "lib-recurrence", "title": "libRecurrence.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "libRecurrence.js" },
+            { "id": "action-bar", "title": "ActionBar.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "ActionBar.jsx" },
+            { "id": "timer", "title": "Timer.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "Timer.jsx" },
+            { "id": "wav-select", "title": "timerSelect.wav", "type": "file", "mime": "audio/wav", "sourceUrl": "timerSelect.wav", "binary": true },
+            { "id": "wav-start", "title": "timerStart.wav", "type": "file", "mime": "audio/wav", "sourceUrl": "timerStart.wav", "binary": true },
+            { "id": "wav-end", "title": "timerEnd.wav", "type": "file", "mime": "audio/wav", "sourceUrl": "timerEnd.wav", "binary": true },
+
+            { "id": "overview", "title": "agendaOverview.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "agendaOverview.jsx" },
+            { "id": "profile-editor-page", "title": "Agenda Editor", "type": "render", "mime": "text/html", "sourceUrl": null },
+            { "id": "profile-editor", "title": "profileEditor.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "profileEditor.jsx" },
+            { "id": "profile-editor-css", "title": "profileEditor.css", "type": "code", "mime": "text/css", "sourceUrl": "profileEditor.css" },
+
+            { "id": "my-day", "title": "myDayWidget.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "myDayWidget.jsx" },
+            { "id": "my-day-css", "title": "myDay.css", "type": "code", "mime": "text/css", "sourceUrl": "myDay.css" },
+            { "id": "now-note", "title": "My Day", "type": "text", "mime": "text/html", "sourceUrl": null },
+            { "id": "agenda-now", "title": "agendaNow.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "agendaNow.js" },
+
+            { "id": "task", "title": "agendaTask.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "agendaTask.jsx" },
+            { "id": "mark-done", "title": "markDone.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "markDone.js" },
+            { "id": "startup", "title": "startup.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "startup.js" },
+
+            { "id": "readme", "title": "README.md", "type": "code", "mime": "text/markdown", "sourceUrl": "README.md" }
+        ],
+        "children": [
+            { "parent": "root", "child": "agenda-settings" },
+            { "parent": "root", "child": "common-css" },
+            { "parent": "root", "child": "schema" },
+            { "parent": "root", "child": "config" },
+            { "parent": "root", "child": "settings" },
+            { "parent": "root", "child": "ical" },
+            { "parent": "root", "child": "overview" },
+            { "parent": "root", "child": "profile-editor-page" },
+            { "parent": "root", "child": "profile-editor-css" },
+            { "parent": "root", "child": "my-day" },
+            { "parent": "root", "child": "my-day-css" },
+            { "parent": "root", "child": "now-note" },
+            { "parent": "root", "child": "task" },
+            { "parent": "root", "child": "mark-done" },
+            { "parent": "root", "child": "startup" },
+            { "parent": "root", "child": "readme" },
+
+            { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
+
+            { "parent": "lib-config", "addon": "libsettings@beatlink", "child": "ui" },
+
+            { "parent": "lib-query", "child": "lib-task" },
+            { "parent": "lib-query", "child": "lib-config" },
+            { "parent": "lib-query", "addon": "libmultisort@beatlink", "child": "lib" },
+
+            { "parent": "lib-overview", "child": "lib-task" },
+            { "parent": "lib-overview", "child": "lib-config" },
+            { "parent": "lib-overview", "child": "lib-query" },
+            { "parent": "lib-overview", "addon": "libnotification@beatlink", "child": "lib" },
+            { "parent": "lib-overview", "addon": "libcalendar@beatlink", "child": "lib" },
+
+            { "parent": "lib-task", "child": "lib-recurrence" },
+            { "parent": "lib-recurrence", "addon": "librrule@jkbrzt", "child": "lib" },
+
+            { "parent": "timer", "child": "wav-select" },
+            { "parent": "timer", "child": "wav-start" },
+            { "parent": "timer", "child": "wav-end" },
+
+            { "parent": "overview", "child": "agenda-settings" },
+            { "parent": "overview", "child": "lib-overview" },
+            { "parent": "overview", "addon": "libformcontrols@beatlink", "child": "collapsible" },
+            { "parent": "overview", "addon": "libformcontrols@beatlink", "child": "checkboxgroup" },
+            { "parent": "overview", "addon": "libipc@beatlink", "child": "lib" },
+
+            { "parent": "profile-editor-page", "child": "profile-editor" },
+            { "parent": "profile-editor", "child": "agenda-settings" },
+            { "parent": "profile-editor", "addon": "libsettings@beatlink", "child": "ui" },
+
+            { "parent": "my-day", "child": "agenda-settings" },
+            { "parent": "my-day", "child": "timer" },
+            { "parent": "my-day", "child": "lib-overview" },
+            { "parent": "my-day", "child": "agenda-now" },
+            { "parent": "agenda-now", "child": "lib-query" },
+
+            { "parent": "task", "child": "agenda-settings" },
+            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "datetime" },
+            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "togglebutton" },
+            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "number" },
+            { "parent": "task", "child": "action-bar" },
+            { "parent": "task", "child": "lib-task" },
+            { "parent": "task", "child": "lib-recurrence" },
+            { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
+
+            { "parent": "mark-done", "child": "agenda-settings" },
+            { "parent": "mark-done", "child": "lib-recurrence" },
+            { "parent": "mark-done", "child": "lib-task" }
+        ],
+        "relations": [
+            { "from": "settings", "type": "AddonData:config", "to": "config" },
+            { "from": "settings", "type": "schemaNote", "to": "schema" },
+            { "from": "settings", "type": "icalNote", "to": "ical" },
+            { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
+            { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" },
+            { "from": "my-day", "type": "nowNote", "to": "now-note" },
+            { "from": "startup", "type": "markDoneScript", "to": "mark-done" }
+        ],
+        "labels": [
+            { "note": "ical", "name": "customResourceProvider", "value": "agendaCalendar.ical" },
+            { "note": "common-css", "name": "appCss", "value": "" },
+            { "note": "profile-editor-css", "name": "appCss", "value": "" },
+            { "note": "my-day-css", "name": "appCss", "value": "" },
+            { "note": "overview", "name": "widget", "value": "" },
+            { "note": "my-day", "name": "widget", "value": "" },
+            { "note": "task", "name": "widget", "value": "" },
+            { "note": "settings", "name": "agendaConfig", "value": "" },
+            { "note": "startup", "name": "run", "value": "frontendStartup" },
+            { "note": "wav-select", "name": "customResourceProvider", "value": "libtimerSelect.wav" },
+            { "note": "wav-start", "name": "customResourceProvider", "value": "libtimerStart.wav" },
+            { "note": "wav-end", "name": "customResourceProvider", "value": "libtimerEnd.wav" }
+        ],
+        "dependencies": [
+            "libsettings@beatlink",
+            "libformcontrols@beatlink",
+            "libipc@beatlink",
+            "libnotification@beatlink",
+            "libcalendar@beatlink",
+            "libmultisort@beatlink",
+            "librrule@jkbrzt"
+        ],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}

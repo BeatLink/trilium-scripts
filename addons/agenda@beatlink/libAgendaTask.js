@@ -198,6 +198,8 @@ module.exports = {
     humanizeDuration,
     frequencyOf,
     complete,
+    markDone,
+    markUndone,
     rescheduleByDays,
     updateDependentAttributes,
     refreshDisplayLabels
