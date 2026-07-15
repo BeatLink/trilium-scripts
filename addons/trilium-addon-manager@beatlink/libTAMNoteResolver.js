@@ -28,6 +28,21 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
     const { rootExternallyParented = false, entryLocalId = m.root, scopeLocalIds = null } = options
     const { primaryParent, extraParents } = buildParentMaps(m.children)
 
+    // A scoped (dependency-export) resolution only sees the export's closure, but a
+    // closure note's first-declared parent is usually the addon root, which lives
+    // outside it. Re-anchor such a note to an in-scope declared parent (the edge
+    // that pulled it into the closure) instead of skipping it as unresolvable.
+    const effectiveParent = { ...primaryParent }
+    if (scopeLocalIds) {
+        for (const localId of scopeLocalIds) {
+            const declaredPrimary = primaryParent[localId]
+            if (localId !== entryLocalId && declaredPrimary && !scopeLocalIds.has(declaredPrimary)) {
+                const inScopeParent = (extraParents[localId] || []).find(p => scopeLocalIds.has(p))
+                if (inScopeParent) effectiveParent[localId] = inScopeParent
+            }
+        }
+    }
+
     // A persisted note (AddonData: relation target) must never have its
     // content overwritten here — see connectAddonPersistence below for why.
     const persistedLocalIds = new Set(
@@ -37,7 +52,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
     )
 
     const noteIds = (scopeLocalIds ? m.notes.filter(n => scopeLocalIds.has(n.id)) : m.notes).map(n => n.id)
-    const sortedIds = topologicalSort(noteIds, primaryParent)
+    const sortedIds = topologicalSort(noteIds, effectiveParent)
 
     const noteMap = {}
     for (const localId of sortedIds) {
@@ -46,7 +61,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
 
         // entryLocalId's real parent lives outside the closure's scope and must never be
         // chased; it always uses fallbackParentNoteId instead.
-        const parentLocalId = localId === entryLocalId ? null : primaryParent[localId]
+        const parentLocalId = localId === entryLocalId ? null : effectiveParent[localId]
         const parentRealId = parentLocalId ? noteMap[parentLocalId] : fallbackParentNoteId
         if (parentLocalId && !parentRealId) {
             console.error(`TAM: skipping note '${localId}' of ${addonId} — its parent '${parentLocalId}' failed to resolve`)
@@ -195,7 +210,8 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
         const noteRealId = noteMap[localId]
         if (!noteRealId) continue
 
-        const desiredRealParents = [primaryParent[localId], ...(extraParents[localId] || [])]
+        const declaredParentLocalIds = [primaryParent[localId], ...(extraParents[localId] || [])].filter(Boolean)
+        const desiredRealParents = declaredParentLocalIds
             .map(pid => noteMap[pid])
             .filter(Boolean)
         if (localId === entryLocalId && !rootExternallyParented && fallbackParentNoteId) {
@@ -203,18 +219,23 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
         }
         if (desiredRealParents.length === 0) continue
 
-        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents) => {
+        // A declared parent that simply wasn't resolved in this call (e.g. it lies
+        // outside a dependency-export closure's scope) must never be detached —
+        // only parents the manifest genuinely no longer declares.
+        const declaredParentTamIds = declaredParentLocalIds.map(pid => `${addonId}/${pid}`)
+
+        await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents, declaredParentTamIds) => {
             const note = api.getNote(noteId)
             const currentParentIds = note.getParentNotes().map(p => p.noteId)
             for (const parentId of currentParentIds) {
                 if (desiredRealParents.includes(parentId)) continue
                 const parentNote = api.getNote(parentId)
                 const parentTamId = parentNote ? parentNote.getLabelValue(tamFileIdLabel) : null
-                if (parentTamId && parentTamId.startsWith(`${addonId}/`)) {
+                if (parentTamId && parentTamId.startsWith(`${addonId}/`) && !declaredParentTamIds.includes(parentTamId)) {
                     api.ensureNoteIsAbsentFromParent(noteId, parentId)
                 }
             }
-        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents])
+        }, [tamFileIdLabel, addonId, noteRealId, desiredRealParents, declaredParentTamIds])
     }
 }
 
