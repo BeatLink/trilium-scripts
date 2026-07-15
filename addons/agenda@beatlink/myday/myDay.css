@@ -1,7 +1,3 @@
-/* My Day Controls -----------------------------------------------------------*/
-/* Shown inline in the note-detail pane, but only on the configured My Day note
-   (the widget renders nothing elsewhere). */
-
 body .myDayControls {
     display: flex;
     flex-direction: row;
@@ -10,58 +6,58 @@ body .myDayControls {
     padding: 0.5rem;
     border-bottom: 2px solid var(--accent) !important;
     overflow: visible !important;
-}
 
-body .myDayControls button.icon-action:before {
-    font-size: 1.5rem !important;
-}
+    button.icon-action:before {
+        font-size: 1.5rem !important;
+    }
 
-body .myDayControls .timer {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center !important;
-    overflow: visible !important;
-    width: fit-content;
-    margin: 0 auto;
-    gap: 0.5rem;
-}
+    .timer {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center !important;
+        overflow: visible !important;
+        width: fit-content;
+        margin: 0 auto;
+        gap: 0.5rem;
 
-body .myDayControls .timer>span {
-    background-color: var(--card-background-color);
-    border-radius: 8px;
-    padding: 0.5rem;
-}
+        > span {
+            background-color: var(--card-background-color);
+            border-radius: 8px;
+            padding: 0.5rem;
 
-body .myDayControls .timer>span.running {
-    color: white;
-}
+            &.running {
+                color: white;
+            }
+        }
 
-body .myDayControls .timer>* {
-    width: fit-content !important;
-    max-width: fit-content !important;
-}
+        > * {
+            width: fit-content !important;
+            max-width: fit-content !important;
+        }
 
-body .myDayControls .timer .dropdown ul {
-    overflow: scroll;
-    max-height: 80vh;
-    min-width: fit-content !important;
-    width: fit-content !important;
-    padding: 0 !important;
-    font-size: large !important;
-}
+        .dropdown ul {
+            overflow: scroll;
+            max-height: 80vh;
+            min-width: fit-content !important;
+            width: fit-content !important;
+            padding: 0 !important;
+            font-size: large !important;
 
-body .myDayControls .timer .dropdown ul li {
-    width: fit-content !important;
-    min-width: fit-content !important;
-    padding: 0.125 rem !important;
-}
+            li {
+                width: fit-content !important;
+                min-width: fit-content !important;
+                padding: 0.125 rem !important;
 
-body .myDayControls .timer .dropdown ul li span {
-    width: 0;
-    min-width: 0;
-    margin: 0 auto;
+                span {
+                    width: 0;
+                    min-width: 0;
+                    margin: 0 auto;
+                }
+            }
+        }
+    }
 }
 
 .flash-accent {

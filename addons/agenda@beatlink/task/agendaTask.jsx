@@ -20,7 +20,6 @@ const { complete, rescheduleByDays, updateDependentAttributes } = require("libAg
 const { RRuleToObj, ObjToRRule } = require("libRecurrence.js")
 const { publish } = require("libIpc.js")
 
-// Dates & Duration picker ---------------------------------------------------------------
 const durationOptions = [
     { key: "", name: "None"},
     { key: "PT5M", name: "5 Minutes"},
@@ -93,7 +92,6 @@ function DatesDurationPicker({ constants, onAfterChange }) {
     )
 }
 
-// Recurrence picker ---------------------------------------------------------------------
 const intervalOptions = [
     { key: "MINUTELY", name: "Minute" },
     { key: "HOURLY", name: "Hour" },
@@ -133,7 +131,6 @@ const stopOptions = [
     { key: "date", name: "After Date" }
 ]
 
-// Intervals that recur at most once a day, so pinning a specific time makes sense.
 const timeIntervals = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]
 
 function RecurrencePicker({ constants, onAfterChange }){
@@ -336,15 +333,12 @@ function RecurrencePicker({ constants, onAfterChange }){
     )
 }
 
-// Main Widget ---------------------------------------------------------------------------
 function MainWidget(){
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
     const [agendaTaskWidget] = useNoteLabel(note, "agendaTaskWidget")
     const [ids, setIds] = useState(null)
 
-    // Resolve this widget's own relations + settings once — separate from
-    // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
             const settings = await getAgendaSettings()
@@ -357,13 +351,8 @@ function MainWidget(){
     if (agendaTaskWidget !== '') {return null;}
     if (!ids) return null
 
-    // Every picker and quick action below mutates a task-related label. This
-    // widget doesn't refresh the overview note itself — it just broadcasts
-    // `agenda:tasksChanged` over libipc@beatlink. The Agenda Overview widget
-    // (a separate addon) owns the profile context and iCal note, so it is the
-    // one that subscribes and re-files the overview note. That keeps this
-    // addon free of any dependency on libAgendaOverview; if Overview isn't
-    // installed there's no overview note to keep fresh anyway.
+    // Broadcast only; the overview widget subscribes and re-files. Do not
+    // import libAgendaOverview here (keeps this decoupled from Overview).
     function afterChange() {
         publish("agenda:tasksChanged")
     }
@@ -387,9 +376,6 @@ function MainWidget(){
             text: "Start Tomorrow",
             onClick: async () => { await rescheduleByDays(noteId, ids.constants, 1); await afterChange() }
         },
-        // Built-in Trilium view commands — no task label is touched, so these
-        // deliberately skip afterChange(). Hoist toggles between this note and
-        // root, mirroring hoist-note@beatlink.
         {
             key: "zen",
             icon: "bx bx-expand",

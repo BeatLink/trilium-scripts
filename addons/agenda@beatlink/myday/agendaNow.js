@@ -1,7 +1,5 @@
 const query = require("libAgendaQuery.js")
 
-// Appends a reference to noteId onto the "My Day" note's content (optionally as
-// a checkbox to-do), unless it's already there.
 async function addTaskToAgendaNow(nowNoteId, noteId, todoEnabled) {
     api.runOnBackend((nowNoteId, currentNoteId, todoEnabled) => {
         const currentNote = api.getNote(currentNoteId)
@@ -22,8 +20,6 @@ async function addTaskToAgendaNow(nowNoteId, noteId, todoEnabled) {
     }, [nowNoteId, noteId, todoEnabled])
 }
 
-// Adds every task starting exactly now (per the overview's task list) onto
-// the "My Day" note as a to-do.
 async function addDueTasksToAgendaNow(profileContext, constants, nowNoteId){
     const taskList = await query.getTaskList(profileContext)
     for (const taskId of taskList){

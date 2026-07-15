@@ -14,19 +14,10 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 const { sendNotificationForDueTasks } = require("libAgendaOverview.js")
 const { addDueTasksToAgendaNow } = require("agendaNow.js")
 
-// My Day focus controls — a manual countdown timer, shown inline in the
-// note-detail pane, but only while the current note is the note the user picked
-// as their "My Day" note (myDayNoteId, from settings). Everywhere else it
-// renders nothing.
 function MyDay() {
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
 
-    // This widget's own settings — resolved once. `myDayNoteId` is the note
-    // this widget attaches to; the constants/profileContext feed the due-task
-    // and notification background loops. If the user hasn't picked a My Day
-    // note in settings, fall back to the shipped "My Day" note this widget's
-    // `nowNote` relation points at (the default target).
     const [ids, setIds] = useState(null)
     useEffect(() => {
         (async () => {
@@ -41,8 +32,6 @@ function MyDay() {
     const myDayNoteId = ids?.myDay?.myDayNoteId || ids?.defaultNoteId
     const isMyDay = myDayNoteId && noteId === myDayNoteId
 
-    // Add Due Tasks To My Day Note — files any task starting now onto the
-    // My Day note as a to-do. Runs only while browsing the My Day note.
     useEffect(() => {
         if (!isMyDay) return
         if (ids.myDay.addTasksWhenDue) {
@@ -54,7 +43,6 @@ function MyDay() {
         }
     }, [isMyDay, ids, myDayNoteId])
 
-    // Send Notifications for tasks that are due.
     useEffect(() => {
         if (!isMyDay) return
         if (ids.myDay.sendDueNotifications) {
@@ -75,7 +63,6 @@ function MyDay() {
     )
 }
 
-// Widget Export ---------------------------------------------------------------------
 export default defineWidget({
     parent: "note-detail-pane",
     position: 100,

@@ -7,37 +7,34 @@ function cleanRRuleString(str) {
         .replace("RRULE:", "");
 }
 
-function createDefaultRecurrenceObj() {
-    return {
-        enabled: false,
-        intervalCount: 1,
-        interval: "DAILY",
-        weeks: {
-            SU: false, MO: false, TU: false,
-            WE: false, TH: false, FR: false, SA: false
-        },
-        month: {
-            mode: "day",
-            day: "",
-            ordinal: "1",
-            weekday: ""
-        },
-        // Fixed time-of-day the rule fires at, independent of the anchor
-        // date's clock. "" means "keep the anchor date's time".
-        time: {
-            hour: "",
-            minute: ""
-        },
-        stop: {
-            type: "never",
-            date: dayjs().format("YYYY-MM-DDTHH:mm"),
-            count: 1
-        },
-        loaded: false
-    };
-}
-
 function RRuleToObj(string){
+    function createDefaultRecurrenceObj() {
+        return {
+            enabled: false,
+            intervalCount: 1,
+            interval: "DAILY",
+            weeks: {
+                SU: false, MO: false, TU: false,
+                WE: false, TH: false, FR: false, SA: false
+            },
+            month: {
+                mode: "day",
+                day: "",
+                ordinal: "1",
+                weekday: ""
+            },
+            time: {
+                hour: "",
+                minute: ""
+            },
+            stop: {
+                type: "never",
+                date: dayjs().format("YYYY-MM-DDTHH:mm"),
+                count: 1
+            },
+            loaded: false
+        };
+    }
     let newState = createDefaultRecurrenceObj()
     const weekdays = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
     if (string){
@@ -118,10 +115,6 @@ function ObjToRRule(state){
     return string ? string : null
 }
 
-// Given an RRULE string and the date it's currently anchored to, returns the
-// next occurrence plus the recurrence string to store afterward (COUNT
-// decremented by one, if the rule has one) — or null if the recurrence is
-// exhausted (a COUNT/UNTIL-bounded rule with nothing left after `start`).
 function nextOccurrence(recurrenceString, start) {
     const options = libRRule.RRule.parseString(recurrenceString)
     options.dtstart = start
@@ -136,9 +129,6 @@ function nextOccurrence(recurrenceString, start) {
     return { nextDate, recurrence }
 }
 
-// A human-readable sentence for an RRULE string ("every week", "every 2 days on
-// Monday"), via rrule's own `toText` humanizer. Returns "" for empty/unparseable
-// input so callers can use it directly as a display label value.
 function humanize(recurrenceString) {
     if (!recurrenceString) return ""
     try {

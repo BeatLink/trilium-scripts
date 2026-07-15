@@ -1,10 +1,4 @@
-/* Every declaration here carries !important — same reasoning as
-   libsettings@beatlink's libsettings-ui.css: Trilium's own note-content CSS
-   otherwise bleeds into a rendered widget note and silently wins ties this
-   file leaves unenforced. The actual settings-form styling (tabs, tables,
-   tree cards, field rows) lives entirely in libsettings-ui.css now — this
-   file only owns this page's own chrome (width, spacing, heading/intro). */
-
+/* !important throughout: Trilium's note-content CSS otherwise bleeds into a rendered widget note and wins ties. */
 .profile-editor {
     box-sizing: border-box !important;
     width: 100% !important;

@@ -16,8 +16,6 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
 const { subscribe } = require("libIpc.js")
 
-// Trilium collection view types the overview note can be set to. Keep in sync
-// with the `viewType` field's options in schema.json.
 const VIEW_TYPES = [
     { key: "list", title: "List" },
     { key: "grid", title: "Grid" },
@@ -29,13 +27,8 @@ const VIEW_TYPES = [
     { key: "presentation", title: "Presentation" }
 ]
 
-// Preact Components ------------------------------------------------------
-
-// A group's `children` fully embed their own search/filter (name/rule/
-// enabled, or name/type/rule-or-dateRuleId/enabled) — no separate registry
-// to resolve a display name against.
 function CheckboxSection({
-    sectionPath,   // e.g. ["searchGroups"]
+    sectionPath,
     title,
     profile,
     update
@@ -129,12 +122,8 @@ function AgendaOverviewWidgetJSX() {
     const [profileId, setProfileId] = useState(null)
     const [registry, setRegistry] = useState(null)
     const [ids, setIds] = useState(null)
-    // Per-profile collapse state for the dropdown sections (Sort/Prefix/Color),
-    // persisted in the config note's `sectionState` map (see libAgendaOverview).
     const [sectionState, setSectionState] = useState({})
 
-    // Resolve this widget's own relations + settings once — separate from
-    // `noteId` above, which is whichever note the user is currently browsing
     useEffect(() => {
         (async () => {
             const settings = await getAgendaSettings()
@@ -144,7 +133,6 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [])
 
-    // Update / Save Profile
     const update = (fn) => {
         const newProfile = structuredClone(profile)
         fn(newProfile)
@@ -154,11 +142,6 @@ function AgendaOverviewWidgetJSX() {
         updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
-    // Switch which profile is active: persist `activeProfileId`, update local
-    // state, and re-populate the shared overview note for the new profile.
-    // Keeps `ids.profileContext` in sync so subsequent updates (e.g. editing a
-    // section) file the profile just selected, and threads the new id straight
-    // into the updateTaskLists call rather than relying on that state landing.
     const switchProfile = async (id) => {
         setProfileId(id)
         await setActiveProfile(ids.profileContext, id)
@@ -166,10 +149,6 @@ function AgendaOverviewWidgetJSX() {
         await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
     }
 
-    // The widget only appears while browsing the single shared overview note;
-    // on any other note it renders nothing. When shown, `getMatchingProfile`
-    // returns the active profile, which seeds the initial dropdown pick; the
-    // dropdown then lets the user switch the active profile.
     useEffect(() => {
         if (!ids || !noteId) return
         (async () => {
@@ -189,13 +168,6 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [noteId, ids])
 
-    // A task mutation happened elsewhere (e.g. the Agenda Task widget completed
-    // or rescheduled a task, broadcasting agenda:tasksChanged over libipc).
-    // This widget owns the profile context and iCal note, so it is the one
-    // that re-files the overview note in response — the Task widget itself has
-    // no dependency on libAgendaOverview. Only active while the overview note
-    // is shown (ids + a matched profile), and torn down via the returned
-    // unsubscribe.
     useEffect(() => {
         if (!ids || !profile) return
         return subscribe("agenda:tasksChanged", () => {
@@ -203,14 +175,11 @@ function AgendaOverviewWidgetJSX() {
         })
     }, [ids, profile])
 
-    // Load the selected profile's editable object whenever the dropdown pick
-    // (or the underlying profile list) changes.
     useEffect(() => {
         if (!profiles || !profileId) return
         setProfile(profiles.find(p => p.id === profileId) || null)
     }, [profileId, profiles])
 
-    // Load the selected profile's persisted section collapse state.
     useEffect(() => {
         if (!ids || !profileId) return
         (async () => {
@@ -218,14 +187,12 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [profileId, ids])
 
-    // Toggle + persist a dropdown section's collapse state (defaults open).
     const toggleSection = (key) => (e) => {
         const next = { ...sectionState, [key]: e.currentTarget.open }
         setSectionState(next)
         saveSectionState(ids.profileContext, profileId, next)
     }
 
-    // No profile claims the browsed note -> the widget doesn't appear at all.
     if (!profile || !registry){
         return null
     }
@@ -234,8 +201,6 @@ function AgendaOverviewWidgetJSX() {
         <RightPanelWidget title="Agenda">
             <div id="x-agenda-overview-widget" className="agenda-widget">
 
-                {/* Active profile selector — switches which profile populates
-                    the shared overview note (persisted as activeProfileId) */}
                 {profiles && profiles.length > 1 && (
                     <div className="agenda-profile-selector">
                         <label>Profile</label>
@@ -250,8 +215,6 @@ function AgendaOverviewWidgetJSX() {
                     </div>
                 )}
 
-                {/* Collection View — sets the overview note's #viewType, so
-                    it renders as the chosen built-in Trilium collection view */}
                 <div className="agenda-viewtype-selector">
                     <label>Collection View</label>
                     <FormDropdownList
@@ -264,9 +227,6 @@ function AgendaOverviewWidgetJSX() {
                     />
                 </div>
 
-                {/* Board Columns — only meaningful for the board view, where
-                    the picked grouping's field drives the built-in board's
-                    columns (#board:groupBy). Sits right under Collection View. */}
                 {profile.viewType === "board" && (
                     <DropdownSection
                         title="Board Columns"
@@ -280,7 +240,6 @@ function AgendaOverviewWidgetJSX() {
                     />
                 )}
 
-                {/* Search */}
                 <CheckboxSection
                     title="Searches"
                     sectionPath={["searchGroups"]}
@@ -288,7 +247,6 @@ function AgendaOverviewWidgetJSX() {
                     update={update}
                 />
 
-                {/* Filters */}
                 <CheckboxSection
                     title="Filters"
                     sectionPath={["filterGroups"]}
@@ -296,8 +254,6 @@ function AgendaOverviewWidgetJSX() {
                     update={update}
                 />
 
-
-                {/* Sort Order */}
                 <DropdownSection
                     title="Sort Order"
                     sectionPath={["sorts"]}
@@ -309,7 +265,6 @@ function AgendaOverviewWidgetJSX() {
                     onToggle={toggleSection("sorts")}
                 />
 
-                {/* Prefixes */}
                 <DropdownSection
                     title="Prefix"
                     sectionPath={["prefixes"]}
@@ -321,8 +276,6 @@ function AgendaOverviewWidgetJSX() {
                     onToggle={toggleSection("prefixes")}
                 />
 
-
-                {/* Colors */}
                 <DropdownSection
                     title="Color"
                     sectionPath={["colors"]}

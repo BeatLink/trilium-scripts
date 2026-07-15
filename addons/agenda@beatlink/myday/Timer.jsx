@@ -13,18 +13,15 @@ export function Timer({
     startSoundUrl = "custom/libtimerStart.wav",
     endSoundUrl = "custom/libtimerEnd.wav"
 }){
-    // Dropdown state
     const [hours, setHours] = useState(initialHours);
     const [minutes, setMinutes] = useState(initialMinutes);
     const [seconds, setSeconds] = useState(initialSeconds);
 
-    // Timer State
     const [remainingSeconds, setRemainingSeconds] = useState(hours * 3600 + minutes * 60 + seconds);
     const [timerRunning, setTimerRunning] = useState(false);
     const [timerExpired, setTimerExpired] = useState(false);
     const [timerPaused, setTimerPaused] = useState(false);
 
-    // Sounds
     const [enableSounds, setEnableSounds] = useState(initialEnableSounds)
     const selectSound = useMemo(() => new Audio(selectSoundUrl), [selectSoundUrl]);
     const startSound = useMemo(() => new Audio(startSoundUrl), [startSoundUrl]);
@@ -32,7 +29,6 @@ export function Timer({
     useEffect(() => { selectSound.playbackRate = 0.8 }, [selectSound]);
     useEffect(() => { setEnableSounds(initialEnableSounds) }, [initialEnableSounds]);
 
-    // Update Timer if initial value changes and timer isnt running
     useEffect(() => {
         if (!timerRunning && !timerExpired  && !timerPaused) {
             setHours(initialHours ?? 0);
@@ -41,7 +37,6 @@ export function Timer({
         }
     }, [initialHours, initialMinutes, initialSeconds, timerRunning, timerExpired, timerPaused]);
 
-    // Update remainingSeconds if dropdowns change and timer hasn't started
     useEffect(() => {
         if (!timerRunning && !timerExpired && !timerPaused) {
             const total = hours * 3600 + minutes * 60 + seconds;
@@ -49,7 +44,6 @@ export function Timer({
         }
     }, [hours, minutes, seconds, timerRunning, timerExpired, timerPaused]);
 
-    // Timer effect
     useEffect(() => {
         if (!timerRunning || timerPaused || remainingSeconds <= 0) return;
         const interval = setInterval(() => {
@@ -67,7 +61,6 @@ export function Timer({
         return () => clearInterval(interval);
     }, [timerRunning, timerPaused, remainingSeconds]);
 
-    // Helper to display H:M:S
     const displayHours = String(Math.floor(remainingSeconds / 3600)).padStart(2, "0");
     const displayMinutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, "0");
     const displaySeconds = String(remainingSeconds % 60).padStart(2, "0");
@@ -76,7 +69,6 @@ export function Timer({
 
     return (
         <div className="timer">
-            {/* Dropdowns only shown when timer not running */}
             {!timerRunning && !timerExpired && !timerPaused && (
                 <>
                     <FormDropdownList
@@ -105,7 +97,6 @@ export function Timer({
                     />
                 </>
             )}
-            {/* Timer display */}
 
             { (timerRunning || timerExpired || timerPaused) && (
                 <span
@@ -118,7 +109,6 @@ export function Timer({
                 </span>
             )}
 
-            {/* Buttons */}
             {!timerRunning && !timerExpired && (
                 <ActionButton
                     icon="bx bx-play"

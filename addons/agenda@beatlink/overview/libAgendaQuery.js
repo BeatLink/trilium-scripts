@@ -2,6 +2,8 @@ const task = require("libAgendaTask.js")
 const multisort = require("libMultisort.js")
 const { loadData, getActiveProfile, getAllProfiles } = require("libAgendaConfig.js")
 
+const NO_VALUE_KEY = "__novalue__"
+
 function matchesDayJsCriteria(dateString, dateCriteriaList, useNumberOfDays) {
     let now = api.dayjs()
     let startOfToday = now.startOf("day")
@@ -65,30 +67,18 @@ async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
             }
         }
     }
-    // Essentially the below checks that every note in the note list is also in all the filter lists
     let finalNotesList = notesList.filter(
         noteId => Object.values(filterGroups).every(
             filter => filter.includes(noteId)))
     return finalNotesList
 }
 
-// Adapts to libMultisort's note-object-in/note-object-out contract (kept
-// as-is since multisort@beatlink already depends on that exact shape),
-// while this module works in note ids throughout
 async function sortNoteIds(sortString, noteIds) {
     const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
     const sorted = multisort.sortChildNotes(sortString, notes)
     return sorted.map(note => note.noteId)
 }
 
-// One matcher for prefixes, colors, and groupings — they share the same
-// dayjs-interval / label / recurrence-frequency matching skeleton and differ
-// only in what a matched bucket resolves to. `resolve(match)` picks that:
-//   - dayjs match: resolve({ interval, intervalId, date })
-//   - label match: resolve({ noteLabel })  (also called for a MISSING label so
-//     the caller can decide whether to map it or fall back)
-//   - recurrence match: resolve({ freq })
-// `unmatched` is the value used when nothing matched. Returns `{noteId: value}`.
 async function matchNotes(dateRules, info, notesList, resolve, unmatched) {
     const result = {}
     for (const note of notesList) {
@@ -114,8 +104,6 @@ async function matchNotes(dateRules, info, notesList, resolve, unmatched) {
             const noteLabel = (await api.getNote(note)).getLabelValue(info.label)
             result[note] = resolve({ noteLabel })
         } else if (info.type == "recurrence") {
-            // Bucket by the RRULE frequency token (from the label the grouping
-            // carries in `label`), not the raw rule.
             const rrule = (await api.getNote(note)).getLabelValue(info.label)
             result[note] = resolve({ freq: task.frequencyOf(rrule) })
         } else {
@@ -128,7 +116,6 @@ async function matchNotes(dateRules, info, notesList, resolve, unmatched) {
 async function getPrefixes(dateRules, prefixInfo, notesList) {
     return matchNotes(dateRules, prefixInfo, notesList, (m) => {
         if ("date" in m) return api.dayjs(m.date).format(m.interval.formatString)
-        // label
         const mapped = prefixInfo.children ? prefixInfo.children[m.noteLabel] : m.noteLabel
         return mapped ?? (prefixInfo.noValue || "")
     }, prefixInfo ? (prefixInfo.noValue || "") : "")
@@ -142,28 +129,15 @@ async function getColors(dateRules, colorInfo, notesList) {
     }, colorInfo ? (colorInfo.noValue || "") : "")
 }
 
-// Same matching logic as getPrefixes/getColors, but returns the group KEY
-// (label value, or dayjs interval's own registry id) instead of a resolved
-// display string — the caller looks the key up in getGroupColumns' output
-// for display, and passes it back into setGroupForNote on drop.
-// When a grouping defines a no-value bucket (noValue.display set), unmatched
-// notes are keyed to NO_VALUE_KEY so getGroupColumns' matching column catches
-// them; otherwise they stay `null` and fall into a generic "Ungrouped" column.
-const NO_VALUE_KEY = "__novalue__"
-
 async function getGroups(dateRules, groupingInfo, notesList) {
     const unmatchedKey = groupingInfo?.noValue?.display ? NO_VALUE_KEY : null
     return matchNotes(dateRules, groupingInfo, notesList, (m) => {
         if ("intervalId" in m) return m.intervalId
         if ("freq" in m) return groupingInfo.children?.[m.freq] ? m.freq : unmatchedKey
-        // label
         return (m.noteLabel && groupingInfo.children?.[m.noteLabel]) ? m.noteLabel : unmatchedKey
     }, unmatchedKey)
 }
 
-// Ordered column definitions for a kanban board's headers, independent of
-// any particular note list — registry insertion order, same convention
-// prefixes/colors already rely on.
 function getGroupColumns(groupingInfo) {
     if (!groupingInfo) return []
     let columns
@@ -174,21 +148,12 @@ function getGroupColumns(groupingInfo) {
     } else {
         return []
     }
-    // Explicit no-value bucket column (read-only: droppable=false so a drag
-    // can't write the sentinel key as a label). Matches getGroups' NO_VALUE_KEY.
     if (groupingInfo.noValue?.display) {
         columns.push({ key: NO_VALUE_KEY, display: groupingInfo.noValue.display, color: groupingInfo.noValue.color || null, droppable: false })
     }
     return columns
 }
 
-// The write side of a kanban drag-drop: only meaningful for type:"label"
-// groupings, since dropping a card writes the underlying note label
-// directly (e.g. #priority) so every other view (prefix/color/search/
-// filter) reading that same label stays in sync. type:"dayjs" groupings are
-// read-only for kanban purposes (a column is a date window, not a settable
-// value) — callers must disable drag entirely for those, not rely on this
-// silently no-op-ing.
 async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
     if (!groupingInfo || groupingInfo.type !== "label") return
     await api.runOnBackend((noteId, label, value) => {
@@ -204,9 +169,6 @@ async function getTaskList(profileContext) {
     return await getFilteredNotes(data.dateRules, profile.filterGroups.children, allNotes)
 }
 
-// Like getTaskList, but sorted. `profileId` lets a caller with its own
-// profile switcher (e.g. the Task View page) pick a specific profile; when
-// omitted it falls back to the active profile, matching getTaskList.
 async function getSortedTaskList(profileContext, profileId = null) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     let profile

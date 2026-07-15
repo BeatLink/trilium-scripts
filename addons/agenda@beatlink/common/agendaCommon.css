@@ -1,5 +1,3 @@
-/* Widget Body -------------------------------------------------------------------------------*/
-
 #right-pane .body-wrapper:has(.agenda-widget),
 #right-pane .card-body:has(.agenda-widget) {
     contain: none !important;
@@ -14,8 +12,6 @@
         justify-content: space-evenly;
         width: 100%;
         gap: 1rem;
-
-        /* Main Section ---------------------------------------------------------------------------*/
 
         > details, > div {
             > summary, > label {
@@ -36,7 +32,6 @@
             }
         }
 
-        /* Subsections -------------------------------------------------------------------------------*/
         details, div {
             width: 100% !important;
             > * {
@@ -52,7 +47,6 @@
             }
         }
 
-        /* Dropdowns ---------------------------------------------------------------------------------*/
         .dropdown {
             button {
                 text-align: left;
@@ -67,7 +61,6 @@
             }
         }
 
-        /* Buttons ----------------------------------------------------------------------------------*/
         button, .togglebutton {
             width: 100% !important;
             * {
@@ -77,7 +70,6 @@
     }
 }
 
-/* Recurrence picker -------------------------------------------------------------------------*/
 .recurrence-picker {
     .interval-picker {
         container-type: inline-size;
