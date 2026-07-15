@@ -1,17 +1,17 @@
 const notifications = require("libNotification.js")
-const task = require("libAgendaTask.js")
 const { generateCalendar } = require("libCalendar.js")
-const config = require("libAgendaConfig.js")
 const query = require("libAgendaQuery.js")
 
+// Everything from the config and task layers is reached through libAgendaQuery,
+// which re-exports it. libAgendaOverview requires only libAgendaQuery (plus the
+// notification and calendar helpers) so each widget bundles config/task once.
 const {
     loadData, saveProfile, getAllProfiles, getActiveProfile, setActiveProfile,
-    getMatchingProfile, getSectionState, saveSectionState
-} = config
-const {
+    getMatchingProfile, getSectionState, saveSectionState,
     getNotesForSearchGroups, getFilteredNotes, sortNoteIds,
     getPrefixes, getColors, getGroups, getGroupColumns, setGroupForNote,
-    getTaskList, getSortedTaskList
+    getTaskList, getSortedTaskList,
+    refreshDisplayLabels, rescheduleByDays
 } = query
 
 // Materializes the sorted task list as children of the overview note: attaches
@@ -185,7 +185,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         }
 
         for (const noteId of sortedNotes) {
-            await task.refreshDisplayLabels(noteId, constants)
+            await refreshDisplayLabels(noteId, constants)
         }
 
         const promotedAttributes = promotedAttributesForConstants(constants)
@@ -213,7 +213,7 @@ async function sendNotificationForDueTasks(profileContext, constants) {
 async function rescheduleAllTasks(profileContext, constants, icalNoteId, days = 0) {
     const taskIds = await getTaskList(profileContext)
     for (const taskId of taskIds) {
-        task.rescheduleByDays(taskId, constants, days)
+        rescheduleByDays(taskId, constants, days)
     }
     await updateTaskLists(profileContext, constants, icalNoteId)
 }
@@ -229,6 +229,40 @@ async function setCalendarEvents(profileContext, constants, icalNoteId) {
     await api.runOnBackend((icalNoteId, icalString) => {
         api.getNote(icalNoteId).setContent(icalString, { forceSave: true })
     }, [icalNoteId, icalString])
+}
+
+// Appends a task reference to the My Day note (once), optionally as a todo item.
+async function addTaskToAgendaNow(nowNoteId, taskNoteId, renderAsTodo) {
+    api.runOnBackend((nowNoteId, taskNoteId, renderAsTodo) => {
+        const taskNote = api.getNote(taskNoteId)
+        const taskLink = `<a class="reference-link" href="#root/${taskNoteId}">${taskNote.title}</a>`
+
+        const nowNote = api.getNote(nowNoteId)
+        const nowNoteContent = nowNote.getContent()
+        if (nowNoteContent.includes(taskLink)) return
+
+        const todoListItem =
+            `<ul class="todo-list"><li data-list-item-id="${api.randomString(32)}">` +
+            `<label class="todo-list__label"><input type="checkbox" disabled="disabled">` +
+            `<span class="todo-list__label__description">${taskLink}</span></label></li></ul>`
+        const entry = renderAsTodo ? todoListItem : `<p>${taskLink}</p>`
+
+        nowNote.setContent(nowNoteContent.concat(entry))
+        nowNote.save()
+    }, [nowNoteId, taskNoteId, renderAsTodo])
+}
+
+// Files every task that is due this minute onto the My Day note.
+async function addDueTasksToAgendaNow(profileContext, constants, nowNoteId) {
+    const taskIds = await getTaskList(profileContext)
+    for (const taskId of taskIds) {
+        const taskNote = await api.getNote(taskId)
+        const startDatetime = taskNote.getLabelValue(constants.START_DATETIME_LABEL)
+        const isDueNow = startDatetime && api.dayjs().isSame(startDatetime, "minute")
+        if (isDueNow) {
+            await addTaskToAgendaNow(nowNoteId, taskId, true)
+        }
+    }
 }
 
 module.exports = {
@@ -248,5 +282,7 @@ module.exports = {
     updateTaskLists,
     sendNotificationForDueTasks,
     rescheduleAllTasks,
-    setCalendarEvents
+    setCalendarEvents,
+    addTaskToAgendaNow,
+    addDueTasksToAgendaNow
 }

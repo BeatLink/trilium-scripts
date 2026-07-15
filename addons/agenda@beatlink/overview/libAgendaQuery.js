@@ -1,6 +1,7 @@
 const task = require("libAgendaTask.js")
 const multisort = require("libMultisort.js")
-const { loadData, getActiveProfile, getAllProfiles } = require("libAgendaConfig.js")
+const config = require("libAgendaConfig.js")
+const { loadData, getActiveProfile, getAllProfiles } = config
 
 const NO_VALUE_KEY = "__novalue__"
 
@@ -224,5 +225,18 @@ module.exports = {
     getGroupColumns,
     setGroupForNote,
     getTaskList,
-    getSortedTaskList
+    getSortedTaskList,
+    // Re-exported so libAgendaOverview reaches config/task through this single
+    // module instead of requiring libAgendaConfig and libAgendaTask directly,
+    // which would bundle them twice (once here, once there) in each widget.
+    loadData: config.loadData,
+    saveProfile: config.saveProfile,
+    getAllProfiles: config.getAllProfiles,
+    getActiveProfile: config.getActiveProfile,
+    setActiveProfile: config.setActiveProfile,
+    getMatchingProfile: config.getMatchingProfile,
+    getSectionState: config.getSectionState,
+    saveSectionState: config.saveSectionState,
+    refreshDisplayLabels: task.refreshDisplayLabels,
+    rescheduleByDays: task.rescheduleByDays
 }

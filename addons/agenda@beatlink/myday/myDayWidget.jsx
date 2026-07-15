@@ -11,8 +11,7 @@ import { startNote } from "trilium:api"
 import { Timer } from "Timer.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { sendNotificationForDueTasks } = require("libAgendaOverview.js")
-const { addDueTasksToAgendaNow } = require("agendaNow.js")
+const { sendNotificationForDueTasks, addDueTasksToAgendaNow } = require("libAgendaOverview.js")
 
 function MyDay() {
     const { note } = useActiveNoteContext();

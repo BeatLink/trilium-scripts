@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -40,7 +40,6 @@
             { "id": "my-day", "title": "myDayWidget.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "myday/myDayWidget.jsx" },
             { "id": "my-day-css", "title": "myDay.css", "type": "code", "mime": "text/css", "sourceUrl": "myday/myDay.css" },
             { "id": "now-note", "title": "My Day", "type": "text", "mime": "text/html", "sourceUrl": null },
-            { "id": "agenda-now", "title": "agendaNow.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "myday/agendaNow.js" },
 
             { "id": "task", "title": "agendaTask.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "task/agendaTask.jsx" },
 
@@ -70,8 +69,6 @@
             { "parent": "lib-query", "child": "lib-config" },
             { "parent": "lib-query", "addon": "libmultisort@beatlink", "child": "lib" },
 
-            { "parent": "lib-overview", "child": "lib-task" },
-            { "parent": "lib-overview", "child": "lib-config" },
             { "parent": "lib-overview", "child": "lib-query" },
             { "parent": "lib-overview", "addon": "libnotification@beatlink", "child": "lib" },
             { "parent": "lib-overview", "addon": "libcalendar@beatlink", "child": "lib" },
@@ -96,8 +93,6 @@
             { "parent": "my-day", "child": "agenda-settings" },
             { "parent": "my-day", "child": "timer" },
             { "parent": "my-day", "child": "lib-overview" },
-            { "parent": "my-day", "child": "agenda-now" },
-            { "parent": "agenda-now", "child": "lib-query" },
 
             { "parent": "task", "child": "agenda-settings" },
             { "parent": "task", "addon": "libformcontrols@beatlink", "child": "datetime" },
@@ -105,7 +100,6 @@
             { "parent": "task", "addon": "libformcontrols@beatlink", "child": "number" },
             { "parent": "task", "child": "action-bar" },
             { "parent": "task", "child": "lib-task" },
-            { "parent": "task", "child": "lib-recurrence" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" }
         ],
         "relations": [

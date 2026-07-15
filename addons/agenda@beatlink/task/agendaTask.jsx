@@ -16,8 +16,7 @@ import { FormNumber } from "FormNumber.jsx"
 import { ActionBar } from "ActionBar.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { complete, rescheduleByDays, updateDependentAttributes } = require("libAgendaTask.js")
-const { RRuleToObj, ObjToRRule } = require("libRecurrence.js")
+const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
 const { publish } = require("libIpc.js")
 
 const durationOptions = [
