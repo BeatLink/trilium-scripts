@@ -986,14 +986,15 @@ function assignIds(filesArray, idMap, seenIds) {
 }
 
 
-function* walkEntries(filesArray, parentLocalId, idMap) {
-    // Second pass: yield [entry, localId, parentLocalId, isClone] in tree order.
+function* walkEntries(filesArray, parentLocalId, idMap, dirPrefix = "") {
+    // Second pass: yield [entry, localId, parentLocalId, isClone, dirPrefix] in tree order.
     for (const entry of filesArray) {
         const noteId = entry.noteId;
         if (noteId == null) continue;
         const localId = idMap[noteId];
-        yield [entry, localId, parentLocalId, Boolean(entry.isClone)];
-        yield* walkEntries(entry.children || [], localId, idMap);
+        yield [entry, localId, parentLocalId, Boolean(entry.isClone), dirPrefix];
+        const childPrefix = entry.dirFileName ? dirPrefix + entry.dirFileName + "/" : dirPrefix;
+        yield* walkEntries(entry.children || [], localId, idMap, childPrefix);
     }
 }
 
@@ -1030,13 +1031,13 @@ function cmdZipToTam(args) {
         const notes = [], children = [], relations = [], labels = [];
         const usedFilenames = new Set();
 
-        // Index extracted files by basename for fallback lookup.
         const byBasename = {};
         for (const p of Object.keys(extracted)) {
             (byBasename[path.basename(p)] ||= []).push(p);
         }
+        const metaPrefix = (metaRoot && metaRoot !== ".") ? metaRoot + "/" : "";
 
-        for (const [entry, localId, parentLocalId, isClone] of walkEntries(filesArray, null, idMap)) {
+        for (const [entry, localId, parentLocalId, isClone, dirPrefix] of walkEntries(filesArray, null, idMap)) {
             if (isClone) {
                 if (parentLocalId) {
                     children.push({ parent: parentLocalId, child: localId });
@@ -1049,10 +1050,11 @@ function cmdZipToTam(args) {
 
             let sourceUrl = null;
             if (dataFile && !dataFile.endsWith(".clone.html")) {
-                let dataKey = path.join(metaRoot, dataFile).split(path.sep).join("/");
+                let dataKey = metaPrefix + dirPrefix + dataFile;
                 if (!(dataKey in extracted)) {
-                    const matches = byBasename[path.basename(dataFile)] || [];
-                    dataKey = matches.length ? matches[0] : null;
+                    const flat = metaPrefix + dataFile;
+                    dataKey = (flat in extracted) ? flat
+                        : ((byBasename[path.basename(dataFile)] || [])[0] || null);
                 }
                 if (dataKey && dataKey in extracted) {
                     const destName = uniqueName(dataFile, usedFilenames);
