@@ -31,19 +31,19 @@
           # `pkgs.mkShell`'s `packages` argument is stored as
           # `nativeBuildInputs` on the resulting derivation, not
           # `buildInputs` — baseShell.buildInputs silently evaluated to `[]`
-          # here (python3/gh from shell.nix were never actually reaching
+          # here (nodejs/gh from shell.nix were never actually reaching
           # this shell's PATH) until this was caught by trying to actually
           # run trilium_seed.
           packages = baseShell.nativeBuildInputs ++ [ triliumServer ];
 
           shellHook = baseShell.shellHook + ''
-            # Points resources/testing/seed.py at Trilium's own e2e-test seed
+            # Points resources/testing/seed.js at Trilium's own e2e-test seed
             # database (document.db + config.ini with noAuthentication=true),
             # fetched reproducibly via the trilium flake input above.
             export TRILIUM_SRC="${trilium}"
 
-            trilium_seed()   { python3 resources/testing/seed.py "$@"; }
-            trilium_server() { python3 resources/testing/run_server.py "$@"; }
+            trilium_seed()   { node resources/testing/seed.js "$@"; }
+            trilium_server() { node resources/testing/run_server.js "$@"; }
 
             export -f trilium_seed trilium_server
 

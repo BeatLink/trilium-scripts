@@ -2,13 +2,13 @@
 
 pkgs.mkShell {
   packages = [
-    (pkgs.python3.withPackages (ps: [ ps.markdown ps.playwright ]))
+    pkgs.nodejs
     pkgs.gh
     pkgs.playwright-driver.browsers
   ];
 
   shellHook = ''
-    tamhelper()            { python3 resources/scripts/tamhelper.py "$@"; }
+    tamhelper()            { node resources/scripts/tamhelper.js "$@"; }
     validate()             { tamhelper validate "$@"; }
     ci()                   { validate && tam_to_zip --all; }
     generate_pages()       { tamhelper generate-pages "$@"; }
@@ -20,11 +20,19 @@ pkgs.mkShell {
 
     export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
 
+    # Install the toolchain's npm deps (marked, playwright) into node_modules
+    # on first entry -- no build step, just the two runtime libraries the
+    # scripts require(). Skipped when already present.
+    if [ -f package.json ] && [ ! -d node_modules ]; then
+      echo "  Installing npm dependencies (marked, playwright)..."
+      npm install --no-audit --no-fund --silent
+    fi
+
     # playwright-driver.browsers ships prebuilt browser binaries matching the
-    # exact revision the pinned `playwright` Python package expects -- point
-    # at it directly instead of `playwright install` (which would try to
-    # download into $HOME/.cache and fails offline/in sandboxes), and skip
-    # the host-requirements probe that otherwise complains about a NixOS host.
+    # revision the pinned `playwright` npm package expects -- point at it
+    # directly instead of `playwright install` (which would try to download
+    # into $HOME/.cache and fails offline/in sandboxes), and skip the
+    # host-requirements probe that otherwise complains about a NixOS host.
     export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
     export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 
