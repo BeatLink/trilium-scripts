@@ -33,27 +33,37 @@
           # `buildInputs` — baseShell.buildInputs silently evaluated to `[]`
           # here (nodejs/gh from shell.nix were never actually reaching
           # this shell's PATH) until this was caught by trying to actually
-          # run trilium_seed.
+          # run the testing harness's seed step.
           packages = baseShell.nativeBuildInputs ++ [ triliumServer ];
 
           shellHook = baseShell.shellHook + ''
-            # Points resources/testing/seed.js at Trilium's own e2e-test seed
-            # database (document.db + config.ini with noAuthentication=true),
-            # fetched reproducibly via the trilium flake input above.
+            # Points the testing harness (resources/testing/harness.js) at
+            # Trilium's own e2e-test seed database (document.db + config.ini with
+            # noAuthentication=true), fetched reproducibly via the trilium flake
+            # input above.
             export TRILIUM_SRC="${trilium}"
 
-            trilium_seed()   { node resources/testing/seed.js "$@"; }
-            trilium_server() { node resources/testing/run_server.js "$@"; }
+            # The one-run test system: `run_tests` seeds the golden snapshot,
+            # boots trilium-server with TAM deployed, drives the Playwright
+            # suite, then stops the server -- all via playwright.config.js's
+            # globalSetup/teardown. Extra args pass through to `playwright test`
+            # (e.g. `run_tests --headed`, `run_tests -g TAM`). Named run_tests
+            # rather than `test` because `test` is a bash builtin.
+            run_tests()       { npx playwright test "$@"; }
+            # Manual escape hatch for debugging the seed/server by hand -- the
+            # normal path is `run_tests`.
+            trilium_harness() { node resources/testing/harness.js "$@"; }
 
-            export -f trilium_seed trilium_server
+            export -f run_tests trilium_harness
 
             echo ""
-            echo "  Trilium Testing Harness (see resources/testing/README.md)"
+            echo "  Trilium Testing System (see resources/testing/README.md)"
             echo ""
-            echo "  trilium_seed                   One-time: build the golden test-data snapshot"
-            echo "  trilium_server start            Start the test server (background, in-memory db)"
-            echo "  trilium_server start --real     Start against the real db file (writes persist)"
-            echo "  trilium_server stop              Stop the test server"
+            echo "  run_tests                      Seed + start Trilium + deploy TAM + run Playwright suite"
+            echo "  run_tests --headed             Same, with a visible browser"
+            echo "  run_tests -g <pattern>         Run only matching tests"
+            echo "  TRILIUM_TESTING_NO_RESEED=1 run_tests   Reuse the existing snapshot (skip reseed)"
+            echo "  trilium_harness <seed|start|stop>       Manual server control (debugging)"
             echo ""
           '';
         };

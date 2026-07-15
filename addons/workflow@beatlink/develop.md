@@ -277,7 +277,7 @@ hand. The structure is data (`workflowStructure.js`), the logic is `workflowProv
       - [ ] **Review**/**Execute** embed the agenda Task View list (filtered per phase).
       - [ ] **Collect** points at the Inbox. Compose agenda pieces, don't reimplement.
 - [ ] **Phase 4 — Live test.** Install agenda + templates + workflow in a test instance
-      (`nix develop` → `trilium_seed` → `trilium_server start`). Confirm the notebook provisions, the
+      (`nix develop` → `run_tests`, or `trilium_harness start` to poke by hand). Confirm the notebook provisions, the
       preset drives the 15-area filters/colors/kanban, and each Workflow tab works end to end.
 - [ ] **Phase 5 — Collect widgets (deferred).** Build inbox-triage widget(s) for the Collect phase
       (set area/type/priority/dates and file into the tree from the Inbox).

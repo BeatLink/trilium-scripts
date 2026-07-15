@@ -8,10 +8,12 @@
     "tamhelper": "resources/scripts/tamhelper.js"
   },
   "scripts": {
-    "tamhelper": "node resources/scripts/tamhelper.js"
+    "tamhelper": "node resources/scripts/tamhelper.js",
+    "test": "playwright test"
   },
   "dependencies": {
     "marked": "^12.0.2",
-    "playwright": "^1.44.0"
+    "@playwright/test": "1.61.1",
+    "playwright": "1.61.1"
   }
 }

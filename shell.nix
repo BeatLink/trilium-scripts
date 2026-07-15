@@ -23,8 +23,8 @@ pkgs.mkShell {
     # Install the toolchain's npm deps (marked, playwright) into node_modules
     # on first entry -- no build step, just the two runtime libraries the
     # scripts require(). Skipped when already present.
-    if [ -f package.json ] && [ ! -d node_modules ]; then
-      echo "  Installing npm dependencies (marked, playwright)..."
+    if [ -f package.json ] && { [ ! -d node_modules ] || [ ! -d node_modules/@playwright/test ]; }; then
+      echo "  Installing npm dependencies (marked, playwright, @playwright/test)..."
       npm install --no-audit --no-fund --silent
     fi
 
