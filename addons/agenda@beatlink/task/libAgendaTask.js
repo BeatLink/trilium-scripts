@@ -120,20 +120,20 @@ async function complete(noteId, constants) {
     const startDatetime = note.getLabelValue(constants.START_DATETIME_LABEL)
     const recurrence = note.getLabelValue(constants.RECURRENCE_LABEL)
 
-    if (startDatetime && recurrence) {
-        const startDate = api.dayjs(startDatetime).utc().toDate()
-        const nextOccurrence = libRecurrence.nextOccurrence(recurrence, startDate)
-        if (nextOccurrence) {
-            const nextStartDatetime = api.dayjs(nextOccurrence.nextDate).local().format("YYYY-MM-DDTHH:mm")
-            await api.runOnBackend((noteId, recurrence, startDatetime, constants) => {
-                const note = api.getNote(noteId)
-                note.setLabel(constants.START_DATETIME_LABEL, startDatetime)
-                note.setLabel(constants.RECURRENCE_LABEL, recurrence)
-            }, [noteId, nextOccurrence.recurrence, nextStartDatetime, constants])
-            await markUndone(noteId)
-        } else {
-            await markDone(noteId)
-        }
+    const nextOccurrence = (startDatetime && recurrence)
+        ? libRecurrence.nextOccurrence(recurrence, api.dayjs(startDatetime).utc().toDate())
+        : null
+
+    if (nextOccurrence) {
+        const nextStartDatetime = api.dayjs(nextOccurrence.nextDate).local().format("YYYY-MM-DDTHH:mm")
+        await api.runOnBackend((noteId, recurrence, startDatetime, constants) => {
+            const note = api.getNote(noteId)
+            note.setLabel(constants.START_DATETIME_LABEL, startDatetime)
+            note.setLabel(constants.RECURRENCE_LABEL, recurrence)
+        }, [noteId, nextOccurrence.recurrence, nextStartDatetime, constants])
+        await markUndone(noteId)
+    } else {
+        await markDone(noteId)
     }
 
     await updateDependentAttributes(noteId, constants)
@@ -159,14 +159,16 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0) {
 // unnecessary backend writes.
 async function refreshDisplayLabels(noteId, constants) {
     if (!noteId) return
+
     const note = await api.getNote(noteId)
     if (!note) return
 
     const durationDisplay = humanizeDuration(note.getLabelValue(constants.DURATION_LABEL))
-    const recurrenceDisplay = libRecurrence.humanize(note.getLabelValue(constants.RECURRENCE_LABEL))
-
     const durationUnchanged = (note.getLabelValue("durationDisplay") || "") === durationDisplay
+    
+    const recurrenceDisplay = libRecurrence.humanize(note.getLabelValue(constants.RECURRENCE_LABEL))
     const recurrenceUnchanged = (note.getLabelValue("recurrenceDisplay") || "") === recurrenceDisplay
+    
     if (durationUnchanged && recurrenceUnchanged) return
 
     await writeDisplayLabelsOnBackend(noteId, durationDisplay, recurrenceDisplay)

@@ -43,8 +43,6 @@
             { "id": "agenda-now", "title": "agendaNow.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "myday/agendaNow.js" },
 
             { "id": "task", "title": "agendaTask.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "task/agendaTask.jsx" },
-            { "id": "mark-done", "title": "markDone.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "task/markDone.js" },
-            { "id": "startup", "title": "startup.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "task/startup.js" },
 
             { "id": "readme", "title": "README.md", "type": "code", "mime": "text/markdown", "sourceUrl": "README.md" }
         ],
@@ -62,8 +60,6 @@
             { "parent": "root", "child": "my-day-css" },
             { "parent": "root", "child": "now-note" },
             { "parent": "root", "child": "task" },
-            { "parent": "root", "child": "mark-done" },
-            { "parent": "root", "child": "startup" },
             { "parent": "root", "child": "readme" },
 
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
@@ -110,11 +106,7 @@
             { "parent": "task", "child": "action-bar" },
             { "parent": "task", "child": "lib-task" },
             { "parent": "task", "child": "lib-recurrence" },
-            { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
-
-            { "parent": "mark-done", "child": "agenda-settings" },
-            { "parent": "mark-done", "child": "lib-recurrence" },
-            { "parent": "mark-done", "child": "lib-task" }
+            { "parent": "task", "addon": "libipc@beatlink", "child": "lib" }
         ],
         "relations": [
             { "from": "settings", "type": "AddonData:config", "to": "config" },
@@ -122,8 +114,7 @@
             { "from": "settings", "type": "icalNote", "to": "ical" },
             { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
             { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" },
-            { "from": "my-day", "type": "nowNote", "to": "now-note" },
-            { "from": "startup", "type": "markDoneScript", "to": "mark-done" }
+            { "from": "my-day", "type": "nowNote", "to": "now-note" }
         ],
         "labels": [
             { "note": "ical", "name": "customResourceProvider", "value": "agendaCalendar.ical" },
