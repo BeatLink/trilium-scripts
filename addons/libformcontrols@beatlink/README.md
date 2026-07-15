@@ -7,6 +7,7 @@ separately, so a consumer clones only the ones it uses.
 |----------------|-------------------------|--------------------|--------------------------------------------------------------------|
 | `datetime`     | `FormDatetime.jsx`      | `FormDatetime`     | datetime-local input                                               |
 | `number`       | `FormNumber.jsx`        | `FormNumber`       | number input                                                       |
+| `time`         | `FormTime.jsx`          | `FormTime`         | time input (`"HH:mm"` string)                                      |
 | `togglebutton` | `FormToggleButton.jsx`  | `FormToggleButton` | toggle button (a checkbox styled as a pill button)                 |
 | `checkboxgroup`| `FormCheckboxGroup.jsx` | `FormCheckboxGroup`| labeled, collapsible group of checkboxes (uses `collapsible`)      |
 | `colorpicker`  | `ColorPicker.jsx`       | `ColorPicker`      | curated color-swatch grid with a custom CSS-color fallback         |

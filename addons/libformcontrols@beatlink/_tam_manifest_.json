@@ -1,11 +1,11 @@
 {
     "id": "libformcontrols@beatlink",
     "name": "Form Controls",
-    "description": "Reusable Preact form-control components for TriliumNext widget UIs: a datetime-local input, a number input, a toggle button (checkbox styled as a pill), a labeled collapsible checkbox group, a curated color-swatch picker, and a collapsible section. Each control is exported separately so a consumer pulls in only the ones it uses.",
+    "description": "Reusable Preact form-control components for TriliumNext widget UIs: a datetime-local input, a number input, a time input, a toggle button (checkbox styled as a pill), a labeled collapsible checkbox group, a curated color-swatch picker, and a collapsible section. Each control is exported separately so a consumer pulls in only the ones it uses.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformcontrols@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libformcontrols@beatlink/_tam_manifest_.json",
@@ -32,6 +32,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "FormNumber.jsx"
+            },
+            {
+                "id": "time",
+                "title": "FormTime.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormTime.jsx"
             },
             {
                 "id": "togglebutton",
@@ -79,6 +86,7 @@
         "children": [
             { "parent": "root", "child": "datetime" },
             { "parent": "root", "child": "number" },
+            { "parent": "root", "child": "time" },
             { "parent": "root", "child": "togglebutton" },
             { "parent": "root", "child": "checkboxgroup" },
             { "parent": "root", "child": "colorpicker" },
@@ -95,6 +103,7 @@
         "exports": {
             "datetime": "datetime",
             "number": "number",
+            "time": "time",
             "togglebutton": "togglebutton",
             "checkboxgroup": "checkboxgroup",
             "colorpicker": "colorpicker",

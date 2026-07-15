@@ -7,13 +7,14 @@ import {
     useMemo,
     useEffect,
     useState,
-    FormDropdownList
+    FormDropdownList,
+    Button
 } from "trilium:preact";
 
 import { FormDatetime } from "FormDatetime.jsx"
 import { FormToggleButton } from "FormToggleButton.jsx"
 import { FormNumber } from "FormNumber.jsx"
-import { ActionBar } from "ActionBar.jsx"
+import { FormTime } from "FormTime.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
@@ -132,6 +133,18 @@ const stopOptions = [
 
 const timeIntervals = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]
 
+// The recurrence object stores hour/minute as strings; FormTime speaks "HH:mm".
+function timeToInput({ hour, minute }) {
+    if (hour === "" || hour == null) return ""
+    return `${String(hour).padStart(2, "0")}:${String(minute || 0).padStart(2, "0")}`
+}
+
+function inputToTime(value) {
+    if (!value) return { hour: "", minute: "" }
+    const [hour, minute] = value.split(":")
+    return { hour: String(Number(hour)), minute: String(Number(minute)) }
+}
+
 function RecurrencePicker({ constants, onAfterChange }){
     const { note } = useActiveNoteContext();
     const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
@@ -187,23 +200,12 @@ function RecurrencePicker({ constants, onAfterChange }){
                 <div className="time-picker">
                     <label>At Time</label>
                     <div>
-                        <FormNumber
-                            min="0" max="23" step="1" placeholder="Hour"
-                            value={recurrenceObj.time.hour}
+                        <FormTime
+                            value={timeToInput(recurrenceObj.time)}
                             onChange={value => {
                                 updateRecurrence({
                                     ...recurrenceObj,
-                                    time: { ...recurrenceObj.time, hour: value }
-                                })
-                            }}
-                        />
-                        <FormNumber
-                            min="0" max="59" step="1" placeholder="Minute"
-                            value={recurrenceObj.time.minute}
-                            onChange={value => {
-                                updateRecurrence({
-                                    ...recurrenceObj,
-                                    time: { ...recurrenceObj.time, minute: value }
+                                    time: inputToTime(value)
                                 })
                             }}
                         />
@@ -406,7 +408,11 @@ function MainWidget(){
                 </div>
                 <div>
                     <label>Actions</label>
-                    <ActionBar actions={actions}/>
+                    <div>
+                        {actions.map(({ key, icon, text, onClick }) => (
+                            <Button key={key} icon={icon} text={text} onClick={onClick} />
+                        ))}
+                    </div>
                 </div>
             </div>
         </RightPanelWidget>
