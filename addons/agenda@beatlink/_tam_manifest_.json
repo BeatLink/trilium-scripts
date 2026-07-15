@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets that share one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions, plus a global Mark Done launcher), and My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open). The config lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets that share one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions), and My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open). The config lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -125,7 +125,6 @@
             { "note": "my-day", "name": "widget", "value": "" },
             { "note": "task", "name": "widget", "value": "" },
             { "note": "settings", "name": "agendaConfig", "value": "" },
-            { "note": "startup", "name": "run", "value": "frontendStartup" },
             { "note": "wav-select", "name": "customResourceProvider", "value": "libtimerSelect.wav" },
             { "note": "wav-start", "name": "customResourceProvider", "value": "libtimerStart.wav" },
             { "note": "wav-end", "name": "customResourceProvider", "value": "libtimerEnd.wav" }

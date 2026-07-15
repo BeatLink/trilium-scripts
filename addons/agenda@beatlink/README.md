@@ -11,8 +11,8 @@ configuration.
   Ships the **Agenda Editor** page that edits the whole configuration.
 - **Task** — a right-pane editor that appears on any note carrying the **`#agendaTaskWidget`** label,
   for editing a task's start/due dates, duration, recurrence, and quick actions (complete, start
-  today/tomorrow, Zen, Hoist). Also installs a global **Mark Done** launcher that advances the active
-  note to its next recurrence, or archives it when the recurrence is exhausted.
+  today/tomorrow, Zen, Hoist). Completing a task advances it to its next recurrence, or archives it
+  when the recurrence is exhausted.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
