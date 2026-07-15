@@ -29,31 +29,27 @@ const VIEW_TYPES = [
 
 function CheckboxSection({
     sectionPath,
+    stateKey,
     title,
     profile,
-    update
+    update,
+    sectionState,
+    toggleSection
 }) {
     const section = sectionPath.reduce((o, k) => o[k], profile)
 
     return (
         <Collapsible
             label={title}
-            expanded={section.expanded}
-            onToggle={e => update(p => {
-                sectionPath.reduce((o,k)=>o[k], p).expanded = e.currentTarget.open
-            })}
+            expanded={sectionState[stateKey] !== false}
+            onToggle={toggleSection(stateKey)}
             className="mainSection"
         >
             {Object.entries(section.children || {}).map(([groupKey, group]) => (
                 <FormCheckboxGroup
                     label={group.name}
-                    expanded={group.expanded}
-                    onToggle={e => update(p => {
-                        sectionPath
-                          .concat(["children", groupKey])
-                          .reduce((o,k)=>o[k], p)
-                          .expanded = e.currentTarget.open
-                    })}
+                    expanded={sectionState[`${stateKey}:${groupKey}`] === true}
+                    onToggle={toggleSection(`${stateKey}:${groupKey}`)}
                     items={Object.entries(group.children || {}).map(
                         ([itemKey, usage]) => ({
                             key: itemKey,
@@ -243,15 +239,21 @@ function AgendaOverviewWidgetJSX() {
                 <CheckboxSection
                     title="Searches"
                     sectionPath={["searchGroups"]}
+                    stateKey="searchGroups"
                     profile={profile}
                     update={update}
+                    sectionState={sectionState}
+                    toggleSection={toggleSection}
                 />
 
                 <CheckboxSection
                     title="Filters"
                     sectionPath={["filterGroups"]}
+                    stateKey="filterGroups"
                     profile={profile}
                     update={update}
+                    sectionState={sectionState}
+                    toggleSection={toggleSection}
                 />
 
                 <DropdownSection
