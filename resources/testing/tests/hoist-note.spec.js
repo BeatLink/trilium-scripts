@@ -33,7 +33,8 @@ test.beforeAll(async ({ browser }) => {
     // beforeAll has no `page` fixture, so drive install on a throwaway page.
     const raw = await browser.newPage();
     try {
-        await installViaTam(wrapPage(raw), httpClient(), ADDON_ID);
+        // hoist-note has no dependencies, so the fast install-by-URL path is fine.
+        await installViaTam(wrapPage(raw), httpClient(), ADDON_ID, { mode: "url" });
     } finally {
         await raw.close();
     }
@@ -76,11 +77,13 @@ test("setupButtons #run=frontendStartup is live after enable", async ({ tri }) =
 
 // ---- Behaviour (frontend) -------------------------------------------------
 
-// The launchbar button setupButtons.js creates (title "Hoist Note", bx-pin icon).
+// The launchbar button setupButtons.js creates. Trilium renders a script
+// launcher as <button class="launcher-button icon-action bx bx-pin"> with NO
+// text/aria-label -- its "Hoist Note" title is only a hover tooltip (Bootstrap
+// config, not a DOM `title` attribute), so it has no accessible name to match
+// on. Target it by the launcher-button class carrying the bx-pin icon instead.
 function hoistLauncher(page) {
-    return page.getByRole("button", { name: /Hoist Note/i })
-        .or(page.locator("[title='Hoist Note'], .launcher-button:has-text('Hoist Note')"))
-        .first();
+    return page.locator("button.launcher-button.bx-pin").first();
 }
 
 test("frontend startup created the Hoist Note launchbar button", async ({ page }) => {

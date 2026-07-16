@@ -60,6 +60,15 @@ function localManifestUrl(addonId) {
     return `${ADDONS_BASE_URL}/${addonId}/_tam_manifest_.json`;
 }
 
+// A TAM catalog URL served by the local addon server (see startAddonServer's
+// synthetic /catalog.json route). Registering this catalog lets TAM resolve an
+// addon's bare-id dependencies against the local repo, exactly as it resolves
+// them against the real GitHub catalog in production -- so installing an addon
+// through the catalog pulls its dependencies in too.
+function localCatalogUrl() {
+    return `${ADDONS_BASE_URL}/catalog.json`;
+}
+
 // -------------------------------------------------------------------------
 // Server lifecycle
 // -------------------------------------------------------------------------
@@ -163,6 +172,25 @@ function startAddonServer() {
     const server = http.createServer((req, res) => {
         // Only GET; only paths that stay inside ADDONS_DIR.
         const urlPath = decodeURIComponent(new URL(req.url, ADDONS_BASE_URL).pathname);
+
+        // Synthetic catalog: a TAM catalog listing every addon dir's LOCAL
+        // manifest URL, so a test can register it and install through the
+        // catalog -- letting TAM resolve bare-id dependencies against the repo
+        // exactly as it would against the GitHub catalog in production.
+        if (req.method === "GET" && urlPath === "/catalog.json") {
+            const addonIds = fs.readdirSync(ADDONS_DIR, { withFileTypes: true })
+                .filter((e) => e.isDirectory() &&
+                    fs.existsSync(path.join(ADDONS_DIR, e.name, "_tam_manifest_.json")))
+                .map((e) => e.name);
+            const catalog = {
+                webUrl: ADDONS_BASE_URL,
+                "tam-addons": addonIds.map(localManifestUrl),
+            };
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(catalog));
+            return;
+        }
+
         const filePath = path.join(ADDONS_DIR, urlPath);
         if (req.method !== "GET" || !filePath.startsWith(ADDONS_DIR + path.sep)) {
             res.writeHead(403).end("forbidden");
@@ -402,33 +430,111 @@ async function debugShot(page, name) {
     } catch { /* best-effort */ }
 }
 
-async function installViaTam(page, tri, addonId, { waitSeconds = 3 } = {}) {
+// Open TAM's render note, dismiss the trust warning, and return a locator scoped
+// to the visible render (so card/control lookups don't hit a hidden stale tab).
+async function openTamRender(page, tri, waitSeconds) {
+    const tam = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
+    if (!tam.results || tam.results.length === 0) {
+        throw new Error("TAM render note not found in the seed -- can't drive TAM");
+    }
+    await page.gotoNote(tam.results[0].noteId, waitSeconds);
+    await page.enableRenderNote(waitSeconds);
+    return page.locator(".note-detail-render:visible").first();
+}
+
+// Reopen TAM's list and click a freshly-installed addon's inline "Enable" button
+// (fresh installs are DISABLED -- #run=frontendStartup scripts and activation
+// labels stay under a `disabled:` prefix until this). Idempotent: skips if the
+// card shows no Enable (already enabled, or a library with no runtime toggle).
+async function enableAddonCard(page, tri, addonName, waitSeconds) {
+    const render = await openTamRender(page, tri, waitSeconds);
+    try {
+        const card = render.locator(".card").filter({ hasText: addonName }).first();
+        await card.waitFor({ state: "visible", timeout: 20_000 });
+        const enable = card.getByRole("button", { name: /^Enable$/ });
+        if (await enable.count() > 0) {
+            await enable.click();
+            await sleep(waitSeconds * 1000);
+        }
+    } catch (e) {
+        await debugShot(page, "enable-step");
+        throw new Error(`enableAddonCard: could not enable '${addonName}' via its card: ${e.message}`);
+    }
+}
+
+// Register the local addon server's synthetic catalog (localCatalogUrl) in TAM
+// via Settings -> "Add Catalog". This is what lets a subsequent catalog install
+// resolve an addon's bare-id dependencies against the local repo. Idempotent:
+// TAM dedupes catalog URLs, so re-adding is a no-op.
+async function addLocalCatalog(page, tri, { waitSeconds = 3 } = {}) {
+    const render = await openTamRender(page, tri, waitSeconds);
+    try {
+        await render.getByText("Settings", { exact: true }).first().click({ timeout: 15_000 });
+        const urlInput = render.locator("input[placeholder*='catalog.json']");
+        await urlInput.waitFor({ state: "visible", timeout: 15_000 });
+        await urlInput.fill(localCatalogUrl());
+        await render.getByRole("button", { name: /Add Catalog/i }).click({ timeout: 15_000 });
+        await sleep(waitSeconds * 1000);
+    } catch (e) {
+        await debugShot(page, "add-catalog");
+        throw new Error(`addLocalCatalog: could not add the local catalog: ${e.message}`);
+    }
+}
+
+// Install an addon through TAM's UI the way a user does. Two modes:
+//
+//   "url"     Settings -> "Install by URL" with localManifestUrl(addonId). Fast,
+//             but carries NO catalogContext, so bare-id dependencies are NOT
+//             resolved -- use only for addons with no (bare-id) dependencies.
+//   "catalog" (default) Settings -> Browse the local catalog -> the addon's
+//             card -> Install. Carries the catalog context, so TAM resolves and
+//             installs the addon's dependencies too -- the real user path for a
+//             dependent addon like area-picker (needs addLocalCatalog first).
+//
+// Either way, fresh installs are DISABLED, so the addon's card is reopened and
+// Enabled, then the frontend is reloaded so #run=frontendStartup scripts fire.
+async function installViaTam(page, tri, addonId, { waitSeconds = 3, mode = "catalog" } = {}) {
     const manifestUrl = localManifestUrl(addonId);
     const manifest = await fetchLocalJson(manifestUrl);
     const addonName = manifest.name || addonId;
     const rootTitle = manifest.manifest?.notes?.find(n => n.id === (manifest.manifest?.root))?.title || addonId;
 
-    const openTam = async () => {
-        const tam = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
-        if (!tam.results || tam.results.length === 0) {
-            throw new Error("TAM render note not found in the seed -- can't install via TAM");
+    if (mode === "url") {
+        const render = await openTamRender(page, tri, waitSeconds);
+        try {
+            await render.getByText("Settings", { exact: true }).first().click({ timeout: 15_000 });
+            const urlInput = render.locator("input[placeholder*='_tam_manifest_.json']");
+            await urlInput.waitFor({ state: "visible", timeout: 15_000 });
+            await urlInput.fill(manifestUrl);
+            await render.getByRole("button", { name: /Install by URL/i }).click({ timeout: 15_000 });
+        } catch (e) {
+            await debugShot(page, "install-step");
+            throw new Error(`installViaTam: could not drive Settings->Install by URL for ${addonId}: ${e.message}`);
         }
-        await page.gotoNote(tam.results[0].noteId, waitSeconds);
-        await page.enableRenderNote(waitSeconds);
-        return page.locator(".note-detail-render");
-    };
-
-    // --- Install: Settings -> Install by URL ------------------------------
-    let render = await openTam();
-    try {
-        await render.getByText("Settings", { exact: true }).first().click({ timeout: 15_000 });
-        const urlInput = render.locator("input[placeholder*='_tam_manifest_.json']");
-        await urlInput.waitFor({ state: "visible", timeout: 15_000 });
-        await urlInput.fill(manifestUrl);
-        await render.getByRole("button", { name: /Install by URL/i }).click({ timeout: 15_000 });
-    } catch (e) {
-        await debugShot(page, "install-step");
-        throw new Error(`installViaTam: could not drive Settings->Install by URL for ${addonId}: ${e.message}`);
+    } else {
+        // Catalog install: add the local catalog, browse it, click the addon's Install.
+        await addLocalCatalog(page, tri, { waitSeconds });
+        const render = await openTamRender(page, tri, waitSeconds);
+        try {
+            await render.getByText("Settings", { exact: true }).first().click({ timeout: 15_000 });
+            // Each catalog is a .TAM-repo-row (its URL + Browse/Visit/Delete buttons).
+            const catalogRow = render.locator(".TAM-repo-row").filter({ hasText: localCatalogUrl() }).first();
+            await catalogRow.getByRole("button", { name: /Browse/i }).click({ timeout: 15_000 });
+            // Browsing swaps SettingsView for CatalogBrowseView (fetches every
+            // manifest in the catalog first), so give the card a generous wait.
+            const card = render.locator(".card").filter({ hasText: addonName }).first();
+            await card.waitFor({ state: "visible", timeout: 30_000 });
+            // Idempotent: a card already installed shows an "INSTALLED" badge and
+            // no Install button (a prior run/spec installed it). Only click Install
+            // if the button is present.
+            const install = card.getByRole("button", { name: /^Install$/ });
+            if (await install.count() > 0) {
+                await install.click({ timeout: 15_000 });
+            }
+        } catch (e) {
+            await debugShot(page, "catalog-install-step");
+            throw new Error(`installViaTam: could not install ${addonId} from the local catalog: ${e.message}`);
+        }
     }
 
     // Confirm the install actually landed by watching for the addon's root note
@@ -439,22 +545,7 @@ async function installViaTam(page, tri, addonId, { waitSeconds = 3 } = {}) {
         throw new Error(`installViaTam: ${addonId} did not install -- no note titled '${rootTitle}' appeared (manifest URL ${manifestUrl} reachable from the server?)`);
     }
 
-    // --- Enable: reopen TAM (fresh list has the addon's card) -------------
-    render = await openTam();
-    try {
-        const card = render.locator(".card").filter({ hasText: addonName }).first();
-        await card.waitFor({ state: "visible", timeout: 20_000 });
-        // Card shows Enable while disabled, Disable once enabled -- click Enable
-        // only if present (idempotent if a prior run already enabled it).
-        const enable = card.getByRole("button", { name: /^Enable$/ });
-        if (await enable.count() > 0) {
-            await enable.click();
-            await sleep(waitSeconds * 1000);
-        }
-    } catch (e) {
-        await debugShot(page, "enable-step");
-        throw new Error(`installViaTam: installed ${addonId} but could not enable it via its card: ${e.message}`);
-    }
+    await enableAddonCard(page, tri, addonName, waitSeconds);
 
     // Reload so #run=frontendStartup scripts pick up the now-enabled addon.
     await page.reload({ waitUntil: "networkidle" });
@@ -595,7 +686,8 @@ async function globalSetup() {
 module.exports = globalSetup;
 Object.assign(module.exports, {
     seed, start, stop, prepare, isRunning,
-    httpClient, wrapPage, startAddonServer, installViaTam, localManifestUrl,
+    httpClient, wrapPage, startAddonServer, installViaTam, addLocalCatalog,
+    localManifestUrl, localCatalogUrl,
     test, expect: base.expect, globalSetup,
     DATA_DIR, PORT, BASE_URL, PIDFILE, LOGFILE,
     ADDONS_DIR, ADDONS_PORT, ADDONS_BASE_URL,
