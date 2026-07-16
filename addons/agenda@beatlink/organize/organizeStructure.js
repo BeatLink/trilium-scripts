@@ -24,9 +24,9 @@
 // setRelation overwrite) on every provision run, including on adopted pre-existing
 // notes. seedLabels and note content are only touched at creation.
 
-// The 15 areas of life, in the order fixed in develop.md, numbered 01-15, each
-// with its #color. Colors reuse agenda's colors.area palette for the 14 shared
-// areas; Legal (new here) = red, grouping it with Career/Finances.
+// The 13 areas of life, in the order fixed in organize/README.md, numbered
+// 01-13, each with its #color. Colors reuse agenda's colors.area palette; Legal
+// = red, grouping it with Career/Finances.
 const AREAS = [
     { name: "Career",       color: "red" },
     { name: "Finances",     color: "red" },
