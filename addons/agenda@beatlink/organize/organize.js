@@ -1,7 +1,7 @@
 // === Trilium Code note ===
-// Title: workflowOrganize.js
+// Title: organize.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by the Workflow window's Organize tab).
+// Library only (CommonJS, require()'d by the Organize page).
 //
 // Backend helpers for the Organize phase's triage queues:
 //   - getItemTemplates(): the item-type templates the "assign a template" queue offers.
@@ -19,7 +19,7 @@
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
-const { AREA_LIST, BUCKET_TEMPLATES } = require("workflowStructure.js")
+const { AREA_LIST, BUCKET_TEMPLATES } = require("organizeStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 // Title of the Task item template; a note whose primary parent carries this

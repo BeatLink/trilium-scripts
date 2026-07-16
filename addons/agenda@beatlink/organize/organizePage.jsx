@@ -1,12 +1,12 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
-import { loadSettings } from "libSettingsUI.jsx"
+import { getAgendaSettings } from "agendaSettings.jsx"
 
 const {
     getItemTemplates, getAreas, getOrganizeCandidates, getMisfiledNotes,
     assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
-} = require("workflowOrganize.js")
-const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("workflowStructure.js")
+} = require("organize.js")
+const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("organizeStructure.js")
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -223,21 +223,20 @@ function OptionButton({ opt, busy, onClick }) {
     )
 }
 
-// Resolve the workflow settings (morning/noon/evening/night times) via the
-// render note's own schemaNote/configNote relations (see manifest), falling back
-// to the shipped defaults if settings can't be resolved (e.g. libsettings absent).
+// Resolve the morning/noon/evening/night times from agenda's shared config
+// (discovered via #agendaConfig by getAgendaSettings), falling back to the
+// shipped defaults if the config can't be resolved (e.g. libsettings absent).
 async function loadTimeSettings() {
     const DEFAULTS = { morning: "08:00", noon: "12:00", evening: "17:00", night: "20:00" }
     try {
-        const schemaNoteId = await api.startNote.getRelationValue("schemaNote")
-        const configNoteId = await api.startNote.getRelationValue("configNote")
-        if (!schemaNoteId || !configNoteId) return DEFAULTS
-        const s = await loadSettings(schemaNoteId, configNoteId)
+        const settings = await getAgendaSettings()
+        const o = settings && settings.organize
+        if (!o) return DEFAULTS
         return {
-            morning: s.morningTime || DEFAULTS.morning,
-            noon: s.noonTime || DEFAULTS.noon,
-            evening: s.eveningTime || DEFAULTS.evening,
-            night: s.nightTime || DEFAULTS.night
+            morning: o.morningTime || DEFAULTS.morning,
+            noon: o.noonTime || DEFAULTS.noon,
+            evening: o.eveningTime || DEFAULTS.evening,
+            night: o.nightTime || DEFAULTS.night
         }
     } catch (e) {
         return DEFAULTS

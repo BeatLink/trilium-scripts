@@ -1,9 +1,9 @@
 // === Trilium Code note ===
-// Title: workflowProvision.js
+// Title: organizeProvision.js
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by the Setup page).
 //
-// Provisions the opinionated notebook structure (workflowStructure.js) by
+// Provisions the opinionated notebook structure (organizeStructure.js) by
 // find-or-create, tagging each note with #workflowNote=<key> so the addon can
 // resolve it later — the same identity idea as TAM's #TAMFILEID, but scoped to
 // this addon and applied to notes the user may already have created by hand.
@@ -18,7 +18,7 @@
 // notes alike, so the structure's look is self-healing and re-running fixes
 // drift. seedLabels and note content are applied only when the note is created.
 
-const { STRUCTURE, AREA_LIST, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("workflowStructure.js")
+const { STRUCTURE, AREA_LIST, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("organizeStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 

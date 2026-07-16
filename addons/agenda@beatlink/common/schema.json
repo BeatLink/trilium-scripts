@@ -47,6 +47,34 @@
         "default": "recurrence",
         "tab": "Settings"
     },
+    "morningTime": {
+        "type": "string",
+        "label": "Morning",
+        "description": "Time (HH:mm) the Organize \"Morning\" button sets on a task's start date.",
+        "default": "08:00",
+        "tab": "Times"
+    },
+    "noonTime": {
+        "type": "string",
+        "label": "Noon",
+        "description": "Time (HH:mm) the Organize \"Noon\" button sets.",
+        "default": "12:00",
+        "tab": "Times"
+    },
+    "eveningTime": {
+        "type": "string",
+        "label": "Evening",
+        "description": "Time (HH:mm) the Organize \"Evening\" button sets.",
+        "default": "17:00",
+        "tab": "Times"
+    },
+    "nightTime": {
+        "type": "string",
+        "label": "Night",
+        "description": "Time (HH:mm) the Organize \"Night\" button sets.",
+        "default": "20:00",
+        "tab": "Times"
+    },
     "overviewNoteId": {
         "type": "note",
         "label": "Overview Note",

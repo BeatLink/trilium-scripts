@@ -1,7 +1,7 @@
 // === Trilium Code note ===
-// Title: workflowStructure.js
+// Title: organizeStructure.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by workflowProvision.js / the Setup page).
+// Library only (CommonJS, require()'d by organizeProvision.js / the Setup page).
 //
 // The single source of truth for the opinionated notebook layout this addon
 // provisions. Each entry is a plain object; workflowProvision.js walks this

@@ -1,13 +1,13 @@
 import { useState } from "trilium:preact"
 
-const { provisionStructure } = require("workflowProvision.js")
+const { provisionStructure } = require("organizeProvision.js")
 
 // The Setup page — a render page separate from the main Workflow window. Its one
 // job: a button that provisions the opinionated notebook structure (Inbox, My
-// Day, Agenda, and the 15 Areas each with their six Type subnotes) by
+// Day, Agenda, and the 13 Areas each with their six Type subnotes) by
 // find-or-create, tagging every note with #workflowNote=<key>. Re-runnable and
 // idempotent: notes you already created by hand at the right title/level are
-// adopted (tagged) rather than duplicated. See workflowProvision.js.
+// adopted (tagged) rather than duplicated. See organizeProvision.js.
 export default function WorkflowSetup() {
     const [running, setRunning] = useState(false)
     const [outcome, setOutcome] = useState(null)

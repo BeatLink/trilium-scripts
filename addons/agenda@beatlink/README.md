@@ -1,7 +1,7 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets that share one
-configuration.
+A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an Organize
+workflow, all sharing one configuration.
 
 ## Widgets
 
@@ -16,6 +16,23 @@ configuration.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
+
+## Organize (GTD triage)
+
+Two render pages implement an opinionated Collect → Organize workflow on top of the widgets above
+(depends on [`templates@beatlink`](../templates@beatlink/README.md) for the item types):
+
+- **Workflow Setup** — one button provisions the notebook structure by find-or-create: **Inbox**,
+  **My Day**, **Agenda**, and one note per Area (13 areas, each with Ideas / Goals / Routines /
+  Projects / Future / Notes buckets below it). Every structural note is tagged **`#workflowNote=<key>`**
+  (this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so it can be resolved later;
+  re-running adopts hand-made notes rather than duplicating, and re-keys stale `#area` slugs after an
+  area reorder. See [organize/README.md](organize/README.md) for the taxonomy and provisioning model.
+- **Organize** — a one-at-a-time triage queue over every note under the Inbox / Area subtrees. Five
+  sections assign the missing attributes agenda reads: **template** (type), **`#area`** (+ `#color`),
+  **`#priority`** (MoSCoW), and **start date** (`#startDateTime`/`#startDate`/`#startTime`), plus a
+  **Misfiled Notes** fixer for notes whose area/type disagrees with where they're filed. The Morning /
+  Noon / Evening / Night quick-time buttons use the times on the Agenda Editor's **Times** tab.
 
 ## Shared configuration
 

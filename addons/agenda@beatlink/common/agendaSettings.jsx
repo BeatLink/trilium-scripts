@@ -38,5 +38,12 @@ export async function getAgendaSettings() {
         sendDueNotifications: settings.sendDueNotifications
     }
 
-    return { constants, profileContext, myDay, schemaNoteId, configNoteId, icalNoteId }
+    const organize = {
+        morningTime: settings.morningTime,
+        noonTime: settings.noonTime,
+        eveningTime: settings.eveningTime,
+        nightTime: settings.nightTime
+    }
+
+    return { constants, profileContext, myDay, organize, schemaNoteId, configNoteId, icalNoteId }
 }
