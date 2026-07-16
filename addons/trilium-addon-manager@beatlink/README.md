@@ -24,17 +24,17 @@ trilium-addon-manager@beatlink  (render note)
 │   ├── Addons  (text note — addon root)
 │   └── Addon Data  (JSON code note — persistence root)
 └── Source Code  (JSX render script)
-    ├── TAM.jsx  (root widget — see below)
-    │   ├── TAMShared.jsx / TAMListViews.jsx / TAMDetailAndSettings.jsx / TAMDialogs.jsx /
-    │   │   TAMCommands.jsx  (UI split by concern — presentational primitives, list/catalog
-    │   │   grid views, detail+settings, dialogs, and the data/command layer, respectively)
-    │   └── libTAM.js  (backend-logic facade)
-    │       └── libTAMDatabase.js / libTAMNetwork.js / libTAMCatalog.js / libTAMManifestUtils.js /
-    │           libTAMNoteResolver.js / libTAMSync.js / libTAMPersistence.js / libTAMUninstall.js /
-    │           libTAMLifecycle.js  (backend logic split by concern — see each file's own header
-    │           comment for what it owns)
+    ├── TAM.jsx  (the entire frontend widget in one file — see below)
+    │   └── lib-tam.js  (the entire backend/data layer in one file)
+    │       └── marked.min.js  (vendored markdown renderer)
     └── TAM.css  (appCss stylesheet)
 ```
+
+TAM is deliberately just **two source files** — `TAM.jsx` (frontend) and `lib-tam.js`
+(backend/data), plus the vendored `marked.min.js`. Each file is organized into clearly-bannered
+sections (former `TAMShared`/`TAMListViews`/`TAMDetailAndSettings`/`TAMDialogs`/`TAMCommands` inside
+`TAM.jsx`; former `libTAMDatabase`/`Network`/`Catalog`/`ManifestUtils`/`NoteResolver`/`Sync`/
+`Persistence`/`Uninstall`/`Lifecycle` inside `lib-tam.js`) rather than separate notes.
 
 **Relations wired at install time:**
 
@@ -42,30 +42,30 @@ trilium-addon-manager@beatlink  (render note)
 |------|----------|----|
 | `trilium-addon-manager@beatlink` | `renderNote` | `TAM.jsx` |
 | `TAM.jsx` | `displayNote` | `trilium-addon-manager@beatlink` |
-| `libTAMDatabase.js` | `database` | `Database` |
-| `libTAMDatabase.js` | `addonRoot` | `Addons` |
-| `libTAMDatabase.js` | `addonPersistence` | `Addon Data` |
+| `lib-tam.js` | `database` | `Database` |
+| `lib-tam.js` | `addonRoot` | `Addons` |
+| `lib-tam.js` | `addonPersistence` | `Addon Data` |
 
 ### Key notes
 
 - **Database** — a JSON code note that holds all TAM state: the list of added catalog URLs and, per addon, a single merged record covering its installed state, own manifest structure, persisted data, and pending update prompts (see [The Database Record](#the-database-record) and [Persistence](#persistence)). TAM reads and writes this note on every operation.
 - **Addons** — the parent note under which all installed addons are placed as children.
 - **Addon Data** — the parent note under which persistence copies of addon data notes are stored (see [Persistence](#persistence)).
-- **libTAM.js** — a thin facade that `require()`s and re-exports the 9 backend files below it; nothing
-  else calls those files directly, only `libTAM.js`'s own re-exported surface (available globally as
-  `libTAMjs`). All 9 run in the browser but use `api.runOnBackend`/`api.runAsyncOnBackendWithManualTransactionHandling`
-  for operations that need backend access (fetching URLs, creating notes, modifying note content).
-  `libTAMDatabase.js` specifically owns every `api.currentNote`-bound relation lookup (`database`/
-  `addonRoot`/`addonPersistence`), since that only resolves correctly in the note the relation is
-  declared `"from"` — everything else receives an id as a parameter instead.
+- **lib-tam.js** — TAM's whole backend/data layer in one `require()`d note (its public surface is
+  available globally as `libTAMjs`). It runs in the browser but uses `api.runOnBackend`/
+  `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access
+  (fetching URLs, creating notes, modifying note content). Its Database section owns every
+  `api.currentNote`-bound relation lookup (`database`/`addonRoot`/`addonPersistence`), since that
+  only resolves correctly in the note the relation is declared `"from"` (hence those relations live
+  on the `lib-tam.js` note) — everything else receives an id as a parameter instead.
 - **Source Code** — a plain empty parent note, existing only to group the actual widget code and its
   own children under a clearly-labeled branch of the tree (same shape as any addon's `root` wrapping
   multiple env variants — see CLAUDE.md's "JS/JSX code note mime" section).
-- **TAM.jsx** — the Preact/JSX render widget, nested under **Source Code**. It owns UI-navigation/dialog
-  state and the one other `currentNote`-bound read (`displayNote`), composing the rest of the UI from
-  its sibling files (`TAMShared.jsx`, `TAMListViews.jsx`, `TAMDetailAndSettings.jsx`, `TAMDialogs.jsx`)
-  and the data/command layer (`TAMCommands.jsx`'s `useTamCommands` hook), which in turn calls
-  `libTAM.js` (`libTAMjs`).
+- **TAM.jsx** — the Preact/JSX render widget, nested under **Source Code**, containing the entire
+  frontend in one file. Its root component (`RepoManager`, the default export) owns UI-navigation/
+  dialog state and the one other `currentNote`-bound read (`displayNote`); the sections above it hold
+  the presentational primitives, list/catalog/detail/settings/dialog views, and the data/command
+  layer (`useTamCommands`), which in turn calls `lib-tam.js` (`libTAMjs`).
 
 ### The UI
 

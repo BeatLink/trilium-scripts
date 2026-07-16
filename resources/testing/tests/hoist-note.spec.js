@@ -25,6 +25,11 @@ const { httpClient, wrapPage } = require("../testing");
 const ADDON_ID = "hoist-note@beatlink";
 
 test.beforeAll(async ({ browser }) => {
+    // Installing through TAM's UI (open TAM, Settings, Install by URL, wait for
+    // the notes to land, reopen, Enable, reload) is several navigations -- give
+    // this hook more than the default 60s so a slow-but-working install isn't
+    // killed. setTimeout inside the hook body sets that hook's own budget.
+    test.setTimeout(180_000);
     // beforeAll has no `page` fixture, so drive install on a throwaway page.
     const raw = await browser.newPage();
     try {

@@ -378,38 +378,83 @@ function fetchLocalJson(urlStr) {
 // render note; needs the wrapped `page` for the UI drive.
 // -------------------------------------------------------------------------
 
+// Wait until an ETAPI search returns >=1 result, polling. Used to confirm an
+// install landed by watching for the addon's own notes to appear server-side,
+// rather than trusting a UI element that may never render.
+async function waitForSearch(tri, query, { timeoutMs = 30_000, everyMs = 1000 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+        const { results } = await tri.searchNotes(query);
+        if (results && results.length > 0) return results;
+        if (Date.now() > deadline) return [];
+        await sleep(everyMs);
+    }
+}
+
+// Snapshot the page to the test-results dir for post-mortem when a UI step
+// can't find what it expects (installViaTam drives TAM's real UI, whose exact
+// DOM/timing we can't see from here).
+async function debugShot(page, name) {
+    try {
+        const dir = path.join(REPO_ROOT, "test-results");
+        fs.mkdirSync(dir, { recursive: true });
+        await page.screenshot({ path: path.join(dir, `installViaTam-${name}.png`), fullPage: true });
+    } catch { /* best-effort */ }
+}
+
 async function installViaTam(page, tri, addonId, { waitSeconds = 3 } = {}) {
     const manifestUrl = localManifestUrl(addonId);
     const manifest = await fetchLocalJson(manifestUrl);
     const addonName = manifest.name || addonId;
+    const rootTitle = manifest.manifest?.notes?.find(n => n.id === (manifest.manifest?.root))?.title || addonId;
 
-    // Locate TAM's render note (present in the seed).
-    const tam = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
-    if (!tam.results || tam.results.length === 0) {
-        throw new Error("TAM render note not found in the seed -- can't install via TAM");
+    const openTam = async () => {
+        const tam = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
+        if (!tam.results || tam.results.length === 0) {
+            throw new Error("TAM render note not found in the seed -- can't install via TAM");
+        }
+        await page.gotoNote(tam.results[0].noteId, waitSeconds);
+        await page.enableRenderNote(waitSeconds);
+        return page.locator(".note-detail-render");
+    };
+
+    // --- Install: Settings -> Install by URL ------------------------------
+    let render = await openTam();
+    try {
+        await render.getByText("Settings", { exact: true }).first().click({ timeout: 15_000 });
+        const urlInput = render.locator("input[placeholder*='_tam_manifest_.json']");
+        await urlInput.waitFor({ state: "visible", timeout: 15_000 });
+        await urlInput.fill(manifestUrl);
+        await render.getByRole("button", { name: /Install by URL/i }).click({ timeout: 15_000 });
+    } catch (e) {
+        await debugShot(page, "install-step");
+        throw new Error(`installViaTam: could not drive Settings->Install by URL for ${addonId}: ${e.message}`);
     }
-    await page.gotoNote(tam.results[0].noteId, waitSeconds);
-    await page.enableRenderNote(waitSeconds);
 
-    const render = page.locator(".note-detail-render");
+    // Confirm the install actually landed by watching for the addon's root note
+    // server-side (survives whatever the UI does next).
+    const installed = await waitForSearch(tri, `note.title = '${rootTitle}'`, { timeoutMs: 30_000 });
+    if (installed.length === 0) {
+        await debugShot(page, "after-install");
+        throw new Error(`installViaTam: ${addonId} did not install -- no note titled '${rootTitle}' appeared (manifest URL ${manifestUrl} reachable from the server?)`);
+    }
 
-    // Settings -> Install by URL.
-    await render.getByText("Settings", { exact: true }).first().click();
-    const urlInput = render.locator("input[placeholder*='_tam_manifest_.json']");
-    await urlInput.waitFor({ state: "visible", timeout: 15_000 });
-    await urlInput.fill(manifestUrl);
-    await render.getByRole("button", { name: /Install by URL/i }).click();
-
-    // Install runs behind a progress overlay. When it's done TAM shows the list;
-    // return to it explicitly if a back/"All Addons" link is present.
-    await sleep(waitSeconds * 1000);
-    await render.getByText("All Addons", { exact: false }).first().click().catch(() => {});
-
-    // Find the addon's card (shows its display name) and click its inline Enable.
-    const card = render.locator(".card").filter({ hasText: addonName }).first();
-    await card.waitFor({ state: "visible", timeout: 20_000 });
-    await card.getByRole("button", { name: /^Enable$/ }).click();
-    await sleep(waitSeconds * 1000);
+    // --- Enable: reopen TAM (fresh list has the addon's card) -------------
+    render = await openTam();
+    try {
+        const card = render.locator(".card").filter({ hasText: addonName }).first();
+        await card.waitFor({ state: "visible", timeout: 20_000 });
+        // Card shows Enable while disabled, Disable once enabled -- click Enable
+        // only if present (idempotent if a prior run already enabled it).
+        const enable = card.getByRole("button", { name: /^Enable$/ });
+        if (await enable.count() > 0) {
+            await enable.click();
+            await sleep(waitSeconds * 1000);
+        }
+    } catch (e) {
+        await debugShot(page, "enable-step");
+        throw new Error(`installViaTam: installed ${addonId} but could not enable it via its card: ${e.message}`);
+    }
 
     // Reload so #run=frontendStartup scripts pick up the now-enabled addon.
     await page.reload({ waitUntil: "networkidle" });

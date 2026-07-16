@@ -20,10 +20,10 @@ test("TAM's #TAMFILEID-tagged notes are present", async ({ tri }) => {
     expect(results.length).toBeGreaterThan(0);
 });
 
-test("TAM's shared library notes are present", async ({ tri }) => {
-    // A few of the code notes TAM's UI require()s -- if the ZIP import dropped
-    // clone/child wiring these would be missing (the tam-to-zip clone-placeholder
-    // bug the harness README documents).
-    const { results } = await tri.searchNotes("note.title *=* libTAM");
-    expect(results.map((n) => n.title)).toContain("libTAMDatabase.js");
+test("TAM's shared library note is present", async ({ tri }) => {
+    // lib-tam.js is the one code note TAM.jsx require()s -- if the ZIP import
+    // dropped clone/child wiring it would be missing (the tam-to-zip
+    // clone-placeholder bug the harness README documents).
+    const { results } = await tri.searchNotes("note.title = 'lib-tam.js'");
+    expect(results.length).toBeGreaterThan(0);
 });

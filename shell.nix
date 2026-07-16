@@ -20,12 +20,14 @@ pkgs.mkShell {
 
     export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
 
-    # Install the toolchain's npm deps (marked, playwright) into node_modules
-    # on first entry -- no build step, just the two runtime libraries the
-    # scripts require(). Skipped when already present.
-    if [ -f package.json ] && { [ ! -d node_modules ] || [ ! -d node_modules/@playwright/test ]; }; then
-      echo "  Installing npm dependencies (marked, playwright, @playwright/test)..."
-      npm install --no-audit --no-fund --silent
+    # Reinstall the toolchain's npm deps (marked, playwright) into node_modules
+    # on every shell entry -- `npm ci` wipes node_modules and installs fresh
+    # from package-lock.json, so a truncated/corrupt prior install (seen once
+    # as a NUL-padded playwright/lib/runner/index.js) can never persist across
+    # runs. No build step, just the runtime libraries the scripts require().
+    if [ -f package.json ] && [ -f package-lock.json ]; then
+      echo "  Installing npm dependencies (npm ci: marked, playwright, @playwright/test)..."
+      npm ci --no-audit --no-fund --silent
     fi
 
     # playwright-driver.browsers ships prebuilt browser binaries matching the
