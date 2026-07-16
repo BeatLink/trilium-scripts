@@ -37,13 +37,13 @@ Playwright entry point that wires it in:
      so each suite starts from the same known state (see the memory-mode note under known bugs); it's
      cheap (a file copy + one zip import). Set `TRILIUM_TESTING_NO_RESEED=1` to reuse the existing
      snapshot while iterating on non-mutating tests.
-  2. **Starts** the server against that snapshot (disk-backed).
+  2. **Starts** the server against that snapshot (disk-backed), plus a small static HTTP server
+     over the repo's `addons/` dir so tests can install an addon-under-test through TAM itself
+     (see "Installing an addon under test" below).
 - **Tests** ([`tests/*.spec.js`](tests/)) import `{ test, expect }` from
   [`testing.js`](testing.js), which injects two Trilium-aware fixtures:
-  - `tri` — a no-auth HTTP client (`searchNotes`, `getNote`, `importZip`, `installAddon`,
-    `execScript`, `request`) against the running server. `searchNotes`/`getNote` are plain ETAPI
-    GETs (no anchor needed). `installAddon(addonDir)` zips a manifest dir (tam-to-zip) and imports
-    it — idempotent, so several specs can each install the same addon in their `beforeAll`.
+  - `tri` — a no-auth HTTP client (`searchNotes`, `getNote`, `importZip`, `execScript`, `request`)
+    against the running server. `searchNotes`/`getNote` are plain ETAPI GETs (no anchor needed).
     `execScript` runs **backend**-env JS via `/api/script/exec` — it requires an existing
     backend/code note as its `startNoteId` anchor (the route builds the script bundle from that
     note), so use `searchNotes` to locate notes and reserve `execScript` for running logic.
@@ -72,12 +72,6 @@ test("TAM is deployed", async ({ tri }) => {
     expect(results.length).toBeGreaterThan(0);
 });
 
-// An addon not in the seed: install it first (idempotent), then assert.
-const { httpClient } = require("../testing");
-test.beforeAll(async () => {
-    await httpClient().installAddon(require("path").resolve(__dirname, "../../../addons/hoist-note@beatlink"));
-});
-
 // Frontend: drive TAM's actual widget in a real browser.
 test("TAM UI mounts", async ({ tri, page }) => {
     const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
@@ -90,6 +84,32 @@ test("TAM UI mounts", async ({ tri, page }) => {
 Known frontend-only gotchas: `gotoNote` needs `enableRenderNote()` once per note before its widget
 mounts; elements matching by visible text can collide with the note tree's own titles (e.g. a note
 literally named "Settings") — scope locators to `:visible` or a container role instead of bare text.
+
+## Installing an addon under test
+
+Only TAM is in the seed. To test any other addon, install it **through TAM itself** — the real user
+path — with `installViaTam(page, tri, addonId)`:
+
+```js
+const { test, expect, installViaTam, httpClient, wrapPage } = require("../testing");
+
+test.beforeAll(async ({ browser }) => {
+    const raw = await browser.newPage();            // beforeAll has no `page` fixture
+    try { await installViaTam(wrapPage(raw), httpClient(), "hoist-note@beatlink"); }
+    finally { await raw.close(); }
+});
+```
+
+It drives TAM's UI end to end: Settings → **Install by URL** (pointed at the addon on the local
+addon server, `http://127.0.0.1:8091/<addonId>/_tam_manifest_.json`) → **Enable Addon** → reload
+the frontend. No ZIP import. Because TAM resolves each note's `sourceUrl` relative to the manifest
+URL, the whole addon (manifest + every source file) is served straight from `addons/` with no
+rewriting. See [`hoist-note.spec.js`](tests/hoist-note.spec.js) for a full example.
+
+Two things this exercises that a raw import wouldn't: fresh installs are **disabled** by default, so
+`#run=frontendStartup` (and other activation labels) live under a `disabled:` prefix until the
+Enable step flips them — assert on the *live* label to prove enable worked. And the addon server
+plus TAM's own fetch/resolve path is the same one users hit against GitHub.
 
 ## Manual debugging
 
@@ -124,7 +144,7 @@ trilium_harness stop
   `run_tests` and `trilium_harness` shell functions.
 - `../../shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
 - `testing.js` — **the whole harness in one file**: all the primitives (seed / start / stop /
-  prepare / http client with `installAddon` / page wrapper), the `test`/`expect` fixtures, the
-  `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI for manual
-  debugging.
-- `tests/` — the Playwright specs (`tam-*` for TAM, `hoist-note-*` for hoist-note).
+  prepare / http client / page wrapper / addon server / `installViaTam`), the `test`/`expect`
+  fixtures, the `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI
+  for manual debugging.
+- `tests/` — the Playwright specs (`tam-*` for TAM, `hoist-note.spec.js` for hoist-note).

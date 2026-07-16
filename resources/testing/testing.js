@@ -18,12 +18,13 @@ folded into one file):
   seed()      copy Trilium's own e2e fixture db + import TAM  -> golden snapshot
   start()     boot trilium-server against that snapshot (in-memory by default)
   stop()      stop it
-  prepare()   seed-if-needed + start; the one call globalSetup makes
-  httpClient  no-auth /api + /etapi client (execScript, importZip, installAddon,
-              search...)
+  prepare()   seed-if-needed + start (+ addon server); the one call globalSetup makes
+  httpClient  no-auth /api + /etapi client (execScript, importZip, search...)
+  startAddonServer  serve addons/ over HTTP so TAM can install from the local repo
   wrapPage    Playwright Page wrapper (gotoNote, enableRenderNote)
+  installViaTam(page, tri, addonId)  install an addon-under-test through TAM's UI
   test/expect Playwright test object pre-extended with `tri` + `page` fixtures
-  globalSetup / globalTeardown   the config's lifecycle hooks
+  globalSetup the config's lifecycle hook (returns its own teardown)
 
 Requires `trilium-server` on PATH and $TRILIUM_SRC set -- both provided by this
 repo's flake devShell (`nix develop`), never installed separately.
@@ -43,7 +44,21 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const PIDFILE = path.join(path.dirname(DATA_DIR), ".server.pid");
 const LOGFILE = path.join(path.dirname(DATA_DIR), "server.log");
 
+// The repo's addons/ dir, served over local HTTP during a test run so TAM can
+// install from it exactly as it would from GitHub -- see addonServer() below.
+const ADDONS_DIR = path.join(REPO_ROOT, "addons");
+const ADDONS_PORT = parseInt(process.env.TRILIUM_TESTING_ADDONS_PORT || "8091", 10);
+const ADDONS_BASE_URL = `http://127.0.0.1:${ADDONS_PORT}`;
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// The manifest URL a test hands TAM to install an addon from the local repo.
+// Relative sourceUrls in the manifest resolve against this automatically
+// (TAM does `new URL(sourceUrl, manifestBaseUrl)`), so the whole addon --
+// manifest + every source file -- is served from addons/ with no rewriting.
+function localManifestUrl(addonId) {
+    return `${ADDONS_BASE_URL}/${addonId}/_tam_manifest_.json`;
+}
 
 // -------------------------------------------------------------------------
 // Server lifecycle
@@ -127,6 +142,50 @@ async function stop() {
             break;
         }
     }
+}
+
+// -------------------------------------------------------------------------
+// Addon file server: serves the repo's addons/ over HTTP so TAM installs an
+// addon-under-test from a real URL (localManifestUrl) via its own install
+// path, no ZIP import. Static, read-only, GET-only, scoped to addons/ (path
+// traversal is rejected). Returned handle has a close() the teardown calls.
+// -------------------------------------------------------------------------
+
+function startAddonServer() {
+    const MIME = {
+        ".json": "application/json",
+        ".js": "text/javascript",
+        ".jsx": "text/javascript",
+        ".css": "text/css",
+        ".md": "text/markdown",
+        ".png": "image/png",
+    };
+    const server = http.createServer((req, res) => {
+        // Only GET; only paths that stay inside ADDONS_DIR.
+        const urlPath = decodeURIComponent(new URL(req.url, ADDONS_BASE_URL).pathname);
+        const filePath = path.join(ADDONS_DIR, urlPath);
+        if (req.method !== "GET" || !filePath.startsWith(ADDONS_DIR + path.sep)) {
+            res.writeHead(403).end("forbidden");
+            return;
+        }
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404).end("not found");
+                return;
+            }
+            res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream" });
+            res.end(data);
+        });
+    });
+    return new Promise((resolve, reject) => {
+        server.on("error", reject);
+        server.listen(ADDONS_PORT, "127.0.0.1", () => {
+            resolve({
+                url: ADDONS_BASE_URL,
+                close: () => new Promise((r) => server.close(r)),
+            });
+        });
+    });
 }
 
 // -------------------------------------------------------------------------
@@ -248,38 +307,10 @@ function httpClient() {
         return raw.length ? JSON.parse(raw.toString()) : null;
     }
 
-    async function installAddon(addonDir, parentNoteId = "root") {
-        // Zip an addon's manifest dir (tam-to-zip) then import it, the same
-        // path seed() uses for TAM. Returns the imported root note's noteId.
-        // Idempotent: the suite runs serially against one shared server, and
-        // several specs may each install the same addon in their beforeAll --
-        // if its root note is already present, skip the re-import (a second
-        // import would clone the whole tree and break single-result lookups).
-        const rootTitle = path.basename(addonDir);
-        const existing = await searchNotes(`note.title = '${rootTitle}'`);
-        if (existing.results && existing.results.length > 0) {
-            return existing.results[0].noteId;
-        }
-        const zipPath = path.join(path.dirname(DATA_DIR), `${rootTitle}.zip`);
-        const r = spawnSync("node", [
-            path.join(REPO_ROOT, "resources", "scripts", "tamhelper.js"),
-            "tam-to-zip", addonDir, "--out", zipPath,
-        ], { cwd: REPO_ROOT, stdio: "inherit" });
-        if (r.status !== 0) throw new Error(`tam-to-zip failed for ${addonDir} (exit ${r.status})`);
-        try {
-            const result = await importZip(parentNoteId, zipPath);
-            const noteId = (result || {}).noteId;
-            if (!noteId) throw new Error(`import of ${addonDir} returned no noteId: ${JSON.stringify(result)}`);
-            return noteId;
-        } finally {
-            fs.rmSync(zipPath, { force: true });
-        }
-    }
-
     const getNote = (noteId) => request("GET", `/etapi/notes/${noteId}`);
     const searchNotes = (query) => request("GET", `/etapi/notes?search=${encodeURIComponent(query)}`);
 
-    return { execScript, importZip, installAddon, getNote, searchNotes, request, BASE_URL, PORT };
+    return { execScript, importZip, getNote, searchNotes, request, BASE_URL, PORT };
 }
 
 // -------------------------------------------------------------------------
@@ -314,6 +345,75 @@ function wrapPage(page) {
             return typeof val === "function" ? val.bind(page) : val;
         },
     });
+}
+
+// Fetch a URL from the local addon server as JSON (used to read an addon's
+// display name for the card locator below).
+function fetchLocalJson(urlStr) {
+    return new Promise((resolve, reject) => {
+        http.get(urlStr, (res) => {
+            const chunks = [];
+            res.on("data", (c) => chunks.push(c));
+            res.on("end", () => {
+                try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+                catch (e) { reject(e); }
+            });
+        }).on("error", reject);
+    });
+}
+
+// -------------------------------------------------------------------------
+// installViaTam: install an addon-under-test the way a user does -- through
+// TAM's own UI, from the local addon server (no ZIP import).
+//
+//   1. open TAM's render note, dismiss the trust warning
+//   2. Settings -> "Install by URL", paste localManifestUrl(addonId), install
+//   3. back on the list, click the addon card's inline "Enable" button
+//      (fresh installs are DISABLED, so #run=frontendStartup scripts and any
+//       activation labels stay under a `disabled:` prefix until this)
+//   4. reload the frontend so #run=frontendStartup scripts fire
+//
+// The addon card shows the manifest's display `name` (not its id), so we read
+// the name from the manifest to locate the card. Needs `tri` to find TAM's
+// render note; needs the wrapped `page` for the UI drive.
+// -------------------------------------------------------------------------
+
+async function installViaTam(page, tri, addonId, { waitSeconds = 3 } = {}) {
+    const manifestUrl = localManifestUrl(addonId);
+    const manifest = await fetchLocalJson(manifestUrl);
+    const addonName = manifest.name || addonId;
+
+    // Locate TAM's render note (present in the seed).
+    const tam = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
+    if (!tam.results || tam.results.length === 0) {
+        throw new Error("TAM render note not found in the seed -- can't install via TAM");
+    }
+    await page.gotoNote(tam.results[0].noteId, waitSeconds);
+    await page.enableRenderNote(waitSeconds);
+
+    const render = page.locator(".note-detail-render");
+
+    // Settings -> Install by URL.
+    await render.getByText("Settings", { exact: true }).first().click();
+    const urlInput = render.locator("input[placeholder*='_tam_manifest_.json']");
+    await urlInput.waitFor({ state: "visible", timeout: 15_000 });
+    await urlInput.fill(manifestUrl);
+    await render.getByRole("button", { name: /Install by URL/i }).click();
+
+    // Install runs behind a progress overlay. When it's done TAM shows the list;
+    // return to it explicitly if a back/"All Addons" link is present.
+    await sleep(waitSeconds * 1000);
+    await render.getByText("All Addons", { exact: false }).first().click().catch(() => {});
+
+    // Find the addon's card (shows its display name) and click its inline Enable.
+    const card = render.locator(".card").filter({ hasText: addonName }).first();
+    await card.waitFor({ state: "visible", timeout: 20_000 });
+    await card.getByRole("button", { name: /^Enable$/ }).click();
+    await sleep(waitSeconds * 1000);
+
+    // Reload so #run=frontendStartup scripts pick up the now-enabled addon.
+    await page.reload({ waitUntil: "networkidle" });
+    await sleep(waitSeconds * 1000);
 }
 
 // -------------------------------------------------------------------------
@@ -398,7 +498,13 @@ async function prepare() {
     if (!skipSeed) await seed();
 
     await start(true);
-    return async () => { await stop(); };
+    // Serve addons/ so specs can install an addon-under-test through TAM's UI
+    // from a real URL (see installViaTam). Torn down with the trilium server.
+    const addonServer = await startAddonServer();
+    return async () => {
+        await addonServer.close();
+        await stop();
+    };
 }
 
 // -------------------------------------------------------------------------
@@ -407,10 +513,12 @@ async function prepare() {
 // whole harness -- primitives + Playwright wiring -- is this single module.
 //
 // Specs do:  const { test, expect } = require("../testing");
-//   tri   no-auth http client (execScript / importZip / installAddon / getNote
-//         / searchNotes / request) against the running test server.
+//   tri   no-auth http client (execScript / importZip / getNote / searchNotes /
+//         request) against the running test server.
 //   page  the standard Playwright page, wrapped so gotoNote()/enableRenderNote()
 //         are available and everything else falls through to the real Page.
+// installViaTam(page, tri, addonId) installs an addon-under-test through TAM's
+// UI from the local addon server (exported below).
 // -------------------------------------------------------------------------
 
 const base = require("@playwright/test");
@@ -427,11 +535,11 @@ const test = base.test.extend({
 // leaves the server up for manual poking (stop later with
 // `node resources/testing/testing.js stop`).
 async function globalSetup() {
-    await prepare();
-    console.log(`Trilium test server ready at ${BASE_URL}/`);
+    const teardown = await prepare();   // boots trilium + the addon server
+    console.log(`Trilium test server ready at ${BASE_URL}/  (addons at ${ADDONS_BASE_URL}/)`);
     return async () => {
         if (process.env.TRILIUM_TESTING_KEEP === "1") return;
-        await stop();
+        await teardown();
     };
 }
 
@@ -442,9 +550,10 @@ async function globalSetup() {
 module.exports = globalSetup;
 Object.assign(module.exports, {
     seed, start, stop, prepare, isRunning,
-    httpClient, wrapPage,
+    httpClient, wrapPage, startAddonServer, installViaTam, localManifestUrl,
     test, expect: base.expect, globalSetup,
     DATA_DIR, PORT, BASE_URL, PIDFILE, LOGFILE,
+    ADDONS_DIR, ADDONS_PORT, ADDONS_BASE_URL,
 });
 
 // CLI escape hatch for the rare manual case (e.g. debugging the seed, or
