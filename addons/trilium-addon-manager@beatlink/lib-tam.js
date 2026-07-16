@@ -441,9 +441,10 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
                     if (existing) {
                         if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
                         if (willWriteContent) {
-                            if (existing.type !== noteType || existing.mime !== mime) {
+                            if (existing.type !== noteType || existing.mime !== mime || existing.title !== title) {
                                 existing.type = noteType
                                 existing.mime = mime
+                                existing.title = title
                                 existing.save()
                             }
                             existing.setContent(finalContent)
