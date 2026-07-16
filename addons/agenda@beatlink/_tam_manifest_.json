@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.0",
+    "latestVersion": "1.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -51,6 +51,17 @@
             { "id": "setup-page", "title": "Workflow Setup", "type": "render", "mime": "text/html", "sourceUrl": null },
             { "id": "setup-src", "title": "organizeSetup.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeSetup.jsx" },
 
+            { "id": "templates-root", "title": "Templates", "type": "text", "mime": "text/html", "sourceUrl": null, "skipOnUpdate": true },
+            { "id": "tpl-idea", "title": "0. Ideas", "type": "text", "mime": "text/html", "sourceUrl": "templates/ideas.html", "promptOnUpdate": true },
+            { "id": "tpl-goal", "title": "1. Goal", "type": "text", "mime": "text/html", "sourceUrl": "templates/goal.html", "promptOnUpdate": true },
+            { "id": "tpl-routine", "title": "2. Routine", "type": "text", "mime": "text/html", "sourceUrl": "templates/routine.html", "promptOnUpdate": true },
+            { "id": "tpl-task", "title": "3. Task", "type": "text", "mime": "text/html", "sourceUrl": "templates/task.html", "promptOnUpdate": true },
+            { "id": "tpl-future", "title": "4. Future", "type": "text", "mime": "text/html", "sourceUrl": "templates/future.html", "promptOnUpdate": true },
+            { "id": "tpl-project", "title": "5. Project", "type": "text", "mime": "text/html", "sourceUrl": "templates/project.html", "promptOnUpdate": true },
+            { "id": "tpl-note", "title": "6. Note", "type": "text", "mime": "text/html", "sourceUrl": "templates/note.html", "promptOnUpdate": true },
+            { "id": "tpl-area", "title": "7. Area", "type": "text", "mime": "text/html", "sourceUrl": "templates/area.html", "promptOnUpdate": true },
+            { "id": "tpl-special", "title": "8. Special", "type": "text", "mime": "text/html", "sourceUrl": "templates/special.html", "promptOnUpdate": true },
+
             { "id": "readme", "title": "README.md", "type": "code", "mime": "text/markdown", "sourceUrl": "README.md" }
         ],
         "children": [
@@ -70,7 +81,18 @@
             { "parent": "root", "child": "organize-page-src" },
             { "parent": "root", "child": "organize-css" },
             { "parent": "root", "child": "setup-page" },
+            { "parent": "root", "child": "templates-root" },
             { "parent": "root", "child": "readme" },
+
+            { "parent": "templates-root", "child": "tpl-idea" },
+            { "parent": "templates-root", "child": "tpl-goal" },
+            { "parent": "templates-root", "child": "tpl-routine" },
+            { "parent": "templates-root", "child": "tpl-task" },
+            { "parent": "templates-root", "child": "tpl-future" },
+            { "parent": "templates-root", "child": "tpl-project" },
+            { "parent": "templates-root", "child": "tpl-note" },
+            { "parent": "templates-root", "child": "tpl-area" },
+            { "parent": "templates-root", "child": "tpl-special" },
 
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
 
@@ -133,7 +155,18 @@
             { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
             { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" },
             { "from": "my-day", "type": "nowNote", "to": "now-note" },
-            { "from": "setup-page", "type": "renderNote", "to": "setup-src" }
+            { "from": "setup-page", "type": "renderNote", "to": "setup-src" },
+
+            { "from": "templates-root", "type": "template", "to": "tpl-special" },
+            { "from": "templates-root", "type": "AddonData:idea", "to": "tpl-idea" },
+            { "from": "templates-root", "type": "AddonData:goal", "to": "tpl-goal" },
+            { "from": "templates-root", "type": "AddonData:routine", "to": "tpl-routine" },
+            { "from": "templates-root", "type": "AddonData:task", "to": "tpl-task" },
+            { "from": "templates-root", "type": "AddonData:future", "to": "tpl-future" },
+            { "from": "templates-root", "type": "AddonData:project", "to": "tpl-project" },
+            { "from": "templates-root", "type": "AddonData:note", "to": "tpl-note" },
+            { "from": "templates-root", "type": "AddonData:area", "to": "tpl-area" },
+            { "from": "templates-root", "type": "AddonData:special", "to": "tpl-special" }
         ],
         "labels": [
             { "note": "ical", "name": "customResourceProvider", "value": "agendaCalendar.ical" },
@@ -149,7 +182,61 @@
             { "note": "settings", "name": "agendaConfig", "value": "" },
             { "note": "wav-select", "name": "customResourceProvider", "value": "libtimerSelect.wav" },
             { "note": "wav-start", "name": "customResourceProvider", "value": "libtimerStart.wav" },
-            { "note": "wav-end", "name": "customResourceProvider", "value": "libtimerEnd.wav" }
+            { "note": "wav-end", "name": "customResourceProvider", "value": "libtimerEnd.wav" },
+
+            { "note": "templates-root", "name": "iconClass", "value": "bx bx-copy-alt" },
+
+            { "note": "tpl-idea", "name": "template", "value": "" },
+            { "note": "tpl-idea", "name": "iconClass", "value": "bx bx-bulb" },
+            { "note": "tpl-idea", "name": "label:area", "value": "single" },
+            { "note": "tpl-idea", "name": "type", "value": "0-ideas" },
+
+            { "note": "tpl-goal", "name": "template", "value": "" },
+            { "note": "tpl-goal", "name": "iconClass", "value": "bx bxs-star-half" },
+            { "note": "tpl-goal", "name": "label:area", "value": "single" },
+            { "note": "tpl-goal", "name": "type", "value": "1-goal" },
+
+            { "note": "tpl-routine", "name": "template", "value": "" },
+            { "note": "tpl-routine", "name": "iconClass", "value": "bx bx-sync" },
+            { "note": "tpl-routine", "name": "agendaTaskWidget", "value": "" },
+            { "note": "tpl-routine", "name": "label:area", "value": "single" },
+            { "note": "tpl-routine", "name": "label:priority", "value": "single,text" },
+            { "note": "tpl-routine", "name": "type", "value": "2-routine" },
+
+            { "note": "tpl-task", "name": "template", "value": "" },
+            { "note": "tpl-task", "name": "iconClass", "value": "bx bx-check" },
+            { "note": "tpl-task", "name": "agendaTaskWidget", "value": "" },
+            { "note": "tpl-task", "name": "label:area", "value": "single" },
+            { "note": "tpl-task", "name": "label:priority", "value": "single,text" },
+            { "note": "tpl-task", "name": "type", "value": "3-task" },
+
+            { "note": "tpl-future", "name": "template", "value": "" },
+            { "note": "tpl-future", "name": "iconClass", "value": "bx bx-time-five" },
+            { "note": "tpl-future", "name": "agendaTaskWidget", "value": "" },
+            { "note": "tpl-future", "name": "label:area", "value": "single" },
+            { "note": "tpl-future", "name": "label:priority", "value": "single,text" },
+            { "note": "tpl-future", "name": "type", "value": "4-future" },
+
+            { "note": "tpl-project", "name": "template", "value": "" },
+            { "note": "tpl-project", "name": "iconClass", "value": "bx bx-check-double" },
+            { "note": "tpl-project", "name": "agendaTaskWidget", "value": "" },
+            { "note": "tpl-project", "name": "label:area", "value": "single" },
+            { "note": "tpl-project", "name": "label:priority", "value": "single,text" },
+            { "note": "tpl-project", "name": "type", "value": "5-project" },
+
+            { "note": "tpl-note", "name": "template", "value": "" },
+            { "note": "tpl-note", "name": "iconClass", "value": "bx bx-notepad" },
+            { "note": "tpl-note", "name": "label:area", "value": "single" },
+            { "note": "tpl-note", "name": "type", "value": "6-note" },
+
+            { "note": "tpl-area", "name": "template", "value": "" },
+            { "note": "tpl-area", "name": "iconClass", "value": "bx bxs-circle" },
+            { "note": "tpl-area", "name": "viewType", "value": "list" },
+            { "note": "tpl-area", "name": "label:area", "value": "single" },
+            { "note": "tpl-area", "name": "type", "value": "7-area" },
+
+            { "note": "tpl-special", "name": "template", "value": "" },
+            { "note": "tpl-special", "name": "type", "value": "8-special" }
         ],
         "dependencies": [
             "libsettings@beatlink",
@@ -159,7 +246,6 @@
             "libcalendar@beatlink",
             "libmultisort@beatlink",
             "librrule@jkbrzt",
-            "templates@beatlink",
             "area-picker@beatlink"
         ],
         "exports": {},

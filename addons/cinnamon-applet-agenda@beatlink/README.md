@@ -15,8 +15,8 @@ renders a Settings screen with the following fields:
 | `taskOrder`   | `earliest` or `latest`       | Whether to surface the earliest or latest matching past-due task   |
 
 `searchQuery` is a raw Trilium search string, so you can scope it however you like — for example,
-add `~template.title="1. Routine" AND` to only surface notes using the Routine template from
-[templates@beatlink](../templates@beatlink/). Whatever you write here must reference the same label
+add `~template.title="2. Routine" AND` to only surface notes using the Routine template from
+[agenda@beatlink](../agenda@beatlink/). Whatever you write here must reference the same label
 named in `dateLabel`, since that label's value is what gets checked against "now" after the search
 runs.
 

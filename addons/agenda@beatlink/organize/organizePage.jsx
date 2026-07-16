@@ -300,8 +300,8 @@ export default function OrganizePanel() {
         <div className="workflow-organize">
             {templates.length === 0 && (
                 <div className="workflow-window-placeholder">
-                    No item templates found. Install the Templates addon (templates@beatlink) so there
-                    are types to assign.
+                    No item templates found. Reinstall or update the Agenda addon so its bundled
+                    templates are present and there are types to assign.
                 </div>
             )}
 

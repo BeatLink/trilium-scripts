@@ -19,7 +19,7 @@
 //   icon        BoxIcons class (without the leading "bx "); re-asserted every run
 //   color       CSS color for the note's #color label; re-asserted every run
 //               (area-picker convention). Omitted -> no #color managed.
-//   template    title of a templates@beatlink template to set as a ~template
+//   template    title of a bundled template to set as a ~template
 //               relation, resolved live at provision time; re-asserted every run.
 //   seedLabels  [{ name, value }] labels set ONLY when the note is first CREATED
 //               (never re-asserted, so user edits to them survive adoption/re-runs)
@@ -42,7 +42,7 @@ const SUBTYPES = [
     { slug: "notes",    title: "Notes",    icon: "bx-notepad" }
 ]
 
-// Template titles shipped by templates@beatlink. Areas use the Area template;
+// Bundled template titles. Areas use the Area template;
 // the structural container notes (Inbox/My Day/Agenda + every bucket) use the
 // neutral Special container template.
 const AREA_TEMPLATE_TITLE = "7. Area"

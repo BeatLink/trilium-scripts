@@ -33,8 +33,8 @@ handled at migration time by `AREA_ALIASES` in `organizeProvision.js` (`health`�
 `productivity`→`tech`), so existing notes re-tag on the next Setup provision.
 
 ### Types (8)
-The 7 from [`templates@beatlink`](../../templates@beatlink/) — Goal, Routine, Task, Future, Project,
-Note, Area — **plus Ideas** (`0. Ideas`).
+The 7 bundled templates (see the [Templates section](../README.md#templates)) — Goal, Routine, Task,
+Future, Project, Note, Area — **plus Ideas** (`0. Ideas`).
 
 | Type     | Icon              | Notes |
 |----------|-------------------|-------|
@@ -95,7 +95,7 @@ via `getAreaSettings()`); the walk/find-or-create logic is `organizeProvision.js
   by its stable name-part, rewriting `#area` + `#color` when the number drifted (e.g. after an area
   reorder). Run the Setup button after any area reorder to apply it.
 - **Templates** are resolved live by title (`7. Area` for areas, `8. Special` for containers), so
-  provisioning degrades gracefully if `templates@beatlink` is absent — the note is still created and
+  provisioning degrades gracefully if a template note is missing — the note is still created and
   tagged, just without a `~template` relation.
 - Items filed into a bucket get their `~template` + `#area` set **programmatically at creation** (not
   via inheritable attributes on the bucket), so a note keeps its identity wherever it's later moved.

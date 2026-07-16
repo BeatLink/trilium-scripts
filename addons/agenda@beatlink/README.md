@@ -20,7 +20,7 @@ workflow, all sharing one configuration.
 ## Organize (GTD triage)
 
 Two render pages implement an opinionated Collect → Organize workflow on top of the widgets above
-(depends on [`templates@beatlink`](../templates@beatlink/README.md) for the item types and
+(uses the bundled item-type templates and
 [`area-picker@beatlink`](../area-picker@beatlink/README.md) for the area vocabulary):
 
 - **Workflow Setup** — one button provisions the notebook structure by find-or-create: **Inbox**,
@@ -40,6 +40,19 @@ Two render pages implement an opinionated Collect → Organize workflow on top o
   Note** picker on the Agenda Editor's **Settings** tab. Selecting a note converts it into a render
   note (`~renderNote` → the Organize code note, icon `bx-sort-down`); clearing or re-picking reverts
   the previously-chosen note to a plain text note.
+
+## Templates
+
+Bundled under a **Templates** container note is one template per item type — 0. Ideas, 1. Goal,
+2. Routine, 3. Task, 4. Future, 5. Project, 6. Note, 7. Area, 8. Special. Each carries `#template`
+(so it is discoverable by Trilium and the Template Picker widget) plus a `#type` label
+(`0-ideas`…`8-special`) the widgets sort and group by; the task-type templates (Routine, Task,
+Future, Project) also carry `#agendaTaskWidget`, and the Area template defaults to `#viewType=list`.
+Organize's provisioning resolves these by title/`#template` search at runtime, so the templates and
+the widgets stay decoupled.
+
+Template content is yours to customize — the templates are tracked via `AddonData:` relations, so a
+future update that changes a default prompts an Update Review rather than overwriting your edits.
 
 ## Shared configuration
 

@@ -64,10 +64,10 @@ async function migrateAreaSlugs(areaList) {
     }, [areaList, AREA_ALIASES])
 }
 
-// Resolve a templates@beatlink template note id by its title (must carry
-// #template). Returns "" if not found, so provisioning degrades gracefully when
-// the Templates addon isn't installed — the note is still created/tagged, just
-// without a template relation.
+// Resolve a bundled template note id by its title (must carry #template).
+// Returns "" if not found, so provisioning degrades gracefully when a template
+// note is missing — the note is still created/tagged, just without a template
+// relation.
 async function resolveTemplateId(title) {
     return api.runOnBackend((title) => {
         const results = api.searchForNotes(`#template note.title = "${title}"`)
