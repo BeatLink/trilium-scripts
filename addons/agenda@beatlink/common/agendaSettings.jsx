@@ -28,6 +28,7 @@ export async function getAgendaSettings() {
         configNoteId,
         profileIds: Object.keys(settings.profiles || {}),
         overviewNoteId: settings.overviewNoteId || "",
+        organizeNoteId: settings.organizeNoteId || "",
         activeProfileId: settings.activeProfileId || ""
     }
 

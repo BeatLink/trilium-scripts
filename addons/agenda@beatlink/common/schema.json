@@ -82,6 +82,14 @@
         "default": "",
         "tab": "Settings"
     },
+    "organizeNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Organize Note",
+        "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
+        "default": "",
+        "tab": "Settings"
+    },
     "activeProfileId": {
         "type": "reference",
         "registry": "profiles",

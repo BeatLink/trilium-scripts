@@ -34,6 +34,11 @@ Two render pages implement an opinionated Collect → Organize workflow on top o
   **Misfiled Notes** fixer for notes whose area/type disagrees with where they're filed. The Morning /
   Noon / Evening / Night quick-time buttons use the times on the Agenda Editor's **Times** tab.
 
+  Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
+  Note** picker on the Agenda Editor's **Settings** tab. Selecting a note converts it into a render
+  note (`~renderNote` → the Organize code note, icon `bx-sort-down`); clearing or re-picking reverts
+  the previously-chosen note to a plain text note.
+
 ## Shared configuration
 
 The config lives in one settings note holding a `schema.json`/`config.json` pair (label-name

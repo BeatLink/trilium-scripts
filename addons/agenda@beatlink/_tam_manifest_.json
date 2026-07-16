@@ -1,7 +1,7 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup page that provisions a GTD notebook of Areas/type-buckets and an Organize page that triages notes by assigning template/area/priority/start-date and fixing misfiled notes). The config lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup page that provisions a GTD notebook of Areas/type-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns template/area/priority/start-date and fixes misfiled notes). The config lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
@@ -42,7 +42,6 @@
 
             { "id": "task", "title": "agendaTask.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "task/agendaTask.jsx" },
 
-            { "id": "organize-page", "title": "Organize", "type": "render", "mime": "text/html", "sourceUrl": null },
             { "id": "organize-page-src", "title": "organizePage.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizePage.jsx" },
             { "id": "organize-lib", "title": "organize.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organize.js" },
             { "id": "organize-structure", "title": "organizeStructure.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organizeStructure.js" },
@@ -67,7 +66,7 @@
             { "parent": "root", "child": "my-day-css" },
             { "parent": "root", "child": "now-note" },
             { "parent": "root", "child": "task" },
-            { "parent": "root", "child": "organize-page" },
+            { "parent": "root", "child": "organize-page-src" },
             { "parent": "root", "child": "organize-css" },
             { "parent": "root", "child": "setup-page" },
             { "parent": "root", "child": "readme" },
@@ -113,7 +112,6 @@
             { "parent": "task", "child": "lib-task" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
 
-            { "parent": "organize-page", "child": "organize-page-src" },
             { "parent": "organize-page-src", "child": "agenda-settings" },
             { "parent": "organize-page-src", "child": "organize-lib" },
             { "parent": "organize-page-src", "child": "organize-structure" },
@@ -130,7 +128,6 @@
             { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
             { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" },
             { "from": "my-day", "type": "nowNote", "to": "now-note" },
-            { "from": "organize-page", "type": "renderNote", "to": "organize-page-src" },
             { "from": "setup-page", "type": "renderNote", "to": "setup-src" }
         ],
         "labels": [
@@ -139,7 +136,7 @@
             { "note": "profile-editor-css", "name": "appCss", "value": "" },
             { "note": "my-day-css", "name": "appCss", "value": "" },
             { "note": "organize-css", "name": "appCss", "value": "" },
-            { "note": "organize-page", "name": "iconClass", "value": "bx bx-been-here" },
+            { "note": "organize-page-src", "name": "agendaOrganizeRender", "value": "" },
             { "note": "setup-page", "name": "iconClass", "value": "bx bx-wrench" },
             { "note": "overview", "name": "widget", "value": "" },
             { "note": "my-day", "name": "widget", "value": "" },

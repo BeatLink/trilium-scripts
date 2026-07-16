@@ -97,9 +97,16 @@ manifest, so it merges with notes the user already created by hand. The structur
 
 ## 5. Wiring
 
-`organizePage.jsx` is a `render`-type page (`organize-page` → `renderNote` → `organize-page-src`); it
-imports `getAgendaSettings` from `agendaSettings.jsx` and requires `organize.js` + `organizeStructure.js`.
-The Setup page (`setup-page` → `setup-src`) requires `organizeProvision.js`, which requires
-`organizeStructure.js`. Per TAM's direct-child require rule, `organize-structure` is wired as a child
-of every note that requires it (`organize-page-src`, `organize-lib`, `organize-provision`). Styling is
-`organize.css` (`appCss`).
+Organize has **no shipped render page**. `organizePage.jsx` (`organize-page-src`, tagged
+`#agendaOrganizeRender`) is a plain code note; the render surface is an **external user-chosen note**.
+The **Organize Note** picker on the Agenda Editor's Settings tab persists `organizeNoteId` in the
+shared config and, on change, reconciles the chosen note on the backend: sets its `type` to `render`,
+its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#iconClass` to
+`bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
+`reconcileOrganizeNote` in [`../overview/profileEditor.jsx`](../overview/profileEditor.jsx).)
+
+`organizePage.jsx` imports `getAgendaSettings` from `agendaSettings.jsx` and requires `organize.js` +
+`organizeStructure.js`. The Setup page (`setup-page` → `setup-src`) requires `organizeProvision.js`,
+which requires `organizeStructure.js`. Per TAM's direct-child require rule, `organize-structure` is
+wired as a child of every note that requires it (`organize-page-src`, `organize-lib`,
+`organize-provision`). Styling is `organize.css` (`appCss`).
