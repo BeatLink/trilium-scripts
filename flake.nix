@@ -37,7 +37,7 @@
           packages = baseShell.nativeBuildInputs ++ [ triliumServer ];
 
           shellHook = baseShell.shellHook + ''
-            # Points the testing harness (resources/testing/harness.js) at
+            # Points the testing harness (resources/testing/testing.js) at
             # Trilium's own e2e-test seed database (document.db + config.ini with
             # noAuthentication=true), fetched reproducibly via the trilium flake
             # input above.
@@ -52,7 +52,7 @@
             run_tests()       { npx playwright test "$@"; }
             # Manual escape hatch for debugging the seed/server by hand -- the
             # normal path is `run_tests`.
-            trilium_harness() { node resources/testing/harness.js "$@"; }
+            trilium_harness() { node resources/testing/testing.js "$@"; }
 
             export -f run_tests trilium_harness
 

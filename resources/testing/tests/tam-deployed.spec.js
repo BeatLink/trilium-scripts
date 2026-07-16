@@ -7,7 +7,7 @@ ZIP, which carries the #TAMFILEID labels TAM's resolver applies, so both the
 render root and the tagged notes are findable straight after import.
 */
 
-const { test, expect } = require("../fixtures");
+const { test, expect } = require("../testing");
 
 test("TAM render root is deployed in the seed", async ({ tri }) => {
     const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");

@@ -23,9 +23,12 @@ TRILIUM_TESTING_NO_RESEED=1 run_tests   # reuse the existing snapshot (skip the 
 
 ## How it works
 
-`playwright.config.js` (repo root) is the single entry point:
+The whole harness -- server lifecycle, http client, page wrapper, the
+`test`/`expect` fixtures, and the Playwright lifecycle hook -- lives in one file,
+[`testing.js`](testing.js). `playwright.config.js` (repo root) is the thin
+Playwright entry point that wires it in:
 
-- **globalSetup** ([`global-setup.js`](global-setup.js)) calls `harness.prepare()`, which:
+- **globalSetup** (`testing.js`'s default export) calls `prepare()`, which:
   1. **Seeds**: copies Trilium's own e2e-test fixture db (`document.db` + `config.ini` with
      `noAuthentication=true` already set — fetched via the `trilium` flake input, exposed as
      `$TRILIUM_SRC`) into `data/` (gitignored), boots a real disk-backed server, imports
@@ -36,17 +39,21 @@ TRILIUM_TESTING_NO_RESEED=1 run_tests   # reuse the existing snapshot (skip the 
      snapshot while iterating on non-mutating tests.
   2. **Starts** the server against that snapshot (disk-backed).
 - **Tests** ([`tests/*.spec.js`](tests/)) import `{ test, expect }` from
-  [`fixtures.js`](fixtures.js), which injects two Trilium-aware fixtures:
-  - `tri` — a no-auth HTTP client (`searchNotes`, `getNote`, `importZip`, `execScript`, `request`)
-    against the running server. `searchNotes`/`getNote` are plain ETAPI GETs (no anchor needed).
+  [`testing.js`](testing.js), which injects two Trilium-aware fixtures:
+  - `tri` — a no-auth HTTP client (`searchNotes`, `getNote`, `importZip`, `installAddon`,
+    `execScript`, `request`) against the running server. `searchNotes`/`getNote` are plain ETAPI
+    GETs (no anchor needed). `installAddon(addonDir)` zips a manifest dir (tam-to-zip) and imports
+    it — idempotent, so several specs can each install the same addon in their `beforeAll`.
     `execScript` runs **backend**-env JS via `/api/script/exec` — it requires an existing
     backend/code note as its `startNoteId` anchor (the route builds the script bundle from that
     note), so use `searchNotes` to locate notes and reserve `execScript` for running logic.
   - `page` — the standard Playwright page, wrapped so `gotoNote(noteId)` / `enableRenderNote()` are
     available and everything else falls through to the real `Page`. Use this for **frontend**-env
-    flows: TAM's own UI (`TAM.jsx` et al.), `require()`-driven module resolution, `fetch()`-based
-    manifest installs, real button clicks — none of which `/api/script/exec` can run.
-- **globalTeardown** ([`global-teardown.js`](global-teardown.js)) stops the server (skip with
+    flows: TAM's own UI (`TAM.jsx` et al.), `#run=frontendStartup` scripts, `require()`-driven
+    module resolution, `fetch()`-based manifest installs, real button clicks — none of which
+    `/api/script/exec` can run.
+- **globalTeardown** — there's no separate teardown file: `globalSetup` returns the teardown
+  function and Playwright runs it after the suite. It stops the server (skip with
   `TRILIUM_TESTING_KEEP=1` to leave it up for manual poking).
 
 Playwright's browser binaries come from `pkgs.playwright-driver.browsers` (pinned to the
@@ -57,12 +64,18 @@ Playwright's browser binaries come from `pkgs.playwright-driver.browsers` (pinne
 ## Writing a test
 
 ```js
-const { test, expect } = require("../fixtures");
+const { test, expect } = require("../testing");
 
 // Backend: inspect notes via ETAPI — no browser.
 test("TAM is deployed", async ({ tri }) => {
     const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
     expect(results.length).toBeGreaterThan(0);
+});
+
+// An addon not in the seed: install it first (idempotent), then assert.
+const { httpClient } = require("../testing");
+test.beforeAll(async () => {
+    await httpClient().installAddon(require("path").resolve(__dirname, "../../../addons/hoist-note@beatlink"));
 });
 
 // Frontend: drive TAM's actual widget in a real browser.
@@ -105,12 +118,13 @@ trilium_harness stop
 
 ## Files
 
-- `../../playwright.config.js` — the single entry point (globalSetup/teardown, fixtures, reporter).
-- `../../flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the `test`
-  and `trilium_harness` shell functions.
+- `../../playwright.config.js` — the thin Playwright entry point (points `globalSetup` at
+  `testing.js`, sets reporter/timeout/browser opts).
+- `../../flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
+  `run_tests` and `trilium_harness` shell functions.
 - `../../shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
-- `harness.js` — all the primitives (seed / start / stop / prepare / http client / page wrapper),
-  plus a `seed|start|stop` CLI for manual debugging.
-- `global-setup.js` / `global-teardown.js` — Playwright lifecycle hooks around `harness.prepare()`.
-- `fixtures.js` — the `tri` (http) and `page` (Trilium-wrapped) test fixtures.
-- `tests/` — the Playwright specs.
+- `testing.js` — **the whole harness in one file**: all the primitives (seed / start / stop /
+  prepare / http client with `installAddon` / page wrapper), the `test`/`expect` fixtures, the
+  `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI for manual
+  debugging.
+- `tests/` — the Playwright specs (`tam-*` for TAM, `hoist-note-*` for hoist-note).

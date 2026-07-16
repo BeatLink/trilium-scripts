@@ -7,7 +7,7 @@ server. Exercises the path the backend smoke test can't: the render note
 actually loading its require()-bundled JSX and painting.
 */
 
-const { test, expect } = require("../fixtures");
+const { test, expect } = require("../testing");
 
 test("TAM UI mounts when its render note is opened", async ({ tri, page }) => {
     const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");

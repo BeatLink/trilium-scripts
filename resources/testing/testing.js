@@ -4,18 +4,26 @@
 
 One module holding every primitive the Playwright suite needs, so the whole
 "start Trilium, load a test environment, deploy TAM, drive it" flow is a single
-`playwright test` run (see playwright.config.js -- its globalSetup calls
-`prepare()` here, its fixtures call `httpClient()` / `triliumPage()`).
+`playwright test` run. playwright.config.js points its globalSetup at this
+file's default export; the specs require() its `test`/`expect` fixtures.
+
+This is the whole harness -- the Playwright glue (fixtures, globalSetup,
+globalTeardown) lives here too, so playwright.config.js and the specs both
+require() this one module and nothing else.
 
 Pieces (previously seed.js / run_server.js / trilium_client.js /
-browser_client.js -- now folded into one file):
+browser_client.js / fixtures.js / global-setup.js / global-teardown.js -- now
+folded into one file):
 
   seed()      copy Trilium's own e2e fixture db + import TAM  -> golden snapshot
   start()     boot trilium-server against that snapshot (in-memory by default)
   stop()      stop it
   prepare()   seed-if-needed + start; the one call globalSetup makes
-  httpClient  no-auth /api + /etapi client (execScript, importZip, search...)
-  TriliumPage Playwright Page wrapper (gotoNote, enableRenderNote)
+  httpClient  no-auth /api + /etapi client (execScript, importZip, installAddon,
+              search...)
+  wrapPage    Playwright Page wrapper (gotoNote, enableRenderNote)
+  test/expect Playwright test object pre-extended with `tri` + `page` fixtures
+  globalSetup / globalTeardown   the config's lifecycle hooks
 
 Requires `trilium-server` on PATH and $TRILIUM_SRC set -- both provided by this
 repo's flake devShell (`nix develop`), never installed separately.
@@ -240,10 +248,38 @@ function httpClient() {
         return raw.length ? JSON.parse(raw.toString()) : null;
     }
 
+    async function installAddon(addonDir, parentNoteId = "root") {
+        // Zip an addon's manifest dir (tam-to-zip) then import it, the same
+        // path seed() uses for TAM. Returns the imported root note's noteId.
+        // Idempotent: the suite runs serially against one shared server, and
+        // several specs may each install the same addon in their beforeAll --
+        // if its root note is already present, skip the re-import (a second
+        // import would clone the whole tree and break single-result lookups).
+        const rootTitle = path.basename(addonDir);
+        const existing = await searchNotes(`note.title = '${rootTitle}'`);
+        if (existing.results && existing.results.length > 0) {
+            return existing.results[0].noteId;
+        }
+        const zipPath = path.join(path.dirname(DATA_DIR), `${rootTitle}.zip`);
+        const r = spawnSync("node", [
+            path.join(REPO_ROOT, "resources", "scripts", "tamhelper.js"),
+            "tam-to-zip", addonDir, "--out", zipPath,
+        ], { cwd: REPO_ROOT, stdio: "inherit" });
+        if (r.status !== 0) throw new Error(`tam-to-zip failed for ${addonDir} (exit ${r.status})`);
+        try {
+            const result = await importZip(parentNoteId, zipPath);
+            const noteId = (result || {}).noteId;
+            if (!noteId) throw new Error(`import of ${addonDir} returned no noteId: ${JSON.stringify(result)}`);
+            return noteId;
+        } finally {
+            fs.rmSync(zipPath, { force: true });
+        }
+    }
+
     const getNote = (noteId) => request("GET", `/etapi/notes/${noteId}`);
     const searchNotes = (query) => request("GET", `/etapi/notes?search=${encodeURIComponent(query)}`);
 
-    return { execScript, importZip, getNote, searchNotes, request, BASE_URL, PORT };
+    return { execScript, importZip, installAddon, getNote, searchNotes, request, BASE_URL, PORT };
 }
 
 // -------------------------------------------------------------------------
@@ -365,11 +401,51 @@ async function prepare() {
     return async () => { await stop(); };
 }
 
-module.exports = {
+// -------------------------------------------------------------------------
+// Playwright glue: the `test`/`expect` a spec imports, plus the
+// globalSetup/globalTeardown playwright.config.js points at. Kept here so the
+// whole harness -- primitives + Playwright wiring -- is this single module.
+//
+// Specs do:  const { test, expect } = require("../testing");
+//   tri   no-auth http client (execScript / importZip / installAddon / getNote
+//         / searchNotes / request) against the running test server.
+//   page  the standard Playwright page, wrapped so gotoNote()/enableRenderNote()
+//         are available and everything else falls through to the real Page.
+// -------------------------------------------------------------------------
+
+const base = require("@playwright/test");
+
+const test = base.test.extend({
+    tri: async ({}, use) => { await use(httpClient()); },
+    page: async ({ page }, use) => { await use(wrapPage(page)); },
+});
+
+// globalSetup: rebuild the golden snapshot (if needed) + boot the server once
+// before the whole suite, and RETURN the teardown. Playwright treats a function
+// returned from globalSetup as the global teardown (runner/index.js), so one
+// hook covers both -- no separate teardown module. TRILIUM_TESTING_KEEP=1
+// leaves the server up for manual poking (stop later with
+// `node resources/testing/testing.js stop`).
+async function globalSetup() {
+    await prepare();
+    console.log(`Trilium test server ready at ${BASE_URL}/`);
+    return async () => {
+        if (process.env.TRILIUM_TESTING_KEEP === "1") return;
+        await stop();
+    };
+}
+
+// The module's callable default IS globalSetup (playwright.config.js points
+// globalSetup at this file, and Playwright requires a default-exported
+// function). Named primitives + the test fixtures hang off it as properties, so
+// specs still do `const { test, expect } = require("../testing")`.
+module.exports = globalSetup;
+Object.assign(module.exports, {
     seed, start, stop, prepare, isRunning,
     httpClient, wrapPage,
+    test, expect: base.expect, globalSetup,
     DATA_DIR, PORT, BASE_URL, PIDFILE, LOGFILE,
-};
+});
 
 // CLI escape hatch for the rare manual case (e.g. debugging the seed, or
 // leaving a server up to poke by hand) -- the normal path is `playwright test`.
@@ -388,7 +464,7 @@ if (require.main === module) {
             console.log("Stopped");
         } else {
             process.stderr.write(
-                "Usage: node resources/testing/harness.js <seed|start [--real]|stop>\n" +
+                "Usage: node resources/testing/testing.js <seed|start [--real]|stop>\n" +
                 "(normal path is `playwright test` -- this CLI is for manual debugging)\n"
             );
             process.exit(1);
