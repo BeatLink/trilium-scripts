@@ -1,9 +1,10 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
+import { getAreaSettings } from "organizeAreas.jsx"
 
 const {
-    getItemTemplates, getAreas, getOrganizeCandidates, getMisfiledNotes,
+    getItemTemplates, getOrganizeCandidates, getMisfiledNotes,
     assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
 } = require("organize.js")
 const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("organizeStructure.js")
@@ -256,8 +257,10 @@ export default function OrganizePanel() {
     async function reload() {
         setCandidates(null)
         setMisfiled(null)
-        const [tpls, ars, cands, mis, tms] = await Promise.all([
-            getItemTemplates(), getAreas(), getOrganizeCandidates(), getMisfiledNotes(), loadTimeSettings()
+        // Areas (from area-picker) drive the misfiled check, so load them first.
+        const ars = await getAreaSettings()
+        const [tpls, cands, mis, tms] = await Promise.all([
+            getItemTemplates(), getOrganizeCandidates(), getMisfiledNotes(ars), loadTimeSettings()
         ])
         setTemplates(tpls)
         setAreas(ars)

@@ -5,11 +5,14 @@
 //
 // Backend helpers for the Organize phase's triage queues:
 //   - getItemTemplates(): the item-type templates the "assign a template" queue offers.
-//   - getAreas(): the area vocabulary the "assign an area" queue offers.
 //   - getOrganizeCandidates(): every note under the Inbox or an Area subtree, with
 //     the flags each queue filters on (hasTemplate / hasArea), plus its tree path,
 //     a content preview, and a suggested area (nearest ancestor's #area).
 //   - assignTemplate / assignArea / deleteNote: the per-note mutations.
+//
+// The area vocabulary is not defined here — it comes from area-picker@beatlink
+// (loaded by the page via organizeAreas.jsx) and is passed into getMisfiledNotes
+// as an [{ slug, name, color }] list.
 //
 // Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
 // structural notes themselves (anything carrying #workflowNote — the areas, the
@@ -19,7 +22,7 @@
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
-const { AREA_LIST, BUCKET_TEMPLATES } = require("organizeStructure.js")
+const { BUCKET_TEMPLATES } = require("organizeStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 // Title of the Task item template; a note whose primary parent carries this
@@ -50,12 +53,6 @@ async function getItemTemplates() {
         }
         return out
     }, [ITEM_TEMPLATE_TITLES])
-}
-
-// The area vocabulary the "Notes Without Areas" queue offers: [{ slug, name,
-// color }], straight from workflowStructure's single source of truth.
-async function getAreas() {
-    return AREA_LIST
 }
 
 // Collect every non-structural note under the Inbox / Area subtrees, each with:
@@ -191,7 +188,7 @@ async function getOrganizeCandidates() {
 //     fixes: { moveTargetNoteId, moveTargetLabel, updateAreaTo, updateAreaColor,
 //              updateTypeToId, updateTypeToTitle } }
 // `fixes.*` are precomputed so the frontend just shows the applicable buttons.
-async function getMisfiledNotes() {
+async function getMisfiledNotes(areaList) {
     return api.runOnBackend((workflowLabel, areaList, bucketTemplates) => {
         const tagged = api.searchForNotes(`#${workflowLabel}`)
         const structuralIds = new Set(tagged.map(n => n.noteId))
@@ -342,7 +339,7 @@ async function getMisfiledNotes() {
 
         for (const root of areaRootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL, AREA_LIST, BUCKET_TEMPLATES])
+    }, [WORKFLOW_LABEL, areaList, BUCKET_TEMPLATES])
 }
 
 // Move a note from one parent branch to another (add to new, remove from old),
@@ -433,7 +430,6 @@ async function deleteNote(noteId) {
 
 module.exports = {
     getItemTemplates,
-    getAreas,
     getOrganizeCandidates,
     getMisfiledNotes,
     assignTemplate,

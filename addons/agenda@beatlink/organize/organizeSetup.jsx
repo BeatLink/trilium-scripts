@@ -1,13 +1,14 @@
 import { useState } from "trilium:preact"
+import { getAreaSettings } from "organizeAreas.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
 
 // The Setup page — a render page separate from the main Workflow window. Its one
 // job: a button that provisions the opinionated notebook structure (Inbox, My
-// Day, Agenda, and the 13 Areas each with their six Type subnotes) by
-// find-or-create, tagging every note with #workflowNote=<key>. Re-runnable and
-// idempotent: notes you already created by hand at the right title/level are
-// adopted (tagged) rather than duplicated. See organizeProvision.js.
+// Day, Agenda, and one note per area-picker Area, each with its six Type
+// subnotes) by find-or-create, tagging every note with #workflowNote=<key>.
+// Re-runnable and idempotent: notes you already created by hand at the right
+// title/level are adopted (tagged) rather than duplicated. See organizeProvision.js.
 export default function WorkflowSetup() {
     const [running, setRunning] = useState(false)
     const [outcome, setOutcome] = useState(null)
@@ -18,7 +19,8 @@ export default function WorkflowSetup() {
         setError(null)
         setOutcome(null)
         try {
-            setOutcome(await provisionStructure())
+            const areas = await getAreaSettings()
+            setOutcome(await provisionStructure(areas))
         } catch (e) {
             setError(String(e && e.message ? e.message : e))
         } finally {
@@ -37,11 +39,12 @@ export default function WorkflowSetup() {
             <h2>Workflow Setup</h2>
             <p className="workflow-setup-blurb">
                 Provision the notebook structure: <strong>Inbox</strong>, <strong>My Day</strong>,
-                <strong> Agenda</strong>, and one note per Area (each with Ideas / Goals / Routines /
-                Projects / Future / Notes below it). Notes are matched by title at the right level — an
-                existing match is adopted (tagged <code>#workflowNote</code>) rather than duplicated,
-                and anything missing is created. Also re-keys any notes left on an old area slug after
-                an area reorder. Safe to run more than once.
+                <strong> Agenda</strong>, and one note per Area (from area-picker@beatlink's area list,
+                each with Ideas / Goals / Routines / Projects / Future / Notes below it). Notes are
+                matched by title at the right level — an existing match is adopted (tagged
+                <code>#workflowNote</code>) rather than duplicated, and anything missing is created.
+                Also re-keys any notes left on an old area slug after an area reorder. Safe to run more
+                than once.
             </p>
 
             <button

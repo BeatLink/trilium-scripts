@@ -20,11 +20,13 @@ workflow, all sharing one configuration.
 ## Organize (GTD triage)
 
 Two render pages implement an opinionated Collect → Organize workflow on top of the widgets above
-(depends on [`templates@beatlink`](../templates@beatlink/README.md) for the item types):
+(depends on [`templates@beatlink`](../templates@beatlink/README.md) for the item types and
+[`area-picker@beatlink`](../area-picker@beatlink/README.md) for the area vocabulary):
 
 - **Workflow Setup** — one button provisions the notebook structure by find-or-create: **Inbox**,
-  **My Day**, **Agenda**, and one note per Area (13 areas, each with Ideas / Goals / Routines /
-  Projects / Future / Notes buckets below it). Every structural note is tagged **`#workflowNote=<key>`**
+  **My Day**, **Agenda**, and one note per Area (the areas defined in area-picker's settings, each
+  with Ideas / Goals / Routines / Projects / Future / Notes buckets below it). Every structural note
+  is tagged **`#workflowNote=<key>`**
   (this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so it can be resolved later;
   re-running adopts hand-made notes rather than duplicating, and re-keys stale `#area` slugs after an
   area reorder. See [organize/README.md](organize/README.md) for the taxonomy and provisioning model.

@@ -3,10 +3,15 @@
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by organizeProvision.js / the Setup page).
 //
-// The single source of truth for the opinionated notebook layout this addon
-// provisions. Each entry is a plain object; workflowProvision.js walks this
-// tree, find-or-creating each note by title at its level and tagging it with
-// #workflowNote=<key> so the addon can resolve it later (see develop.md).
+// The opinionated notebook layout this addon provisions. The area vocabulary is
+// NOT defined here — it comes from area-picker@beatlink (discovered via
+// #areaConfig, see organizeAreas.jsx) and is passed into buildStructure() as an
+// [{ slug, name, color }] list. This module supplies the fixed parts (subtype
+// buckets, template titles, priority vocabulary) and assembles the full tree.
+//
+// buildStructure(areaList) returns an array of nodes; organizeProvision.js walks
+// it, find-or-creating each note by title at its level and tagging it with
+// #workflowNote=<key> so the addon can resolve it later (see README.md).
 //
 // A node:
 //   key         stable identity written as #workflowNote=<key>
@@ -23,25 +28,6 @@
 // Idempotency: icon, color and template are DERIVED — re-asserted (setLabel /
 // setRelation overwrite) on every provision run, including on adopted pre-existing
 // notes. seedLabels and note content are only touched at creation.
-
-// The 13 areas of life, in the order fixed in organize/README.md, numbered
-// 01-13, each with its #color. Colors reuse agenda's colors.area palette; Legal
-// = red, grouping it with Career/Finances.
-const AREAS = [
-    { name: "Career",       color: "red" },
-    { name: "Finances",     color: "red" },
-    { name: "Legal",        color: "red" },
-    { name: "Home",         color: "darkorange" },
-    { name: "Car",          color: "darkorange" },
-    { name: "Tech",         color: "darkorange" },
-    { name: "Fitness",      color: "gold" },
-    { name: "Grooming",     color: "gold" },
-    { name: "Sexual",       color: "gold" },
-    { name: "Social",       color: "lime" },
-    { name: "Mental",       color: "lime" },
-    { name: "Identity",     color: "lime" },
-    { name: "Fun",          color: "magenta" }
-]
 
 // The six Type buckets provisioned under every Area (draft's non-structural,
 // non-Task set). Task is filed within these by agenda; Area is the container.
@@ -93,27 +79,11 @@ const PRIORITY_OPTIONS = [
     { value: "1-low",      label: "Want To Do" }
 ]
 
-// zero-padded area number: 1 -> "01"
-function pad2(n) {
-    return String(n).padStart(2, "0")
-}
-
-// The #area label value for an area at a given 0-based index: "03-legal".
-function areaSlug(area, index) {
-    return `${pad2(index + 1)}-${area.name.toLowerCase()}`
-}
-
-// Flat area vocabulary { slug, name, color } — the single source used both to
-// provision Area notes and to offer areas in the Organize "assign area" queue.
-const AREA_LIST = AREAS.map((area, i) => ({
-    slug: areaSlug(area, i),
-    name: area.name,
-    color: area.color
-}))
-
-function buildAreaNode(area, index) {
-    const slug = areaSlug(area, index)
-    const key = `area-${slug}`
+// Build one Area node (+ its six subtype buckets) from an area-picker area
+// { slug, name, color }. `slug` is the #area value (e.g. "03-legal") and the
+// area root's #workflowNote key is `area-<slug>`.
+function buildAreaNode(area) {
+    const key = `area-${area.slug}`
     return {
         key,
         title: area.name,
@@ -122,10 +92,10 @@ function buildAreaNode(area, index) {
         template: AREA_TEMPLATE_TITLE,
         // The #area value is note-specific (agenda's filters/colors/kanban key on
         // it) and can't come from the Area template. It's DERIVED (re-asserted
-        // every run), not a seed, so reordering areas (which renumbers slugs)
+        // every run), not a seed, so an area-picker edit that renumbers a slug
         // self-heals the root notes' #area on the next provision run.
         // #viewType/#label:area come from the Area template itself.
-        areaValue: slug,
+        areaValue: area.slug,
         seedLabels: [],
         children: SUBTYPES.map(sub => ({
             key: `${key}-${sub.slug}`,
@@ -143,17 +113,19 @@ function buildAreaNode(area, index) {
     }
 }
 
-// The full structure: three top-level container singletons, then one node per
-// area. Singletons use the Special container template.
-const STRUCTURE = [
-    { key: "inbox",  title: "Inbox",  icon: "bxs-inbox",   template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
-    { key: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
-    { key: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
-    ...AREAS.map(buildAreaNode)
-]
+// The full structure for a given area list: three top-level container singletons,
+// then one node per area. Singletons use the Special container template.
+function buildStructure(areaList) {
+    return [
+        { key: "inbox",  title: "Inbox",  icon: "bxs-inbox",   template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        { key: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        { key: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        ...(areaList || []).map(buildAreaNode)
+    ]
+}
 
 module.exports = {
-    STRUCTURE, AREAS, AREA_LIST, SUBTYPES,
+    buildStructure, SUBTYPES,
     AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE, BUCKET_TEMPLATES,
     PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS
 }

@@ -18,27 +18,27 @@
 // notes alike, so the structure's look is self-healing and re-running fixes
 // drift. seedLabels and note content are applied only when the note is created.
 
-const { STRUCTURE, AREA_LIST, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("organizeStructure.js")
+const { buildStructure, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("organizeStructure.js")
 
 const WORKFLOW_LABEL = "workflowNote"
 
 // Removed/renamed areas that fold into a surviving one: old name -> surviving
 // name (both lowercase). When an area is dropped (e.g. Health folded into
-// Fitness), its name no longer appears in AREA_LIST, so migrateAreaSlugs can't
-// re-key it by name alone — this alias points the old name at the survivor.
+// Fitness), its name no longer appears in area-picker's list, so migrateAreaSlugs
+// can't re-key it by name alone — this alias points the old name at the survivor.
 const AREA_ALIASES = {
     health: "fitness",
     productivity: "tech"
 }
 
-// Migrate stale #area slugs after an area reorder OR a fold. Slugs are
-// "<NN>-<name>"; the number changes when areas are inserted/reordered/removed,
+// Migrate stale #area slugs after an area reorder OR a fold in area-picker. Slugs
+// are "<NN>-<name>"; the number changes when areas are inserted/reordered/removed,
 // but names are stable, so we re-key by name: for every note carrying #area,
 // resolve its name-part (via AREA_ALIASES first, for folded areas) to the current
-// slug in AREA_LIST and rewrite #area + #color when it differs. Notes whose name
+// slug in `areaList` and rewrite #area + #color when it differs. Notes whose name
 // is neither a current area nor an alias are left alone (could be custom).
 // Returns the count of notes migrated.
-async function migrateAreaSlugs() {
+async function migrateAreaSlugs(areaList) {
     return api.runOnBackend((areaList, aliases) => {
         // name (lowercase) -> { slug, color } for the current vocabulary.
         const byName = {}
@@ -61,7 +61,7 @@ async function migrateAreaSlugs() {
             migrated++
         }
         return migrated
-    }, [AREA_LIST, AREA_ALIASES])
+    }, [areaList, AREA_ALIASES])
 }
 
 // Resolve a templates@beatlink template note id by its title (must carry
@@ -127,10 +127,12 @@ async function provisionNode(parentNoteId, node, templateId) {
     }, [parentNoteId, node.key, node.title, node.icon, node.color || "", node.areaValue || "", !!node.alwaysExpanded, templateId, node.seedLabels || [], WORKFLOW_LABEL])
 }
 
-// Walk the whole STRUCTURE depth-first, provisioning each node under its
-// resolved parent. Top-level nodes go under "root". Returns a flat result log
-// [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
-async function provisionStructure() {
+// Walk the whole structure depth-first, provisioning each node under its
+// resolved parent. Top-level nodes go under "root". `areaList` is area-picker's
+// vocabulary ([{ slug, name, color }]); it drives which Area notes are built.
+// Returns a flat result log [{ key, title, created, adopted, noteId, depth }]
+// for the Setup page to show.
+async function provisionStructure(areaList) {
     // Resolve the two templates once up front, then map each node's template
     // title to a real id inside the walk.
     const templateIds = {
@@ -151,11 +153,11 @@ async function provisionStructure() {
         }
     }
 
-    await walk(STRUCTURE, "root", 0)
+    await walk(buildStructure(areaList), "root", 0)
 
     // After the structure notes are in place (area roots' #area re-asserted),
     // re-key any note still carrying a stale area slug from a prior ordering.
-    const migratedAreaCount = await migrateAreaSlugs()
+    const migratedAreaCount = await migrateAreaSlugs(areaList)
 
     return { results, migratedAreaCount }
 }

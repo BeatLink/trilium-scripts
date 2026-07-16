@@ -46,6 +46,7 @@
             { "id": "organize-lib", "title": "organize.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organize.js" },
             { "id": "organize-structure", "title": "organizeStructure.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organizeStructure.js" },
             { "id": "organize-provision", "title": "organizeProvision.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organizeProvision.js" },
+            { "id": "organize-areas", "title": "organizeAreas.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeAreas.jsx" },
             { "id": "organize-css", "title": "organize.css", "type": "code", "mime": "text/css", "sourceUrl": "organize/organize.css" },
             { "id": "setup-page", "title": "Workflow Setup", "type": "render", "mime": "text/html", "sourceUrl": null },
             { "id": "setup-src", "title": "organizeSetup.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeSetup.jsx" },
@@ -113,13 +114,17 @@
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
 
             { "parent": "organize-page-src", "child": "agenda-settings" },
+            { "parent": "organize-page-src", "child": "organize-areas" },
             { "parent": "organize-page-src", "child": "organize-lib" },
             { "parent": "organize-page-src", "child": "organize-structure" },
             { "parent": "organize-lib", "child": "organize-structure" },
 
             { "parent": "setup-page", "child": "setup-src" },
+            { "parent": "setup-src", "child": "organize-areas" },
             { "parent": "setup-src", "child": "organize-provision" },
-            { "parent": "organize-provision", "child": "organize-structure" }
+            { "parent": "organize-provision", "child": "organize-structure" },
+
+            { "parent": "organize-areas", "addon": "libsettings@beatlink", "child": "ui" }
         ],
         "relations": [
             { "from": "settings", "type": "AddonData:config", "to": "config" },
@@ -154,7 +159,8 @@
             "libcalendar@beatlink",
             "libmultisort@beatlink",
             "librrule@jkbrzt",
-            "templates@beatlink"
+            "templates@beatlink",
+            "area-picker@beatlink"
         ],
         "exports": {},
         "readmeNote": "readme"

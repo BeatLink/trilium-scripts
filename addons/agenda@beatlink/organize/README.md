@@ -19,13 +19,17 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 
 ## 2. Taxonomy
 
-### Areas (13)
-Career, Finances, Legal, Home, Car, Tech, Fitness, Grooming, Sexual, Social, Mental, Identity, Fun.
-`#area` values are `01-career` … `13-fun`. **Health was folded into Fitness and Productivity into
-Tech.** The 13-area list is kept in sync across `organizeStructure.js` (`AREAS`) and `agenda`'s four
-area registries in [`common/schema.json`](../common/schema.json)
-(`filterGroups.area`/`prefixes.area`/`colors.area`/`groupings.area`) — edit both when areas change.
-Folds are handled at migration time by `AREA_ALIASES` in `organizeProvision.js` (`health`→`fitness`,
+### Areas
+The area vocabulary comes from **[`area-picker@beatlink`](../../area-picker@beatlink/)**, not this
+module. Organize discovers area-picker's settings note by its `#areaConfig` label and loads its
+`areas` list (`{ key, title, color }`, `key` = the `#area` slug like `01-career`) via
+[`organizeAreas.jsx`](organizeAreas.jsx) → `getAreaSettings()`, which normalizes it to
+`{ slug, name, color }`. The assign-area picker, the misfiled check, and Setup provisioning all read
+this one list, so editing areas in area-picker's settings changes them everywhere. area-picker ships
+the same 13 defaults agenda's four area registries in
+[`common/schema.json`](../common/schema.json) use (`filterGroups.area`/`prefixes.area`/`colors.area`/
+`groupings.area`) — keep those in sync with area-picker if you change the defaults. Folds/renames are
+handled at migration time by `AREA_ALIASES` in `organizeProvision.js` (`health`→`fitness`,
 `productivity`→`tech`), so existing notes re-tag on the next Setup provision.
 
 ### Types (8)
@@ -62,8 +66,8 @@ patches the list in place so the acted-on note leaves its queue. Sections:
 
 1. **Notes Without Templates** — buttons are the item templates (`0. Ideas`..`6. Note`), resolved
    live by title; assigns `~template`.
-2. **Notes Without Areas** — buttons are the 13 areas (`AREA_LIST`), color-coded; the ancestor area
-   is highlighted as the suggestion; assigns `#area` + `#color`.
+2. **Notes Without Areas** — buttons are area-picker's areas (via `getAreaSettings()`), color-coded;
+   the ancestor area is highlighted as the suggestion; assigns `#area` + `#color`.
 3. **Tasks Without Priority** — actionable types only (`PRIORITY_TEMPLATE_TITLES`); MoSCoW buttons
    (`4-critical`..`1-low`) set `#priority`.
 4. **Tasks Without a Start Date** — a two-step date + time picker; writes `#startDateTime`,
@@ -76,8 +80,9 @@ patches the list in place so the acted-on note leaves its queue. Sections:
 ## 4. Provisioning model — runtime find-or-create
 
 The notebook *structure* is provisioned by the **Workflow Setup** page button, not cloned in via the
-manifest, so it merges with notes the user already created by hand. The structure is data
-(`organizeStructure.js`); the logic is `organizeProvision.js`.
+manifest, so it merges with notes the user already created by hand. `organizeStructure.js`'s
+`buildStructure(areaList)` assembles the tree from area-picker's area list (loaded by the Setup page
+via `getAreaSettings()`); the walk/find-or-create logic is `organizeProvision.js`.
 
 - **Identity:** each note is tagged **`#workflowNote=<key>`** (e.g. `inbox`, `area-03-legal`,
   `area-03-legal-goals`) — this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes.
@@ -105,8 +110,11 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
 `reconcileOrganizeNote` in [`../overview/profileEditor.jsx`](../overview/profileEditor.jsx).)
 
-`organizePage.jsx` imports `getAgendaSettings` from `agendaSettings.jsx` and requires `organize.js` +
-`organizeStructure.js`. The Setup page (`setup-page` → `setup-src`) requires `organizeProvision.js`,
-which requires `organizeStructure.js`. Per TAM's direct-child require rule, `organize-structure` is
-wired as a child of every note that requires it (`organize-page-src`, `organize-lib`,
-`organize-provision`). Styling is `organize.css` (`appCss`).
+`organizePage.jsx` imports `getAgendaSettings` from `agendaSettings.jsx` and `getAreaSettings` from
+`organizeAreas.jsx`, and requires `organize.js` + `organizeStructure.js`. The Setup page (`setup-page`
+→ `setup-src`) imports `organizeAreas.jsx` and requires `organizeProvision.js`, which requires
+`organizeStructure.js`. Per TAM's direct-child require rule, `organize-structure` is wired as a child
+of every note that requires it (`organize-page-src`, `organize-lib`, `organize-provision`), and
+`organize-areas` is a child of both entry notes (each with libsettings' `ui` wired under it for
+`loadSettings`). `area-picker@beatlink` is an agenda dependency so its `#areaConfig` note resolves.
+Styling is `organize.css` (`appCss`).
