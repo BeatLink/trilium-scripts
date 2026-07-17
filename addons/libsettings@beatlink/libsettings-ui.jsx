@@ -516,7 +516,12 @@ function resolveCategory(def) {
 // schema fields. An extra panel naming a category not in `_categories` falls
 // under the first declared category, same as a field would. Purely additive:
 // no `extraPanels` and the form behaves exactly as before.
-export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [] }) {
+// `only` restricts the form to a single tab (by its resolved label): the
+// category/tab nav is hidden and just that tab's fields render directly — for
+// embedding one tab of a larger schema on its own page while the full schema
+// still edits elsewhere. Fields on other tabs are still loaded/merged/persisted
+// (it's a display filter, not a schema subset), so Save writes the whole doc.
+export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], only = null }) {
     const [schema, setSchema] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
@@ -591,7 +596,8 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [] }) {
     // field carries no `category` (or names one not in `_categories`) falls
     // under the first declared category so no field is ever unreachable.
     const declaredCategories = Array.isArray(schema._categories) ? schema._categories : []
-    const useCategories = declaredCategories.length > 0
+    // `only` collapses everything to a single tab: no category bar, no tab bar.
+    const useCategories = declaredCategories.length > 0 && !only
     const tabsForCategory = (cat) => tabs.filter(t => {
         const c = tabCategory[t.key]
         const resolved = (c && declaredCategories.includes(c)) ? c : declaredCategories[0]
@@ -603,14 +609,24 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [] }) {
             ? activeCategory
             : (declaredCategories.find(c => tabsForCategory(c).length > 0) || declaredCategories[0]))
         : null
-    const visibleTabs = useCategories ? tabsForCategory(activeCat) : tabs
+    const visibleTabs = only
+        ? tabs.filter(t => t.key === only)
+        : (useCategories ? tabsForCategory(activeCat) : tabs)
 
-    const useTabs = visibleTabs.length > 1
+    // With `only`, never show the tab bar even for the one matching tab.
+    const useTabs = !only && visibleTabs.length > 1
     const activeKey = visibleTabs.some(t => t.key === activeTab) ? activeTab : visibleTabs[0]?.key
     // Nothing ever needs the explicit button if every field autosaves — the
     // common case for a schema that's entirely element-library-shaped, no
-    // profile-identity-style fields that want a deliberate Save.
-    const needsSaveButton = entries.some(([, def]) => !def.autosave)
+    // profile-identity-style fields that want a deliberate Save. Under `only`,
+    // scope this to the visible tab's fields — a Save that persisted the whole
+    // document from an embedded single-registry panel would surprise (the panel
+    // shows one autosave registry; the doc's other non-autosave fields aren't
+    // even on screen).
+    const saveScopeEntries = only
+        ? (tabEntries[only] || [])
+        : entries
+    const needsSaveButton = saveScopeEntries.some(([, def]) => !def.autosave)
 
     // A group field (list/registry) keeps its own heading above a full-width
     // widget — a fixed left-hand label column doesn't make sense next to

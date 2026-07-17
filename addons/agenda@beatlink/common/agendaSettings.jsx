@@ -46,5 +46,9 @@ export async function getAgendaSettings() {
         nightTime: settings.nightTime
     }
 
-    return { constants, profileContext, myDay, organize, schemaNoteId, configNoteId, icalNoteId }
+    const collect = {
+        inboxNoteId: settings.inboxNoteId || ""
+    }
+
+    return { constants, profileContext, myDay, organize, collect, schemaNoteId, configNoteId, icalNoteId }
 }

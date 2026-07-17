@@ -1,12 +1,41 @@
 import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { getAreaSettings } from "organizeAreas.jsx"
+import { getTemplateConfig } from "organizeTemplates.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
 
 // The icon stamped on the note that hosts the Organize UI.
 const ORGANIZE_ICON = "bx bx-sort-down"
+
+// Preselect the Collect › Inbox Note setting to Trilium's own inbox the first
+// time (when it's still empty), so a fresh install lands somewhere sensible and
+// collection addons that read agenda's inboxNoteId have a target. Resolution
+// order: a note tagged #inbox (Trilium's own inbox convention), else agenda's
+// provisioned Inbox (#workflowNote=inbox), else a root-level note titled "Inbox".
+// Persists the resolved id back into the shared config; a no-op once set (so the
+// user's own later choice is never overwritten). Returns the resolved id or "".
+async function preselectInboxNote(schemaNoteId, configNoteId) {
+    const values = await loadSettings(schemaNoteId, configNoteId)
+    if (values.inboxNoteId) return values.inboxNoteId
+
+    const resolved = await api.runOnBackend(() => {
+        let hits = api.searchForNotes("#inbox")
+        if (hits.length) return hits[0].noteId
+        hits = api.searchForNotes('#workflowNote = "inbox"')
+        if (hits.length) return hits[0].noteId
+        hits = api.searchForNotes('note.title = "Inbox" AND note.parents.noteId = "root"')
+        if (hits.length) return hits[0].noteId
+        return ""
+    }, [])
+
+    if (resolved) {
+        values.inboxNoteId = resolved
+        await saveSettings(schemaNoteId, configNoteId, values)
+    }
+    return resolved
+}
 
 // Point `noteId` at the Organize page: make it a render note whose ~renderNote
 // relation targets the Organize code note (found by #agendaOrganizeRender), and
@@ -94,8 +123,8 @@ function WorkflowSetup() {
         setError(null)
         setOutcome(null)
         try {
-            const areas = await getAreaSettings()
-            setOutcome(await provisionStructure(areas))
+            const [areas, templateList] = await Promise.all([getAreaSettings(), getTemplateConfig()])
+            setOutcome(await provisionStructure(areas, templateList.filter(t => t.enabled)))
         } catch (e) {
             setError(String(e && e.message ? e.message : e))
         } finally {
@@ -169,6 +198,10 @@ export default function ProfileEditor() {
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
+            // Preselect the inbox note (persists to config) before mounting the
+            // SettingsForm below, so its Collect › Inbox tab shows the resolved
+            // note rather than an empty picker on a fresh install.
+            await preselectInboxNote(settings.schemaNoteId, settings.configNoteId)
             setSchemaNoteId(settings.schemaNoteId)
             setConfigNoteId(settings.configNoteId)
             setOrganizeNoteId(settings.profileContext.organizeNoteId || "")
@@ -209,9 +242,9 @@ export default function ProfileEditor() {
                 note and active profile, build out your profiles, and manage every shared
                 search/filter/sort/prefix/color/date-rule element — each on its own tab. A profile only
                 ever references an element by name; edit the element on its own tab to change it
-                everywhere it's used. Set the quick-times and pick the note that hosts the Organize
-                triage UI under Organize; provision the notebook structure from Settings › Workflow
-                Setup.
+                everywhere it's used. Pick the inbox note captures land in under Collect. Set the
+                quick-times, manage the item templates, and pick the note that hosts the Organize triage
+                UI under Organize; provision the notebook structure from Settings › Workflow Setup.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

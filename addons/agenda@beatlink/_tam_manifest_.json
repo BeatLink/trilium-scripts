@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.9.0",
+    "latestVersion": "1.10.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -54,6 +54,7 @@
             { "id": "organize-structure", "title": "organizeStructure.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organizeStructure.js" },
             { "id": "organize-provision", "title": "organizeProvision.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organizeProvision.js" },
             { "id": "organize-areas", "title": "organizeAreas.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeAreas.jsx" },
+            { "id": "organize-templates", "title": "organizeTemplates.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeTemplates.jsx" },
             { "id": "organize-css", "title": "organize.css", "type": "code", "mime": "text/css", "sourceUrl": "organize/organize.css" },
 
             { "id": "templates-root", "title": "Templates", "type": "text", "mime": "text/html", "sourceUrl": null, "skipOnUpdate": true },
@@ -96,6 +97,7 @@
             { "parent": "grp-task", "child": "task" },
 
             { "parent": "grp-organize", "child": "organize-page-src" },
+            { "parent": "grp-organize", "child": "organize-templates" },
             { "parent": "grp-organize", "child": "organize-css" },
 
             { "parent": "templates-root", "child": "tpl-idea" },
@@ -136,6 +138,7 @@
             { "parent": "profile-editor-page", "child": "profile-editor" },
             { "parent": "profile-editor", "child": "agenda-settings" },
             { "parent": "profile-editor", "child": "organize-areas" },
+            { "parent": "profile-editor", "child": "organize-templates" },
             { "parent": "profile-editor", "child": "organize-provision" },
             { "parent": "profile-editor", "addon": "libsettings@beatlink", "child": "ui" },
 
@@ -153,13 +156,14 @@
 
             { "parent": "organize-page-src", "child": "agenda-settings" },
             { "parent": "organize-page-src", "child": "organize-areas" },
+            { "parent": "organize-page-src", "child": "organize-templates" },
             { "parent": "organize-page-src", "child": "organize-lib" },
             { "parent": "organize-page-src", "child": "organize-structure" },
-            { "parent": "organize-lib", "child": "organize-structure" },
 
             { "parent": "organize-provision", "child": "organize-structure" },
 
-            { "parent": "organize-areas", "addon": "libsettings@beatlink", "child": "ui" }
+            { "parent": "organize-areas", "addon": "libsettings@beatlink", "child": "ui" },
+            { "parent": "organize-templates", "addon": "libsettings@beatlink", "child": "ui" }
         ],
         "relations": [
             { "from": "settings", "type": "AddonData:config", "to": "config" },
@@ -229,6 +233,7 @@
             { "note": "organize-structure", "name": "iconClass", "value": "bx bx-task" },
             { "note": "organize-provision", "name": "iconClass", "value": "bx bx-task" },
             { "note": "organize-areas", "name": "iconClass", "value": "bx bx-task" },
+            { "note": "organize-templates", "name": "iconClass", "value": "bx bx-task" },
             { "note": "organize-css", "name": "iconClass", "value": "bx bx-task" },
             { "note": "readme", "name": "iconClass", "value": "bx bx-task" },
 

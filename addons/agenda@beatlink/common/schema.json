@@ -1,5 +1,13 @@
 {
     "_categories": ["Collect", "Organize", "Review", "Execute", "Settings"],
+    "inboxNoteId": {
+        "type": "note",
+        "label": "Inbox Note",
+        "description": "The note new captures land in. Defaults to Trilium's own inbox (a note tagged #inbox). Shared via #agendaConfig so collection addons can file into the same place.",
+        "default": "",
+        "category": "Collect",
+        "tab": "Inbox"
+    },
     "startDatetimeLabel": {
         "type": "string",
         "label": "Start Datetime Label",
@@ -678,6 +686,31 @@
             "thisMonth": { "name": "This Month", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfThisWeek", "moment2": "endOfThisMonth", "bracket": "[)" },
             "thisYear": { "name": "This Year", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfThisMonth", "moment2": "endOfThisYear", "bracket": "[]" },
             "future": { "name": "Future", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isAfter", "moment1": "endOfThisYear" }
+        }
+    },
+    "templates": {
+        "type": "registry",
+        "label": "Templates",
+        "category": "Organize",
+        "tab": "Templates",
+        "autosave": true,
+        "description": "The item-type templates the Organize workflow offers, scaffolds a bucket for, and derives #type / #agendaTaskWidget from. Use Scan to pick up #template notes you have added. Structural templates (the Area root and container templates) are managed separately and not listed here.",
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Template" },
+            "titleMatch": { "type": "string", "label": "Title Match", "default": "", "description": "The #template note title this row resolves to when its note id is not yet known (used to adopt agenda's bundled templates on first Scan). Leave blank for templates discovered by Scan." },
+            "templateNoteId": { "type": "note", "label": "Template Note", "default": "" },
+            "enabled": { "type": "boolean", "label": "Enabled", "default": true, "description": "Offered in the Organize assign queue and given its own scaffolding bucket." },
+            "actionable": { "type": "boolean", "label": "Actionable Task", "default": false, "description": "Its notes flow through the priority and start-date triage queues; the template carries #agendaTaskWidget." },
+            "order": { "type": "number", "label": "Order", "default": 0, "description": "Assign-queue and bucket order, and the numeric prefix of the derived #type sort key." }
+        },
+        "default": {
+            "ideas":    { "name": "Ideas",    "titleMatch": "0. Ideas",   "templateNoteId": "", "enabled": true, "actionable": false, "order": 0 },
+            "goal":     { "name": "Goal",     "titleMatch": "1. Goal",    "templateNoteId": "", "enabled": true, "actionable": false, "order": 1 },
+            "routine":  { "name": "Routine",  "titleMatch": "2. Routine", "templateNoteId": "", "enabled": true, "actionable": true,  "order": 2 },
+            "task":     { "name": "Task",     "titleMatch": "3. Task",    "templateNoteId": "", "enabled": true, "actionable": true,  "order": 3 },
+            "future":   { "name": "Future",   "titleMatch": "4. Future",  "templateNoteId": "", "enabled": true, "actionable": true,  "order": 4 },
+            "project":  { "name": "Project",  "titleMatch": "5. Project", "templateNoteId": "", "enabled": true, "actionable": true,  "order": 5 },
+            "note":     { "name": "Note",     "titleMatch": "6. Note",    "templateNoteId": "", "enabled": true, "actionable": false, "order": 6 }
         }
     }
 }

@@ -10,9 +10,11 @@
 //     a content preview, and a suggested area (nearest ancestor's #area).
 //   - assignTemplate / assignArea / deleteNote: the per-note mutations.
 //
-// The area vocabulary is not defined here — it comes from area-picker@beatlink
-// (loaded by the page via organizeAreas.jsx) and is passed into getMisfiledNotes
-// as an [{ slug, name, color }] list.
+// Neither vocabulary is defined here: the AREA list comes from area-picker@beatlink
+// (via organizeAreas.jsx), the TEMPLATE list from agenda's managed-templates
+// config (via organizeTemplates.getTemplateConfig). Both are loaded by the page
+// and passed in — getItemTemplates/getOrganizeCandidates/getMisfiledNotes take the
+// enabled/actionable template list and the area list as arguments.
 //
 // Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
 // structural notes themselves (anything carrying #workflowNote — the areas, the
@@ -22,48 +24,36 @@
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
-const { BUCKET_TEMPLATES } = require("organizeStructure.js")
-
 const WORKFLOW_LABEL = "workflowNote"
-// Title of the Task item template; a note whose primary parent carries this
-// template is a subtask (see getOrganizeCandidates' parentIsTask).
-const TASK_TEMPLATE_TITLE = "3. Task"
 
-// The item-type templates offered by the "Notes Without Templates" queue, in
-// workflow order. Structural templates (Area / Special) are excluded. Resolved
-// live by title; a title with no matching #template note is simply omitted.
-const ITEM_TEMPLATE_TITLES = [
-    "0. Ideas",
-    "1. Goal",
-    "2. Routine",
-    "3. Task",
-    "4. Future",
-    "5. Project",
-    "6. Note"
-]
-
-// Resolve the offered item templates to real notes. Returns [{ noteId, title }]
-// in ITEM_TEMPLATE_TITLES order, skipping any that don't resolve.
-async function getItemTemplates() {
-    return api.runOnBackend((titles) => {
+// The item-type templates offered by the "Notes Without Templates" queue come
+// from agenda's managed-templates config (organizeTemplates.getTemplateConfig),
+// passed in as an ordered [{ noteId, name, slug, order, actionable }] list of the
+// ENABLED templates — no hard-coded titles here anymore. Returns [{ noteId,
+// title }] in the given order (title = the template note's live title).
+async function getItemTemplates(templateList) {
+    return api.runOnBackend((templateList) => {
         const out = []
-        for (const title of titles) {
-            const results = api.searchForNotes(`#template note.title = "${title}"`)
-            if (results.length > 0) out.push({ noteId: results[0].noteId, title })
+        for (const t of templateList) {
+            const note = api.getNote(t.noteId)
+            if (note) out.push({ noteId: t.noteId, title: note.title })
         }
         return out
-    }, [ITEM_TEMPLATE_TITLES])
+    }, [templateList])
 }
 
 // Collect every non-structural note under the Inbox / Area subtrees, each with:
-//   { noteId, title, path, preview, hasTemplate, hasArea, hasPriority,
-//     hasStartDate, isSubtask, suggestedArea }
+//   { noteId, title, path, preview, hasTemplate, templateTitle, hasArea,
+//     hasPriority, hasStartDate, isSubtask, suggestedArea }
 // The frontend filters this into the per-queue work lists (untemplated, or
 // no-area). `suggestedArea` is the nearest ancestor's #area value ("" if none).
-// `isSubtask` marks a note whose primary parent is a Task (excluded from the
-// no-start-date queue).
-async function getOrganizeCandidates() {
-    return api.runOnBackend((workflowLabel, taskTemplateTitle) => {
+// `isSubtask` marks a note whose primary parent is itself an actionable-template
+// note (excluded from the no-start-date queue — it's scheduled with its parent).
+// `actionableTemplateIds` is the set of template note ids flagged actionable in
+// the managed-templates config.
+async function getOrganizeCandidates(actionableTemplateIds) {
+    return api.runOnBackend((workflowLabel, actionableTemplateIds) => {
+        const actionableSet = new Set(actionableTemplateIds)
         // Scope roots: the Inbox note + every Area root. Area roots have a
         // #workflowNote value like "area-03-legal" (no trailing bucket slug);
         // buckets look like "area-03-legal-goals" and are NOT scope roots (but
@@ -128,18 +118,15 @@ async function getOrganizeCandidates() {
             return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
         }
 
-        // A note is a subtask when its primary parent is itself a Task-templated
-        // note. Subtasks are managed under their parent Task, so they're excluded
-        // from the "no start date" queue (they don't need their own start date).
-        function templateTitleOf(note) {
-            const tId = note.getRelationValue("template")
-            if (!tId) return ""
-            const t = api.getNote(tId)
-            return t ? t.title : ""
-        }
-        function parentIsTask(note) {
+        // A note is a subtask when its primary parent is itself an
+        // actionable-template note. Subtasks are managed under their parent, so
+        // they're excluded from the "no start date" queue (scheduled with the
+        // parent, not on their own).
+        function parentIsActionable(note) {
             const parent = note.getParentNotes()[0]
-            return !!parent && templateTitleOf(parent) === taskTemplateTitle
+            if (!parent) return false
+            const tId = parent.getRelationValue("template")
+            return !!tId && actionableSet.has(tId)
         }
 
         // Collect descendants of the scope roots, de-duped (a note can be cloned
@@ -160,11 +147,12 @@ async function getOrganizeCandidates() {
                         path: pathOf(child),
                         preview: previewOf(child),
                         hasTemplate: !!templateId,
+                        templateId,
                         templateTitle: templateNote ? templateNote.title : "",
                         hasArea: !!child.getLabelValue("area"),
                         hasPriority: !!child.getLabelValue("priority"),
                         hasStartDate: !!child.getLabelValue("startDateTime"),
-                        isSubtask: parentIsTask(child),
+                        isSubtask: parentIsActionable(child),
                         suggestedArea: ancestorArea(child)
                     })
                 }
@@ -174,27 +162,30 @@ async function getOrganizeCandidates() {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL, TASK_TEMPLATE_TITLE])
+    }, [WORKFLOW_LABEL, actionableTemplateIds])
 }
 
-// Find notes whose #area or ~template disagrees with where they're filed. A note
-// under "Home > Projects" implies area=03-home and bucket=projects; it's misfiled
-// if its own #area differs from the ancestor Area, or its ~template isn't one the
-// ancestor bucket accepts. Only notes inside an Area subtree are checked (Inbox
-// notes aren't filed yet). Returns per note:
+// Find notes whose #area or ~template disagrees with where they're filed. In the
+// managed-templates model a bucket IS a template: a note under "Home > Task"
+// implies area=03-home and bucket-template=task; it's misfiled if its own #area
+// differs from the ancestor Area, or its ~template's slug differs from the
+// ancestor bucket's template slug. Only notes inside an Area subtree are checked
+// (Inbox notes aren't filed yet). `templateList` is agenda's enabled managed
+// templates ([{ noteId, slug, name }]). Returns per note:
 //   { noteId, title, path, preview,
 //     areaMisfiled, typeMisfiled,
 //     branchArea, branchBucket, noteArea, noteTemplateTitle,
 //     fixes: { moveTargetNoteId, moveTargetLabel, updateAreaTo, updateAreaColor,
 //              updateTypeToId, updateTypeToTitle } }
-// `fixes.*` are precomputed so the frontend just shows the applicable buttons.
-async function getMisfiledNotes(areaList) {
-    return api.runOnBackend((workflowLabel, areaList, bucketTemplates) => {
+// `branchBucket` is the ancestor bucket's template slug. `fixes.*` are precomputed
+// so the frontend just shows the applicable buttons.
+async function getMisfiledNotes(areaList, templateList) {
+    return api.runOnBackend((workflowLabel, areaList, templateList) => {
         const tagged = api.searchForNotes(`#${workflowLabel}`)
         const structuralIds = new Set(tagged.map(n => n.noteId))
 
         // Index the structural notes by their #workflowNote key so we can resolve
-        // "the projects bucket under the home area" -> a real noteId for moves.
+        // "the Task bucket under the Home area" -> a real noteId for moves.
         const byKey = {}
         for (const n of tagged) byKey[n.getLabelValue(workflowLabel)] = n
 
@@ -206,13 +197,19 @@ async function getMisfiledNotes(areaList) {
         for (const a of areaList) areaKeyBySlug[a.slug] = `area-${a.slug}`
         const colorBySlug = {}
         for (const a of areaList) colorBySlug[a.slug] = a.color
+        const areaSlugs = areaList.map(a => a.slug)
 
-        // template title -> the bucket slug that accepts it (first match wins).
-        const bucketByTemplate = {}
-        for (const bucket of Object.keys(bucketTemplates)) {
-            for (const title of bucketTemplates[bucket]) {
-                if (!(title in bucketByTemplate)) bucketByTemplate[title] = bucket
-            }
+        // template note id -> its bucket slug; and bucket slug -> template note id
+        // (for the "update type" fix, which sets the note's template to the one
+        // its bucket represents).
+        const slugByTemplateId = {}
+        const templateIdBySlug = {}
+        const titleByTemplateId = {}
+        for (const t of templateList) {
+            slugByTemplateId[t.noteId] = t.slug
+            templateIdBySlug[t.slug] = t.noteId
+            const note = api.getNote(t.noteId)
+            titleByTemplateId[t.noteId] = note ? note.title : t.name
         }
 
         function pathOf(note) {
@@ -238,9 +235,17 @@ async function getMisfiledNotes(areaList) {
             return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
         }
 
-        // Nearest ancestor Area's #area, and nearest ancestor bucket's slug. A
-        // bucket key looks like "area-03-home-projects"; the trailing segment is
-        // the bucket slug.
+        // Nearest ancestor Area's #area, and nearest ancestor bucket's template
+        // slug. A bucket key is "area-<areaSlug>-<templateSlug>"; since a template
+        // slug can itself contain dashes, we strip the known "area-<areaSlug>-"
+        // prefix rather than assuming a single trailing segment.
+        function bucketSlugFromKey(key) {
+            for (const areaSlug of areaSlugs) {
+                const prefix = `area-${areaSlug}-`
+                if (key.startsWith(prefix)) return key.slice(prefix.length)
+            }
+            return ""
+        }
         function branchContext(note) {
             let branchArea = ""
             let branchBucket = ""
@@ -249,8 +254,8 @@ async function getMisfiledNotes(areaList) {
                 const key = cur.getLabelValue(workflowLabel)
                 if (key) {
                     if (!branchBucket) {
-                        const m = key.match(/^area-\d\d-[a-z]+-([a-z]+)$/)
-                        if (m) branchBucket = m[1]
+                        const slug = bucketSlugFromKey(key)
+                        if (slug) branchBucket = slug
                     }
                     if (!branchArea) {
                         const a = cur.getLabelValue("area")
@@ -273,13 +278,23 @@ async function getMisfiledNotes(areaList) {
                     const { branchArea, branchBucket } = branchContext(child)
                     const noteArea = child.getLabelValue("area") || ""
                     const templateId = child.getRelationValue("template") || ""
-                    const templateNote = templateId ? api.getNote(templateId) : null
-                    const noteTemplateTitle = templateNote ? templateNote.title : ""
+                    let noteTemplateTitle = ""
+                    if (templateId) {
+                        noteTemplateTitle = titleByTemplateId[templateId] || ""
+                        if (!noteTemplateTitle) {
+                            const tn = api.getNote(templateId)
+                            noteTemplateTitle = tn ? tn.title : ""
+                        }
+                    }
 
                     const areaMisfiled = !!noteArea && !!branchArea && noteArea !== branchArea
-                    const templateBucket = noteTemplateTitle ? bucketByTemplate[noteTemplateTitle] : undefined
-                    const typeMisfiled = !!noteTemplateTitle && !!branchBucket &&
-                        templateBucket !== undefined && templateBucket !== branchBucket
+                    // The note's own bucket slug (from its template); a managed
+                    // template maps to a bucket of the same slug. A note whose
+                    // template isn't a managed one has no bucket slug and is never
+                    // type-misfiled (we don't know where it belongs).
+                    const templateBucket = templateId ? slugByTemplateId[templateId] : undefined
+                    const typeMisfiled = templateBucket !== undefined && !!branchBucket &&
+                        templateBucket !== branchBucket
 
                     if (areaMisfiled || typeMisfiled) {
                         // Move target: the note's correct Area (by its #area) and,
@@ -300,11 +315,9 @@ async function getMisfiledNotes(areaList) {
                             }
                         }
 
-                        const bucketCanonical = branchBucket && bucketTemplates[branchBucket]
-                            ? bucketTemplates[branchBucket][0] : ""
-                        const canonicalNote = bucketCanonical
-                            ? (api.searchForNotes(`#template note.title = "${bucketCanonical}"`)[0] || null)
-                            : null
+                        // "Set type" fix: adopt the branch bucket's own template.
+                        const canonicalId = branchBucket ? (templateIdBySlug[branchBucket] || "") : ""
+                        const canonicalTitle = canonicalId ? (titleByTemplateId[canonicalId] || "") : ""
 
                         // The branch this note is filed under (its parent in this
                         // subtree walk) — what a move removes it from.
@@ -327,8 +340,8 @@ async function getMisfiledNotes(areaList) {
                                 moveTargetLabel,
                                 updateAreaTo: areaMisfiled ? branchArea : "",
                                 updateAreaColor: areaMisfiled ? (colorBySlug[branchArea] || "") : "",
-                                updateTypeToId: typeMisfiled && canonicalNote ? canonicalNote.noteId : "",
-                                updateTypeToTitle: typeMisfiled && canonicalNote ? bucketCanonical : ""
+                                updateTypeToId: typeMisfiled && canonicalId ? canonicalId : "",
+                                updateTypeToTitle: typeMisfiled && canonicalId ? canonicalTitle : ""
                             }
                         })
                     }
@@ -339,7 +352,7 @@ async function getMisfiledNotes(areaList) {
 
         for (const root of areaRootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL, areaList, BUCKET_TEMPLATES])
+    }, [WORKFLOW_LABEL, areaList, templateList])
 }
 
 // Move a note from one parent branch to another (add to new, remove from old),

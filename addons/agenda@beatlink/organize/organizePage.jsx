@@ -2,12 +2,13 @@ import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { getAreaSettings } from "organizeAreas.jsx"
+import { getTemplateConfig, TemplatesPanel } from "organizeTemplates.jsx"
 
 const {
     getItemTemplates, getOrganizeCandidates, getMisfiledNotes,
     assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
 } = require("organize.js")
-const { PRIORITY_TEMPLATE_TITLES, PRIORITY_OPTIONS } = require("organizeStructure.js")
+const { PRIORITY_OPTIONS } = require("organizeStructure.js")
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -244,26 +245,37 @@ async function loadTimeSettings() {
     }
 }
 
-// The Organize tab. Loads the candidate notes, the misfiled notes, and the
+// The Triage tab. Loads the candidate notes, the misfiled notes, and the
 // template/area vocabularies once, then renders the triage sections. Mutations
 // update the in-memory lists in place so an acted-on note leaves its queue.
-export default function OrganizePanel() {
+function TriagePanel() {
     const [templates, setTemplates] = useState(null)
     const [areas, setAreas] = useState(null)
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
     const [times, setTimes] = useState(null)
+    // The set of template note ids flagged actionable in the managed-templates
+    // config — drives the priority/start-date queues (replaces the old hard-coded
+    // PRIORITY_TEMPLATE_TITLES).
+    const [actionableIds, setActionableIds] = useState(null)
 
     async function reload() {
         setCandidates(null)
         setMisfiled(null)
-        // Areas (from area-picker) drive the misfiled check, so load them first.
-        const ars = await getAreaSettings()
+        // Areas (area-picker) and enabled templates (agenda config) drive the
+        // queues + misfiled check, so load both vocabularies first.
+        const [ars, tplList] = await Promise.all([getAreaSettings(), getTemplateConfig()])
+        const enabled = tplList.filter(t => t.enabled)
+        const actionable = new Set(enabled.filter(t => t.actionable).map(t => t.noteId))
         const [tpls, cands, mis, tms] = await Promise.all([
-            getItemTemplates(), getOrganizeCandidates(), getMisfiledNotes(ars), loadTimeSettings()
+            getItemTemplates(enabled),
+            getOrganizeCandidates([...actionable]),
+            getMisfiledNotes(ars, enabled),
+            loadTimeSettings()
         ])
         setTemplates(tpls)
         setAreas(ars)
+        setActionableIds(actionable)
         setCandidates(cands)
         setMisfiled(mis)
         setTimes(tms)
@@ -271,7 +283,7 @@ export default function OrganizePanel() {
 
     useEffect(() => { reload() }, [])
 
-    if (candidates === null || templates === null || areas === null || misfiled === null || times === null) {
+    if (candidates === null || templates === null || areas === null || misfiled === null || times === null || actionableIds === null) {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
@@ -287,14 +299,13 @@ export default function OrganizePanel() {
 
     const untemplated = candidates.filter(c => !c.hasTemplate)
     const arealess = candidates.filter(c => !c.hasArea)
-    // Actionable items (Routine/Task/Project/Future) that have no #priority yet.
+    // Actionable items (per the managed-templates config) that have no #priority yet.
     const noPriority = candidates.filter(c =>
-        !c.hasPriority && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
-    // Actionable items with no start date (#startDateTime) yet. Subtasks (a task
-    // filed under a parent task) are excluded — they're scheduled with their
-    // parent, not on their own.
+        !c.hasPriority && actionableIds.has(c.templateId))
+    // Actionable items with no start date (#startDateTime) yet. Subtasks (filed
+    // under a parent actionable note) are excluded — scheduled with the parent.
     const noStartDate = candidates.filter(c =>
-        !c.hasStartDate && !c.isSubtask && PRIORITY_TEMPLATE_TITLES.includes(c.templateTitle))
+        !c.hasStartDate && !c.isSubtask && actionableIds.has(c.templateId))
 
     return (
         <div className="workflow-organize">
@@ -448,6 +459,50 @@ export default function OrganizePanel() {
                 onDelete={async (item) => { await deleteNote(item.noteId); dropMisfiled(item.noteId) }}
                 emptyMessage="Nothing misfiled — every note's area and type match where it lives."
             />
+        </div>
+    )
+}
+
+// The Organize page: two tabs — Triage (the one-at-a-time triage queues) and
+// Templates (manage which #template notes the workflow uses, their order, and
+// whether each is actionable). Templates edits the shared #agendaConfig, so it
+// needs the schema/config note ids agendaSettings resolves.
+export default function OrganizePanel() {
+    const [tab, setTab] = useState("triage")
+    const [ids, setIds] = useState(null)
+
+    useEffect(() => {
+        (async () => {
+            const settings = await getAgendaSettings()
+            if (settings) setIds({ schemaNoteId: settings.schemaNoteId, configNoteId: settings.configNoteId })
+        })()
+    }, [])
+
+    return (
+        <div className="workflow-window">
+            <div className="workflow-window-tabs">
+                <button
+                    className={"workflow-window-tab" + (tab === "triage" ? " workflow-window-tab-active" : "")}
+                    onClick={() => setTab("triage")}
+                >
+                    Triage
+                </button>
+                <button
+                    className={"workflow-window-tab" + (tab === "templates" ? " workflow-window-tab-active" : "")}
+                    onClick={() => setTab("templates")}
+                >
+                    Templates
+                </button>
+            </div>
+            <div className="workflow-window-panel">
+                {tab === "triage" ? (
+                    <TriagePanel />
+                ) : ids ? (
+                    <TemplatesPanel schemaNoteId={ids.schemaNoteId} configNoteId={ids.configNoteId} />
+                ) : (
+                    <div>Loading...</div>
+                )}
+            </div>
         </div>
     )
 }

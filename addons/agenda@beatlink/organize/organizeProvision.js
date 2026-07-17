@@ -129,10 +129,11 @@ async function provisionNode(parentNoteId, node, templateId) {
 
 // Walk the whole structure depth-first, provisioning each node under its
 // resolved parent. Top-level nodes go under "root". `areaList` is area-picker's
-// vocabulary ([{ slug, name, color }]); it drives which Area notes are built.
-// Returns a flat result log [{ key, title, created, adopted, noteId, depth }]
-// for the Setup page to show.
-async function provisionStructure(areaList) {
+// vocabulary ([{ slug, name, color }]); `templateList` is agenda's enabled
+// managed templates ([{ slug, name, ... }], in order) — together they drive
+// which Area notes and per-template buckets are built. Returns a flat result log
+// [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
+async function provisionStructure(areaList, templateList) {
     // Resolve the two templates once up front, then map each node's template
     // title to a real id inside the walk.
     const templateIds = {
@@ -153,7 +154,7 @@ async function provisionStructure(areaList) {
         }
     }
 
-    await walk(buildStructure(areaList), "root", 0)
+    await walk(buildStructure(areaList, templateList), "root", 0)
 
     // After the structure notes are in place (area roots' #area re-asserted),
     // re-key any note still carrying a stale area slug from a prior ordering.

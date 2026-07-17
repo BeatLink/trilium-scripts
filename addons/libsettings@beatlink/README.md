@@ -449,6 +449,21 @@ falls under the first declared category, exactly as a field would. Give each pan
 [`agenda@beatlink`](../agenda@beatlink/)'s `profileEditor.jsx` for a real consumer (Workflow Setup +
 the Organize-note picker injected as a Settings tab).
 
+#### `only` — embedding a single tab
+
+Pass `only="<tab label>"` to render just one tab of the schema: the category and tab nav are hidden
+and only that tab's fields show. For surfacing one registry of a larger schema on its own page while
+the full schema still edits elsewhere:
+
+```jsx
+<SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} only="Templates" />
+```
+
+`only` is a display filter, not a schema subset — every field is still loaded, merged, and persisted,
+so a change here writes the whole document like any other save. The Save button appears only if the
+*visible* tab has a non-autosave field (an embedded autosave-only registry shows no Save button). See
+[`agenda@beatlink`](../agenda@beatlink/)'s `organizeTemplates.jsx` (the Organize page's Templates tab).
+
 ### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
 
 The same merge-with-defaults read as the backend function, but `async` and usable from any frontend
