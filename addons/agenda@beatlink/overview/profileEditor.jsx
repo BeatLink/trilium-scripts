@@ -177,25 +177,27 @@ export default function ProfileEditor() {
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    // The Settings category's "Workflow Setup" tab: the Organize-note picker
-    // (a side-effecting picker the schema can't express) plus the provision
-    // button, injected into SettingsForm's own category/tab nav. The schema's
-    // label vocabulary and Active Profile live on the Settings category's
-    // "Settings" tab; everything else groups by its own category.
+    // Two side-effecting pickers/actions the schema can't express, injected
+    // into SettingsForm's own category/tab nav: the Organize-note picker lives
+    // under Organize (it wires which note hosts the Organize triage UI), and
+    // the provision button under Settings › Workflow Setup. Everything else
+    // groups by its own schema `category`.
     const extraPanels = [
+        {
+            category: "Organize",
+            tab: "Organize Note",
+            render: () => (
+                <OrganizeNotePicker
+                    schemaNoteId={schemaNoteId}
+                    configNoteId={configNoteId}
+                    initialNoteId={organizeNoteId}
+                />
+            )
+        },
         {
             category: "Settings",
             tab: "Workflow Setup",
-            render: () => (
-                <>
-                    <OrganizeNotePicker
-                        schemaNoteId={schemaNoteId}
-                        configNoteId={configNoteId}
-                        initialNoteId={organizeNoteId}
-                    />
-                    <WorkflowSetup />
-                </>
-            )
+            render: () => <WorkflowSetup />
         }
     ]
 
@@ -203,13 +205,13 @@ export default function ProfileEditor() {
         <div className="profile-editor">
             <h2>Agenda Editor</h2>
             <p>
-                Override the label-name vocabulary and pick the active profile (Settings), choose the
-                shared overview note (Review), build out your profiles (their collection view,
-                search/filter groups, and sort/prefix/color pick), and manage every shared
-                search/filter/sort/prefix/color/date-rule element — each on its own tab under its
-                workflow category. A profile only ever references an element by name; edit the element
-                on its own tab to change it everywhere it's used. Provision the notebook structure from
-                Settings › Workflow Setup.
+                Override the label-name vocabulary (Settings). Under Review, pick the shared overview
+                note and active profile, build out your profiles, and manage every shared
+                search/filter/sort/prefix/color/date-rule element — each on its own tab. A profile only
+                ever references an element by name; edit the element on its own tab to change it
+                everywhere it's used. Set the quick-times and pick the note that hosts the Organize
+                triage UI under Organize; provision the notebook structure from Settings › Workflow
+                Setup.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

@@ -102,8 +102,8 @@
         "label": "Organize Note",
         "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
         "default": "",
-        "category": "Settings",
-        "tab": "Settings"
+        "category": "Organize",
+        "tab": "Organize Note"
     },
     "activeProfileId": {
         "type": "reference",
@@ -111,8 +111,8 @@
         "label": "Active Profile",
         "description": "Which profile currently populates the shared Overview Note. Switchable here or from the Agenda sidebar widget.",
         "default": "default",
-        "category": "Settings",
-        "tab": "Settings"
+        "category": "Review",
+        "tab": "Active Profile"
     },
     "myDayNoteId": {
         "type": "note",
@@ -191,7 +191,7 @@
     "searchGroups": {
         "type": "registry",
         "label": "Search Groups",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Searches",
         "autosave": true,
         "itemSchema": {
@@ -238,7 +238,7 @@
     "filterGroups": {
         "type": "registry",
         "label": "Filter Groups",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Filters",
         "autosave": true,
         "itemSchema": {
@@ -327,7 +327,7 @@
     "sorts": {
         "type": "registry",
         "label": "Sorts",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Sorts",
         "autosave": true,
         "itemSchema": {
@@ -377,7 +377,7 @@
     "prefixes": {
         "type": "registry",
         "label": "Prefixes",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Prefixes",
         "autosave": true,
         "itemSchema": {
@@ -453,7 +453,7 @@
     "colors": {
         "type": "registry",
         "label": "Colors",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Colors",
         "autosave": true,
         "itemSchema": {
@@ -528,7 +528,7 @@
     "groupings": {
         "type": "registry",
         "label": "Groupings",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Groupings",
         "autosave": true,
         "itemSchema": {
@@ -618,7 +618,7 @@
     "dateRules": {
         "type": "registry",
         "label": "Date Rules",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Date Rules",
         "autosave": true,
         "itemSchema": {

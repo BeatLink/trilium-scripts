@@ -36,7 +36,7 @@ templates and [`area-picker@beatlink`](../area-picker@beatlink/README.md) for th
   Noon / Evening / Night quick-time buttons use the times on the Agenda Editor's **Organize › Times** tab.
 
   Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
-  Note** picker in **Settings › Workflow Setup**. Selecting a note converts it into a render note
+  Note** picker on the Agenda Editor's **Organize › Organize Note** tab. Selecting a note converts it into a render note
   (`~renderNote` → the Organize code note, icon `bx-sort-down`); clearing or re-picking reverts the
   previously-chosen note to a plain text note.
 
@@ -65,11 +65,11 @@ The Agenda Editor groups its tabs under five workflow categories — **Collect**
 category level (`_categories` + per-field `category`, plus `extraPanels` for the non-schema Workflow
 Setup tab):
 
-- **Organize** — Times, Searches, Filters, Sorts, Prefixes, Colors, Groupings, Date Rules.
-- **Review** — Overview Note, Profiles.
+- **Organize** — Times, and the Organize-note picker (which note hosts the Organize triage UI).
+- **Review** — Overview Note, Active Profile, Profiles, Searches, Filters, Sorts, Prefixes, Colors,
+  Groupings, Date Rules (everything that shapes what the overview shows).
 - **Execute** — My Day.
-- **Settings** — the label-name vocabulary, Active Profile, and the Workflow Setup tab (provision
-  button + Organize-note picker).
+- **Settings** — the label-name vocabulary and the Workflow Setup tab (provision button).
 - **Collect** — shown but empty, reserved for future capture settings.
 
 Task edits broadcast an `agenda:tasksChanged` event over
