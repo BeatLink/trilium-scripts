@@ -54,9 +54,10 @@ from the managed list — they stay hard-coded scaffolding (see `organizeStructu
 
 [`organizeTemplates.jsx`](organizeTemplates.jsx) is the module: `getTemplateConfig()` reads the
 registry and resolves each entry to a live note (`{ noteId, name, slug, enabled, actionable, order }`,
-ordered); **Scan** discovers every `#template` note, adds unseen ones (disabled) to the registry, and
-re-derives `#type` / `#agendaTaskWidget` from the current config onto the notes. A seeded entry ships
-with `titleMatch` (its bundled title) and blank `templateNoteId`; the first Scan resolves the title to
+ordered); **Scan** discovers every `#template` note and adds unseen ones (disabled) to the registry;
+`applyTemplateLabels()` (wired as the Templates form's `onSaved`) re-derives `#type` /
+`#agendaTaskWidget` onto the enabled templates whenever you Save. A seeded entry ships with
+`titleMatch` (its bundled title) and blank `templateNoteId`; the first Scan/Save resolves the title to
 a real id.
 
 ### Notebook structure
@@ -68,8 +69,10 @@ not an instance of the type it holds; its `#workflowNote` key is `area-<areaSlug
 ## 3. The Organize page (`organizePage.jsx`)
 
 Two tabs: **Triage** (the one-at-a-time queues) and **Templates** (the managed-templates panel —
-`TemplatesPanel` from `organizeTemplates.jsx`: a Scan button above a single-tab `SettingsForm` editing
-the `templates` registry).
+`TemplatesPanel` from `organizeTemplates.jsx`: a Scan button above a single-tab `SettingsForm`
+(`only="Templates"`) editing the `templates` registry, with `onSaved=applyTemplateLabels` so Save both
+persists the rows and writes the derived labels; Scan mutates config directly and remounts the form to
+re-read it).
 
 The Triage tab loads two vocabularies up front — area-picker's areas (`getAreaSettings()`) and
 agenda's enabled templates (`getTemplateConfig()`) — then `organize.js` does a single backend walk of
