@@ -1,50 +1,59 @@
 {
+    "_categories": ["Collect", "Organize", "Review", "Execute"],
     "startDatetimeLabel": {
         "type": "string",
         "label": "Start Datetime Label",
         "default": "startDateTime",
+        "category": "Organize",
         "tab": "Settings"
     },
     "startDateLabel": {
         "type": "string",
         "label": "Start Date Label",
         "default": "startDate",
+        "category": "Organize",
         "tab": "Settings"
     },
     "startTimeLabel": {
         "type": "string",
         "label": "Start Time Label",
         "default": "startTime",
+        "category": "Organize",
         "tab": "Settings"
     },
     "dueDatetimeLabel": {
         "type": "string",
         "label": "Due Datetime Label",
         "default": "dueDateTime",
+        "category": "Organize",
         "tab": "Settings"
     },
     "dueDateLabel": {
         "type": "string",
         "label": "Due Date Label",
         "default": "endDate",
+        "category": "Organize",
         "tab": "Settings"
     },
     "dueTimeLabel": {
         "type": "string",
         "label": "Due Time Label",
         "default": "endTime",
+        "category": "Organize",
         "tab": "Settings"
     },
     "durationLabel": {
         "type": "string",
         "label": "Duration Label",
         "default": "duration",
+        "category": "Organize",
         "tab": "Settings"
     },
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
         "default": "recurrence",
+        "category": "Organize",
         "tab": "Settings"
     },
     "morningTime": {
@@ -52,6 +61,7 @@
         "label": "Morning",
         "description": "Time (HH:mm) the Organize \"Morning\" button sets on a task's start date.",
         "default": "08:00",
+        "category": "Organize",
         "tab": "Times"
     },
     "noonTime": {
@@ -59,6 +69,7 @@
         "label": "Noon",
         "description": "Time (HH:mm) the Organize \"Noon\" button sets.",
         "default": "12:00",
+        "category": "Organize",
         "tab": "Times"
     },
     "eveningTime": {
@@ -66,6 +77,7 @@
         "label": "Evening",
         "description": "Time (HH:mm) the Organize \"Evening\" button sets.",
         "default": "17:00",
+        "category": "Organize",
         "tab": "Times"
     },
     "nightTime": {
@@ -73,6 +85,7 @@
         "label": "Night",
         "description": "Time (HH:mm) the Organize \"Night\" button sets.",
         "default": "20:00",
+        "category": "Organize",
         "tab": "Times"
     },
     "overviewNoteId": {
@@ -80,6 +93,7 @@
         "label": "Overview Note",
         "description": "The single shared collection note the active profile's matching tasks are filed under. Opening it shows the active profile's tasks in the chosen collection view.",
         "default": "",
+        "category": "Organize",
         "tab": "Settings"
     },
     "organizeNoteId": {
@@ -88,6 +102,7 @@
         "label": "Organize Note",
         "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
         "default": "",
+        "category": "Organize",
         "tab": "Settings"
     },
     "activeProfileId": {
@@ -96,6 +111,7 @@
         "label": "Active Profile",
         "description": "Which profile currently populates the shared Overview Note. Switchable here or from the Agenda sidebar widget.",
         "default": "default",
+        "category": "Organize",
         "tab": "Settings"
     },
     "myDayNoteId": {
@@ -103,24 +119,28 @@
         "label": "My Day Note",
         "description": "The note that shows the My Day focus controls (timer, mark done). The My Day widget only appears while browsing this note.",
         "default": "",
+        "category": "Execute",
         "tab": "My Day"
     },
     "enableSounds": {
         "type": "boolean",
         "label": "Enable Timer Sounds",
         "default": true,
+        "category": "Execute",
         "tab": "My Day"
     },
     "addTasksWhenDue": {
         "type": "boolean",
         "label": "Add Tasks When Due",
         "default": false,
+        "category": "Execute",
         "tab": "My Day"
     },
     "sendDueNotifications": {
         "type": "boolean",
         "label": "Send Due Notifications",
         "default": true,
+        "category": "Execute",
         "tab": "My Day"
     },
     "sectionState": {
@@ -132,6 +152,7 @@
     "profiles": {
         "type": "registry",
         "label": "Profiles",
+        "category": "Organize",
         "tab": "Profiles",
         "autosave": true,
         "itemSchema": {
@@ -170,6 +191,7 @@
     "searchGroups": {
         "type": "registry",
         "label": "Search Groups",
+        "category": "Organize",
         "tab": "Searches",
         "autosave": true,
         "itemSchema": {
@@ -216,6 +238,7 @@
     "filterGroups": {
         "type": "registry",
         "label": "Filter Groups",
+        "category": "Organize",
         "tab": "Filters",
         "autosave": true,
         "itemSchema": {
@@ -304,6 +327,7 @@
     "sorts": {
         "type": "registry",
         "label": "Sorts",
+        "category": "Organize",
         "tab": "Sorts",
         "autosave": true,
         "itemSchema": {
@@ -353,6 +377,7 @@
     "prefixes": {
         "type": "registry",
         "label": "Prefixes",
+        "category": "Organize",
         "tab": "Prefixes",
         "autosave": true,
         "itemSchema": {
@@ -428,6 +453,7 @@
     "colors": {
         "type": "registry",
         "label": "Colors",
+        "category": "Organize",
         "tab": "Colors",
         "autosave": true,
         "itemSchema": {
@@ -502,6 +528,7 @@
     "groupings": {
         "type": "registry",
         "label": "Groupings",
+        "category": "Organize",
         "tab": "Groupings",
         "autosave": true,
         "itemSchema": {
@@ -591,6 +618,7 @@
     "dateRules": {
         "type": "registry",
         "label": "Date Rules",
+        "category": "Organize",
         "tab": "Date Rules",
         "autosave": true,
         "itemSchema": {

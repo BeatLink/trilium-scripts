@@ -75,6 +75,10 @@ function filterRegistryBySchema(itemSchema, shipped, effective) {
 function mergeDefaults(schema, shippedNode, storedNode) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
+        // Keys starting with `_` are schema-level metadata (e.g. `_categories`,
+        // the ordered category list SettingsForm reads), not fields — they
+        // carry no per-user value, so they never enter the merged/persisted map.
+        if (key.startsWith("_")) continue
         const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
         if (def.type === "list") {
             const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
@@ -91,6 +95,7 @@ function mergeDefaults(schema, shippedNode, storedNode) {
 function filterBySchema(schema, values, shippedNode) {
     const filtered = {}
     for (const key of Object.keys(schema)) {
+        if (key.startsWith("_")) continue
         const def = schema[key]
         if (def.type === "list") {
             const list = Array.isArray(values?.[key]) ? values[key] : []
@@ -478,6 +483,16 @@ function resolveTab(def) {
     return (def.type === "list" || def.type === "registry") ? (def.label || "General") : "General"
 }
 
+// A field's category is an optional second grouping level *above* tabs: a
+// field with `"category": "X"` puts its tab inside category X's tab row. A
+// field with no `category` is uncategorized (returns null). Categories only
+// take effect when the schema declares a top-level `_categories` array (the
+// ordered list of every category label, empty ones included) — see
+// SettingsForm.
+function resolveCategory(def) {
+    return def.category || null
+}
+
 // Self-contained: loads schema.json + config.json itself, renders one field per schema
 // entry, and owns its own Save button. The consuming addon just places this wherever
 // it wants in its own settings widget.
@@ -497,6 +512,7 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
     const [activeTab, setActiveTab] = useState(null)
+    const [activeCategory, setActiveCategory] = useState(null)
 
     useEffect(() => {
         (async () => {
@@ -529,20 +545,46 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     // other (it stays in `values` and rides every save) — it's just never
     // rendered into a tab. For state a widget writes programmatically and
     // wants durable in the config note, without a place in the editor UI.
-    const entries = Object.entries(schema).filter(([, def]) => !def.hidden)
+    const entries = Object.entries(schema).filter(([key, def]) => !key.startsWith("_") && !def.hidden)
     const tabOrder = []
     const tabEntries = {}
+    // A tab's category is that of the first field that lands on it — a schema
+    // shouldn't split one tab across categories, but if it did the first wins.
+    const tabCategory = {}
     for (const entry of entries) {
         const tabLabel = resolveTab(entry[1])
         if (!(tabLabel in tabEntries)) {
             tabEntries[tabLabel] = []
             tabOrder.push(tabLabel)
+            tabCategory[tabLabel] = resolveCategory(entry[1])
         }
         tabEntries[tabLabel].push(entry)
     }
     const tabs = tabOrder.map(label => ({ key: label, label }))
-    const useTabs = tabs.length > 1
-    const activeKey = useTabs && tabs.some(t => t.key === activeTab) ? activeTab : tabs[0]?.key
+
+    // Categories are the optional second grouping level: active only when the
+    // schema declares a top-level `_categories` array (the ordered category
+    // list, empty ones included). When active, the top row is the category bar
+    // and the tab bar below it is scoped to the active category; a tab whose
+    // field carries no `category` (or names one not in `_categories`) falls
+    // under the first declared category so no field is ever unreachable.
+    const declaredCategories = Array.isArray(schema._categories) ? schema._categories : []
+    const useCategories = declaredCategories.length > 0
+    const tabsForCategory = (cat) => tabs.filter(t => {
+        const c = tabCategory[t.key]
+        const resolved = (c && declaredCategories.includes(c)) ? c : declaredCategories[0]
+        return resolved === cat
+    })
+
+    const activeCat = useCategories
+        ? (declaredCategories.includes(activeCategory)
+            ? activeCategory
+            : (declaredCategories.find(c => tabsForCategory(c).length > 0) || declaredCategories[0]))
+        : null
+    const visibleTabs = useCategories ? tabsForCategory(activeCat) : tabs
+
+    const useTabs = visibleTabs.length > 1
+    const activeKey = visibleTabs.some(t => t.key === activeTab) ? activeTab : visibleTabs[0]?.key
     // Nothing ever needs the explicit button if every field autosaves — the
     // common case for a schema that's entirely element-library-shaped, no
     // profile-identity-style fields that want a deliberate Save.
@@ -594,29 +636,55 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
         )
     }
 
+    // The panel body for whichever tabs are in scope: a tab bar plus the
+    // active tab's fields when there's more than one tab, otherwise just the
+    // single tab's fields stacked directly (no bar), or an empty-state line
+    // when the active category has no tabs at all.
+    const panelBody = visibleTabs.length === 0 ? (
+        <p class="lst-list-empty">Nothing here yet.</p>
+    ) : useTabs ? (
+        <div class="lst-tabbed">
+            <div class="lst-tabbed-tabs">
+                {visibleTabs.map(tab => (
+                    <button
+                        type="button"
+                        key={tab.key}
+                        class={`lst-tab${tab.key === activeKey ? " lst-tab-active" : ""}`}
+                        onClick={() => setActiveTab(tab.key)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+            <div class="lst-tabbed-panel">
+                {(tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))}
+            </div>
+        </div>
+    ) : (
+        (tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))
+    )
+
     return (
         <div class="lst-panel">
-            {useTabs ? (
-                <div class="lst-tabbed">
-                    <div class="lst-tabbed-tabs">
-                        {tabs.map(tab => (
+            {useCategories && (
+                <div class="lst-categories">
+                    {declaredCategories.map(cat => {
+                        const empty = tabsForCategory(cat).length === 0
+                        return (
                             <button
                                 type="button"
-                                key={tab.key}
-                                class={`lst-tab${tab.key === activeKey ? " lst-tab-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
+                                key={cat}
+                                class={`lst-category${cat === activeCat ? " lst-category-active" : ""}`}
+                                disabled={empty}
+                                onClick={() => { setActiveCategory(cat); setActiveTab(null) }}
                             >
-                                {tab.label}
+                                {cat}
                             </button>
-                        ))}
-                    </div>
-                    <div class="lst-tabbed-panel">
-                        {(tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))}
-                    </div>
+                        )
+                    })}
                 </div>
-            ) : (
-                entries.map(entry => renderEntry(entry, tabs[0]?.key))
             )}
+            {panelBody}
             {needsSaveButton && (
                 <div class="lst-actions">
                     <Button

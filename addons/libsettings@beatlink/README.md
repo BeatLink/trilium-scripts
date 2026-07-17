@@ -36,6 +36,7 @@ library's — schema lives with the addon that defines it):
 | `itemSchema`  | `list`/`registry` only | A nested schema object (same shape as above) describing the fields of each entry |
 | `registry`    | `reference` only | The sibling top-level schema key (must be a `registry` field) this field picks an entry from |
 | `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
+| `category`    | no       | Optional second grouping level *above* the tab — the tab this field is on lands inside this category — see "Categories" below |
 | `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
 | `autosave`    | no, top-level fields only, default `false` | Persist this field's edits immediately instead of waiting on the Save button — see "Autosave fields" below |
 
@@ -300,6 +301,34 @@ onto one named tab instead of each getting its own:
     "searchGroups": {"type": "registry", "label": "Search Groups", "default": {}, "itemSchema": {...}, "tab": "Searches"}
 }
 ```
+
+### Categories
+
+A schema can add a second grouping level *above* tabs — for a settings form big enough that a single
+row of tabs is too flat. Two pieces enable it:
+
+- A field declares `"category": "Some Label"` — the tab that field lands on is placed inside that
+  category.
+- The schema declares a top-level `_categories` array (a `_`-prefixed *meta* key, not a field —
+  it holds no per-user value and never enters `config.json`) listing every category label **in the
+  order they should appear**, empty ones included.
+
+```json
+{
+    "_categories": ["Collect", "Organize", "Review", "Execute"],
+    "myDayNoteId": {"type": "note", "label": "My Day Note", "default": "", "category": "Execute", "tab": "My Day"},
+    "morningTime": {"type": "string", "label": "Morning", "default": "08:00", "category": "Organize", "tab": "Times"},
+    "profiles": {"type": "registry", "label": "Profiles", "default": {}, "itemSchema": {}, "category": "Organize", "tab": "Profiles"}
+}
+```
+
+With `_categories` present, `SettingsForm` renders the category bar on top and the tab bar below it
+scoped to the active category. A category listed in `_categories` but with no tabs assigned yet is
+shown **disabled/greyed** rather than hidden (`Collect` and `Review` above), so the full intended set
+stays visible as the schema grows. A tab whose field carries no `category` (or names one not in
+`_categories`) falls under the first declared category, so no field is ever unreachable. Without
+`_categories`, `category` is ignored and the form renders exactly the flat single tab row described
+above.
 
 ### Autosave fields
 

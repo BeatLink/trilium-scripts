@@ -34,10 +34,10 @@ Two render pages implement an opinionated Collect → Organize workflow on top o
   sections assign the missing attributes agenda reads: **template** (type), **`#area`** (+ `#color`),
   **`#priority`** (MoSCoW), and **start date** (`#startDateTime`/`#startDate`/`#startTime`), plus a
   **Misfiled Notes** fixer for notes whose area/type disagrees with where they're filed. The Morning /
-  Noon / Evening / Night quick-time buttons use the times on the Agenda Editor's **Times** tab.
+  Noon / Evening / Night quick-time buttons use the times on the Agenda Editor's **Organize › Times** tab.
 
   Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
-  Note** picker on the Agenda Editor's **Settings** tab. Selecting a note converts it into a render
+  Note** picker on the Agenda Editor's **Organize › Settings** tab. Selecting a note converts it into a render
   note (`~renderNote` → the Organize code note, icon `bx-sort-down`); clearing or re-picking reverts
   the previously-chosen note to a plain text note.
 
@@ -60,6 +60,12 @@ The config lives in one settings note holding a `schema.json`/`config.json` pair
 vocabulary, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules those
 profiles reference). That note is tagged **`#agendaConfig`**; every widget finds it at runtime via
 `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all three widgets at once.
+
+The Agenda Editor groups its tabs under four workflow categories — **Collect**, **Organize**,
+**Review**, **Execute** — using [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category
+level (`_categories` + per-field `category`). Today every configuration tab lives under **Organize**
+and My Day lives under **Execute**; **Collect** and **Review** are shown but empty, reserved for
+future capture/review settings.
 
 Task edits broadcast an `agenda:tasksChanged` event over
 [`libipc@beatlink`](../libipc@beatlink/README.md); the Overview widget subscribes and re-files the

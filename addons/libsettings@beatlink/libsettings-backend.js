@@ -65,6 +65,10 @@ function filterRegistryBySchema(itemSchema, shipped, effective) {
 function mergeDefaults(schema, shippedNode, storedNode) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
+        // Keys starting with `_` are schema-level metadata (e.g. `_categories`,
+        // the ordered category list SettingsForm reads), not fields — they
+        // carry no per-user value, so they never enter the merged/persisted map.
+        if (key.startsWith("_")) continue
         const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
         if (def.type === "list") {
             const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
@@ -81,6 +85,7 @@ function mergeDefaults(schema, shippedNode, storedNode) {
 function filterBySchema(schema, values, shippedNode) {
     const filtered = {}
     for (const key of Object.keys(schema)) {
+        if (key.startsWith("_")) continue
         const def = schema[key]
         if (def.type === "list") {
             const list = Array.isArray(values?.[key]) ? values[key] : []
