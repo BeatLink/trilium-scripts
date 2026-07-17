@@ -38,7 +38,6 @@ library's — schema lives with the addon that defines it):
 | `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
 | `category`    | no       | Optional second grouping level *above* the tab — the tab this field is on lands inside this category — see "Categories" below |
 | `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
-| `autosave`    | no, top-level fields only, default `false` | Persist this field's edits immediately instead of waiting on the Save button — see "Autosave fields" below |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
 first read, so there's nothing to duplicate between the two files.
@@ -273,10 +272,10 @@ list of checkboxes — no separate item-editing form, just enable/disable. It on
 For a given `profiles` entry, the `searchGroups` checklist field looks at the top-level `searchGroups`
 registry named by `registry`, keeps only the entries whose `filterBy` field (`profileId`) equals this
 profile's own id, and renders each as a collapsible group of checkboxes — one per `children` entry,
-bound to its `enabled` field. Toggling one writes straight back into that sibling top-level
-`searchGroups` registry and persists immediately (regardless of whether the enclosing field is
-`autosave`); the `checklist` field itself stores nothing under its own key, so it needs no `default`
-and doesn't participate in `mergeDefaults`/`filterBySchema`. Anything not covered by the checklist view
+bound to its `enabled` field. Toggling one stages straight into that sibling top-level `searchGroups`
+registry (written on the next Save, like any other edit); the `checklist` field itself stores nothing
+under its own key, so it needs no `default` and doesn't participate in
+`mergeDefaults`/`filterBySchema`. Anything not covered by the checklist view
 (a group's own name, its members' `rule`, adding/removing a group, reassigning which profile a group
 belongs to) is still edited on the referenced registry's own tab — `checklist` only ever toggles
 `enabled`.
@@ -330,28 +329,16 @@ stays visible as the schema grows. A tab whose field carries no `category` (or n
 `_categories`, `category` is ignored and the form renders exactly the flat single tab row described
 above.
 
-### Autosave fields
+### Saving
 
-By default every field waits on the Save button — nothing is written to `config.json` until it's
-clicked, same as before `autosave` existed. A top-level field marked `"autosave": true` instead
-persists immediately on every edit (still the same full-document `persistValues` write; there's no
-partial write of "just one field" to a JSON note). This is meant for the case where a schema mixes two
-kinds of field on purpose — an element-library-style `registry` you want to feel "live" (edit an
-entry, it's saved, no separate step) alongside a handful of fields that represent a deliberate choice
-worth confirming explicitly (a name, which note something files under, which preset is currently
-selected):
+Every edit stages in the form's local state; nothing is written to `config.json` until the **Save**
+button is clicked, which persists the whole document at once (there's no partial write of "just one
+field" to a JSON note). The button flashes "Saved!" briefly on success. It renders whenever there's at
+least one field to save (under `only`, whenever the visible tab has fields).
 
-```json
-{
-    "parentNoteId": {"type": "note", "label": "File Tasks Under", "default": ""},
-    "searches": {"type": "registry", "label": "Searches", "default": {}, "itemSchema": {...}, "autosave": true}
-}
-```
-
-Autosave is silent — no save-status flash — since the explicit Save button's flash means "you had a
-pending edit, and it's now saved," and an autosave field never has one. The Save button itself is only
-rendered at all if at least one top-level field *isn't* `autosave`; a schema that's entirely autosave
-fields has nothing left for it to do.
+Pass an optional `onSaved(values)` callback (see `<SettingsForm>` below) to run a side-effect right
+after a successful Save — for a consumer that needs to act on the just-persisted config, e.g. writing
+derived labels onto notes once the config describing them is on disk.
 
 ## Backend usage
 
@@ -460,9 +447,17 @@ the full schema still edits elsewhere:
 ```
 
 `only` is a display filter, not a schema subset — every field is still loaded, merged, and persisted,
-so a change here writes the whole document like any other save. The Save button appears only if the
-*visible* tab has a non-autosave field (an embedded autosave-only registry shows no Save button). See
-[`agenda@beatlink`](../agenda@beatlink/)'s `organizeTemplates.jsx` (the Organize page's Templates tab).
+so a change here writes the whole document like any other save. The Save button appears when the
+*visible* tab has fields (so an embedded single-tab panel gets its own Save). See
+[`agenda@beatlink`](../agenda@beatlink/)'s `organizeTemplates.jsx` (the Organize page's Templates tab),
+which pairs `only` with `onSaved` to apply derived labels after each save.
+
+#### `onSaved` — a post-save hook
+
+Pass `onSaved={fn}` to run `fn(values)` right after a successful Save (after the config is persisted,
+before the "Saved!" flash). For a consumer that derives something from the config and needs it applied
+once the config is on disk — e.g. `organizeTemplates.jsx` writes each enabled template's `#type` /
+`#agendaTaskWidget` labels here, so saving the template rows both persists them and applies them.
 
 ### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
 

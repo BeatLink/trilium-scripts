@@ -92,13 +92,22 @@ async function writeTemplateLabels(list) {
     }, [list, TYPE_LABEL, TASK_WIDGET_LABEL])
 }
 
+// The Save-side counterpart, wired as the Templates SettingsForm's `onSaved`:
+// once the registry is persisted, re-derive the labels agenda reads (#type,
+// #agendaTaskWidget) onto every enabled+resolved template. Returns the count.
+export async function applyTemplateLabels() {
+    const resolved = await getTemplateConfig()
+    return writeTemplateLabels(resolved.filter(t => t.enabled))
+}
+
 // Scan Trilium for every #template note and reconcile the registry: add an entry
 // (disabled) for any #template note not already covered by an existing entry
-// (matched by resolved note id OR titleMatch), then persist and re-derive labels.
-// Preserves every existing entry's flags. Returns { added, total, labeled }.
+// (matched by resolved note id OR titleMatch), then persist. Discovery only —
+// applying labels is Save's job (applyTemplateLabels). Preserves every existing
+// entry's flags. Returns { added, total }.
 async function scanTemplates() {
     const ctx = await getConfigContext()
-    if (!ctx) return { added: 0, total: 0, labeled: 0 }
+    if (!ctx) return { added: 0, total: 0 }
     const settings = await loadSettings(ctx.schemaNoteId, ctx.configNoteId)
     const registry = { ...(settings.templates || {}) }
 
@@ -119,12 +128,10 @@ async function scanTemplates() {
         }
         const structural = new Set(structuralTitles)
         const newOnes = all.filter(t => !coveredIds.has(t.noteId) && !structural.has(t.title))
-        return { newOnes, coveredIds: [...coveredIds] }
+        return { newOnes }
     }, [Object.entries(registry), STRUCTURAL_TITLES])
 
-    // Adopt resolved note ids onto existing entries (so titleMatch-seeded rows
-    // carry a real id going forward), and append the newly-found templates.
-    // Determine the next order after the current max.
+    // Append the newly-found templates after the current max order.
     let maxOrder = -1
     for (const e of Object.values(registry)) maxOrder = Math.max(maxOrder, e.order ?? 0)
 
@@ -141,30 +148,29 @@ async function scanTemplates() {
     settings.templates = registry
     await saveSettings(ctx.schemaNoteId, ctx.configNoteId, settings)
 
-    // Re-derive labels for every enabled+resolved template.
-    const resolved = await getTemplateConfig()
-    const labeled = await writeTemplateLabels(resolved.filter(t => t.enabled))
-
-    return { added, total: Object.keys(registry).length, labeled }
+    return { added, total: Object.keys(registry).length }
 }
 
-// The Templates settings panel: a Scan button (discover + adopt #template notes,
-// re-derive labels) above the SettingsForm `templates` registry editor. The
-// registry edits autosave; Scan handles discovery and the derived-label rewrite
-// that editing a row's order/actionable alone wouldn't trigger, so the button
-// doubles as "apply my changes to the notes".
+// The Templates settings panel: a Scan button (discover newly-added #template
+// notes into the registry) above the SettingsForm `templates` registry editor.
+// Edits stage until you click the form's Save, which persists the registry and
+// then applies the derived #type / #agendaTaskWidget labels (via onSaved =
+// applyTemplateLabels). Scan mutates config directly, so it remounts the form
+// (reloadKey bump) to re-read the fresh config afterward.
 export function TemplatesPanel({ schemaNoteId, configNoteId }) {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
+    const [reloadKey, setReloadKey] = useState(0)
 
     async function onScan() {
         setBusy(true)
         setStatus(null)
         try {
             const r = await scanTemplates()
+            setReloadKey(k => k + 1)
             setStatus(
                 `Scan complete: ${r.added} new template${r.added === 1 ? "" : "s"} found ` +
-                `(${r.total} total). Applied labels to ${r.labeled} enabled template${r.labeled === 1 ? "" : "s"}.`
+                `(${r.total} total). Enable the ones you want, then Save.`
             )
         } catch (e) {
             setStatus("Scan failed: " + String(e && e.message ? e.message : e))
@@ -181,8 +187,9 @@ export function TemplatesPanel({ schemaNoteId, configNoteId }) {
                 templates appear in the assign queue and get a scaffolding bucket; <strong>Actionable</strong>{" "}
                 templates additionally flow through the priority and start-date queues. <strong>Order</strong>{" "}
                 sets the assign/bucket sequence and the numeric prefix of each template's{" "}
-                <code>#type</code>. Run <strong>Scan</strong> after adding a <code>#template</code> note, or
-                after changing a row's order/actionable flag, to apply the derived labels to the notes.
+                <code>#type</code>. Run <strong>Scan</strong> to pull in any <code>#template</code> note you
+                have added, then edit the rows and click <strong>Save</strong> — saving persists your
+                choices and applies the derived labels to the notes.
             </p>
 
             <button className="organize-templates-scan" disabled={busy} onClick={onScan}>
@@ -191,7 +198,13 @@ export function TemplatesPanel({ schemaNoteId, configNoteId }) {
 
             {status && <div className="organize-templates-status">{status}</div>}
 
-            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} onlyTab="Templates" />
+            <SettingsForm
+                key={reloadKey}
+                schemaNoteId={schemaNoteId}
+                configNoteId={configNoteId}
+                only="Templates"
+                onSaved={applyTemplateLabels}
+            />
         </div>
     )
 }

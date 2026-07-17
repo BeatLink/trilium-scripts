@@ -162,7 +162,6 @@
         "label": "Profiles",
         "category": "Review",
         "tab": "Profiles",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Profile" },
             "viewType": {
@@ -201,7 +200,6 @@
         "label": "Search Groups",
         "category": "Review",
         "tab": "Searches",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Group" },
             "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
@@ -248,7 +246,6 @@
         "label": "Filter Groups",
         "category": "Review",
         "tab": "Filters",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Filter Group" },
             "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
@@ -337,7 +334,6 @@
         "label": "Sorts",
         "category": "Review",
         "tab": "Sorts",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Sort" },
             "criteria": {
@@ -387,7 +383,6 @@
         "label": "Prefixes",
         "category": "Review",
         "tab": "Prefixes",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Prefix" },
             "type": {
@@ -463,7 +458,6 @@
         "label": "Colors",
         "category": "Review",
         "tab": "Colors",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Color" },
             "type": {
@@ -538,7 +532,6 @@
         "label": "Groupings",
         "category": "Review",
         "tab": "Groupings",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Grouping" },
             "type": {
@@ -628,7 +621,6 @@
         "label": "Date Rules",
         "category": "Review",
         "tab": "Date Rules",
-        "autosave": true,
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Date Rule" },
             "dateLabel": { "type": "string", "label": "Date Label", "default": "" },
@@ -693,7 +685,6 @@
         "label": "Templates",
         "category": "Organize",
         "tab": "Templates",
-        "autosave": true,
         "description": "The item-type templates the Organize workflow offers, scaffolds a bucket for, and derives #type / #agendaTaskWidget from. Use Scan to pick up #template notes you have added. Structural templates (the Area root and container templates) are managed separately and not listed here.",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Template" },

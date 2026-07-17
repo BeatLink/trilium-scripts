@@ -139,7 +139,7 @@ export async function loadSettings(schemaNoteId, configNoteId) {
 
 // The write-side counterpart, for frontend code that needs to persist a
 // programmatic edit itself (e.g. a library function called from a widget,
-// not just `SettingsForm`'s own Save button/autosave) — mirrors
+// not just `SettingsForm`'s own Save button) — mirrors
 // `libsettings-backend.js`'s `saveSettings` exactly, just backend-note-read
 // via `api.runOnBackend` like every other frontend function in this file.
 export async function saveSettings(schemaNoteId, configNoteId, values) {
@@ -157,9 +157,9 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
 // passes its own entry id down; `ListItems` passes its index for signature
 // symmetry) — `checklist` needs it to filter a sibling registry down to just
 // the entries that reference this one. `onRegistriesChange` replaces the
-// *entire* top-level values object and persists immediately; only
-// `checklist` uses it, since toggling one edits a sibling top-level field
-// rather than this field's own value.
+// *entire* top-level values object (staged like any other edit — Save persists
+// it); only `checklist` uses it, since toggling one edits a sibling top-level
+// field rather than this field's own value.
 function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }) {
     switch (def.type) {
         case "boolean":
@@ -503,10 +503,8 @@ function resolveCategory(def) {
 // together; a schema with only one group (the common case: just a handful of
 // scalar fields, or just one list/registry) renders directly with no tab bar.
 //
-// A field marked `autosave: true` persists on every edit instead of only on
-// Save — see `handleChange` below. The Save button
-// itself is only rendered if at least one field isn't `autosave`; a schema
-// that's entirely autosave fields has nothing left for it to do.
+// Every edit stages in local state; nothing is written to config.json until the
+// Save button is clicked (`save` below persists the whole document at once).
 //
 // `extraPanels` lets a consumer inject its own non-schema content into the
 // same category/tab structure: each entry is `{ category, tab, render }`,
@@ -521,7 +519,11 @@ function resolveCategory(def) {
 // embedding one tab of a larger schema on its own page while the full schema
 // still edits elsewhere. Fields on other tabs are still loaded/merged/persisted
 // (it's a display filter, not a schema subset), so Save writes the whole doc.
-export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], only = null }) {
+//
+// `onSaved(values)` (optional) fires after a successful Save, for a consumer
+// that needs to run a side-effect off the just-persisted config — e.g. writing
+// derived labels onto notes once the config that describes them is on disk.
+export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], only = null, onSaved = null }) {
     const [schema, setSchema] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
@@ -538,19 +540,9 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
 
     async function save() {
         await persistValues(schema, configNoteId, values)
+        if (onSaved) await onSaved(values)
         setSaveStatus("saved")
         setTimeout(() => setSaveStatus(null), 2000)
-    }
-
-    // A field marked `autosave: true` persists immediately on every edit
-    // instead of waiting on the Save button below — same full-document
-    // `persistValues` write either way (there's no such thing as writing
-    // "just one field" to config.json), just triggered right away instead of
-    // on click. Silent by design (no save-status flash): the explicit Save
-    // button's flash means "you have a pending edit, and it's now saved";
-    // an autosave field never has a pending edit to report on.
-    function persistNow(updatedValues) {
-        persistValues(schema, configNoteId, updatedValues)
     }
 
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
@@ -616,17 +608,13 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
     // With `only`, never show the tab bar even for the one matching tab.
     const useTabs = !only && visibleTabs.length > 1
     const activeKey = visibleTabs.some(t => t.key === activeTab) ? activeTab : visibleTabs[0]?.key
-    // Nothing ever needs the explicit button if every field autosaves — the
-    // common case for a schema that's entirely element-library-shaped, no
-    // profile-identity-style fields that want a deliberate Save. Under `only`,
-    // scope this to the visible tab's fields — a Save that persisted the whole
-    // document from an embedded single-registry panel would surprise (the panel
-    // shows one autosave registry; the doc's other non-autosave fields aren't
-    // even on screen).
+    // The Save button shows whenever there's at least one field to save. Under
+    // `only`, scope that to the visible tab — an embedded single-tab panel gets
+    // its own Save when that tab has fields, and none when it doesn't.
     const saveScopeEntries = only
         ? (tabEntries[only] || [])
         : entries
-    const needsSaveButton = saveScopeEntries.some(([, def]) => !def.autosave)
+    const needsSaveButton = saveScopeEntries.length > 0
 
     // A group field (list/registry) keeps its own heading above a full-width
     // widget — a fixed left-hand label column doesn't make sense next to
@@ -644,9 +632,7 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
         const isGroup = def.type === "list" || def.type === "registry"
 
         function handleChange(v) {
-            const updated = { ...values, [key]: v }
-            setValues(updated)
-            if (def.autosave) persistNow(updated)
+            setValues({ ...values, [key]: v })
         }
 
         return (
@@ -668,7 +654,7 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
                     value={values[key]}
                     onChange={handleChange}
                     registries={values}
-                    onRegistriesChange={v => { setValues(v); persistNow(v) }}
+                    onRegistriesChange={v => setValues(v)}
                 />
             </div>
         )
