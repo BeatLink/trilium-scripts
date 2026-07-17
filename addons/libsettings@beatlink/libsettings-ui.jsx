@@ -507,7 +507,16 @@ function resolveCategory(def) {
 // Save — see `handleChange` below. The Save button
 // itself is only rendered if at least one field isn't `autosave`; a schema
 // that's entirely autosave fields has nothing left for it to do.
-export function SettingsForm({ schemaNoteId, configNoteId }) {
+//
+// `extraPanels` lets a consumer inject its own non-schema content into the
+// same category/tab structure: each entry is `{ category, tab, render }`,
+// where `render()` returns the tab's body (any JSX — a custom widget the
+// schema can't express). Its `tab` joins the given `category`'s tab row (after
+// the schema tabs already there); when active, `render()` is shown in place of
+// schema fields. An extra panel naming a category not in `_categories` falls
+// under the first declared category, same as a field would. Purely additive:
+// no `extraPanels` and the form behaves exactly as before.
+export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [] }) {
     const [schema, setSchema] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
@@ -551,6 +560,11 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     // A tab's category is that of the first field that lands on it — a schema
     // shouldn't split one tab across categories, but if it did the first wins.
     const tabCategory = {}
+    // A tab backed by an `extraPanels` entry rather than schema fields maps to
+    // its render function here; a tab is never both (a schema tab and an extra
+    // panel sharing one label would collide, so consumers give panels their
+    // own tab names).
+    const extraRender = {}
     for (const entry of entries) {
         const tabLabel = resolveTab(entry[1])
         if (!(tabLabel in tabEntries)) {
@@ -559,6 +573,14 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
             tabCategory[tabLabel] = resolveCategory(entry[1])
         }
         tabEntries[tabLabel].push(entry)
+    }
+    for (const panel of extraPanels) {
+        const tabLabel = panel.tab
+        if (!(tabLabel in tabEntries) && !(tabLabel in extraRender)) {
+            tabOrder.push(tabLabel)
+            tabCategory[tabLabel] = panel.category || null
+        }
+        extraRender[tabLabel] = panel.render
     }
     const tabs = tabOrder.map(label => ({ key: label, label }))
 
@@ -636,9 +658,15 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
         )
     }
 
+    // The content of whichever tab is active: an extra panel's own render
+    // output if it owns this tab, otherwise the schema fields grouped onto it.
+    const activeContent = extraRender[activeKey]
+        ? extraRender[activeKey]()
+        : (tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))
+
     // The panel body for whichever tabs are in scope: a tab bar plus the
-    // active tab's fields when there's more than one tab, otherwise just the
-    // single tab's fields stacked directly (no bar), or an empty-state line
+    // active tab's content when there's more than one tab, otherwise just the
+    // single tab's content stacked directly (no bar), or an empty-state line
     // when the active category has no tabs at all.
     const panelBody = visibleTabs.length === 0 ? (
         <p class="lst-list-empty">Nothing here yet.</p>
@@ -657,11 +685,11 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
                 ))}
             </div>
             <div class="lst-tabbed-panel">
-                {(tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))}
+                {activeContent}
             </div>
         </div>
     ) : (
-        (tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))
+        activeContent
     )
 
     return (

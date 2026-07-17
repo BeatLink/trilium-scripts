@@ -1,59 +1,59 @@
 {
-    "_categories": ["Collect", "Organize", "Review", "Execute"],
+    "_categories": ["Collect", "Organize", "Review", "Execute", "Settings"],
     "startDatetimeLabel": {
         "type": "string",
         "label": "Start Datetime Label",
         "default": "startDateTime",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "startDateLabel": {
         "type": "string",
         "label": "Start Date Label",
         "default": "startDate",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "startTimeLabel": {
         "type": "string",
         "label": "Start Time Label",
         "default": "startTime",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "dueDatetimeLabel": {
         "type": "string",
         "label": "Due Datetime Label",
         "default": "dueDateTime",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "dueDateLabel": {
         "type": "string",
         "label": "Due Date Label",
         "default": "endDate",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "dueTimeLabel": {
         "type": "string",
         "label": "Due Time Label",
         "default": "endTime",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "durationLabel": {
         "type": "string",
         "label": "Duration Label",
         "default": "duration",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
         "default": "recurrence",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "morningTime": {
@@ -93,8 +93,8 @@
         "label": "Overview Note",
         "description": "The single shared collection note the active profile's matching tasks are filed under. Opening it shows the active profile's tasks in the chosen collection view.",
         "default": "",
-        "category": "Organize",
-        "tab": "Settings"
+        "category": "Review",
+        "tab": "Overview"
     },
     "organizeNoteId": {
         "type": "note",
@@ -102,7 +102,7 @@
         "label": "Organize Note",
         "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
         "default": "",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "activeProfileId": {
@@ -111,7 +111,7 @@
         "label": "Active Profile",
         "description": "Which profile currently populates the shared Overview Note. Switchable here or from the Agenda sidebar widget.",
         "default": "default",
-        "category": "Organize",
+        "category": "Settings",
         "tab": "Settings"
     },
     "myDayNoteId": {
@@ -152,7 +152,7 @@
     "profiles": {
         "type": "registry",
         "label": "Profiles",
-        "category": "Organize",
+        "category": "Review",
         "tab": "Profiles",
         "autosave": true,
         "itemSchema": {

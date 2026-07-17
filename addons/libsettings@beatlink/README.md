@@ -424,6 +424,31 @@ page layout, only the fields.
 `color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
 dependency of this library, not something a consumer needs to declare directly.
 
+#### `extraPanels` — injecting custom (non-schema) tabs
+
+Some settings content can't be expressed as a schema field — a side-effecting picker, a "run this
+action" button, a bespoke widget. Pass `extraPanels` to slot such content into the *same*
+category/tab nav as the schema fields, so it doesn't need a second page or a second nav bar:
+
+```jsx
+<SettingsForm
+    schemaNoteId={schemaNoteId}
+    configNoteId={configNoteId}
+    extraPanels={[
+        { category: "Settings", tab: "Workflow Setup", render: () => <MySetupPanel /> }
+    ]}
+/>
+```
+
+Each entry is `{ category, tab, render }`: `render()` returns the tab's body (any JSX). Its `tab`
+joins the given `category`'s tab row (after the schema tabs already there); when that tab is active,
+`render()` shows in place of schema fields. An extra panel naming a category absent from `_categories`
+falls under the first declared category, exactly as a field would. Give each panel its own `tab` label
+— a panel sharing a label with a schema tab would collide. `extraPanels` is purely additive: omit it
+(the default `[]`) and the form behaves exactly as documented above. See
+[`agenda@beatlink`](../agenda@beatlink/)'s `profileEditor.jsx` for a real consumer (Workflow Setup +
+the Organize-note picker injected as a Settings tab).
+
 ### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
 
 The same merge-with-defaults read as the backend function, but `async` and usable from any frontend
