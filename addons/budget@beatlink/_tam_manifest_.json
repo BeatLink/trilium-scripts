@@ -35,6 +35,13 @@
                 "sourceUrl": "libBudget.js"
             },
             {
+                "id": "provision",
+                "title": "budgetProvision.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "budgetProvision.js"
+            },
+            {
                 "id": "style",
                 "title": "budget.css",
                 "type": "code",
@@ -107,6 +114,10 @@
                 "child": "readme"
             },
             {
+                "parent": "root",
+                "child": "provision"
+            },
+            {
                 "parent": "widget",
                 "child": "lib"
             },
@@ -153,9 +164,24 @@
                 "to": "template"
             },
             {
-                "from": "template",
-                "type": "renderNote(inheritable)",
+                "from": "provision",
+                "type": "budgetTemplateNote",
+                "to": "template"
+            },
+            {
+                "from": "provision",
+                "type": "budgetWidgetNote",
                 "to": "widget"
+            },
+            {
+                "from": "provision",
+                "type": "runOnAttributeCreation",
+                "to": "provision"
+            },
+            {
+                "from": "provision",
+                "type": "runOnAttributeChange",
+                "to": "provision"
             }
         ],
         "labels": [
