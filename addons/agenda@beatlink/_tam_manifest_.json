@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.13.0",
+    "latestVersion": "1.13.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -49,6 +49,7 @@
             { "id": "now-note", "title": "My Day", "type": "text", "mime": "text/html", "sourceUrl": null },
 
             { "id": "task", "title": "agendaTask.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "task/agendaTask.jsx" },
+            { "id": "togglebutton", "title": "FormToggleButton.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "task/FormToggleButton.jsx" },
 
             { "id": "organize-page-src", "title": "organizePage.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizePage.jsx" },
             { "id": "organize-lib", "title": "organize.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "organize/organize.js" },
@@ -147,6 +148,7 @@
             { "parent": "my-day", "child": "lib-overview" },
 
             { "parent": "task", "child": "agenda-settings" },
+            { "parent": "task", "child": "togglebutton" },
             { "parent": "task", "child": "lib-task" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
 

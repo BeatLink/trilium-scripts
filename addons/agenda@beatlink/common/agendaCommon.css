@@ -61,7 +61,7 @@
             }
         }
 
-        button {
+        button, .togglebutton {
             width: 100% !important;
             * {
                 text-align: center;
@@ -106,7 +106,7 @@
             width: 100%;
             justify-content: space-between;
             gap: 0.25rem !important;
-            button {
+            .togglebutton, .togglebutton > * {
                 min-width: 1.5rem !important;
                 min-height: 1.5rem !important;
                 width: 100% !important;
@@ -118,7 +118,7 @@
         @container ( inline-size < 15rem ) {
             > div {
                 flex-direction: column;
-                button {
+                .togglebutton, .togglebutton > * {
                     width: 100% !important;
                 }
             }
@@ -140,7 +140,7 @@
         @container ( inline-size < 12rem ) {
             > div {
                 flex-direction: column;
-                button {
+                .togglebutton, .togglebutton > * {
                     width: 100% !important;
                 }
             }

@@ -10,10 +10,10 @@ import {
     FormDropdownList,
     FormTextBox,
     FormToggle,
-    FormToggleButton,
     Button
 } from "trilium:preact";
 
+import { FormToggleButton } from "FormToggleButton.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")

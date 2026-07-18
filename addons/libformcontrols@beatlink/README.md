@@ -4,9 +4,9 @@ Reusable Preact form-control components for TriliumNext widget UIs.
 
 Anything `trilium:preact` already provides is not duplicated here. Use Trilium's own components for
 plain inputs (`FormTextBox` with the appropriate `type`, e.g. `<FormTextBox type="datetime-local" />`),
-pill toggle buttons (`FormToggleButton`), sliding switches (`FormToggle`), checkboxes
-(`FormCheckbox`), and collapsible sections (`Collapsible`). Note that `FormTextBox` with
-`type="number"` clamps the value to `min`/`max` on every keystroke.
+sliding switches (`FormToggle`), checkboxes (`FormCheckbox`), and collapsible sections
+(`Collapsible`). Note that `FormTextBox` with `type="number"` clamps the value to `min`/`max` on
+every keystroke.
 
 | Export         | Note                    | Component          | Description                                                        |
 |----------------|-------------------------|--------------------|--------------------------------------------------------------------|
