@@ -1,0 +1,25 @@
+{
+    "rollupMode": {
+        "type": "select",
+        "label": "Parent Totals",
+        "description": "How a parent row's amount relates to its children",
+        "options": [
+            {"value": "computed", "label": "Computed - parent amount is the sum of its children"},
+            {"value": "additive", "label": "Own + children - parent's own amount is added to its children's sum"},
+            {"value": "cap", "label": "Budget cap - parent amount is an allocation, children are shown against it"}
+        ],
+        "default": "computed"
+    },
+    "currency": {
+        "type": "string",
+        "label": "Currency Code",
+        "description": "ISO 4217 currency code used to format amounts, e.g. USD, JMD",
+        "default": "USD"
+    },
+    "locale": {
+        "type": "string",
+        "label": "Locale",
+        "description": "Locale used to format amounts, e.g. en-US, en-JM. Leave blank to use the system default.",
+        "default": ""
+    }
+}

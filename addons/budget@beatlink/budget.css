@@ -1,0 +1,148 @@
+.budget-table-widget {
+    padding: 10px 14px 20px 14px;
+}
+
+.budget-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.budget-table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--main-border-color);
+    white-space: nowrap;
+}
+
+.budget-table td {
+    padding: 2px 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    vertical-align: middle;
+}
+
+.budget-cell-amount,
+.budget-cell-total {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.budget-cell-actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.budget-title-inner {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.budget-twisty {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    flex: 0 0 20px;
+}
+
+.budget-twisty-empty {
+    cursor: default;
+    visibility: hidden;
+}
+
+.budget-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: inherit;
+    font: inherit;
+    padding: 3px 5px;
+    width: 100%;
+}
+
+.budget-input:hover {
+    border-color: var(--main-border-color);
+}
+
+.budget-input:focus {
+    background: var(--input-background-color);
+    border-color: var(--main-text-color);
+    outline: none;
+}
+
+.budget-input-amount {
+    text-align: right;
+}
+
+.budget-derived,
+.budget-total {
+    display: block;
+    text-align: right;
+    padding: 3px 5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.budget-derived {
+    color: var(--muted-text-color);
+}
+
+.budget-total {
+    font-weight: 600;
+}
+
+.budget-total-over {
+    color: var(--error-text-color, #d33);
+}
+
+.budget-subtotal {
+    display: block;
+    text-align: right;
+    padding: 0 5px 3px 5px;
+    font-size: 0.82em;
+    color: var(--muted-text-color);
+}
+
+.budget-action {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 3px;
+    opacity: 0;
+}
+
+.budget-row:hover .budget-action,
+.budget-action:focus {
+    opacity: 1;
+}
+
+.budget-action:hover {
+    color: var(--main-text-color);
+}
+
+.budget-action-remove:hover {
+    color: var(--error-text-color, #d33);
+}
+
+.budget-empty {
+    color: var(--muted-text-color);
+    font-style: italic;
+    padding: 10px 8px;
+}
+
+.budget-grand-label {
+    font-weight: 600;
+    padding-top: 8px;
+}
+
+.budget-grand-total {
+    font-weight: 700;
+    text-align: right;
+    padding-top: 8px;
+    font-variant-numeric: tabular-nums;
+}

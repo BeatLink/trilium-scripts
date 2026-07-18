@@ -72,7 +72,7 @@ expanded or collapsed, so acting on an entry never requires opening it first); e
 shows one labeled field row per `itemSchema` key stacked vertically like any other form on the page
 (not a wide table with a column per field) — with an "Add" button below that seeds a new entry from
 `itemSchema`'s defaults, expanded by default. See
-[`table-calculator@beatlink`](../table-calculator@beatlink/) for a real consumer.
+[`area-picker@beatlink`](../area-picker@beatlink/) for a real consumer.
 
 ### `registry` fields — id-keyed collections of settings
 

@@ -1,31 +1,45 @@
 {
-    "id": "table-calculator@beatlink",
-    "name": "Table Calculator",
-    "description": "Recursively sums a numeric label across a note's children, rolling child totals up into parent notes \u2014 useful for budget/table-style note trees. Supports multiple independent table profiles.",
+    "id": "budget@beatlink",
+    "name": "Budget",
+    "description": "Nested budget tables — apply the Budget template to any note and edit Title / Amount Budgeted / Notes rows in place, with child rows rolling up into their parents. Rollup behaviour (computed, own + children, or budget cap) is configurable.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/table-calculator@beatlink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.3",
-    "type": "script",
+    "latestVersion": "1.0.0",
+    "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/table-calculator@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "root",
         "notes": [
             {
                 "id": "root",
-                "title": "table-calculator@beatlink",
+                "title": "budget@beatlink",
                 "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
-                "id": "script",
-                "title": "TableCalculator.js",
+                "id": "widget",
+                "title": "budgetWidget.jsx",
                 "type": "code",
-                "mime": "application/javascript;env=backend",
-                "sourceUrl": "TableCalculator.js"
+                "mime": "text/jsx",
+                "sourceUrl": "budgetWidget.jsx"
+            },
+            {
+                "id": "lib",
+                "title": "libBudget.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libBudget.js"
+            },
+            {
+                "id": "style",
+                "title": "budget.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "budget.css"
             },
             {
                 "id": "schema",
@@ -49,11 +63,12 @@
                 "sourceUrl": "settings.jsx"
             },
             {
-                "id": "table-widget",
-                "title": "table-widget.jsx",
+                "id": "template",
+                "title": "Budget",
                 "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "table-widget.jsx"
+                "mime": "application/json",
+                "sourceUrl": "template.json",
+                "promptOnUpdate": true
             },
             {
                 "id": "readme",
@@ -66,7 +81,11 @@
         "children": [
             {
                 "parent": "root",
-                "child": "script"
+                "child": "widget"
+            },
+            {
+                "parent": "root",
+                "child": "style"
             },
             {
                 "parent": "root",
@@ -82,26 +101,25 @@
             },
             {
                 "parent": "root",
-                "child": "table-widget"
+                "child": "template"
             },
             {
-                "parent": "script",
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "widget",
+                "child": "lib"
+            },
+            {
+                "parent": "widget",
                 "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "ui"
             },
             {
                 "parent": "settings",
                 "addon": "libsettings@beatlink",
                 "child": "ui"
-            },
-            {
-                "parent": "table-widget",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
-            },
-            {
-                "parent": "root",
-                "child": "readme"
             }
         ],
         "relations": [
@@ -116,22 +134,12 @@
                 "to": "schema"
             },
             {
-                "from": "script",
+                "from": "widget",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "script",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "table-widget",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "table-widget",
+                "from": "widget",
                 "type": "settingsNote",
                 "to": "settings"
             },
@@ -139,13 +147,43 @@
                 "from": "root",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "root",
+                "type": "AddonData:template",
+                "to": "template"
             }
         ],
         "labels": [
             {
-                "note": "table-widget",
+                "note": "widget",
                 "name": "widget",
                 "value": ""
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "budgetTable",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "iconClass",
+                "value": "bx bx-wallet"
+            },
+            {
+                "note": "root",
+                "name": "iconClass",
+                "value": "bx bx-wallet"
             }
         ],
         "dependencies": [
