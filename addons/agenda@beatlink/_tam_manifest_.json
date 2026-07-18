@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.11.0",
+    "latestVersion": "1.12.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -147,10 +147,7 @@
             { "parent": "my-day", "child": "lib-overview" },
 
             { "parent": "task", "child": "agenda-settings" },
-            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "datetime" },
             { "parent": "task", "addon": "libformcontrols@beatlink", "child": "togglebutton" },
-            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "number" },
-            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "time" },
             { "parent": "task", "child": "lib-task" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
 

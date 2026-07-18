@@ -8,13 +8,11 @@ import {
     useEffect,
     useState,
     FormDropdownList,
+    FormTextBox,
     Button
 } from "trilium:preact";
 
-import { FormDatetime } from "FormDatetime.jsx"
 import { FormToggleButton } from "FormToggleButton.jsx"
-import { FormNumber } from "FormNumber.jsx"
-import { FormTime } from "FormTime.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
@@ -57,8 +55,9 @@ function DatesDurationPicker({ constants, onAfterChange }) {
         <div>
             <div>
                 <label>Start Date</label>
-                <FormDatetime
-                    value={startDatetime}
+                <FormTextBox
+                    type="datetime-local" placeholder="not set"
+                    currentValue={startDatetime}
                     onChange={value => {
                         setStartDatetime(value)
                         afterChange()
@@ -67,8 +66,9 @@ function DatesDurationPicker({ constants, onAfterChange }) {
             </div>
             <div>
                 <label>Due Date</label>
-                <FormDatetime
-                    value={dueDatetime}
+                <FormTextBox
+                    type="datetime-local" placeholder="not set"
+                    currentValue={dueDatetime}
                     onChange={value => {
                         setDueDatetime(value)
                         afterChange()
@@ -133,7 +133,7 @@ const stopOptions = [
 
 const timeIntervals = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]
 
-// The recurrence object stores hour/minute as strings; FormTime speaks "HH:mm".
+// The recurrence object stores hour/minute as strings; a time input speaks "HH:mm".
 function timeToInput({ hour, minute }) {
     if (hour === "" || hour == null) return ""
     return `${String(hour).padStart(2, "0")}:${String(minute || 0).padStart(2, "0")}`
@@ -177,10 +177,14 @@ function RecurrencePicker({ constants, onAfterChange }){
                 <div className="interval-picker">
                     <label>Interval</label>
                     <div>
-                        <FormNumber
-                            min="1" step="1" value={recurrenceObj.intervalCount}
+                        <FormTextBox
+                            type="number"
+                            min="1" step="1" currentValue={recurrenceObj.intervalCount}
                             onChange={value => {
-                                updateRecurrence({ ...recurrenceObj, intervalCount: value })
+                                updateRecurrence({
+                                    ...recurrenceObj,
+                                    intervalCount: Number(value)
+                                })
                             }}
                         />
                         <FormDropdownList
@@ -200,8 +204,9 @@ function RecurrencePicker({ constants, onAfterChange }){
                 <div className="time-picker">
                     <label>At Time</label>
                     <div>
-                        <FormTime
-                            value={timeToInput(recurrenceObj.time)}
+                        <FormTextBox
+                            type="time" placeholder="not set"
+                            currentValue={timeToInput(recurrenceObj.time)}
                             onChange={value => {
                                 updateRecurrence({
                                     ...recurrenceObj,
@@ -249,13 +254,17 @@ function RecurrencePicker({ constants, onAfterChange }){
                             keyProperty="key" titleProperty="name"
                         />
                         {recurrenceObj.month.mode === "day" && (
-                            <FormNumber
+                            <FormTextBox
+                                type="number"
                                 min="1" max="31" step="1" placeholder="Day"
-                                value={recurrenceObj.month.day}
+                                currentValue={recurrenceObj.month.day}
                                 onChange={value => {
                                     updateRecurrence({
                                         ...recurrenceObj,
-                                        month: { ...recurrenceObj.month, day: value }
+                                        month: {
+                                            ...recurrenceObj.month,
+                                            day: Number(value)
+                                        }
                                     })
                                 }}
                             />
@@ -306,19 +315,24 @@ function RecurrencePicker({ constants, onAfterChange }){
                             keyProperty="key" titleProperty="name"
                         />
                         {recurrenceObj.stop.type === "number" && (
-                            <FormNumber
-                                min="1" step="1" value={recurrenceObj.stop.count}
+                            <FormTextBox
+                                type="number"
+                                min="1" step="1" currentValue={recurrenceObj.stop.count}
                                 onChange={value => {
                                     updateRecurrence({
                                         ...recurrenceObj,
-                                        stop: { ...recurrenceObj.stop, count: value }
+                                        stop: {
+                                            ...recurrenceObj.stop,
+                                            count: Number(value)
+                                        }
                                     })
                                 }}
                             />
                         )}
                         {recurrenceObj.stop.type === "date" && (
-                            <FormDatetime
-                                value={recurrenceObj.stop.date}
+                            <FormTextBox
+                                type="datetime-local" placeholder="not set"
+                                currentValue={recurrenceObj.stop.date}
                                 onChange={value => {
                                     updateRecurrence({
                                         ...recurrenceObj,

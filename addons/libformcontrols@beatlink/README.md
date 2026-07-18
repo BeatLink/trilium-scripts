@@ -3,11 +3,12 @@
 Reusable Preact form-control components for TriliumNext widget UIs. Each control is exported
 separately, so a consumer clones only the ones it uses.
 
+Plain inputs (text, number, date/time) are not provided here — use Trilium's own `FormTextBox` from
+`trilium:preact` with the appropriate `type`, e.g. `<FormTextBox type="datetime-local" />`. Note that
+for `type="number"` it clamps the value to `min`/`max` on every keystroke.
+
 | Export         | Note                    | Component          | Description                                                        |
 |----------------|-------------------------|--------------------|--------------------------------------------------------------------|
-| `datetime`     | `FormDatetime.jsx`      | `FormDatetime`     | datetime-local input                                               |
-| `number`       | `FormNumber.jsx`        | `FormNumber`       | number input                                                       |
-| `time`         | `FormTime.jsx`          | `FormTime`         | time input (`"HH:mm"` string)                                      |
 | `togglebutton` | `FormToggleButton.jsx`  | `FormToggleButton` | toggle button (a checkbox styled as a pill button)                 |
 | `checkboxgroup`| `FormCheckboxGroup.jsx` | `FormCheckboxGroup`| labeled, collapsible group of checkboxes (uses `collapsible`)      |
 | `colorpicker`  | `ColorPicker.jsx`       | `ColorPicker`      | curated color-swatch grid with a custom CSS-color fallback         |
@@ -19,14 +20,14 @@ Add `libformcontrols@beatlink` as a dependency and clone the export you need as 
 widget that uses it, then import by note title:
 
 ```jsx
-import { FormNumber } from "FormNumber.jsx"
+import { FormToggleButton } from "FormToggleButton.jsx"
 import { ColorPicker } from "ColorPicker.jsx"
 ```
 
 Wire each export in your manifest, e.g.:
 
 ```json
-{ "parent": "my-widget", "addon": "libformcontrols@beatlink", "child": "number" }
+{ "parent": "my-widget", "addon": "libformcontrols@beatlink", "child": "togglebutton" }
 ```
 
 The `colorpicker` export ships its own `ColorPicker.css` (`#appCss`); `checkboxgroup` pulls in the
