@@ -1,5 +1,4 @@
 import {
-    defineWidget,
     useActiveNoteContext,
     useNoteProperty,
     useState,
@@ -24,8 +23,6 @@ const {
     moveRow,
     formatAmount
 } = require("libBudget.js")
-
-const TEMPLATE_LABEL = "budgetTable"
 
 function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange, onAdd, onRemove, onMove }) {
     const info = totals[row.id] || { total: 0, isLeaf: true, over: false }
@@ -120,6 +117,12 @@ function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange
     )
 }
 
+/*
+ * Rendered as the whole body of any note templated from the addon's Budget
+ * template, which carries an inheritable `~renderNote` pointing here. The note
+ * being viewed IS the budget note; `api.currentNote` stays this JSX note, so the
+ * addon's own schema/settings relations still resolve off it.
+ */
 function BudgetTable() {
     const { note } = useActiveNoteContext()
     const noteId = useNoteProperty(note, "noteId")
@@ -127,7 +130,6 @@ function BudgetTable() {
     const [settings, setSettings] = useState(null)
     const [rows, setRows] = useState(null)
     const [collapsed, setCollapsed] = useState(() => new Set())
-    const [isBudget, setIsBudget] = useState(false)
 
     useEffect(() => {
         (async () => {
@@ -138,15 +140,9 @@ function BudgetTable() {
         })()
     }, [])
 
-    // Gate on the template label, then load that note's budget document.
     useEffect(() => {
         (async () => {
-            if (!noteId || !note) { setIsBudget(false); setRows(null); return }
-
-            const matches = !!note.hasLabel?.(TEMPLATE_LABEL)
-            setIsBudget(matches)
-            if (!matches) { setRows(null); return }
-
+            if (!noteId || !note) { setRows(null); return }
             const content = (await note.getBlob()).content
             setRows(parseBudget(content).rows)
             setCollapsed(new Set())
@@ -193,7 +189,7 @@ function BudgetTable() {
         [rows, settings]
     )
 
-    if (!isBudget || !rows || !settings) return null
+    if (!rows || !settings) return <div className="budget-table-widget">Loading...</div>
 
     return (
         <div className="budget-table-widget">
@@ -243,8 +239,4 @@ function BudgetTable() {
     )
 }
 
-export default defineWidget({
-    parent: "note-detail-pane",
-    position: 100,
-    render: BudgetTable
-})
+export default BudgetTable

@@ -10,10 +10,14 @@ is a single note you can edit, revision, and export as one unit.
 
 ## Setup
 
-1. Install the addon (it pulls in [`libsettings@beatlink`](../libsettings@beatlink/)).
+1. Install the addon (it pulls in [`libsettings@beatlink`](../libsettings@beatlink/)) and enable it.
 2. Create a note and set its template to **Budget** (the addon ships a `#template` note by that
-   name), or add the `#budgetTable` label to an existing note.
-3. Open the note. The table renders in place of the note body, with an **Add Row** button below it.
+   name).
+3. Open the note. The table renders as the note body, with an **Add Row** button below it.
+
+The Budget template is a `render` note carrying an inheritable `~renderNote` relation, so every note
+templated from it renders `budgetWidget.jsx` as its entire body instead of a text editor. Applying
+the template is the only wiring needed — there's no marker label to add.
 
 ## Using the table
 
@@ -66,8 +70,9 @@ A budget note's content is a JSON document:
 
 Only what you typed is stored — totals are always derived at render time from the current rollup
 mode, so switching modes re-interprets an existing budget rather than rewriting it. Content that
-isn't valid budget JSON is treated as an empty budget rather than erroring, so applying the template
-to a note that already had text won't break the widget (but that text is replaced on the first edit).
+isn't valid budget JSON is treated as an empty budget rather than erroring, so a brand-new note (or
+one converted from a text note, whose content arrives HTML-wrapped) starts as an empty table instead
+of breaking — but any prior content is replaced on the first edit.
 
 ## Limitations
 

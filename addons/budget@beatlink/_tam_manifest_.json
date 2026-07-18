@@ -65,10 +65,9 @@
             {
                 "id": "template",
                 "title": "Budget",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "template.json",
-                "promptOnUpdate": true
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "readme",
@@ -152,14 +151,14 @@
                 "from": "root",
                 "type": "AddonData:template",
                 "to": "template"
+            },
+            {
+                "from": "template",
+                "type": "renderNote(inheritable)",
+                "to": "widget"
             }
         ],
         "labels": [
-            {
-                "note": "widget",
-                "name": "widget",
-                "value": ""
-            },
             {
                 "note": "style",
                 "name": "appCss",
@@ -168,11 +167,6 @@
             {
                 "note": "template",
                 "name": "template",
-                "value": ""
-            },
-            {
-                "note": "template",
-                "name": "budgetTable",
                 "value": ""
             },
             {

@@ -11,17 +11,36 @@ function newRow(overrides = {}) {
     return { id: newId(), title: "", amount: 0, notes: "", children: [], ...overrides }
 }
 
-// Tolerates hand-edited or empty note content — anything unparseable becomes an
-// empty budget rather than throwing in the widget's render path.
+/*
+ * Budget notes are text notes, so the stored document arrives wrapped in the
+ * markup the text editor keeps around it (at minimum the `<p></p>` the template
+ * ships). Strip tags and decode the handful of entities the editor escapes
+ * before parsing. Anything unparseable becomes an empty budget rather than
+ * throwing in the widget's render path.
+ */
 function parseBudget(content) {
+    const text = stripHtml(content)
     let parsed = null
     try {
-        parsed = content ? JSON.parse(content) : null
+        parsed = text ? JSON.parse(text) : null
     } catch {
         parsed = null
     }
     const rows = Array.isArray(parsed?.rows) ? parsed.rows : []
     return { rows: rows.map(normalizeRow) }
+}
+
+function stripHtml(content) {
+    if (!content) return ""
+    return String(content)
+        .replace(/<[^>]*>/g, "")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .trim()
 }
 
 function normalizeRow(row) {
