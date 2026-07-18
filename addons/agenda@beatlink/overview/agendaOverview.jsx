@@ -1,5 +1,6 @@
 import {
     FormDropdownList,
+    FormCheckbox,
     Button,
     defineWidget,
     RightPanelWidget,
@@ -10,7 +11,6 @@ import {
 } from "trilium:preact"
 
 import { Collapsible } from "Collapsible.jsx"
-import { FormCheckboxGroup } from "FormCheckboxGroup.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
@@ -46,25 +46,28 @@ function CheckboxSection({
             className="mainSection"
         >
             {Object.entries(section.children || {}).map(([groupKey, group]) => (
-                <FormCheckboxGroup
+                <Collapsible
                     label={group.name}
                     expanded={sectionState[`${stateKey}:${groupKey}`] === true}
                     onToggle={toggleSection(`${stateKey}:${groupKey}`)}
-                    items={Object.entries(group.children || {}).map(
-                        ([itemKey, usage]) => ({
-                            key: itemKey,
-                            label: usage.name,
-                            currentValue: usage.enabled,
-                            onChange: checked =>
+                    className="checkboxGroup"
+                >
+                    <ul>{Object.entries(group.children || {}).map(([itemKey, usage]) => (
+                        <FormCheckbox
+                            key={itemKey}
+                            label={usage.name}
+                            currentValue={usage.enabled}
+                            onChange={checked =>
                                 update(p => {
                                     sectionPath
                                       .concat(["children", groupKey, "children", itemKey])
                                       .reduce((o,k)=>o[k], p)
                                       .enabled = checked
                                 })
-                        })
-                    )}
-                />
+                            }
+                        />
+                    ))}</ul>
+                </Collapsible>
             ))}
         </Collapsible>
     )

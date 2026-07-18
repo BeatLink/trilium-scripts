@@ -1,11 +1,11 @@
 {
     "id": "libformcontrols@beatlink",
     "name": "Form Controls",
-    "description": "Reusable Preact form-control components for TriliumNext widget UIs: a toggle button (checkbox styled as a pill), a labeled collapsible checkbox group, a curated color-swatch picker, and a collapsible section. Each control is exported separately so a consumer pulls in only the ones it uses.",
+    "description": "A curated color-swatch picker with a custom CSS-color fallback, as a reusable Preact component for TriliumNext widget UIs. Controls that Trilium's own trilium:preact provides are not duplicated here.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/libformcontrols@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.3.0",
+    "latestVersion": "1.6.0",
     "type": "library",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/libformcontrols@beatlink/_tam_manifest_.json",
@@ -18,27 +18,6 @@
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
-            },
-            {
-                "id": "togglebutton",
-                "title": "FormToggleButton.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "FormToggleButton.jsx"
-            },
-            {
-                "id": "checkboxgroup",
-                "title": "FormCheckboxGroup.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "FormCheckboxGroup.jsx"
-            },
-            {
-                "id": "collapsible",
-                "title": "Collapsible.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "Collapsible.jsx"
             },
             {
                 "id": "colorpicker",
@@ -63,12 +42,8 @@
             }
         ],
         "children": [
-            { "parent": "root", "child": "togglebutton" },
-            { "parent": "root", "child": "checkboxgroup" },
             { "parent": "root", "child": "colorpicker" },
-            { "parent": "root", "child": "collapsible" },
             { "parent": "root", "child": "readme" },
-            { "parent": "checkboxgroup", "child": "collapsible" },
             { "parent": "colorpicker", "child": "colorpicker-css" }
         ],
         "relations": [],
@@ -77,11 +52,7 @@
         ],
         "dependencies": [],
         "exports": {
-            "number": "number",
-            "togglebutton": "togglebutton",
-            "checkboxgroup": "checkboxgroup",
-            "colorpicker": "colorpicker",
-            "collapsible": "collapsible"
+            "colorpicker": "colorpicker"
         },
         "readmeNote": "readme"
     }

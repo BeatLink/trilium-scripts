@@ -9,10 +9,11 @@ import {
     useState,
     FormDropdownList,
     FormTextBox,
+    FormToggle,
+    FormToggleButton,
     Button
 } from "trilium:preact";
 
-import { FormToggleButton } from "FormToggleButton.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
@@ -163,9 +164,8 @@ function RecurrencePicker({ constants, onAfterChange }){
         <div className="recurrence-picker">
             <div>
                 <label>Enabled</label>
-                <div>
-                    <FormToggleButton
-                        label="Task Repeats"
+                <div className="enabled-picker">
+                    <FormToggle
                         currentValue={recurrenceObj.enabled}
                         onChange={value => {
                             updateRecurrence({ ...recurrenceObj, enabled: value })

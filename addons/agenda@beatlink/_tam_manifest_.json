@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.12.0",
+    "latestVersion": "1.13.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -39,6 +39,7 @@
             { "id": "wav-end", "title": "timerEnd.wav", "type": "file", "mime": "audio/wav", "sourceUrl": "myday/timerEnd.wav", "binary": true },
 
             { "id": "overview", "title": "agendaOverview.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "overview/agendaOverview.jsx" },
+            { "id": "collapsible", "title": "Collapsible.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "overview/Collapsible.jsx" },
             { "id": "profile-editor-page", "title": "Agenda Editor", "type": "render", "mime": "text/html", "sourceUrl": null },
             { "id": "profile-editor", "title": "profileEditor.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "overview/profileEditor.jsx" },
             { "id": "profile-editor-css", "title": "profileEditor.css", "type": "code", "mime": "text/css", "sourceUrl": "overview/profileEditor.css" },
@@ -131,8 +132,7 @@
 
             { "parent": "overview", "child": "agenda-settings" },
             { "parent": "overview", "child": "lib-overview" },
-            { "parent": "overview", "addon": "libformcontrols@beatlink", "child": "collapsible" },
-            { "parent": "overview", "addon": "libformcontrols@beatlink", "child": "checkboxgroup" },
+            { "parent": "overview", "child": "collapsible" },
             { "parent": "overview", "addon": "libipc@beatlink", "child": "lib" },
 
             { "parent": "profile-editor-page", "child": "profile-editor" },
@@ -147,7 +147,6 @@
             { "parent": "my-day", "child": "lib-overview" },
 
             { "parent": "task", "child": "agenda-settings" },
-            { "parent": "task", "addon": "libformcontrols@beatlink", "child": "togglebutton" },
             { "parent": "task", "child": "lib-task" },
             { "parent": "task", "addon": "libipc@beatlink", "child": "lib" },
 
@@ -290,7 +289,6 @@
         ],
         "dependencies": [
             "libsettings@beatlink",
-            "libformcontrols@beatlink",
             "libipc@beatlink",
             "libnotification@beatlink",
             "libcalendar@beatlink",
