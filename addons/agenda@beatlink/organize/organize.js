@@ -17,14 +17,22 @@
 // enabled/actionable template list and the area list as arguments.
 //
 // Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
-// structural notes themselves (anything carrying #workflowNote — the areas, the
-// buckets, Inbox/My Day/Agenda) are excluded; they're containers, not items.
+// structural notes themselves (anything carrying #agendaOrganizeArea or
+// #agendaOrganizeSpecial — the areas, the buckets, Inbox/My Day/Agenda) are
+// excluded; they're containers, not items.
 //
 // One backend round-trip collects the candidate list once (runOnBackend closures
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
-const WORKFLOW_LABEL = "workflowNote"
+// Structural identity labels (written by organizeProvision.js). An area root has
+// `area` only; a bucket has `area` + `bucket`; the Inbox / My Day / Agenda
+// singletons have `special`.
+const LABELS = {
+    area: "agendaOrganizeArea",
+    bucket: "agendaOrganizeBucket",
+    special: "agendaOrganizeSpecial"
+}
 
 // The item-type templates offered by the "Notes Without Templates" queue come
 // from agenda's managed-templates config (organizeTemplates.getTemplateConfig),
@@ -52,21 +60,22 @@ async function getItemTemplates(templateList) {
 // `actionableTemplateIds` is the set of template note ids flagged actionable in
 // the managed-templates config.
 async function getOrganizeCandidates(actionableTemplateIds) {
-    return api.runOnBackend((workflowLabel, actionableTemplateIds) => {
+    return api.runOnBackend((labels, actionableTemplateIds) => {
         const actionableSet = new Set(actionableTemplateIds)
-        // Scope roots: the Inbox note + every Area root. Area roots have a
-        // #workflowNote value like "area-03-legal" (no trailing bucket slug);
-        // buckets look like "area-03-legal-goals" and are NOT scope roots (but
-        // their contents are still reached by descending from the area root).
-        const tagged = api.searchForNotes(`#${workflowLabel}`)
-        const isAreaRoot = v => /^area-\d\d-[a-z]+$/.test(v)
-        const rootNotes = tagged.filter(n => {
-            const v = n.getLabelValue(workflowLabel)
-            return v === "inbox" || isAreaRoot(v)
-        })
+        // Scope roots: the Inbox note + every Area root. An area root carries
+        // the area label and NO bucket label; a bucket carries both and is NOT a
+        // scope root (its contents are still reached by descending from the area
+        // root).
+        const areaTagged = api.searchForNotes(`#${labels.area}`)
+        const specialTagged = api.searchForNotes(`#${labels.special}`)
+        const rootNotes = areaTagged
+            .filter(n => !n.getLabelValue(labels.bucket))
+            .concat(specialTagged.filter(n => n.getLabelValue(labels.special) === "inbox"))
 
-        // Every note carrying #workflowNote is structural — never a triage item.
-        const structuralIds = new Set(tagged.map(n => n.noteId))
+        // Any note carrying a structural identity label is scaffolding — never a
+        // triage item.
+        const structuralIds = new Set(
+            areaTagged.concat(specialTagged).map(n => n.noteId))
 
         // Ancestor breadcrumb: walk primary parents up to (but excluding) root.
         function pathOf(note) {
@@ -162,7 +171,7 @@ async function getOrganizeCandidates(actionableTemplateIds) {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL, actionableTemplateIds])
+    }, [LABELS, actionableTemplateIds])
 }
 
 // Find notes whose #area or ~template disagrees with where they're filed. In the
@@ -180,24 +189,25 @@ async function getOrganizeCandidates(actionableTemplateIds) {
 // `branchBucket` is the ancestor bucket's template slug. `fixes.*` are precomputed
 // so the frontend just shows the applicable buttons.
 async function getMisfiledNotes(areaList, templateList) {
-    return api.runOnBackend((workflowLabel, areaList, templateList) => {
-        const tagged = api.searchForNotes(`#${workflowLabel}`)
-        const structuralIds = new Set(tagged.map(n => n.noteId))
+    return api.runOnBackend((labels, areaList, templateList) => {
+        const areaTagged = api.searchForNotes(`#${labels.area}`)
+        const specialTagged = api.searchForNotes(`#${labels.special}`)
+        const structuralIds = new Set(
+            areaTagged.concat(specialTagged).map(n => n.noteId))
 
-        // Index the structural notes by their #workflowNote key so we can resolve
-        // "the Task bucket under the Home area" -> a real noteId for moves.
+        // Index structural notes by "<areaSlug>" / "<areaSlug> <bucketSlug>" so we
+        // can resolve "the Task bucket under the Home area" -> a real noteId.
+        const idKey = (areaSlug, bucketSlug) => bucketSlug ? `${areaSlug} ${bucketSlug}` : areaSlug
         const byKey = {}
-        for (const n of tagged) byKey[n.getLabelValue(workflowLabel)] = n
+        for (const n of areaTagged) {
+            byKey[idKey(n.getLabelValue(labels.area), n.getLabelValue(labels.bucket))] = n
+        }
 
-        const isAreaRootKey = k => /^area-\d\d-[a-z]+$/.test(k)
-        const areaRootNotes = tagged.filter(n => isAreaRootKey(n.getLabelValue(workflowLabel)))
+        // Area roots carry the area label and no bucket label.
+        const areaRootNotes = areaTagged.filter(n => !n.getLabelValue(labels.bucket))
 
-        // area slug ("03-home") -> its area-root #workflowNote key ("area-03-home")
-        const areaKeyBySlug = {}
-        for (const a of areaList) areaKeyBySlug[a.slug] = `area-${a.slug}`
         const colorBySlug = {}
         for (const a of areaList) colorBySlug[a.slug] = a.color
-        const areaSlugs = areaList.map(a => a.slug)
 
         // template note id -> its bucket slug; and bucket slug -> template note id
         // (for the "update type" fix, which sets the note's template to the one
@@ -236,31 +246,20 @@ async function getMisfiledNotes(areaList, templateList) {
         }
 
         // Nearest ancestor Area's #area, and nearest ancestor bucket's template
-        // slug. A bucket key is "area-<areaSlug>-<templateSlug>"; since a template
-        // slug can itself contain dashes, we strip the known "area-<areaSlug>-"
-        // prefix rather than assuming a single trailing segment.
-        function bucketSlugFromKey(key) {
-            for (const areaSlug of areaSlugs) {
-                const prefix = `area-${areaSlug}-`
-                if (key.startsWith(prefix)) return key.slice(prefix.length)
-            }
-            return ""
-        }
+        // slug — both read straight off their own labels now that identity is
+        // split, so no key parsing is involved.
         function branchContext(note) {
             let branchArea = ""
             let branchBucket = ""
             let cur = note.getParentNotes()[0]
             while (cur && cur.noteId !== "root") {
-                const key = cur.getLabelValue(workflowLabel)
-                if (key) {
-                    if (!branchBucket) {
-                        const slug = bucketSlugFromKey(key)
-                        if (slug) branchBucket = slug
-                    }
-                    if (!branchArea) {
-                        const a = cur.getLabelValue("area")
-                        if (a) branchArea = a
-                    }
+                if (!branchBucket) {
+                    const slug = cur.getLabelValue(labels.bucket)
+                    if (slug) branchBucket = slug
+                }
+                if (!branchArea) {
+                    const a = cur.getLabelValue("area")
+                    if (a) branchArea = a
                 }
                 cur = cur.getParentNotes()[0]
             }
@@ -308,9 +307,8 @@ async function getMisfiledNotes(areaList, templateList) {
                         const destAreaSlug = noteArea || branchArea
                         const destBucketSlug = templateBucket || branchBucket
                         if (destAreaSlug) {
-                            const areaKey = areaKeyBySlug[destAreaSlug]
-                            const bucketKey = destBucketSlug ? `${areaKey}-${destBucketSlug}` : ""
-                            const target = (bucketKey && byKey[bucketKey]) || byKey[areaKey]
+                            const target = (destBucketSlug && byKey[idKey(destAreaSlug, destBucketSlug)])
+                                || byKey[idKey(destAreaSlug, "")]
                             if (target) {
                                 moveTargetNoteId = target.noteId
                                 moveTargetLabel = pathOf(target) + (pathOf(target) ? " › " : "") + target.title
@@ -358,7 +356,7 @@ async function getMisfiledNotes(areaList, templateList) {
 
         for (const root of areaRootNotes) visit(root)
         return out
-    }, [WORKFLOW_LABEL, areaList, templateList])
+    }, [LABELS, areaList, templateList])
 }
 
 // Move a note from one parent branch to another (add to new, remove from old),

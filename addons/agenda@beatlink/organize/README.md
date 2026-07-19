@@ -64,7 +64,8 @@ a real id.
 Three top-level container singletons — **Inbox** (`bxs-inbox`), **My Day** (`bx-task`), **Agenda**
 (`bx-calendar`) — then one note per Area (`bxs-circle`), each containing **one bucket per enabled
 template** (in `order`), titled by the template's name. A bucket is a container (Special-templated),
-not an instance of the type it holds; its `#workflowNote` key is `area-<areaSlug>-<templateSlug>`.
+not an instance of the type it holds; it carries `#agendaOrganizeArea=<areaSlug>` plus
+`#agendaOrganizeBucket=<templateSlug>`.
 
 ## 3. The Organize page (`organizePage.jsx`)
 
@@ -76,7 +77,7 @@ re-read it).
 
 The Triage tab loads two vocabularies up front — area-picker's areas (`getAreaSettings()`) and
 agenda's enabled templates (`getTemplateConfig()`) — then `organize.js` does a single backend walk of
-the Inbox / Area subtrees, excluding the structural `#workflowNote` notes, tagging each candidate with
+the Inbox / Area subtrees, excluding the structural (identity-labelled) notes, tagging each candidate with
 the flags each section filters on (`hasTemplate` / `templateId` / `hasArea` / `hasPriority` /
 `hasStartDate` / `isSubtask` / `suggestedArea` / `path` / `preview`). The page keeps that list in state
 and filters it per section; a mutation patches the list in place so the acted-on note leaves its queue.
@@ -104,10 +105,20 @@ hand. `organizeStructure.js`'s `buildStructure(areaList, templateList)` assemble
 area-picker's area list **and** agenda's enabled template list (both loaded by the button's handler via
 `getAreaSettings()` / `getTemplateConfig()`); the walk/find-or-create logic is `organizeProvision.js`.
 
-- **Identity:** each note is tagged **`#workflowNote=<key>`** (e.g. `inbox`, `area-03-legal`,
-  `area-03-legal-goals`) — this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes.
-- **Resolution per node (idempotent, rename-safe):** (1) a note already tagged `#workflowNote=<key>`
+- **Identity:** carried by three independent labels — this addon's analogue of TAM's `#TAMFILEID`,
+  scoped to user notes:
+  - `#agendaOrganizeArea=<areaSlug>` — on an Area root, and on every bucket inside it
+  - `#agendaOrganizeBucket=<templateSlug>` — on a bucket, alongside its area label
+  - `#agendaOrganizeSpecial=<name>` — on the `inbox` / `my-day` / `agenda` singletons
+
+  So an Area root is *area label, no bucket label*; a bucket is *both*. Keeping the two slugs on
+  separate labels means neither is parsed out of a composite string, which is what made renames and
+  area renumbering fragile.
+- **Resolution per node (idempotent, rename-safe):** (1) a note already carrying this exact identity
   → adopt; (2) else a same-titled child under the parent → adopt + tag; (3) else create + tag.
+- **Legacy migration:** trees provisioned before the split carry a single `#workflowNote=<key>`.
+  `migrateStructuralLabels()` re-stamps them onto the three labels and runs first on every
+  provision, so an existing structure is converted in place rather than rebuilt alongside.
 - **Derived vs. seed:** icon (`#iconClass`), `#color`, `~template`, an Area root's `#area`, and a
   bucket's `#alwaysExpanded` are re-asserted on *every* run (self-healing). Note content and
   `seedLabels` are written only on creation, so user edits survive.

@@ -25,7 +25,8 @@ templates and [`area-picker@beatlink`](../area-picker@beatlink/README.md) for th
 - **Workflow Setup** — a tab in the Agenda Editor's **Settings › Workflow Setup**: one button
   provisions the notebook structure by find-or-create: **Inbox**, **My Day**, **Agenda**, and one note
   per Area (the areas defined in area-picker's settings, each with Ideas / Goals / Routines / Projects
-  / Future / Notes buckets below it). Every structural note is tagged **`#workflowNote=<key>`** (this
+  / Future / Notes buckets below it). Every structural note is tagged with its identity labels
+  (**`#agendaOrganizeArea`** / **`#agendaOrganizeBucket`** / **`#agendaOrganizeSpecial`** — this
   addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so it can be resolved later; re-running
   adopts hand-made notes rather than duplicating, and re-keys stale `#area` slugs after an area
   reorder. See [organize/README.md](organize/README.md) for the taxonomy and provisioning model.

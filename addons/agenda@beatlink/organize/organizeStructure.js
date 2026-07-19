@@ -16,11 +16,21 @@
 //
 // buildStructure(areaList, templateList) returns an array of nodes;
 // organizeProvision.js walks it, find-or-creating each note by title at its
-// level and tagging it with #workflowNote=<key> so the addon can resolve it
+// level and tagging it with its identity labels so the addon can resolve it
 // later (see README.md).
 //
+// Identity is carried by three INDEPENDENT labels rather than one composite key:
+//   #agendaOrganizeArea=<areaSlug>       on an area root AND on every bucket in it
+//   #agendaOrganizeBucket=<templateSlug> on a bucket (alongside the area label)
+//   #agendaOrganizeSpecial=<name>        on the Inbox / My Day / Agenda singletons
+// So an area root is "has area, no bucket", a bucket is "has both", and the two
+// slugs are read directly instead of being parsed back out of one string.
+//
 // A node:
-//   key         stable identity written as #workflowNote=<key>
+//   key         stable identity for logging/diffing (not written to the note)
+//   area        #agendaOrganizeArea value, when this node belongs to an area
+//   bucket      #agendaOrganizeBucket value, when this node is a bucket
+//   special     #agendaOrganizeSpecial value, for the top-level singletons
 //   title       the note title matched on / created with
 //   icon        BoxIcons class (without the leading "bx "); re-asserted every run
 //   color       CSS color for the note's #color label; re-asserted every run
@@ -72,14 +82,15 @@ function bucketIcon(slug) {
 
 // Build one Area node (+ one bucket per enabled template) from an area-picker
 // area { slug, name, color } and the managed template list. `slug` is the #area
-// value (e.g. "03-legal") and the area root's #workflowNote key is `area-<slug>`.
-// Each bucket's #workflowNote key is `area-<slug>-<templateSlug>`, its title the
-// template's name, and its ~template the area/Special container template (a
-// bucket is a container, not an instance of the type it holds).
+// value (e.g. "03-legal"); the area root carries #agendaOrganizeArea=<slug> and
+// each bucket carries that SAME area label plus #agendaOrganizeBucket=<tplSlug>,
+// its title the template's name, and its ~template the area/Special container
+// template (a bucket is a container, not an instance of the type it holds).
 function buildAreaNode(area, templateList) {
     const key = `area-${area.slug}`
     return {
         key,
+        area: area.slug,
         title: area.name,
         icon: "bxs-circle",
         color: area.color,
@@ -92,6 +103,8 @@ function buildAreaNode(area, templateList) {
         seedLabels: [],
         children: (templateList || []).map(tpl => ({
             key: `${key}-${tpl.slug}`,
+            area: area.slug,
+            bucket: tpl.slug,
             title: tpl.name,
             icon: bucketIcon(tpl.slug),
             // Buckets inherit their area's color; no other seed labels.
@@ -111,9 +124,9 @@ function buildAreaNode(area, templateList) {
 // Singletons use the Special container template.
 function buildStructure(areaList, templateList) {
     return [
-        { key: "inbox",  title: "Inbox",  icon: "bxs-inbox",   template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
-        { key: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
-        { key: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        { key: "inbox",  special: "inbox",  title: "Inbox",  icon: "bxs-inbox",   template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        { key: "my-day", special: "my-day", title: "My Day", icon: "bx-task",     template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
+        { key: "agenda", special: "agenda", title: "Agenda", icon: "bx-calendar", template: SPECIAL_TEMPLATE_TITLE, seedLabels: [], children: [] },
         ...(areaList || []).map(area => buildAreaNode(area, templateList))
     ]
 }

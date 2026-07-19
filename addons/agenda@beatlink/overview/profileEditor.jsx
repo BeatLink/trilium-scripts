@@ -13,7 +13,8 @@ const ORGANIZE_ICON = "bx bx-sort-down"
 // time (when it's still empty), so a fresh install lands somewhere sensible and
 // collection addons that read agenda's inboxNoteId have a target. Resolution
 // order: a note tagged #inbox (Trilium's own inbox convention), else agenda's
-// provisioned Inbox (#workflowNote=inbox), else a root-level note titled "Inbox".
+// provisioned Inbox (#agendaOrganizeSpecial=inbox), else a root-level note
+// titled "Inbox".
 // Persists the resolved id back into the shared config; a no-op once set (so the
 // user's own later choice is never overwritten). Returns the resolved id or "".
 async function preselectInboxNote(schemaNoteId, configNoteId) {
@@ -23,6 +24,9 @@ async function preselectInboxNote(schemaNoteId, configNoteId) {
     const resolved = await api.runOnBackend(() => {
         let hits = api.searchForNotes("#inbox")
         if (hits.length) return hits[0].noteId
+        hits = api.searchForNotes('#agendaOrganizeSpecial = "inbox"')
+        if (hits.length) return hits[0].noteId
+        // Pre-split tree that hasn't been through migrateStructuralLabels yet.
         hits = api.searchForNotes('#workflowNote = "inbox"')
         if (hits.length) return hits[0].noteId
         hits = api.searchForNotes('note.title = "Inbox" AND note.parents.noteId = "root"')
@@ -108,8 +112,9 @@ function OrganizeNotePicker({ schemaNoteId, configNoteId, initialNoteId }) {
 
 // The Workflow Setup panel: one button that provisions the opinionated notebook
 // structure (Inbox, My Day, Agenda, and one note per area-picker Area, each with
-// its six Type subnotes) by find-or-create, tagging every note with
-// #workflowNote=<key>. Re-runnable and idempotent — notes you already made by
+// its six Type subnotes) by find-or-create, tagging every note with its split
+// identity labels (#agendaOrganizeArea / #agendaOrganizeBucket /
+// #agendaOrganizeSpecial). Re-runnable and idempotent — notes you already made by
 // hand at the right title/level are adopted (tagged) rather than duplicated. See
 // organizeProvision.js. (Formerly a standalone render page; now a tab inside the
 // Agenda Editor's Settings category.)
@@ -135,6 +140,7 @@ function WorkflowSetup() {
     const results = outcome ? outcome.results : null
     const migratedAreaCount = outcome ? outcome.migratedAreaCount : 0
     const merges = outcome && outcome.merged ? outcome.merged.merges : []
+    const labelMigration = outcome ? outcome.labelMigration : null
     const created = results ? results.filter(r => r.created).length : 0
     const adopted = results ? results.filter(r => r.adopted).length : 0
     const existing = results ? results.filter(r => !r.created && !r.adopted).length : 0
@@ -146,7 +152,8 @@ function WorkflowSetup() {
                 <strong> Agenda</strong>, and one note per Area (from area-picker@beatlink's area list,
                 each with Ideas / Goals / Routines / Projects / Future / Notes below it). Notes are
                 matched by title at the right level — an existing match is adopted (tagged
-                <code>#workflowNote</code>) rather than duplicated, and anything missing is created.
+                <code>#agendaOrganizeArea</code> / <code>#agendaOrganizeBucket</code>) rather than
+                duplicated, and anything missing is created.
                 Also re-keys any notes left on an old area slug after an area reorder. Safe to run more
                 than once.
             </p>
@@ -170,6 +177,10 @@ function WorkflowSetup() {
                         ({results.length} total).
                         {migratedAreaCount > 0 &&
                             ` Migrated ${migratedAreaCount} note${migratedAreaCount === 1 ? "" : "s"} to updated area slugs.`}
+                        {labelMigration && labelMigration.migrated > 0 &&
+                            ` Converted ${labelMigration.migrated} structural note${labelMigration.migrated === 1 ? "" : "s"} to the split identity labels.`}
+                        {labelMigration && labelMigration.unparsed.length > 0 &&
+                            ` ${labelMigration.unparsed.length} legacy key${labelMigration.unparsed.length === 1 ? "" : "s"} could not be parsed and were left as-is.`}
                     </div>
                     {merges.length > 0 && (
                         <ul className="workflow-setup-log">

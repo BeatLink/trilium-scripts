@@ -32,7 +32,7 @@ async function getConfigContext() {
 
 // A URL/label-safe slug from a template's display name: lowercased, runs of
 // non-alphanumerics collapsed to a single dash, edges trimmed. Used as the
-// trailing segment of #type and the scaffolding bucket's #workflowNote key.
+// trailing segment of #type and the scaffolding bucket's #agendaOrganizeBucket.
 function slugify(name) {
     return String(name || "")
         .toLowerCase()
