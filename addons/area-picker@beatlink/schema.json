@@ -5,67 +5,67 @@
         "description": "The life areas shown in the Area picker dropdown, in display order.",
         "default": [
             {
-                "key": "01-career",
+                "key": "career",
                 "title": "Career",
                 "color": "red"
             },
             {
-                "key": "02-finances",
+                "key": "finances",
                 "title": "Finances",
                 "color": "red"
             },
             {
-                "key": "03-legal",
+                "key": "legal",
                 "title": "Legal",
                 "color": "red"
             },
             {
-                "key": "04-home",
+                "key": "home",
                 "title": "Home",
                 "color": "darkorange"
             },
             {
-                "key": "05-car",
+                "key": "car",
                 "title": "Car",
                 "color": "darkorange"
             },
             {
-                "key": "06-tech",
+                "key": "tech",
                 "title": "Tech",
                 "color": "darkorange"
             },
             {
-                "key": "07-fitness",
+                "key": "fitness",
                 "title": "Fitness",
                 "color": "gold"
             },
             {
-                "key": "08-grooming",
+                "key": "grooming",
                 "title": "Grooming",
                 "color": "gold"
             },
             {
-                "key": "09-sexual",
+                "key": "sexual",
                 "title": "Sexual",
                 "color": "gold"
             },
             {
-                "key": "10-social",
+                "key": "social",
                 "title": "Social",
                 "color": "lime"
             },
             {
-                "key": "11-mental",
+                "key": "mental",
                 "title": "Mental",
                 "color": "lime"
             },
             {
-                "key": "12-identity",
+                "key": "identity",
                 "title": "Identity",
                 "color": "lime"
             },
             {
-                "key": "13-fun",
+                "key": "fun",
                 "title": "Fun",
                 "color": "magenta"
             }
@@ -74,7 +74,7 @@
             "key": {
                 "type": "string",
                 "label": "Key",
-                "description": "Stable identifier stored on tagged notes — changing this after notes are tagged orphans their #area label.",
+                "description": "Stable identifier stored on tagged notes as #area. Carries no ordering — display order is this list's order — so reordering areas never rewrites a note. Changing a key after notes are tagged orphans their #area label.",
                 "default": ""
             },
             "title": {
