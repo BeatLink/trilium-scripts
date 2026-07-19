@@ -1,7 +1,7 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
-import { getAreaSettings } from "organizeAreas.jsx"
+import { getAreaSettings, AreasPanel } from "organizeAreas.jsx"
 import { getTemplateConfig, TemplatesPanel } from "organizeTemplates.jsx"
 
 const {
@@ -463,10 +463,12 @@ function TriagePanel() {
     )
 }
 
-// The Organize page: two tabs — Triage (the one-at-a-time triage queues) and
+// The Organize page: three tabs — Triage (the one-at-a-time triage queues),
+// Areas (the life-area vocabulary the notebook is scaffolded from), and
 // Templates (manage which #template notes the workflow uses, their order, and
 // whether each is actionable). Templates edits the shared #agendaConfig, so it
-// needs the schema/config note ids agendaSettings resolves.
+// needs the schema/config note ids agendaSettings resolves; Areas edits
+// area-picker's own config and resolves its ids itself.
 export default function OrganizePanel() {
     const [tab, setTab] = useState("triage")
     const [ids, setIds] = useState(null)
@@ -488,6 +490,12 @@ export default function OrganizePanel() {
                     Triage
                 </button>
                 <button
+                    className={"workflow-window-tab" + (tab === "areas" ? " workflow-window-tab-active" : "")}
+                    onClick={() => setTab("areas")}
+                >
+                    Areas
+                </button>
+                <button
                     className={"workflow-window-tab" + (tab === "templates" ? " workflow-window-tab-active" : "")}
                     onClick={() => setTab("templates")}
                 >
@@ -497,6 +505,8 @@ export default function OrganizePanel() {
             <div className="workflow-window-panel">
                 {tab === "triage" ? (
                     <TriagePanel />
+                ) : tab === "areas" ? (
+                    <AreasPanel />
                 ) : ids ? (
                     <TemplatesPanel schemaNoteId={ids.schemaNoteId} configNoteId={ids.configNoteId} />
                 ) : (

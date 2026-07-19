@@ -69,11 +69,19 @@ not an instance of the type it holds; it carries `#agendaOrganizeArea=<areaSlug>
 
 ## 3. The Organize page (`organizePage.jsx`)
 
-Two tabs: **Triage** (the one-at-a-time queues) and **Templates** (the managed-templates panel —
-`TemplatesPanel` from `organizeTemplates.jsx`: a Scan button above a single-tab `SettingsForm`
-(`only="Templates"`) editing the `templates` registry, with `onSaved=applyTemplateLabels` so Save both
-persists the rows and writes the derived labels; Scan mutates config directly and remounts the form to
-re-read it).
+Three tabs: **Triage** (the one-at-a-time queues), **Areas** (the life-area vocabulary), and
+**Templates** (the managed-templates panel — `TemplatesPanel` from `organizeTemplates.jsx`: a Scan
+button above a single-tab `SettingsForm` (`only="Templates"`) editing the `templates` registry, with
+`onSaved=applyTemplateLabels` so Save both persists the rows and writes the derived labels; Scan
+mutates config directly and remounts the form to re-read it).
+
+The **Areas** tab (`AreasPanel` from `organizeAreas.jsx`) edits **area-picker's** config, not agenda's:
+the two addons share the vocabulary by `#areaConfig` discovery, so duplicating it here would let them
+drift. `getAreaConfigIds()` resolves area-picker's schema/config note ids and the panel hands them to
+the same single-tab `SettingsForm` (`only="Areas"`) that area-picker's own settings page uses. When
+area-picker isn't installed the tab explains that instead of erroring. Editing an area's **Title** is
+safe (buckets re-key by name on the next provision run); editing its **Key** orphans every note
+carrying that `#area` value.
 
 The Triage tab loads two vocabularies up front — area-picker's areas (`getAreaSettings()`) and
 agenda's enabled templates (`getTemplateConfig()`) — then `organize.js` does a single backend walk of

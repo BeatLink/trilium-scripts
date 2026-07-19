@@ -47,6 +47,22 @@
     opacity: 0.85;
 }
 
+/* --- Areas settings tab --- */
+
+.organize-areas-blurb {
+    opacity: 0.85;
+    max-width: 70ch;
+    margin-bottom: 12px;
+}
+
+.organize-areas-warning {
+    max-width: 70ch;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--muted-text-color, #888);
+    opacity: 0.85;
+}
+
 .workflow-window-blurb {
     opacity: 0.85;
     max-width: 70ch;
