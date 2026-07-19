@@ -21,6 +21,8 @@ const {
     removeRow,
     addRow,
     moveRow,
+    importBudget,
+    exportBudget,
     formatAmount
 } = require("libBudget.js")
 
@@ -177,6 +179,42 @@ function BudgetTable() {
         })
     }, [mutate])
 
+    // Downloads the note's document as a .json file named after the note.
+    const onExport = useCallback(() => {
+        const blob = new Blob([exportBudget(rows)], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `${note?.title || "budget"}.json`
+        link.click()
+        URL.revokeObjectURL(url)
+    }, [rows, note])
+
+    // Replaces the whole document, so a non-empty budget confirms first.
+    const onImport = useCallback(() => {
+        const input = document.createElement("input")
+        input.type = "file"
+        input.accept = "application/json,.json"
+        input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+            let imported
+            try {
+                imported = importBudget(await file.text())
+            } catch (e) {
+                api.showError(`Could not import budget: ${e.message}`)
+                return
+            }
+            if (rows.length > 0 && !await api.showConfirmDialog(
+                `Replace all ${rows.length} top-level row(s) with ${imported.length} imported row(s)? This cannot be undone.`
+            )) return
+            mutate(() => imported)
+            setCollapsed(new Set())
+            api.showMessage(`Imported ${imported.length} top-level row(s).`)
+        }
+        input.click()
+    }, [rows, mutate])
+
     const onToggle = useCallback(id => {
         setCollapsed(current => {
             const next = new Set(current)
@@ -235,7 +273,11 @@ function BudgetTable() {
                     </tr>
                 </tfoot>
             </table>
-            <Button icon="bx-plus" text="Add Row" onClick={() => onAdd(null)} />
+            <div className="budget-toolbar">
+                <Button icon="bx-plus" text="Add Row" onClick={() => onAdd(null)} />
+                <Button icon="bx-import" text="Import JSON" onClick={onImport} />
+                <Button icon="bx-export" text="Export JSON" onClick={onExport} />
+            </div>
         </div>
     )
 }

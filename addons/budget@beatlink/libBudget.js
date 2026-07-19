@@ -123,6 +123,34 @@ function moveRow(rows, id, delta) {
     return rows.map(row => ({ ...row, children: moveRow(row.children, id, delta) }))
 }
 
+/*
+ * Import accepts the same document shape serializeBudget writes, and also a
+ * bare array of rows. Row ids are regenerated so importing a file twice, or a
+ * file exported from another budget, can never collide with existing ids.
+ * Throws on anything that isn't recognisably a budget so the caller can report
+ * it rather than silently wiping the note.
+ */
+function importBudget(text) {
+    let parsed
+    try {
+        parsed = JSON.parse(String(text).trim())
+    } catch {
+        throw new Error("Not valid JSON.")
+    }
+
+    const rows = Array.isArray(parsed) ? parsed : parsed?.rows
+    if (!Array.isArray(rows)) {
+        throw new Error('Expected a JSON object with a "rows" array.')
+    }
+
+    const reid = row => ({ ...normalizeRow(row), id: newId(), children: row?.children?.map?.(reid) ?? [] })
+    return rows.map(reid)
+}
+
+function exportBudget(rows) {
+    return serializeBudget({ rows })
+}
+
 function formatAmount(value, currency, locale) {
     return new Intl.NumberFormat(locale || undefined, {
         style: "currency",
@@ -142,5 +170,7 @@ module.exports = {
     removeRow,
     addRow,
     moveRow,
+    importBudget,
+    exportBudget,
     formatAmount
 }

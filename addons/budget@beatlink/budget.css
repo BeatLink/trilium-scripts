@@ -146,3 +146,9 @@
     padding-top: 8px;
     font-variant-numeric: tabular-nums;
 }
+
+.budget-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}

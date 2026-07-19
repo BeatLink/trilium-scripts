@@ -36,9 +36,25 @@ both the `render` type and the render relation, and shows the table as its whole
 | Indent arrow | Add a child row under this row |
 | Up / down arrows | Reorder a row among its siblings |
 | Trash | Delete the row and everything under it |
+| Import / Export JSON | Load or download the whole budget as a JSON file (see below) |
 
 A row's **Total** column always shows its effective total; the table footer shows the grand total of
 all top-level rows.
+
+## Import and export
+
+Below the table, **Export JSON** downloads the budget as a `.json` file named after the note, and
+**Import JSON** loads one back in.
+
+Import **replaces the entire budget**, so a non-empty note asks for confirmation first. Row ids are
+regenerated on import, so the same file can be imported into several notes, or twice into one,
+without id collisions. A file that isn't valid budget JSON reports an error and leaves the note
+untouched.
+
+The import format is the [storage format](#storage-format) below; a bare array of rows is also
+accepted, and missing fields fall back to their defaults (`amount` `0`, empty `title`/`notes`/
+`children`). Since amounts are plain numbers, exporting is also the simplest way to hand a budget to
+a spreadsheet or script.
 
 ## Rollup modes
 
