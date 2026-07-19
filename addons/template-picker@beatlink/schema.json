@@ -1,0 +1,34 @@
+{
+    "templates": {
+        "type": "registry",
+        "label": "Templates",
+        "description": "The templates offered by the picker dropdown. Run Scan to pull in every #template note you have; each row's Enabled flag controls whether it appears, and Order sets its position in the dropdown.",
+        "default": {},
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "description": "The label shown in the picker dropdown. Defaults to the template note's title when discovered by Scan; editing it here only changes the dropdown text, not the note.",
+                "default": ""
+            },
+            "templateNoteId": {
+                "type": "note",
+                "label": "Template Note",
+                "description": "The #template note this row assigns. Filled in by Scan; a row whose note no longer exists is skipped by the picker.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "description": "Whether this template appears in the picker dropdown.",
+                "default": true
+            },
+            "order": {
+                "type": "number",
+                "label": "Order",
+                "description": "Position in the dropdown, ascending. Scan appends newly found templates after the highest existing order.",
+                "default": 0
+            }
+        }
+    }
+}

@@ -1,26 +1,50 @@
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
-import { searchForNotes, getActiveContextNote } from "trilium:api"
+import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
+import { getTemplates } from "templateRegistry.jsx"
+
+const NONE_OPTION = { noteId: "none", title: "None" }
 
 export default defineWidget({
     parent: "right-pane",
     position: 1,
     render() {
-        let defaultDropdownOption = [{ noteId: "none", name: "No Templates Found" }]
-        const [existingTemplates, setExistingTemplates] = useState(defaultDropdownOption)
+        const [existingTemplates, setExistingTemplates] = useState([NONE_OPTION])
         const [dropdownValue, setDropdownValue] = useState("none")
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         useEffect(() => {
             (async () => {
-                setExistingTemplates(
-                    (await searchForNotes("#template #!noTemplatePicker orderBy note.title"))
-                        .map(note => ({ noteId: note.noteId, title: note.title }))
-                        .concat({ noteId: "none", title: "None" })
-                )
-                setDropdownValue(
-                    (await getActiveContextNote())
-                        .getRelationValue("template") ?? "none"
-                )
+                const schemaNoteId = await currentNote.getRelationValue("schemaNote")
+                const settingsNoteId = await currentNote.getRelationValue("settingsNote")
+                const configNoteId = await api.runOnBackend((settingsNoteId) => {
+                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+                }, [settingsNoteId])
+                const templates = await getTemplates(schemaNoteId, configNoteId)
+
+                // An install that has never been scanned has an empty registry —
+                // fall back to every #template note so the picker still works out
+                // of the box, rather than showing nothing until the user finds the
+                // settings page.
+                const options = templates.length
+                    ? templates.filter(t => t.enabled).map(t => ({ noteId: t.noteId, title: t.name }))
+                    : (await searchForNotes("#template orderBy note.title"))
+                        .map(n => ({ noteId: n.noteId, title: n.title }))
+
+                const currentTemplate = (await getActiveContextNote())
+                    .getRelationValue("template") ?? "none"
+                // The note's ~template relation can point at a template that is
+                // disabled or missing from the registry — surface that as its own
+                // option instead of silently showing "None", which would misreport
+                // the note as having no template at all.
+                const isUnlisted = currentTemplate !== "none"
+                    && !options.some(o => o.noteId === currentTemplate)
+
+                setExistingTemplates([
+                    NONE_OPTION,
+                    ...options,
+                    ...(isUnlisted ? [{ noteId: currentTemplate, title: "⚠ Not listed" }] : [])
+                ])
+                setDropdownValue(currentTemplate)
             })()
         }, [noteId])
         const saveTemplate = (template) => {
