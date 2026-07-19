@@ -31,8 +31,8 @@ function TemplatesPanel({ schemaNoteId, configNoteId }) {
             <p className="template-picker-blurb">
                 The templates the picker dropdown offers. Run <strong>Scan</strong> to pull in every{" "}
                 <code>#template</code> note you have — newly found ones are added enabled, at the end.
-                Existing rows keep their settings. Untick <strong>Enabled</strong> to hide a template,
-                use the move controls or <strong>Order</strong> to reorder, then click{" "}
+                Existing rows keep their settings and position. Untick <strong>Enabled</strong> to
+                hide a template, use each row's move controls to reorder, then click{" "}
                 <strong>Save</strong>.
             </p>
 

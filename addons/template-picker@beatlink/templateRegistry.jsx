@@ -3,30 +3,33 @@ import { loadSettings, saveSettings } from "libSettingsUI.jsx"
 // The picker's template registry: which #template notes the dropdown offers, in
 // what order. Keyed by note id so a reorder or rename never orphans a row.
 //
-// An entry: { name, templateNoteId, enabled, order }.
-// Scan is discovery only — it adds rows for #template notes not already in the
-// registry and never touches an existing row's name/enabled/order.
+// An entry: { name, templateNoteId, enabled }. There is no order field — the
+// registry's own key order is the display order (the settings form's move
+// controls rewrite the key order, and libsettings preserves it through both the
+// defaults merge and the save), so ordering is never a number to reconcile.
+//
+// Scan is discovery only — it appends rows for #template notes not already in
+// the registry and never touches an existing row.
 
 // Read the registry and drop rows whose note no longer exists. Returns
-// [{ id, noteId, name, enabled, order }] sorted by order.
+// [{ id, noteId, name, enabled }] in registry order.
 export async function getTemplates(schemaNoteId, configNoteId) {
     const settings = await loadSettings(schemaNoteId, configNoteId)
     const entries = Object.entries(settings.templates || {})
 
-    const live = await api.runOnBackend((entries) => {
+    return api.runOnBackend((entries) => {
         return entries
             .filter(([, e]) => e.templateNoteId && api.getNote(e.templateNoteId))
             .map(([id, e]) => ({
-                id, noteId: e.templateNoteId, name: e.name, enabled: e.enabled, order: e.order
+                id, noteId: e.templateNoteId, name: e.name, enabled: e.enabled
             }))
     }, [entries])
-
-    return live.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 }
 
 // Search the tree for every #template note and add a row for any not already in
-// the registry, enabled and appended after the highest existing order. Existing
-// rows are preserved as-is. Returns { added, total }.
+// the registry, enabled. New keys land at the end of the object, which is the
+// end of the display order. Existing rows are preserved as-is, keeping the order
+// the user arranged. Returns { added, total }.
 export async function scanTemplates(schemaNoteId, configNoteId) {
     const settings = await loadSettings(schemaNoteId, configNoteId)
     const registry = { ...(settings.templates || {}) }
@@ -38,16 +41,10 @@ export async function scanTemplates(schemaNoteId, configNoteId) {
         return api.searchForNotes("#template").map(n => ({ noteId: n.noteId, title: n.title }))
     }, [])
 
-    let maxOrder = -1
-    for (const e of Object.values(registry)) maxOrder = Math.max(maxOrder, e.order ?? 0)
-
     let added = 0
     for (const t of found) {
         if (known.has(t.noteId)) continue
-        maxOrder += 1
-        registry[t.noteId] = {
-            name: t.title, templateNoteId: t.noteId, enabled: true, order: maxOrder
-        }
+        registry[t.noteId] = { name: t.title, templateNoteId: t.noteId, enabled: true }
         added += 1
     }
 

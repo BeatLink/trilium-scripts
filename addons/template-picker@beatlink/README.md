@@ -12,9 +12,9 @@ Which templates appear, and in what order, is configured in the addon's settings
 
 Open the addon's settings note and use the **Templates** registry:
 
-- **Scan for templates** searches the tree for every `#template` note and adds a row for any not already listed, enabled, at the end of the order. Existing rows keep their name, enabled state, and order, so scanning again after adding a template is safe.
+- **Scan for templates** searches the tree for every `#template` note and adds a row for any not already listed, enabled, at the end of the list. Existing rows keep their name, enabled state, and position, so scanning again after adding a template is safe.
 - **Enabled** controls whether a template appears in the dropdown.
-- **Order** sets its position in the dropdown, ascending. Use the row move controls or edit the number directly.
+- **Row order** is the dropdown order. Use each row's move-up/move-down controls to rearrange.
 - **Name** is the text shown in the dropdown. It defaults to the template note's title and editing it does not rename the note.
 
 Click **Save** to persist your changes.
