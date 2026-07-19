@@ -9,7 +9,6 @@ import {
     useState,
     FormDropdownList,
     FormTextBox,
-    FormToggle,
     Button
 } from "trilium:preact";
 
@@ -165,7 +164,8 @@ function RecurrencePicker({ constants, onAfterChange }){
             <div>
                 <label>Enabled</label>
                 <div className="enabled-picker">
-                    <FormToggle
+                    <FormToggleButton
+                        label="Enabled"
                         currentValue={recurrenceObj.enabled}
                         onChange={value => {
                             updateRecurrence({ ...recurrenceObj, enabled: value })

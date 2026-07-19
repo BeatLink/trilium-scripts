@@ -71,15 +71,6 @@
 }
 
 .recurrence-picker {
-    /* FormToggle's track is fixed-size; exempt it from the width: 100%
-       rules the agenda widget applies to nested divs. The hidden checkbox
-       inside it is absolutely positioned and keeps its own 100%. */
-    .enabled-picker .switch-button {
-        width: var(--switch-track-width) !important;
-        flex: none;
-        /* No switch name is rendered, so drop the gap meant to separate it. */
-        margin-inline-start: 0;
-    }
     .interval-picker {
         container-type: inline-size;
         > div {
