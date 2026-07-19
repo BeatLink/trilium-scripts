@@ -167,12 +167,15 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [noteId, ids])
 
+    // Subscribe as soon as ids resolve. Gating on `profile` too would drop any
+    // event published before the profile loads: the bus is fire-and-forget with
+    // no history, so a missed event is never redelivered.
     useEffect(() => {
-        if (!ids || !profile) return
+        if (!ids) return
         return subscribe("agenda:tasksChanged", () => {
             updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
         })
-    }, [ids, profile])
+    }, [ids])
 
     useEffect(() => {
         if (!profiles || !profileId) return

@@ -17,10 +17,10 @@ const {
 // Materializes the sorted task list as children of the overview note: attaches
 // each note, stamps a sort key, applies per-note colors, sets branch prefixes,
 // and detaches notes no longer in the list.
-// Note: the backend call is intentionally not awaited, matching the original
-// fire-and-forget behavior.
+// The backend call is awaited by callers: updateTaskLists refreshes the
+// frontend note cache afterwards, which would race a fire-and-forget write.
 function loadNotes(parentNoteId, notesList, prefixDict, colorDict) {
-    api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
+    return api.runOnBackend((parentNoteId, notesList, prefixDict, colorDict) => {
         const sortKeyWidth = String(notesList.length).length
         for (const [index, noteId] of notesList.entries()) {
             api.toggleNoteInParent(true, noteId, parentNoteId, "")
@@ -194,6 +194,13 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         const prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)
         const colorDict = await getColors(data.dateRules, data.colors[profile.colors.selected], sortedNotes)
         await loadNotes(overviewNoteId, sortedNotes, prefixDict, colorDict)
+
+        // All the mutation above happens on the backend, so the frontend note
+        // cache still holds the pre-change tree and the view renders stale.
+        // Wait for the backend -> frontend sync, then refresh the overview note
+        // and every task whose labels/branches we just rewrote.
+        await api.waitUntilSynced()
+        await api.reloadNotes([overviewNoteId, ...sortedNotes])
     }
 
     await setCalendarEvents(profileContext, constants, icalNoteId)
