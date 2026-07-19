@@ -274,6 +274,7 @@ async function getMisfiledNotes(areaList, templateList) {
             for (const child of note.getChildNotes()) {
                 if (seen.has(child.noteId)) continue
                 seen.add(child.noteId)
+                let flagged = false
                 if (!structuralIds.has(child.noteId)) {
                     const { branchArea, branchBucket } = branchContext(child)
                     const noteArea = child.getLabelValue("area") || ""
@@ -297,6 +298,7 @@ async function getMisfiledNotes(areaList, templateList) {
                         templateBucket !== branchBucket
 
                     if (areaMisfiled || typeMisfiled) {
+                        flagged = true
                         // Move target: the note's correct Area (by its #area) and,
                         // if its type maps to a bucket, that bucket under that area.
                         // Best-effort — fall back to area root, or current area if
@@ -346,7 +348,11 @@ async function getMisfiledNotes(areaList, templateList) {
                         })
                     }
                 }
-                visit(child)
+                // A misfiled note's descendants inherit its (wrong) branch context,
+                // so they'd all be flagged for a problem that moving this one note
+                // fixes. Report the topmost offender only; the subtree is re-checked
+                // on the next load, after the move.
+                if (!flagged) visit(child)
             }
         }
 
