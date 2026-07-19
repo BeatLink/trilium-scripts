@@ -15,9 +15,23 @@ is a single note you can edit, revision, and export as one unit.
    name).
 3. Open the note. The table renders as the note body, with an **Add Row** button below it.
 
-The Budget template is a `render` note carrying an inheritable `~renderNote` relation, so every note
-templated from it renders `budgetWidget.jsx` as its entire body instead of a text editor. Applying
-the template is the only wiring needed — there's no marker label to add.
+Applying the template is the only wiring needed — there's no marker label to add.
+
+### How the render relation gets wired
+
+The Budget template is a `render` note, so a templated note renders `budgetWidget.jsx` as its entire
+body instead of showing an editor. The template can't simply carry an inheritable `~renderNote` for
+instances to inherit: TAM applies manifest relations with a plain `setRelation` and only honours the
+`(inheritable)` suffix on *labels*, so a template-level render relation never reaches instances.
+
+Instead `budgetProvision.js` runs as a backend hook on `~runOnAttributeCreation` /
+`~runOnAttributeChange`. When a note gains the Budget template (or a `#budgetTable` label), the hook
+sets `~renderNote` on it if it doesn't already have one — so a render target you pointed elsewhere is
+never clobbered.
+
+Notes that were templated *before* the addon was installed (or while it was disabled) never fired
+that hook. The settings screen has a **Wire Existing Budget Notes** button that walks every note
+using the template plus every `#budgetTable` note and wires the ones still missing a `~renderNote`.
 
 ## Using the table
 
@@ -68,11 +82,13 @@ A budget note's content is a JSON document:
 }
 ```
 
+Because a budget note is a `render` note, no text editor ever touches its content — the document is
+stored as raw JSON rather than arriving wrapped in editor markup.
+
 Only what you typed is stored — totals are always derived at render time from the current rollup
 mode, so switching modes re-interprets an existing budget rather than rewriting it. Content that
-isn't valid budget JSON is treated as an empty budget rather than erroring, so a brand-new note (or
-one converted from a text note, whose content arrives HTML-wrapped) starts as an empty table instead
-of breaking — but any prior content is replaced on the first edit.
+isn't valid budget JSON is treated as an empty budget rather than erroring, so a brand-new note
+starts as an empty table instead of breaking — but any prior content is replaced on the first edit.
 
 ## Limitations
 

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",
@@ -73,7 +73,7 @@
                 "id": "template",
                 "title": "Budget",
                 "type": "render",
-                "mime": "text/html",
+                "mime": "application/json",
                 "sourceUrl": null
             },
             {
@@ -162,6 +162,11 @@
                 "from": "root",
                 "type": "AddonData:template",
                 "to": "template"
+            },
+            {
+                "from": "settings",
+                "type": "provisionNote",
+                "to": "provision"
             },
             {
                 "from": "provision",

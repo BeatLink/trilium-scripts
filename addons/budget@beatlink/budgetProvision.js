@@ -32,39 +32,11 @@ function provision(note) {
 
 const attribute = api.originEntity
 
-// Attribute event: only the two attributes that can make a note a budget note
-// are worth a lookup. Notes templated before this hook was installed are
-// backfilled by the settings screen's "Wire Existing Budget Notes" button,
-// which calls backfill() below.
+// Only the two attributes that can make a note a budget note are worth a lookup.
+// Notes templated before this hook was installed are backfilled by the settings
+// screen's "Wire Existing Budget Notes" button, which does its own walk.
 if (attribute && attribute.name) {
     if (attribute.name === "template" || attribute.name === "budgetTable") {
         provision(api.getNote(attribute.noteId))
     }
 }
-
-// Called from the settings screen via api.runOnBackend.
-function backfill() {
-    let wired = 0
-    const seen = new Set()
-    const candidates = []
-
-    if (templateNoteId) {
-        for (const rel of api.getNote(templateNoteId).getTargetRelations("template")) {
-            const note = rel.getNote()
-            if (note) candidates.push(note)
-        }
-    }
-    for (const note of api.searchForNotes("#budgetTable")) candidates.push(note)
-
-    for (const note of candidates) {
-        if (seen.has(note.noteId)) continue
-        seen.add(note.noteId)
-        if (!note.getRelationValue("renderNote") && isBudgetNote(note)) {
-            provision(note)
-            wired++
-        }
-    }
-    return wired
-}
-
-module.exports = { backfill }

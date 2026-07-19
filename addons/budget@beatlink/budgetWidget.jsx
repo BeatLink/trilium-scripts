@@ -118,8 +118,8 @@ function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange
 }
 
 /*
- * Rendered as the whole body of any note templated from the addon's Budget
- * template, which carries an inheritable `~renderNote` pointing here. The note
+ * Rendered as the whole body of any note whose `~renderNote` points here —
+ * wired by budgetProvision.js when the Budget template is applied. The note
  * being viewed IS the budget note; `api.currentNote` stays this JSX note, so the
  * addon's own schema/settings relations still resolve off it.
  */
