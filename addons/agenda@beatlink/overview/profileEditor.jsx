@@ -134,6 +134,7 @@ function WorkflowSetup() {
 
     const results = outcome ? outcome.results : null
     const migratedAreaCount = outcome ? outcome.migratedAreaCount : 0
+    const merges = outcome && outcome.merged ? outcome.merged.merges : []
     const created = results ? results.filter(r => r.created).length : 0
     const adopted = results ? results.filter(r => r.adopted).length : 0
     const existing = results ? results.filter(r => !r.created && !r.adopted).length : 0
@@ -170,6 +171,21 @@ function WorkflowSetup() {
                         {migratedAreaCount > 0 &&
                             ` Migrated ${migratedAreaCount} note${migratedAreaCount === 1 ? "" : "s"} to updated area slugs.`}
                     </div>
+                    {merges.length > 0 && (
+                        <ul className="workflow-setup-log">
+                            {merges.map(m => (
+                                <li key={m.fromNoteId}>
+                                    <span className="workflow-setup-tag workflow-setup-tag-adopted">merged</span>
+                                    {m.rekeyedInPlace
+                                        ? ` Re-keyed "${m.fromTitle}" to ${m.toKey}.`
+                                        : ` Folded "${m.fromTitle}" into "${m.toTitle}"` +
+                                          ` (${m.movedCount} note${m.movedCount === 1 ? "" : "s"}` +
+                                          `${m.movedContent ? " + content" : ""} moved)` +
+                                          (m.deleted ? " and removed the empty bucket." : ` — kept: ${m.keptReason}.`)}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                     <ul className="workflow-setup-log">
                         {results.map(r => (
                             <li key={r.key} style={{ marginLeft: `${r.depth * 16}px` }}>

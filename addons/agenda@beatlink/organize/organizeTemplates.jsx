@@ -75,10 +75,12 @@ export async function getTemplateConfig() {
 
 // Re-derive the labels agenda reads from the current template config: for each
 // resolved template set #type=<order>-<slug>; set/remove #agendaTaskWidget per
-// `actionable`. Idempotent — safe to run on every Scan / Save. Returns the count
-// of templates whose labels were (re)written.
-async function writeTemplateLabels(list) {
-    return api.runOnBackend((list, typeLabel, taskWidgetLabel) => {
+// `actionable`. `disabledNoteIds` get both labels stripped — #type is a derived
+// value, so a template that leaves the enabled set must not keep a stale one
+// (agenda's widgets key on it). Idempotent — safe to run on every Scan / Save.
+// Returns the count of templates whose labels were (re)written.
+async function writeTemplateLabels(list, disabledNoteIds) {
+    return api.runOnBackend((list, disabledNoteIds, typeLabel, taskWidgetLabel) => {
         let count = 0
         for (const t of list) {
             const note = api.getNote(t.noteId)
@@ -88,8 +90,14 @@ async function writeTemplateLabels(list) {
             else note.removeLabel(taskWidgetLabel)
             count++
         }
+        for (const noteId of disabledNoteIds) {
+            const note = api.getNote(noteId)
+            if (!note) continue
+            note.removeLabel(typeLabel)
+            note.removeLabel(taskWidgetLabel)
+        }
         return count
-    }, [list, TYPE_LABEL, TASK_WIDGET_LABEL])
+    }, [list, disabledNoteIds, TYPE_LABEL, TASK_WIDGET_LABEL])
 }
 
 // The Save-side counterpart, wired as the Templates SettingsForm's `onSaved`:
@@ -97,7 +105,10 @@ async function writeTemplateLabels(list) {
 // #agendaTaskWidget) onto every enabled+resolved template. Returns the count.
 export async function applyTemplateLabels() {
     const resolved = await getTemplateConfig()
-    return writeTemplateLabels(resolved.filter(t => t.enabled))
+    return writeTemplateLabels(
+        resolved.filter(t => t.enabled),
+        resolved.filter(t => !t.enabled).map(t => t.noteId)
+    )
 }
 
 // Scan Trilium for every #template note and reconcile the registry: add an entry
