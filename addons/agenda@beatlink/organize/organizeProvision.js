@@ -119,22 +119,25 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
         const byKey = {}
         for (const n of tagged) byKey[n.getLabelValue(workflowLabel)] = n
 
-        // Split a bucket key into its area and template halves. A template slug
-        // may itself contain dashes, so match the area prefix against the known
-        // area slugs (and any alias-resolvable name) rather than splitting on
-        // the first dash.
-        function splitBucketKey(key) {
-            const m = key.match(/^area-(\d\d-[a-z]+)-(.+)$/)
+        // Split a structural key into its area and (optional) template halves.
+        // Two shapes exist: an area ROOT is "area-<areaSlug>" and a BUCKET is
+        // "area-<areaSlug>-<templateSlug>". A template slug may itself contain
+        // dashes, so the area half is matched as the fixed "<NN>-<name>" prefix
+        // and everything after it is the template slug (absent for a root).
+        function splitKey(key) {
+            const m = key.match(/^area-(\d\d-[a-z]+)(?:-(.+))?$/)
             if (!m) return null
-            return { areaSlug: m[1], templateSlug: m[2] }
+            return { areaSlug: m[1], templateSlug: m[2] || "" }
         }
 
-        // Re-key a stale bucket key to what it would be in today's vocabulary,
-        // or "" if either half can't be resolved to a live area/template.
+        // Re-key a stale structural key to what it would be in today's
+        // vocabulary, or "" if either half can't be resolved. Handles roots
+        // (no template half) and buckets alike.
         function currentKeyFor(parts) {
             const areaName = parts.areaSlug.replace(/^\d\d-/, "")
             const liveAreaSlug = areaSlugByName[aliases[areaName] || areaName]
             if (!liveAreaSlug) return ""
+            if (!parts.templateSlug) return `area-${liveAreaSlug}`
             // slugify() is lossy (all non-alphanumerics collapse to "-"), so a
             // stale slug cannot be inverted back to a name. A renamed template's
             // old slug is only resolvable via an explicit alias.
@@ -149,7 +152,7 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
 
         for (const note of tagged) {
             const key = note.getLabelValue(workflowLabel)
-            const parts = key ? splitBucketKey(key) : null
+            const parts = key ? splitKey(key) : null
             if (!parts) continue
 
             const targetKey = currentKeyFor(parts)
@@ -196,13 +199,26 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
             let keptReason = ""
 
             if (!dryRun) {
+                // Move each child and confirm the move from the CHILD's own
+                // parent list. Re-reading the husk's getChildNotes() instead
+                // would read a cached entity that still lists the children we
+                // just moved, so every husk would look non-empty and never be
+                // deleted.
+                const stuck = []
                 for (const child of children) {
                     api.toggleNoteInParent(true, child.noteId, survivor.noteId, "")
                     api.toggleNoteInParent(false, child.noteId, note.noteId, "")
+                    const moved = api.getNote(child.noteId)
+                    const parentIds = moved ? moved.getParentNotes().map(p => p.noteId) : []
+                    if (!moved || parentIds.indexOf(survivor.noteId) === -1 ||
+                        parentIds.indexOf(note.noteId) !== -1) {
+                        stuck.push(child.title)
+                    }
                 }
 
                 // Migrate the husk's own body onto the survivor before emptying
                 // it, so deletion can't drop content.
+                let contentStuck = false
                 if (movedContent) {
                     const target = api.getNote(survivor.noteId)
                     if (target && target.type === "text") {
@@ -210,30 +226,24 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
                         target.setContent(`${existing}<h2>Merged from ${note.title}</h2>${staleBody}`)
                         note.setContent("")
                     } else {
+                        contentStuck = true
                         keptReason = "survivor is not a text note; content left in place"
                     }
                 }
 
-                // Re-read and verify actually empty before the irreversible step.
-                const husk = api.getNote(note.noteId)
-                if (!husk) {
+                // Delete only on verified-empty: every child confirmed re-parented
+                // and the body confirmed migrated.
+                if (stuck.length > 0) {
+                    keptReason = `${stuck.length} child note(s) did not move: ${stuck.join(", ")}`
+                }
+                if (!keptReason && !contentStuck) {
+                    note.deleteNote()
                     deleted = true
                 } else {
-                    const remainingChildren = husk.getChildNotes().length
-                    if (remainingChildren > 0) {
-                        keptReason = `${remainingChildren} child note(s) did not move`
-                    } else if (!keptReason && !isBlank(bodyOf(husk))) {
-                        keptReason = "content remains on the note"
-                    }
-                    if (!keptReason) {
-                        husk.deleteNote()
-                        deleted = true
-                    } else {
-                        // Kept for inspection — drop the key so provisioning
-                        // stops resolving to it, and point at where it folded.
-                        husk.removeLabel(workflowLabel)
-                        husk.setLabel("workflowNoteMerged", targetKey)
-                    }
+                    // Kept for inspection — drop the key so provisioning
+                    // stops resolving to it, and point at where it folded.
+                    note.removeLabel(workflowLabel)
+                    note.setLabel("workflowNoteMerged", targetKey)
                 }
             }
 
