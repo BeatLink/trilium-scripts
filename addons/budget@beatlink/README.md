@@ -15,23 +15,17 @@ is a single note you can edit, revision, and export as one unit.
    name).
 3. Open the note. The table renders as the note body, with an **Add Row** button below it.
 
-Applying the template is the only wiring needed — there's no marker label to add.
+Applying the template is the only wiring needed — there's no marker label to add and no script to
+provision anything.
 
 ### How the render relation gets wired
 
-The Budget template is a `render` note, so a templated note renders `budgetWidget.jsx` as its entire
-body instead of showing an editor. The template can't simply carry an inheritable `~renderNote` for
-instances to inherit: TAM applies manifest relations with a plain `setRelation` and only honours the
-`(inheritable)` suffix on *labels*, so a template-level render relation never reaches instances.
-
-Instead `budgetProvision.js` runs as a backend hook on `~runOnAttributeCreation` /
-`~runOnAttributeChange`. When a note gains the Budget template (or a `#budgetTable` label), the hook
-sets `~renderNote` on it if it doesn't already have one — so a render target you pointed elsewhere is
-never clobbered.
-
-Notes that were templated *before* the addon was installed (or while it was disabled) never fired
-that hook. The settings screen has a **Wire Existing Budget Notes** button that walks every note
-using the template plus every `#budgetTable` note and wires the ones still missing a `~renderNote`.
+The Budget template is a `render` note carrying `~renderNote` → `budgetWidget.jsx`. Trilium inherits
+a template's attributes by its instances *unconditionally* — the `isInheritable` flag only gates the
+parent/subtree cascade, not the template path (`BNote.__getAttributes` in
+[`bnote.ts`](https://github.com/TriliumNext/Trilium/blob/main/packages/trilium-core/src/becca/entities/bnote.ts),
+which excludes only the `#template` marker label itself). So every note using the template picks up
+both the `render` type and the render relation, and shows the table as its whole body.
 
 ## Using the table
 
