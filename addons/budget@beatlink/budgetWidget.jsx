@@ -21,12 +21,14 @@ const {
     removeRow,
     addRow,
     moveRow,
+    resolveColumns,
+    parentIds,
     importBudget,
     exportBudget,
     formatAmount
 } = require("libBudget.js")
 
-function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange, onAdd, onRemove, onMove }) {
+function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle, onChange, onAdd, onRemove, onMove }) {
     const info = totals[row.id] || { total: 0, isLeaf: true, over: false }
     const hasChildren = row.children.length > 0
     const isCollapsed = collapsed.has(row.id)
@@ -56,43 +58,51 @@ function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange
                         />
                     </div>
                 </td>
-                <td className="budget-cell-amount">
-                    {amountDerived ? (
-                        <span className="budget-derived">{formatAmount(info.total, settings.currency, settings.locale)}</span>
-                    ) : (
-                        <input
-                            type="number"
-                            step="0.01"
-                            className="budget-input budget-input-amount"
-                            value={row.amount}
-                            onInput={e => onChange(row.id, { amount: parseFloat(e.target.value) || 0 })}
-                        />
-                    )}
-                </td>
-                <td className="budget-cell-total">
-                    <span className={info.over ? "budget-total budget-total-over" : "budget-total"}>
-                        {formatAmount(info.total, settings.currency, settings.locale)}
-                    </span>
-                    {settings.rollupMode === "cap" && hasChildren && (
-                        <span className="budget-subtotal">
-                            {formatAmount(info.childrenTotal, settings.currency, settings.locale)} used
-                        </span>
-                    )}
-                    {settings.rollupMode === "additive" && hasChildren && (
-                        <span className="budget-subtotal">
-                            incl. {formatAmount(row.amount, settings.currency, settings.locale)} own
-                        </span>
-                    )}
-                </td>
-                <td className="budget-cell-notes">
-                    <input
-                        type="text"
-                        className="budget-input budget-input-notes"
-                        value={row.notes}
-                        placeholder="Notes"
-                        onInput={e => onChange(row.id, { notes: e.target.value })}
-                    />
-                </td>
+                {columns.map(column => {
+                    if (column.key === "amount") return (
+                        <td className="budget-cell-amount" key={column.key}>
+                            {amountDerived ? (
+                                <span className="budget-derived">{formatAmount(info.total, settings.currency, settings.locale)}</span>
+                            ) : (
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="budget-input budget-input-amount"
+                                    value={row.amount}
+                                    onInput={e => onChange(row.id, { amount: parseFloat(e.target.value) || 0 })}
+                                />
+                            )}
+                        </td>
+                    )
+                    if (column.key === "total") return (
+                        <td className="budget-cell-total" key={column.key}>
+                            <span className={info.over ? "budget-total budget-total-over" : "budget-total"}>
+                                {formatAmount(info.total, settings.currency, settings.locale)}
+                            </span>
+                            {settings.rollupMode === "cap" && hasChildren && (
+                                <span className="budget-subtotal">
+                                    {formatAmount(info.childrenTotal, settings.currency, settings.locale)} used
+                                </span>
+                            )}
+                            {settings.rollupMode === "additive" && hasChildren && (
+                                <span className="budget-subtotal">
+                                    incl. {formatAmount(row.amount, settings.currency, settings.locale)} own
+                                </span>
+                            )}
+                        </td>
+                    )
+                    return (
+                        <td className="budget-cell-notes" key={column.key}>
+                            <input
+                                type="text"
+                                className="budget-input budget-input-notes"
+                                value={row.notes}
+                                placeholder="Notes"
+                                onInput={e => onChange(row.id, { notes: e.target.value })}
+                            />
+                        </td>
+                    )
+                })}
                 <td className="budget-cell-actions">
                     <button className="budget-action bx bx-subdirectory-right" title="Add child row" onClick={() => onAdd(row.id)} />
                     <button className="budget-action bx bx-up-arrow-alt" title="Move up" onClick={() => onMove(row.id, -1)} />
@@ -108,6 +118,7 @@ function BudgetRow({ row, depth, totals, collapsed, settings, onToggle, onChange
                     totals={totals}
                     collapsed={collapsed}
                     settings={settings}
+                    columns={columns}
                     onToggle={onToggle}
                     onChange={onChange}
                     onAdd={onAdd}
@@ -215,6 +226,11 @@ function BudgetTable() {
         input.click()
     }, [rows, mutate])
 
+    const parents = useMemo(() => (rows ? parentIds(rows) : []), [rows])
+
+    const onExpandAll = useCallback(() => setCollapsed(new Set()), [])
+    const onCollapseAll = useCallback(() => setCollapsed(new Set(parents)), [parents])
+
     const onToggle = useCallback(id => {
         setCollapsed(current => {
             const next = new Set(current)
@@ -228,6 +244,13 @@ function BudgetTable() {
         [rows, settings]
     )
 
+    // Only the visible columns are rendered; order follows the stored config.
+    const columns = useMemo(
+        () => resolveColumns(settings?.columns).filter(c => c.visible),
+        [settings]
+    )
+    const showTotalColumn = columns.some(c => c.key === "total")
+
     if (!rows || !settings) return <div className="budget-table-widget">Loading...</div>
 
     return (
@@ -236,9 +259,9 @@ function BudgetTable() {
                 <thead>
                     <tr>
                         <th className="budget-cell-title">Title</th>
-                        <th className="budget-cell-amount">Amount Budgeted</th>
-                        <th className="budget-cell-total">Total</th>
-                        <th className="budget-cell-notes">Notes</th>
+                        {columns.map(column => (
+                            <th className={`budget-cell-${column.key}`} key={column.key}>{column.label}</th>
+                        ))}
                         <th className="budget-cell-actions" />
                     </tr>
                 </thead>
@@ -251,6 +274,7 @@ function BudgetTable() {
                             totals={totals}
                             collapsed={collapsed}
                             settings={settings}
+                            columns={columns}
                             onToggle={onToggle}
                             onChange={onChange}
                             onAdd={onAdd}
@@ -259,22 +283,42 @@ function BudgetTable() {
                         />
                     ))}
                     {rows.length === 0 && (
-                        <tr><td colSpan="5" className="budget-empty">No rows yet.</td></tr>
+                        <tr><td colSpan={columns.length + 2} className="budget-empty">No rows yet.</td></tr>
                     )}
                 </tbody>
                 <tfoot>
                     <tr>
                         <td className="budget-cell-title budget-grand-label">Grand Total</td>
-                        <td />
-                        <td className="budget-cell-total budget-grand-total">
-                            {formatAmount(grandTotal(rows, totals), settings.currency, settings.locale)}
+                        {/* The total lands under whichever position the Total column now
+                            occupies; with that column hidden it falls back to the last cell
+                            so the figure is never dropped. */}
+                        {columns.map(column => (
+                            column.key === "total" ? (
+                                <td className="budget-cell-total budget-grand-total" key={column.key}>
+                                    {formatAmount(grandTotal(rows, totals), settings.currency, settings.locale)}
+                                </td>
+                            ) : <td key={column.key} />
+                        ))}
+                        <td className={showTotalColumn ? "" : "budget-cell-total budget-grand-total"}>
+                            {!showTotalColumn && formatAmount(grandTotal(rows, totals), settings.currency, settings.locale)}
                         </td>
-                        <td colSpan="2" />
                     </tr>
                 </tfoot>
             </table>
             <div className="budget-toolbar">
                 <Button icon="bx-plus" text="Add Row" onClick={() => onAdd(null)} />
+                <Button
+                    icon="bx-expand-vertical"
+                    text="Expand All"
+                    onClick={onExpandAll}
+                    disabled={collapsed.size === 0}
+                />
+                <Button
+                    icon="bx-collapse-vertical"
+                    text="Collapse All"
+                    onClick={onCollapseAll}
+                    disabled={collapsed.size === parents.length}
+                />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
                 <Button icon="bx-export" text="Export JSON" onClick={onExport} />
             </div>

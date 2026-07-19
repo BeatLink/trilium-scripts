@@ -152,3 +152,25 @@
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* Column visibility/order rows on the settings page. */
+.budget-column-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+}
+
+.budget-column-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.budget-column-status {
+    margin-left: 10px;
+    color: var(--muted-text-color);
+}

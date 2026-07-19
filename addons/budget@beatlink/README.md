@@ -33,6 +33,7 @@ both the `render` type and the render relation, and shows the table as its whole
 |---|---|
 | Title / Amount / Notes cells | Edit in place; every change saves to the note immediately |
 | Chevron | Collapse or expand a row's children |
+| Expand All / Collapse All | Expand or collapse every row with children at once |
 | Indent arrow | Add a child row under this row |
 | Up / down arrows | Reorder a row among its siblings |
 | Trash | Delete the row and everything under it |
@@ -40,6 +41,10 @@ both the `render` type and the render relation, and shows the table as its whole
 
 A row's **Total** column always shows its effective total; the table footer shows the grand total of
 all top-level rows.
+
+Which rows are collapsed is view state, not part of the document — it isn't written to the note, so
+it resets when you navigate away and is never shared between viewers. **Expand All** and **Collapse
+All** are disabled when they would do nothing (nothing is collapsed, or everything already is).
 
 ## Import and export
 
@@ -66,6 +71,20 @@ selects how a parent row relates to its children:
 | **Computed** (default) | A parent's amount *is* the sum of its children. Its own amount cell is read-only and shows the derived total. |
 | **Own + children** | A parent carries its own amount, and its total is that amount plus its children's sum. The Total column notes how much of it is the row's own. |
 | **Budget cap** | A parent's amount is an allocation you type in. Its children's sum is shown beneath the total as "used", and the row turns red when children exceed the allocation. |
+
+## Columns
+
+The **Columns** tab on the settings screen controls which columns the table shows and the order they
+appear in. Tick a column to show it, and use the arrows to move it earlier or later.
+
+**Title** is always the first column and the row actions always the last, so neither is listed —
+Title carries the collapse chevron and the indentation that makes nesting readable, so hiding or
+moving it would leave the table unnavigable. **Amount Budgeted**, **Total**, and **Notes** can each
+be hidden or reordered freely, including hiding all three.
+
+With the **Total** column hidden the grand total still renders in the footer's last cell rather than
+being dropped. A column added by a future version appears automatically in an existing config, and a
+stored column that no longer exists is ignored, so a config never has to be reset across an upgrade.
 
 **Currency** (ISO 4217, e.g. `USD`, `JMD`) and **Locale** (e.g. `en-US`; blank uses the system
 default) control amount formatting. Settings are stored in a persisted note via TAM's

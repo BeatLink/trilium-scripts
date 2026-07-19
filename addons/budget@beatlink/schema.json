@@ -10,6 +10,21 @@
         ],
         "default": "computed"
     },
+    "columns": {
+        "type": "list",
+        "label": "Columns",
+        "hidden": true,
+        "description": "Ordered column visibility, edited by the Columns tab rather than as a schema field",
+        "itemSchema": {
+            "key": {"type": "string", "label": "Column", "default": ""},
+            "visible": {"type": "boolean", "label": "Visible", "default": true}
+        },
+        "default": [
+            {"key": "amount", "visible": true},
+            {"key": "total", "visible": true},
+            {"key": "notes", "visible": true}
+        ]
+    },
     "currency": {
         "type": "string",
         "label": "Currency Code",

@@ -124,6 +124,69 @@ function moveRow(rows, id, delta) {
 }
 
 /*
+ * The optional columns, in their default order. Title is deliberately absent:
+ * it carries the twisty and the indentation, so it is always rendered first and
+ * can be neither hidden nor moved. Actions are likewise always last.
+ */
+const COLUMNS = [
+    { key: "amount", label: "Amount Budgeted" },
+    { key: "total", label: "Total" },
+    { key: "notes", label: "Notes" }
+]
+
+/*
+ * Reconciles a stored column list against COLUMNS, so the widget always gets
+ * every known column exactly once, in the stored order. Unknown keys (a column
+ * removed in a later version) are dropped and columns missing from the stored
+ * list (one added in a later version) are appended visible, which keeps an old
+ * config forward-compatible instead of losing a column.
+ */
+function resolveColumns(stored) {
+    const list = Array.isArray(stored) ? stored : []
+    const seen = new Set()
+    const resolved = []
+
+    for (const entry of list) {
+        const column = COLUMNS.find(c => c.key === entry?.key)
+        if (column && !seen.has(column.key)) {
+            seen.add(column.key)
+            resolved.push({ ...column, visible: entry.visible !== false })
+        }
+    }
+    for (const column of COLUMNS) {
+        if (!seen.has(column.key)) resolved.push({ ...column, visible: true })
+    }
+    return resolved
+}
+
+// Moves a column within the list; out-of-range moves are no-ops so the caller
+// can wire up/down buttons without bounds-checking at the edges.
+function moveColumn(columns, key, delta) {
+    const index = columns.findIndex(c => c.key === key)
+    if (index === -1) return columns
+    const target = index + delta
+    if (target < 0 || target >= columns.length) return columns
+    const next = [...columns]
+    const [moved] = next.splice(index, 1)
+    next.splice(target, 0, moved)
+    return next
+}
+
+// Ids of every row that has children — the rows a collapse-all should collapse.
+// Leaves are excluded so the collapsed set never carries ids that do nothing.
+function parentIds(rows) {
+    const ids = []
+    function walk(row) {
+        if (row.children.length > 0) {
+            ids.push(row.id)
+            row.children.forEach(walk)
+        }
+    }
+    rows.forEach(walk)
+    return ids
+}
+
+/*
  * Import accepts the same document shape serializeBudget writes, and also a
  * bare array of rows. Row ids are regenerated so importing a file twice, or a
  * file exported from another budget, can never collide with existing ids.
@@ -170,6 +233,10 @@ module.exports = {
     removeRow,
     addRow,
     moveRow,
+    COLUMNS,
+    resolveColumns,
+    moveColumn,
+    parentIds,
     importBudget,
     exportBudget,
     formatAmount
