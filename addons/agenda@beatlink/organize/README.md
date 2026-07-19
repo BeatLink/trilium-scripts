@@ -26,7 +26,8 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 ### Areas
 The area vocabulary comes from **[`area-picker@beatlink`](../../area-picker@beatlink/)**, not this
 module. Organize discovers area-picker's settings note by its `#areaConfig` label and loads its
-`areas` list (`{ key, title, color }`, `key` = the `#area` slug like `01-career`) via
+`areas` list (`{ key, title, color }`, `key` = the `#area` slug like `career` — stable and
+order-free, so reordering areas never rewrites a tagged note) via
 [`organizeAreas.jsx`](organizeAreas.jsx) → `getAreaSettings()`, which normalizes it to
 `{ slug, name, color }`. The assign-area picker, the misfiled check, and Setup provisioning all read
 this one list, so editing areas in area-picker's settings changes them everywhere. area-picker ships
@@ -130,9 +131,12 @@ area-picker's area list **and** agenda's enabled template list (both loaded by t
 - **Derived vs. seed:** icon (`#iconClass`), `#color`, `~template`, an Area root's `#area`, and a
   bucket's `#alwaysExpanded` are re-asserted on *every* run (self-healing). Note content and
   `seedLabels` are written only on creation, so user edits survive.
-- **Area-slug migration:** after the walk, `migrateAreaSlugs()` re-keys every note carrying `#area`
-  by its stable name-part, rewriting `#area` + `#color` when the number drifted (e.g. after an area
-  reorder). Run the Setup button after any area reorder to apply it.
+- **Area-slug migration:** after the walk, `migrateAreaSlugs()` normalizes every note carrying
+  `#area` onto area-picker's stable keys — stripping the legacy `<NN>-` prefix and applying
+  `AREA_ALIASES` for folded areas — rewriting `#area` + `#color` when the value changes. Idempotent:
+  an already-stable value resolves to itself, so re-running migrates nothing. Reordering areas no
+  longer rewrites notes at all; display order comes from the config list's position (see
+  `getSortValueMaps` in [`../overview/libAgendaConfig.js`](../overview/libAgendaConfig.js)).
 - **Structural templates** are resolved live by title (`7. Area` for area roots, `8. Special` for all
   containers, including the per-template buckets), so provisioning degrades gracefully if a template
   note is missing — the note is still created and tagged, just without a `~template` relation. The

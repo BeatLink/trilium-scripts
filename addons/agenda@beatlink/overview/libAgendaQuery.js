@@ -78,9 +78,15 @@ async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
         Object.values(allowedByGroup).every(allowed => allowed.includes(noteId)))
 }
 
-async function sortNoteIds(sortString, noteIds) {
+// `valueMaps` (see libAgendaConfig.getSortValueMaps) orders attributes whose
+// stored values are order-free stable slugs — #area sorts by its configured
+// position rather than alphabetically. Resolved per call so an area reorder
+// takes effect without a reload; callers that already hold the maps can pass
+// them in to skip the lookup.
+async function sortNoteIds(sortString, noteIds, valueMaps) {
     const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
-    const sorted = multisort.sortChildNotes(sortString, notes)
+    const maps = valueMaps ?? await config.getSortValueMaps()
+    const sorted = multisort.sortChildNotes(sortString, notes, maps)
     return sorted.map(note => note.noteId)
 }
 

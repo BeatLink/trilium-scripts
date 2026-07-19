@@ -311,19 +311,19 @@
                 "name": "Area",
                 "profileId": "default",
                 "children": {
-                    "01-career": { "name": "Career", "type": "search", "rule": "#area='01-career'", "enabled": true },
-                    "02-finances": { "name": "Finances", "type": "search", "rule": "#area='02-finances'", "enabled": true },
-                    "03-legal": { "name": "Legal", "type": "search", "rule": "#area='03-legal'", "enabled": true },
-                    "04-home": { "name": "Home", "type": "search", "rule": "#area='04-home'", "enabled": true },
-                    "05-car": { "name": "Car", "type": "search", "rule": "#area='05-car'", "enabled": true },
-                    "06-tech": { "name": "Tech", "type": "search", "rule": "#area='06-tech'", "enabled": true },
-                    "07-fitness": { "name": "Fitness", "type": "search", "rule": "#area='07-fitness'", "enabled": true },
-                    "08-grooming": { "name": "Grooming", "type": "search", "rule": "#area='08-grooming'", "enabled": true },
-                    "09-sexual": { "name": "Sexual", "type": "search", "rule": "#area='09-sexual'", "enabled": true },
-                    "10-social": { "name": "Social", "type": "search", "rule": "#area='10-social'", "enabled": true },
-                    "11-mental": { "name": "Mental", "type": "search", "rule": "#area='11-mental'", "enabled": true },
-                    "12-identity": { "name": "Identity", "type": "search", "rule": "#area='12-identity'", "enabled": true },
-                    "13-fun": { "name": "Fun", "type": "search", "rule": "#area='13-fun'", "enabled": true },
+                    "career": { "name": "Career", "type": "search", "rule": "#area='career'", "enabled": true },
+                    "finances": { "name": "Finances", "type": "search", "rule": "#area='finances'", "enabled": true },
+                    "legal": { "name": "Legal", "type": "search", "rule": "#area='legal'", "enabled": true },
+                    "home": { "name": "Home", "type": "search", "rule": "#area='home'", "enabled": true },
+                    "car": { "name": "Car", "type": "search", "rule": "#area='car'", "enabled": true },
+                    "tech": { "name": "Tech", "type": "search", "rule": "#area='tech'", "enabled": true },
+                    "fitness": { "name": "Fitness", "type": "search", "rule": "#area='fitness'", "enabled": true },
+                    "grooming": { "name": "Grooming", "type": "search", "rule": "#area='grooming'", "enabled": true },
+                    "sexual": { "name": "Sexual", "type": "search", "rule": "#area='sexual'", "enabled": true },
+                    "social": { "name": "Social", "type": "search", "rule": "#area='social'", "enabled": true },
+                    "mental": { "name": "Mental", "type": "search", "rule": "#area='mental'", "enabled": true },
+                    "identity": { "name": "Identity", "type": "search", "rule": "#area='identity'", "enabled": true },
+                    "fun": { "name": "Fun", "type": "search", "rule": "#area='fun'", "enabled": true },
                     "none": { "name": "No Area", "type": "search", "rule": "#!area OR #area=''", "enabled": true }
                 }
             }
@@ -422,19 +422,19 @@
             "area": {
                 "name": "Area", "type": "label", "label": "area",
                 "children": {
-                    "01-career": { "labelValue": "01-career", "display": "Career" },
-                    "02-finances": { "labelValue": "02-finances", "display": "Finances" },
-                    "03-legal": { "labelValue": "03-legal", "display": "Legal" },
-                    "04-home": { "labelValue": "04-home", "display": "Home" },
-                    "05-car": { "labelValue": "05-car", "display": "Car" },
-                    "06-tech": { "labelValue": "06-tech", "display": "Tech" },
-                    "07-fitness": { "labelValue": "07-fitness", "display": "Fitness" },
-                    "08-grooming": { "labelValue": "08-grooming", "display": "Grooming" },
-                    "09-sexual": { "labelValue": "09-sexual", "display": "Sexual" },
-                    "10-social": { "labelValue": "10-social", "display": "Social" },
-                    "11-mental": { "labelValue": "11-mental", "display": "Mental" },
-                    "12-identity": { "labelValue": "12-identity", "display": "Identity" },
-                    "13-fun": { "labelValue": "13-fun", "display": "Fun" }
+                    "career": { "labelValue": "career", "display": "Career" },
+                    "finances": { "labelValue": "finances", "display": "Finances" },
+                    "legal": { "labelValue": "legal", "display": "Legal" },
+                    "home": { "labelValue": "home", "display": "Home" },
+                    "car": { "labelValue": "car", "display": "Car" },
+                    "tech": { "labelValue": "tech", "display": "Tech" },
+                    "fitness": { "labelValue": "fitness", "display": "Fitness" },
+                    "grooming": { "labelValue": "grooming", "display": "Grooming" },
+                    "sexual": { "labelValue": "sexual", "display": "Sexual" },
+                    "social": { "labelValue": "social", "display": "Social" },
+                    "mental": { "labelValue": "mental", "display": "Mental" },
+                    "identity": { "labelValue": "identity", "display": "Identity" },
+                    "fun": { "labelValue": "fun", "display": "Fun" }
                 }
             },
             "interval": {
@@ -497,19 +497,19 @@
             "area": {
                 "name": "Area", "type": "label", "label": "area",
                 "children": {
-                    "01-career": { "labelValue": "01-career", "display": "red" },
-                    "02-finances": { "labelValue": "02-finances", "display": "red" },
-                    "03-legal": { "labelValue": "03-legal", "display": "red" },
-                    "04-home": { "labelValue": "04-home", "display": "darkorange" },
-                    "05-car": { "labelValue": "05-car", "display": "darkorange" },
-                    "06-tech": { "labelValue": "06-tech", "display": "darkorange" },
-                    "07-fitness": { "labelValue": "07-fitness", "display": "gold" },
-                    "08-grooming": { "labelValue": "08-grooming", "display": "gold" },
-                    "09-sexual": { "labelValue": "09-sexual", "display": "gold" },
-                    "10-social": { "labelValue": "10-social", "display": "lime" },
-                    "11-mental": { "labelValue": "11-mental", "display": "lime" },
-                    "12-identity": { "labelValue": "12-identity", "display": "lime" },
-                    "13-fun": { "labelValue": "13-fun", "display": "magenta" }
+                    "career": { "labelValue": "career", "display": "red" },
+                    "finances": { "labelValue": "finances", "display": "red" },
+                    "legal": { "labelValue": "legal", "display": "red" },
+                    "home": { "labelValue": "home", "display": "darkorange" },
+                    "car": { "labelValue": "car", "display": "darkorange" },
+                    "tech": { "labelValue": "tech", "display": "darkorange" },
+                    "fitness": { "labelValue": "fitness", "display": "gold" },
+                    "grooming": { "labelValue": "grooming", "display": "gold" },
+                    "sexual": { "labelValue": "sexual", "display": "gold" },
+                    "social": { "labelValue": "social", "display": "lime" },
+                    "mental": { "labelValue": "mental", "display": "lime" },
+                    "identity": { "labelValue": "identity", "display": "lime" },
+                    "fun": { "labelValue": "fun", "display": "magenta" }
                 }
             },
             "interval": {
@@ -575,19 +575,19 @@
             "area": {
                 "name": "By Area", "type": "label", "label": "area",
                 "children": {
-                    "01-career": { "labelValue": "01-career", "display": "Career", "color": "red" },
-                    "02-finances": { "labelValue": "02-finances", "display": "Finances", "color": "red" },
-                    "03-legal": { "labelValue": "03-legal", "display": "Legal", "color": "red" },
-                    "04-home": { "labelValue": "04-home", "display": "Home", "color": "darkorange" },
-                    "05-car": { "labelValue": "05-car", "display": "Car", "color": "darkorange" },
-                    "06-tech": { "labelValue": "06-tech", "display": "Tech", "color": "darkorange" },
-                    "07-fitness": { "labelValue": "07-fitness", "display": "Fitness", "color": "gold" },
-                    "08-grooming": { "labelValue": "08-grooming", "display": "Grooming", "color": "gold" },
-                    "09-sexual": { "labelValue": "09-sexual", "display": "Sexual", "color": "gold" },
-                    "10-social": { "labelValue": "10-social", "display": "Social", "color": "lime" },
-                    "11-mental": { "labelValue": "11-mental", "display": "Mental", "color": "lime" },
-                    "12-identity": { "labelValue": "12-identity", "display": "Identity", "color": "lime" },
-                    "13-fun": { "labelValue": "13-fun", "display": "Fun", "color": "magenta" }
+                    "career": { "labelValue": "career", "display": "Career", "color": "red" },
+                    "finances": { "labelValue": "finances", "display": "Finances", "color": "red" },
+                    "legal": { "labelValue": "legal", "display": "Legal", "color": "red" },
+                    "home": { "labelValue": "home", "display": "Home", "color": "darkorange" },
+                    "car": { "labelValue": "car", "display": "Car", "color": "darkorange" },
+                    "tech": { "labelValue": "tech", "display": "Tech", "color": "darkorange" },
+                    "fitness": { "labelValue": "fitness", "display": "Fitness", "color": "gold" },
+                    "grooming": { "labelValue": "grooming", "display": "Grooming", "color": "gold" },
+                    "sexual": { "labelValue": "sexual", "display": "Sexual", "color": "gold" },
+                    "social": { "labelValue": "social", "display": "Social", "color": "lime" },
+                    "mental": { "labelValue": "mental", "display": "Mental", "color": "lime" },
+                    "identity": { "labelValue": "identity", "display": "Identity", "color": "lime" },
+                    "fun": { "labelValue": "fun", "display": "Fun", "color": "magenta" }
                 }
             },
             "interval": {

@@ -123,6 +123,39 @@ async function loadData(schemaNoteId, configNoteId) {
     }
 }
 
+// Ordinal maps for sorting attributes whose stored values carry no intrinsic
+// order, in libMultisort's `valueMaps` shape: { attribute: { value: ordinal } }.
+//
+// #area is the case this exists for. Its values are stable slugs ("career"),
+// deliberately order-free so reordering areas never rewrites a note — but that
+// means sorting them as strings yields alphabetical, not the order configured in
+// area-picker. So the order is resolved here, from the position of each area in
+// area-picker's `areas` list (the same list its dropdown renders), and handed to
+// the sort layer.
+//
+// Resolved by #areaConfig discovery, matching organizeAreas.jsx. Returns {} when
+// area-picker isn't installed, so sorting degrades to plain string comparison
+// rather than throwing.
+async function getSortValueMaps() {
+    const anchors = await api.searchForNotes("#areaConfig")
+    if (!anchors.length) return {}
+
+    const anchor = anchors[0]
+    const schemaNoteId = anchor.getRelationValue("schemaNote")
+    const configNoteId = anchor.getRelationValue("AddonData:config")
+    if (!schemaNoteId || !configNoteId) return {}
+
+    const settings = await loadSettings(schemaNoteId, configNoteId)
+    const areas = settings.areas || []
+    if (!areas.length) return {}
+
+    const area = {}
+    areas.forEach((entry, index) => {
+        if (entry && entry.key) area[entry.key] = index
+    })
+    return { area }
+}
+
 async function saveProfile(profile) {
     const { id, schemaNoteId, configNoteId, ...profileFields } = profile
     const values = await loadSettings(schemaNoteId, configNoteId)
@@ -176,6 +209,7 @@ async function saveSectionState({ schemaNoteId, configNoteId }, profileId, state
 
 module.exports = {
     loadData,
+    getSortValueMaps,
     saveProfile,
     getAllProfiles,
     getActiveProfile,

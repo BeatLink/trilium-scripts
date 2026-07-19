@@ -22,7 +22,7 @@ export async function getAreaConfigIds() {
 // Discover the area vocabulary from area-picker@beatlink and normalize it to the
 // { slug, name, color } shape the Organize code uses internally. loadSettings
 // merges schema + config and returns { areas: [{ key, title, color }] }, where
-// key is the #area slug (e.g. "01-career").
+// key is the #area slug — a stable, order-free identifier (e.g. "career").
 //
 // Returns [] when area-picker isn't installed / discoverable, so the Organize
 // UI degrades to an empty area list rather than throwing.
@@ -45,10 +45,12 @@ export async function getAreaSettings() {
 // them to the same SettingsForm area-picker's own settings page uses, scoped to
 // the `areas` key.
 //
-// Renaming an area's Title is safe (buckets re-key by name on the next
-// provision). Changing a Key is not — it's the #area value stored on every
-// tagged note — hence the warning; provisionStructure's migrateAreaSlugs only
-// repairs slugs whose NAME still matches a current area.
+// Renaming an area's Title is safe, as is reordering the list — keys are stable
+// and carry no ordering, so neither rewrites a note. Changing a Key is not: it's
+// the #area value stored on every tagged note, hence the warning.
+// provisionStructure's migrateAreaSlugs repairs only values that resolve to a
+// current area (after stripping a legacy "<NN>-" prefix and applying
+// AREA_ALIASES).
 export function AreasPanel() {
     const [ids, setIds] = useState(undefined)
 
@@ -75,8 +77,9 @@ export function AreasPanel() {
                 The life areas the Organize workflow scaffolds a notebook section for — one Area note
                 per entry, each holding a bucket per enabled template. This is{" "}
                 <strong>Area Picker's</strong> configuration, shared with its dropdown widget and every
-                note tagged <code>#area</code>. <strong>Order</strong> here sets the numeric prefix in
-                each area's key and the order areas appear in.
+                note tagged <code>#area</code>. The order of this list sets the order areas appear in,
+                both in the picker and in area-sorted views; keys are stable and never rewritten by a
+                reorder.
             </p>
             <p className="organize-areas-warning">
                 Renaming an area's <strong>Title</strong> is safe — the next Workflow Setup run re-keys
