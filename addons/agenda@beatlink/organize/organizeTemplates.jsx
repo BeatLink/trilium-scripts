@@ -1,27 +1,52 @@
 import { useState, useEffect } from "trilium:preact"
-import { loadSettings, saveSettings, SettingsForm } from "libSettingsUI.jsx"
+import { SettingsForm } from "libSettingsUI.jsx"
+import { getTemplates } from "templateRegistry.jsx"
 
-// Managed item-type templates for the Organize workflow. The config lives in the
-// shared #agendaConfig note as the `templates` registry (schema.json); this
-// module reads it, resolves each entry to a live #template note, and re-derives
-// the labels agenda's widgets key on (#type sort key, #agendaTaskWidget).
+// The item-type templates the Organize workflow offers. agenda does NOT own this
+// vocabulary — template-picker@beatlink does, in its own settings note (found by
+// #templatePickerConfig, the same discovery organizeAreas.jsx uses for
+// area-picker's #areaConfig). This module reads that registry and adds only what
+// agenda needs on top of it.
 //
-// An entry: { name, titleMatch, templateNoteId, enabled, actionable, order }.
-//   - Seeded (bundled) entries ship with `titleMatch` set and `templateNoteId`
-//     blank; the first Scan resolves the title to a real note id.
-//   - Scan-discovered entries are keyed by note id, `titleMatch` blank.
-// Structural templates (the Area root / container templates) are NOT managed
-// here — organizeStructure.js keeps them hard-coded.
+// Two properties agenda cares about are read off each template NOTE, not from
+// config, so the note itself is the single source of truth:
+//   #agendaTaskWidget  -> actionable: its items flow through the priority and
+//                         start-date triage queues (and mount the Task editor)
+//   #label:priority    -> its items carry a priority at all
+// Both are plain Trilium labels the user sets on the template like any other, so
+// making a type actionable is one label rather than a config row to keep in sync.
+//
+// Display/sort order is the registry's own key order (template-picker's move
+// controls rewrite it), matching how #area ordering works — see
+// libAgendaConfig.getSortValueMaps.
+//
+// Structural templates (AreaCollection / TypeCollection / Special) are NOT part of
+// this vocabulary — organizeStructure.js keeps them hard-coded, and they are
+// filtered out below so scaffolding never appears as an assignable item type.
 
-// The label agenda widgets sort/group notes by; its value is `<order>-<slug>`.
+// The label agenda widgets sort/group notes by; its value is the bare `<slug>`.
+// Order is NOT baked into the value — it comes from the registry's position via
+// libAgendaConfig.getSortValueMaps, the same way #area ordering works, so
+// reordering templates never rewrites a tagged note.
 const TYPE_LABEL = "type"
-// The label that mounts agenda's Task editor on a note.
+// The label that mounts agenda's Task editor on a note, and the marker that makes
+// a template actionable. Set by the user on the template note.
 const TASK_WIDGET_LABEL = "agendaTaskWidget"
 
-// Resolve the #agendaConfig anchor to the schema + config note ids libsettings
-// needs. Returns null when agenda's config note can't be found.
-async function getConfigContext() {
-    const anchors = await api.searchForNotes("#agendaConfig")
+// Scaffolding template titles, excluded from the assignable item vocabulary.
+// template-picker's Scan picks up every #template note including agenda's own
+// containers, so they are filtered here rather than in its registry. The numbered
+// predecessors are kept so a tree provisioned before the rename filters too.
+const STRUCTURAL_TITLES = new Set([
+    "AreaCollection", "TypeCollection", "Special",
+    "7. Area", "8. Special"
+])
+
+// Resolve template-picker's settings note to the schema + config note ids
+// libsettings needs. Returns null when template-picker isn't installed, so the
+// callers can explain that rather than throw (matching getAreaConfigIds).
+export async function getTemplateConfigIds() {
+    const anchors = await api.searchForNotes("#templatePickerConfig")
     if (!anchors.length) return null
     const anchor = anchors[0]
     const schemaNoteId = anchor.getRelationValue("schemaNote")
@@ -40,69 +65,79 @@ function slugify(name) {
         .replace(/^-+|-+$/g, "") || "template"
 }
 
-// Read the managed template config, resolving each entry to a live note. Returns
-// [{ id, noteId, name, slug, enabled, actionable, order }] sorted by order, for
-// entries that resolve to an existing note (a stale id / unresolved titleMatch is
-// dropped). `id` is the registry key. Loads settings itself so any frontend
-// caller (the Organize page, provisioning) can use it without wiring.
+// The item-type vocabulary: template-picker's registry, with agenda's per-note
+// properties read off each template note. Returns
+// [{ id, noteId, name, slug, enabled, actionable, hasPriority, order }] in
+// registry order (`order` is the row's position, so it feeds the #type sort map
+// the same way an area's list position does).
+//
+// `actionable` and `hasPriority` come from the template note's own labels
+// (#agendaTaskWidget, #label:priority), not from config — see the module header.
+// Structural scaffolding templates are filtered out by title so they can never be
+// offered as an assignable type. Returns [] when template-picker isn't installed.
 export async function getTemplateConfig() {
-    const ctx = await getConfigContext()
+    const ctx = await getTemplateConfigIds()
     if (!ctx) return []
-    const settings = await loadSettings(ctx.schemaNoteId, ctx.configNoteId)
-    const registry = settings.templates || {}
+    const rows = await getTemplates(ctx.schemaNoteId, ctx.configNoteId)
+    if (!rows.length) return []
 
-    // Resolve each entry's live note id: an explicit templateNoteId if it still
-    // exists, else a lookup of its `titleMatch` among #template notes.
-    const entries = Object.entries(registry)
-    const resolved = await api.runOnBackend((entries) => {
-        return entries.map(([id, e]) => {
-            let noteId = ""
-            if (e.templateNoteId && api.getNote(e.templateNoteId)) {
-                noteId = e.templateNoteId
-            } else if (e.titleMatch) {
-                const hits = api.searchForNotes(`#template note.title = "${e.titleMatch}"`)
-                if (hits.length) noteId = hits[0].noteId
+    // Read the two agenda labels off each resolved template note in one hop.
+    const flags = await api.runOnBackend((noteIds, taskWidgetLabel) => {
+        const out = {}
+        for (const noteId of noteIds) {
+            const note = api.getNote(noteId)
+            if (!note) continue
+            out[noteId] = {
+                actionable: note.hasLabel(taskWidgetLabel),
+                // Trilium's promoted-attribute declaration for #priority. Its
+                // presence means items of this type carry a priority.
+                hasPriority: note.hasLabel("label:priority")
             }
-            return { id, noteId, name: e.name, enabled: e.enabled, actionable: e.actionable, order: e.order }
-        })
-    }, [entries])
+        }
+        return out
+    }, [rows.map(r => r.noteId), TASK_WIDGET_LABEL])
 
-    return resolved
-        .filter(e => e.noteId)
-        .map(e => ({ ...e, slug: slugify(e.name) }))
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    return rows
+        .filter(r => !STRUCTURAL_TITLES.has(r.name))
+        .map((r, index) => ({
+            ...r,
+            slug: slugify(r.name),
+            actionable: !!(flags[r.noteId] && flags[r.noteId].actionable),
+            hasPriority: !!(flags[r.noteId] && flags[r.noteId].hasPriority),
+            order: index
+        }))
 }
 
-// Re-derive the labels agenda reads from the current template config: for each
-// resolved template set #type=<order>-<slug>; set/remove #agendaTaskWidget per
-// `actionable`. `disabledNoteIds` get both labels stripped — #type is a derived
-// value, so a template that leaves the enabled set must not keep a stale one
-// (agenda's widgets key on it). Idempotent — safe to run on every Scan / Save.
-// Returns the count of templates whose labels were (re)written.
+// Re-derive #type onto each enabled template, and strip it from the disabled ones
+// so a template leaving the vocabulary keeps no stale sort key.
+//
+// #agendaTaskWidget is deliberately NOT written here. It is user-set INPUT that
+// getTemplateConfig reads to decide `actionable` — writing it back would make
+// agenda overwrite the very label it derives from, clearing the user's choice on
+// the next save. Same for #label:priority.
+//
+// Idempotent — safe to run on every Save. Returns the count of templates written.
 async function writeTemplateLabels(list, disabledNoteIds) {
-    return api.runOnBackend((list, disabledNoteIds, typeLabel, taskWidgetLabel) => {
+    return api.runOnBackend((list, disabledNoteIds, typeLabel) => {
         let count = 0
         for (const t of list) {
             const note = api.getNote(t.noteId)
             if (!note) continue
-            note.setLabel(typeLabel, `${t.order}-${t.slug}`)
-            if (t.actionable) note.setLabel(taskWidgetLabel, "")
-            else note.removeLabel(taskWidgetLabel)
+            note.setLabel(typeLabel, t.slug)
             count++
         }
         for (const noteId of disabledNoteIds) {
             const note = api.getNote(noteId)
             if (!note) continue
             note.removeLabel(typeLabel)
-            note.removeLabel(taskWidgetLabel)
         }
         return count
-    }, [list, disabledNoteIds, TYPE_LABEL, TASK_WIDGET_LABEL])
+    }, [list, disabledNoteIds, TYPE_LABEL])
 }
 
-// The Save-side counterpart, wired as the Templates SettingsForm's `onSaved`:
-// once the registry is persisted, re-derive the labels agenda reads (#type,
-// #agendaTaskWidget) onto every enabled+resolved template. Returns the count.
+// The Save-side counterpart, wired as the Templates form's `onSaved`: once
+// template-picker's registry is persisted, re-derive agenda's #type sort key onto
+// the enabled templates. Returns the count.
 export async function applyTemplateLabels() {
     const resolved = await getTemplateConfig()
     return writeTemplateLabels(
@@ -111,108 +146,59 @@ export async function applyTemplateLabels() {
     )
 }
 
-// Scan Trilium for every #template note and reconcile the registry: add an entry
-// (disabled) for any #template note not already covered by an existing entry
-// (matched by resolved note id OR titleMatch), then persist. Discovery only —
-// applying labels is Save's job (applyTemplateLabels). Preserves every existing
-// entry's flags. Returns { added, total }.
-async function scanTemplates() {
-    const ctx = await getConfigContext()
-    if (!ctx) return { added: 0, total: 0 }
-    const settings = await loadSettings(ctx.schemaNoteId, ctx.configNoteId)
-    const registry = { ...(settings.templates || {}) }
+// The Templates settings panel: template-picker's own `templates` registry
+// editor, surfaced inside agenda's Organize page so the vocabulary the workflow
+// scaffolds from can be edited without leaving it.
+//
+// This edits TEMPLATE-PICKER's config note, not agenda's — the two addons share
+// the vocabulary by #templatePickerConfig discovery, and duplicating it here would
+// let them drift. Same shape as AreasPanel: resolve the other addon's note ids and
+// hand them to the same SettingsForm its own settings page uses. Scan lives in
+// template-picker's settings page, so there's no Scan button here.
+//
+// Save re-derives agenda's #type sort key onto the enabled templates (onSaved =
+// applyTemplateLabels). It does NOT write #agendaTaskWidget / #label:priority —
+// those are user-set labels on the template note that agenda only reads.
+export function TemplatesPanel() {
+    const [ids, setIds] = useState(undefined)
 
-    // Structural templates are excluded from the managed list (Area/Special).
-    const STRUCTURAL_TITLES = ["7. Area", "8. Special"]
+    useEffect(() => {
+        (async () => setIds(await getTemplateConfigIds()))()
+    }, [])
 
-    // On the backend: find all #template notes, and for each existing entry the
-    // note id it currently resolves to (so we don't re-add one already covered).
-    const scan = await api.runOnBackend((entries, structuralTitles) => {
-        const all = api.searchForNotes("#template").map(n => ({ noteId: n.noteId, title: n.title }))
-        const coveredIds = new Set()
-        for (const [, e] of entries) {
-            if (e.templateNoteId && api.getNote(e.templateNoteId)) coveredIds.add(e.templateNoteId)
-            else if (e.titleMatch) {
-                const hits = api.searchForNotes(`#template note.title = "${e.titleMatch}"`)
-                if (hits.length) coveredIds.add(hits[0].noteId)
-            }
-        }
-        const structural = new Set(structuralTitles)
-        const newOnes = all.filter(t => !coveredIds.has(t.noteId) && !structural.has(t.title))
-        return { newOnes }
-    }, [Object.entries(registry), STRUCTURAL_TITLES])
-
-    // Append the newly-found templates after the current max order.
-    let maxOrder = -1
-    for (const e of Object.values(registry)) maxOrder = Math.max(maxOrder, e.order ?? 0)
-
-    let added = 0
-    for (const t of scan.newOnes) {
-        maxOrder += 1
-        registry[t.noteId] = {
-            name: t.title, titleMatch: "", templateNoteId: t.noteId,
-            enabled: false, actionable: false, order: maxOrder
-        }
-        added += 1
-    }
-
-    settings.templates = registry
-    await saveSettings(ctx.schemaNoteId, ctx.configNoteId, settings)
-
-    return { added, total: Object.keys(registry).length }
-}
-
-// The Templates settings panel: a Scan button (discover newly-added #template
-// notes into the registry) above the SettingsForm `templates` registry editor.
-// Edits stage until you click the form's Save, which persists the registry and
-// then applies the derived #type / #agendaTaskWidget labels (via onSaved =
-// applyTemplateLabels). Scan mutates config directly, so it remounts the form
-// (reloadKey bump) to re-read the fresh config afterward.
-export function TemplatesPanel({ schemaNoteId, configNoteId }) {
-    const [busy, setBusy] = useState(false)
-    const [status, setStatus] = useState(null)
-    const [reloadKey, setReloadKey] = useState(0)
-
-    async function onScan() {
-        setBusy(true)
-        setStatus(null)
-        try {
-            const r = await scanTemplates()
-            setReloadKey(k => k + 1)
-            setStatus(
-                `Scan complete: ${r.added} new template${r.added === 1 ? "" : "s"} found ` +
-                `(${r.total} total). Enable the ones you want, then Save.`
-            )
-        } catch (e) {
-            setStatus("Scan failed: " + String(e && e.message ? e.message : e))
-        } finally {
-            setBusy(false)
-        }
+    if (ids === undefined) return <div>Loading...</div>
+    if (ids === null) {
+        return (
+            <div className="organize-templates">
+                <p className="organize-templates-blurb">
+                    Template Picker isn't installed, so there's no template vocabulary to edit.
+                    Install <code>template-picker@beatlink</code> to define the item types this
+                    workflow offers and scaffolds buckets for.
+                </p>
+            </div>
+        )
     }
 
     return (
         <div className="organize-templates">
             <p className="organize-templates-blurb">
-                The item-type templates the Organize workflow offers, scaffolds a bucket per, and
-                derives <code>#type</code> / <code>#agendaTaskWidget</code> from. <strong>Enabled</strong>{" "}
-                templates appear in the assign queue and get a scaffolding bucket; <strong>Actionable</strong>{" "}
-                templates additionally flow through the priority and start-date queues. <strong>Order</strong>{" "}
-                sets the assign/bucket sequence and the numeric prefix of each template's{" "}
-                <code>#type</code>. Run <strong>Scan</strong> to pull in any <code>#template</code> note you
-                have added, then edit the rows and click <strong>Save</strong> — saving persists your
-                choices and applies the derived labels to the notes.
+                The item-type templates the Organize workflow offers and scaffolds a bucket per. This
+                is <strong>Template Picker's</strong> configuration, shared with its dropdown widget.
+                <strong> Enabled</strong> templates appear in the assign queue and get a bucket; the
+                order of this list sets the assign/bucket sequence and the order these types sort in
+                across agenda's views. Use Template Picker's own settings page to <strong>Scan</strong>{" "}
+                for newly-added <code>#template</code> notes.
             </p>
-
-            <button className="organize-templates-scan" disabled={busy} onClick={onScan}>
-                {busy ? "Scanning..." : "Scan for templates"}
-            </button>
-
-            {status && <div className="organize-templates-status">{status}</div>}
-
+            <p className="organize-templates-warning">
+                A template is <strong>actionable</strong> — its notes flow through the priority and
+                start-date queues and mount the Task editor — when the template note itself carries{" "}
+                <code>#agendaTaskWidget</code>. Priority comes from <code>#label:priority</code> on the
+                same note. Set those on the template note directly; agenda reads them and never
+                overwrites them.
+            </p>
             <SettingsForm
-                key={reloadKey}
-                schemaNoteId={schemaNoteId}
-                configNoteId={configNoteId}
+                schemaNoteId={ids.schemaNoteId}
+                configNoteId={ids.configNoteId}
                 only="Templates"
                 onSaved={applyTemplateLabels}
             />

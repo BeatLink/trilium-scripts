@@ -32,10 +32,10 @@ templates and [`area-picker@beatlink`](../area-picker@beatlink/README.md) for th
   reorder. See [organize/README.md](organize/README.md) for the taxonomy and provisioning model.
 - **Organize** — a two-tab page: **Triage** (a one-at-a-time queue over every note under the Inbox /
   Area subtrees, whose five sections assign the missing attributes agenda reads: **template** (type),
-  **`#area`** (+ `#color`), **`#priority`** (MoSCoW), and **start date**
+  **`#area`** (+ `#color`), **priority** (from priority-widget's active profile), and **start date**
   (`#startDateTime`/`#startDate`/`#startTime`), plus a **Misfiled Notes** fixer for notes whose
-  area/type disagrees with where they're filed) and **Templates** (manage which `#template` notes the
-  workflow uses, their order, and whether each is actionable). The Morning / Noon / Evening / Night
+  area/type disagrees with where they're filed) and **Templates** (which `#template` notes the
+  workflow uses and their order, edited in template-picker's shared registry). The Morning / Noon / Evening / Night
   quick-time buttons use the times on the Agenda Editor's **Organize › Times** tab.
 
   Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
@@ -45,21 +45,27 @@ templates and [`area-picker@beatlink`](../area-picker@beatlink/README.md) for th
 
 ## Templates
 
-Bundled under a **Templates** container note is one template per item type — 0. Ideas, 1. Goal,
-2. Routine, 3. Task, 4. Future, 5. Project, 6. Note, 7. Area, 8. Special. Each carries `#template`
-(so it is discoverable by Trilium and the Template Picker widget). Template content is yours to
-customize — the templates are tracked via `AddonData:` relations, so a future update that changes a
-default prompts an Update Review rather than overwriting your edits.
+Bundled under a **Templates** container note is one template per item type — Ideas, Goal, Routine,
+Task, Future, Project, Note — plus three structural containers the Organize workflow scaffolds with:
+**AreaCollection** (an area root), **TypeCollection** (a per-type bucket inside an area), and
+**Special** (the Inbox / My Day / Agenda singletons). Each carries `#template` (so it is discoverable
+by Trilium and the Template Picker widget). Template content is yours to customize — the templates are
+tracked via `AddonData:` relations, so a future update that changes a default prompts an Update Review
+rather than overwriting your edits.
 
-**Which templates the Organize workflow uses is managed, not hard-coded** — the seven item templates
-(Ideas…Note) are seeded into a `templates` registry you edit on the Organize page's **Templates** tab
-(also reachable under the Agenda Editor's **Organize › Templates**). Per template you set whether it's
-**enabled** (offered in the assign queue + gets a scaffolding bucket), **actionable** (flows through
-the priority/start-date queues + carries `#agendaTaskWidget`), and its **order** (assign/bucket
-sequence + the numeric prefix of its derived `#type` sort key). A **Scan** action discovers any
-`#template` note you have added and lets you opt it in. The two structural templates (7. Area,
-8. Special) stay hard-coded scaffolding and aren't in the managed list. See
-[organize/README.md](organize/README.md#types--user-managed-templates).
+**Which templates the Organize workflow uses comes from
+[`template-picker@beatlink`](../template-picker@beatlink/)**, not from agenda — one shared registry,
+edited on the Organize page's **Templates** tab (also under the Agenda Editor's **Organize ›
+Templates**), so the picker dropdown and the workflow can't drift. Per row you set whether it's
+**enabled** (offered in the assign queue + gets a scaffolding bucket); the row's position sets the
+assign/bucket sequence and how those types sort across agenda's views.
+
+Two things are read off the **template note's own labels** instead of config: a template is
+**actionable** (flows through the priority/start-date queues, mounts the Task editor) when it carries
+`#agendaTaskWidget`, and its items carry a priority when it declares `#label:priority`. Set those on
+the template note directly — agenda reads them and never writes them back. The priority vocabulary
+itself comes from [`priority-widget@beatlink`](../priority-widget@beatlink/). See
+[organize/README.md](organize/README.md#types--template-pickers-registry).
 
 ## Shared configuration
 

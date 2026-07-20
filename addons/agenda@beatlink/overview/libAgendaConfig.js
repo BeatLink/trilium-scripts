@@ -126,17 +126,24 @@ async function loadData(schemaNoteId, configNoteId) {
 // Ordinal maps for sorting attributes whose stored values carry no intrinsic
 // order, in libMultisort's `valueMaps` shape: { attribute: { value: ordinal } }.
 //
-// #area is the case this exists for. Its values are stable slugs ("career"),
-// deliberately order-free so reordering areas never rewrites a note — but that
-// means sorting them as strings yields alphabetical, not the order configured in
-// area-picker. So the order is resolved here, from the position of each area in
-// area-picker's `areas` list (the same list its dropdown renders), and handed to
-// the sort layer.
+// #area and #type are both stable, order-free slugs ("career", "task"),
+// deliberately carrying no ordinal so reordering the vocabulary never rewrites a
+// tagged note — but that means sorting them as strings yields alphabetical, not
+// the configured order. So the order is resolved here, from each value's position
+// in the list that defines it, and handed to the sort layer:
+//   #area -> area-picker's `areas` list (the same list its dropdown renders)
+//   #type -> template-picker's `templates` registry (the same list its dropdown
+//            renders), in registry key order
 //
-// Resolved by #areaConfig discovery, matching organizeAreas.jsx. Returns {} when
-// area-picker isn't installed, so sorting degrades to plain string comparison
-// rather than throwing.
+// Both vocabularies live in their owning addon, discovered by label (#areaConfig /
+// #templatePickerConfig) rather than duplicated here. Each half degrades
+// independently: a missing source contributes no map, so that attribute falls back
+// to plain string comparison rather than throwing.
 async function getSortValueMaps() {
+    return { ...(await getAreaSortMap()), ...(await getTypeSortMap()) }
+}
+
+async function getAreaSortMap() {
     const anchors = await api.searchForNotes("#areaConfig")
     if (!anchors.length) return {}
 
@@ -154,6 +161,39 @@ async function getSortValueMaps() {
         if (entry && entry.key) area[entry.key] = index
     })
     return { area }
+}
+
+// #type ordinals from template-picker's registry (found by #templatePickerConfig,
+// the same discovery organizeTemplates.jsx uses). Keyed by each row's slug — the
+// same slugify() the #type label is derived from — and ordered by the registry's
+// own key order, which is what template-picker's row-move controls rewrite. There
+// is no `order` field to read: position IS the order, exactly as it is for areas.
+//
+// Slugified inline rather than imported to keep this module free of a require() on
+// the organize/ tree — it loads in every widget, including ones with no Organize
+// wiring.
+async function getTypeSortMap() {
+    const anchors = await api.searchForNotes("#templatePickerConfig")
+    if (!anchors.length) return {}
+
+    const anchor = anchors[0]
+    const schemaNoteId = anchor.getRelationValue("schemaNote")
+    const configNoteId = anchor.getRelationValue("AddonData:config")
+    if (!schemaNoteId || !configNoteId) return {}
+
+    const settings = await loadSettings(schemaNoteId, configNoteId)
+    const templates = Object.values(settings.templates || {})
+    if (!templates.length) return {}
+
+    const type = {}
+    templates.forEach((entry, index) => {
+        const slug = String(entry.name || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+        if (slug) type[slug] = index
+    })
+    return { type }
 }
 
 async function saveProfile(profile) {

@@ -8,7 +8,7 @@ const {
     getItemTemplates, getOrganizeCandidates, getMisfiledNotes,
     assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
 } = require("organize.js")
-const { PRIORITY_OPTIONS } = require("organizeStructure.js")
+const { getPriorityOptions } = require("organizePriority.js")
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -254,10 +254,12 @@ function TriagePanel() {
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
     const [times, setTimes] = useState(null)
-    // The set of template note ids flagged actionable in the managed-templates
-    // config — drives the priority/start-date queues (replaces the old hard-coded
-    // PRIORITY_TEMPLATE_TITLES).
+    // The set of template note ids that are actionable — i.e. whose template note
+    // carries #agendaTaskWidget. Drives the priority/start-date queues.
     const [actionableIds, setActionableIds] = useState(null)
+    // The active priority profile from priority-widget ({ label, options }), or
+    // null when priority-widget isn't installed.
+    const [priority, setPriority] = useState(undefined)
 
     async function reload() {
         setCandidates(null)
@@ -267,9 +269,13 @@ function TriagePanel() {
         const [ars, tplList] = await Promise.all([getAreaSettings(), getTemplateConfig()])
         const enabled = tplList.filter(t => t.enabled)
         const actionable = new Set(enabled.filter(t => t.actionable).map(t => t.noteId))
+        // The priority profile must resolve before the candidate walk: its label
+        // is what `hasPriority` tests, so scanning with the wrong one would put
+        // already-prioritized notes back in the queue.
+        const prio = await getPriorityOptions()
         const [tpls, cands, mis, tms] = await Promise.all([
             getItemTemplates(enabled),
-            getOrganizeCandidates([...actionable]),
+            getOrganizeCandidates([...actionable], prio ? prio.label : "priority"),
             getMisfiledNotes(ars, enabled),
             loadTimeSettings()
         ])
@@ -279,11 +285,12 @@ function TriagePanel() {
         setCandidates(cands)
         setMisfiled(mis)
         setTimes(tms)
+        setPriority(prio)
     }
 
     useEffect(() => { reload() }, [])
 
-    if (candidates === null || templates === null || areas === null || misfiled === null || times === null || actionableIds === null) {
+    if (candidates === null || templates === null || areas === null || misfiled === null || times === null || actionableIds === null || priority === undefined) {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
@@ -360,20 +367,22 @@ function TriagePanel() {
                 heading="Tasks Without Priority"
                 items={noPriority}
                 renderActions={(item, act, busy) =>
-                    PRIORITY_OPTIONS.map(p => (
+                    (priority ? priority.options : []).map(p => (
                         <OptionButton
                             key={p.value}
-                            opt={{ label: p.label }}
+                            opt={{ label: p.label, color: p.color }}
                             busy={busy}
                             onClick={() => act(async () => {
-                                await assignPriority(item.noteId, p.value)
+                                await assignPriority(item.noteId, p.value, priority.label)
                                 patch(item.noteId, { hasPriority: true })
                             })}
                         />
                     ))
                 }
                 onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
-                emptyMessage="Nothing to organize — every routine, task, project, and future item has a priority."
+                emptyMessage={priority
+                    ? "Nothing to organize — every actionable item has a priority."
+                    : "Priority Picker isn't installed, so there's no priority vocabulary to assign."}
             />
 
             <QueueSection
@@ -507,10 +516,8 @@ export default function OrganizePanel() {
                     <TriagePanel />
                 ) : tab === "areas" ? (
                     <AreasPanel />
-                ) : ids ? (
-                    <TemplatesPanel schemaNoteId={ids.schemaNoteId} configNoteId={ids.configNoteId} />
                 ) : (
-                    <div>Loading...</div>
+                    <TemplatesPanel />
                 )}
             </div>
         </div>

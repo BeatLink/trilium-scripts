@@ -168,7 +168,9 @@
         "dependencies": [
             "libsettings@beatlink"
         ],
-        "exports": {},
+        "exports": {
+            "registry": "registry"
+        },
         "readmeNote": "readme"
     }
 }

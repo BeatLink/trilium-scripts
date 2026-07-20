@@ -59,8 +59,12 @@ async function getItemTemplates(templateList) {
 // note (excluded from the no-start-date queue — it's scheduled with its parent).
 // `actionableTemplateIds` is the set of template note ids flagged actionable in
 // the managed-templates config.
-async function getOrganizeCandidates(actionableTemplateIds) {
-    return api.runOnBackend((labels, actionableTemplateIds) => {
+// `priorityLabel` is the active priority profile's label name (see
+// organizePriority.js) — "priority" for the bundled MoSCoW/Standard profiles,
+// "color" for the Color one. Passed in rather than hardcoded so `hasPriority`
+// tests the same label assignPriority writes.
+async function getOrganizeCandidates(actionableTemplateIds, priorityLabel) {
+    return api.runOnBackend((labels, actionableTemplateIds, priorityLabel) => {
         const actionableSet = new Set(actionableTemplateIds)
         // Scope roots: the Inbox note + every Area root. An area root carries
         // the area label and NO bucket label; a bucket carries both and is NOT a
@@ -159,7 +163,7 @@ async function getOrganizeCandidates(actionableTemplateIds) {
                         templateId,
                         templateTitle: templateNote ? templateNote.title : "",
                         hasArea: !!child.getLabelValue("area"),
-                        hasPriority: !!child.getLabelValue("priority"),
+                        hasPriority: !!child.getLabelValue(priorityLabel),
                         hasStartDate: !!child.getLabelValue("startDateTime"),
                         isSubtask: parentIsActionable(child),
                         suggestedArea: ancestorArea(child)
@@ -171,7 +175,7 @@ async function getOrganizeCandidates(actionableTemplateIds) {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [LABELS, actionableTemplateIds])
+    }, [LABELS, actionableTemplateIds, priorityLabel || "priority"])
 }
 
 // Find notes whose #area or ~template disagrees with where they're filed. In the
@@ -423,14 +427,17 @@ async function assignStartDate(noteId, dateStr, timeStr) {
 
 // Assign (or clear, when value is "") a note's #priority label — the MoSCoW
 // value convention (4-critical..1-low), matching the priority-widget/agenda.
-async function assignPriority(noteId, value) {
-    return api.runOnBackend((noteId, value) => {
+// `label` is the active priority profile's label name (organizePriority.js), not
+// always "priority" — the bundled Color profile writes #color — so the triage
+// queue and the picker widget always agree on where a priority lives.
+async function assignPriority(noteId, value, label) {
+    return api.runOnBackend((noteId, value, label) => {
         const note = api.getNote(noteId)
         if (!note) return false
-        if (value) note.setLabel("priority", value)
-        else note.removeLabel("priority")
+        if (value) note.setLabel(label, value)
+        else note.removeLabel(label)
         return true
-    }, [noteId, value])
+    }, [noteId, value, label])
 }
 
 // Delete a note outright (all its clones), used by the Organize queues' Delete

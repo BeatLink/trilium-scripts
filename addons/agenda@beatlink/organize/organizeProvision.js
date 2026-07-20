@@ -18,7 +18,25 @@
 // notes alike, so the structure's look is self-healing and re-running fixes
 // drift. seedLabels and note content are applied only when the note is created.
 
-const { buildStructure, AREA_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE } = require("organizeStructure.js")
+const {
+    buildStructure,
+    AREA_TEMPLATE_TITLE, TYPE_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE,
+    AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE, SPECIAL_TYPE
+} = require("organizeStructure.js")
+
+// Structural #type values that changed name, not just shape, when the numeric
+// prefixes were dropped: old value -> new.
+//
+// "8-special" maps to the singletons' marker because that is what it becomes for
+// the notes this map can still reach. Buckets also wore it, but they are
+// re-stamped to `typecollection` by provisionNode's derived pass on the same run,
+// which lands after this one — so a bucket briefly mapped to `special` here is
+// corrected before the run ends, and a bucket the walk no longer reaches (a
+// dropped area) is inert scaffolding either way.
+const LEGACY_TYPE_VALUES = {
+    "7-area": AREA_COLLECTION_TYPE,
+    "8-special": SPECIAL_TYPE
+}
 
 // Structural identity, split across three independent labels (see
 // organizeStructure.js). An area root has AREA_LABEL only; a bucket has
@@ -82,6 +100,44 @@ async function migrateAreaSlugs(areaList) {
         }
         return migrated
     }, [areaList, AREA_ALIASES])
+}
+
+// Normalize every note's #type off the old "<order>-<slug>" shape onto the bare
+// slug ("3-task" -> "task").
+//
+// #type used to bake the template's `order` into its value, so reordering the
+// template list rewrote the label on every tagged note. Order now comes from the
+// registry's position instead (libAgendaConfig.getSortValueMaps, the same
+// mechanism #area has always used), leaving #type a stable, order-free slug.
+//
+// Only values whose stripped form matches a CURRENT template slug are rewritten.
+// A "<NN>-<word>" #type that resolves to no known template is left alone — #type
+// is a public label the user may also be using for a vocabulary of their own, and
+// blind prefix-stripping would silently rewrite it.
+//
+// Idempotent: a bare slug has no prefix to strip and compares equal, so a second
+// run migrates nothing. Returns the count of notes migrated.
+async function migrateTypeSlugs(templateList) {
+    return api.runOnBackend((templateList, containerTypes, renames) => {
+        // The slugs a migrated value is allowed to land on: every managed
+        // template, plus the structural container markers.
+        const known = new Set(templateList.map(t => t.slug))
+        for (const t of containerTypes) known.add(t)
+
+        let migrated = 0
+        for (const note of api.searchForNotes("#type")) {
+            const current = note.getLabelValue("type")
+            if (!current) continue
+            // The structural values changed name as well as shape ("7-area" ->
+            // "areacollection"), so they resolve through an explicit map rather
+            // than by stripping.
+            const target = renames[current] || current.replace(/^\d+-/, "")
+            if (target === current || !known.has(target)) continue
+            note.setLabel("type", target)
+            migrated++
+        }
+        return migrated
+    }, [templateList, [AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE], LEGACY_TYPE_VALUES])
 }
 
 // Find buckets whose #workflowNote key is stale — created under an area or
@@ -356,7 +412,7 @@ async function resolveTemplateId(title) {
 // none). Returns { noteId, created, adopted, title }. Runs on the backend — the
 // closure may reference only `api`, so every value is passed in.
 async function provisionNode(parentNoteId, node, templateId) {
-    return api.runOnBackend((parentNoteId, identity, title, icon, color, areaValue, alwaysExpanded, templateId, seedLabels, labels) => {
+    return api.runOnBackend((parentNoteId, identity, title, icon, color, areaValue, typeValue, alwaysExpanded, templateId, seedLabels, labels) => {
         let note
         let created = false
         let adopted = false
@@ -418,11 +474,12 @@ async function provisionNode(parentNoteId, node, templateId) {
         }
 
         // Derived attributes — re-asserted every run (idempotent) on any of the
-        // three branches above, so icon/color/template/#area/#alwaysExpanded are
-        // self-healing.
+        // three branches above, so icon/color/template/#area/#type/#alwaysExpanded
+        // are self-healing.
         if (icon) note.setLabel("iconClass", `bx ${icon}`)
         if (color) note.setLabel("color", color)
         if (areaValue) note.setLabel("area", areaValue)
+        if (typeValue) note.setLabel("type", typeValue)
         if (alwaysExpanded) note.setLabel("alwaysExpanded", "")
         if (templateId) note.setRelation("template", templateId)
 
@@ -431,6 +488,7 @@ async function provisionNode(parentNoteId, node, templateId) {
         parentNoteId,
         { area: node.area || "", bucket: node.bucket || "", special: node.special || "" },
         node.title, node.icon, node.color || "", node.areaValue || "",
+        node.typeValue || "",
         !!node.alwaysExpanded, templateId, node.seedLabels || [],
         { area: AREA_LABEL, bucket: BUCKET_LABEL, special: SPECIAL_LABEL }
     ])
@@ -447,6 +505,7 @@ async function provisionStructure(areaList, templateList) {
     // title to a real id inside the walk.
     const templateIds = {
         [AREA_TEMPLATE_TITLE]: await resolveTemplateId(AREA_TEMPLATE_TITLE),
+        [TYPE_TEMPLATE_TITLE]: await resolveTemplateId(TYPE_TEMPLATE_TITLE),
         [SPECIAL_TEMPLATE_TITLE]: await resolveTemplateId(SPECIAL_TEMPLATE_TITLE)
     }
 
@@ -480,10 +539,15 @@ async function provisionStructure(areaList, templateList) {
     // re-key any note still carrying a stale area slug from a prior ordering.
     const migratedAreaCount = await migrateAreaSlugs(areaList)
 
-    return { results, migratedAreaCount, merged, labelMigration }
+    // Same shape for #type: strip the legacy "<order>-" prefix now that ordering
+    // lives in the templates registry's position rather than in the label value.
+    // Runs after the walk so the structural notes' own #type is already current.
+    const migratedTypeCount = await migrateTypeSlugs(templateList)
+
+    return { results, migratedAreaCount, migratedTypeCount, merged, labelMigration }
 }
 
 module.exports = {
-    provisionStructure, migrateAreaSlugs, mergeStaleBuckets, migrateStructuralLabels,
+    provisionStructure, migrateAreaSlugs, migrateTypeSlugs, mergeStaleBuckets, migrateStructuralLabels,
     AREA_LABEL, BUCKET_LABEL, SPECIAL_LABEL
 }
