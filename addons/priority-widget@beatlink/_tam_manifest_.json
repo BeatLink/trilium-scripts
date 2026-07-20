@@ -1,19 +1,27 @@
 {
     "id": "priority-widget@beatlink",
     "name": "Priority Widget",
-    "description": "A widget to set the priority of a note",
+    "description": "A right pane dropdown widget that allows you to set the priority of a note",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
+        "settingsNote": "root",
         "notes": [
             {
                 "id": "root",
+                "title": "priority-widget@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "script",
                 "title": "priority-widget@beatlink",
                 "type": "code",
                 "mime": "text/jsx",
@@ -27,44 +35,102 @@
                 "sourceUrl": "style.css"
             },
             {
-                "id": "profile",
-                "title": "profile.json",
+                "id": "schema",
+                "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "profile.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config.json",
+                "promptOnUpdate": true
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [
             {
                 "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "script",
                 "child": "style"
             },
             {
                 "parent": "root",
-                "child": "profile"
+                "child": "schema"
+            },
+            {
+                "parent": "root",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "settings"
             },
             {
                 "parent": "root",
                 "child": "readme"
+            },
+            {
+                "parent": "script",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
+            },
+            {
+                "parent": "settings",
+                "addon": "libsettings@beatlink",
+                "child": "ui"
             }
         ],
         "relations": [
             {
+                "from": "settings",
+                "type": "AddonData:config",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
                 "from": "root",
-                "type": "AddonData:profile",
-                "to": "profile"
+                "type": "renderNote",
+                "to": "settings"
             }
         ],
         "labels": [
             {
-                "note": "root",
+                "note": "script",
                 "name": "widget",
                 "value": ""
             },
@@ -72,9 +138,16 @@
                 "note": "style",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "settings",
+                "name": "priorityConfig",
+                "value": ""
             }
         ],
-        "dependencies": [],
+        "dependencies": [
+            "libsettings@beatlink"
+        ],
         "exports": {},
         "readmeNote": "readme"
     }
