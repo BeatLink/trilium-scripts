@@ -147,12 +147,18 @@ export async function resolveConfigNotes(note = api.currentNote) {
     const schemaNoteId = await note.getRelationValue("schemaNote")
     const settingsNoteId = await note.getRelationValue("settingsNote")
     // No `settingsNote` means this *is* the settings note: read config locally.
+    // Note the asymmetry — the local read goes through `getRelationTarget().noteId`,
+    // not `getRelationValue()`. On a *frontend* note `getRelationValue` does not
+    // resolve `AddonData:config` (it yields undefined, which strands every caller
+    // on its loading state); the backend note objects reached via `api.getNote`
+    // are the ones where `getRelationValue` works, which is why the
+    // `settingsNote` branch below can use it inside `runOnBackend`.
     const configNoteId = settingsNoteId
         ? await api.runOnBackend(
             (id) => api.getNote(id).getRelationValue("AddonData:config"),
             [settingsNoteId]
         )
-        : await note.getRelationValue("AddonData:config")
+        : (await note.getRelationTarget("AddonData:config"))?.noteId
     return { schemaNoteId, configNoteId }
 }
 
