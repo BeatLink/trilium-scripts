@@ -373,31 +373,36 @@ Writes `values` to the config note, keeping only keys present in the schema.
 Declare this addon as a dependency and pull in its `ui` export as a child of your settings widget
 note (`{"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}`):
 
+For the common case — a settings note that is nothing but the form — the whole file is a re-export:
+
 ```jsx
-import { SettingsForm } from "libSettingsUI.jsx"
+import { SettingsPage } from "libSettingsUI.jsx"
 
-export default function MySettings() {
-    const [schemaNoteId, setSchemaNoteId] = useState(null)
-    const [configNoteId, setConfigNoteId] = useState(null)
-
-    useEffect(() => {
-        (async () => {
-            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
-            setConfigNoteId(target.noteId)
-        })()
-    }, [])
-
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
-
-    return (
-        <div>
-            <h3>My Addon Settings</h3>
-            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-        </div>
-    )
-}
+export default SettingsPage
 ```
+
+### `<SettingsPage />`
+
+Resolves the current note's `schemaNote` and `AddonData:config` relations itself, then renders a
+`SettingsForm` for them, showing `Loading...` until both resolve. Any other prop (`extraPanels`,
+`only`, `onSaved`) passes straight through to `SettingsForm`.
+
+Reach for `SettingsForm` directly only when the page is more than the form — e.g. content stacked
+*above* it rather than in a tab, as `template-picker@beatlink` does with its Scan button. In that
+case use `resolveConfigNotes()` so you still don't hand-roll the relation lookups.
+
+### `resolveConfigNotes(note = api.currentNote)`
+
+Returns `{ schemaNoteId, configNoteId }` for a note, handling both wirings:
+
+* a **settings note**, where `schemaNote` and `AddonData:config` both hang off the note directly;
+* a **widget script note**, which carries `schemaNote` itself but reaches config indirectly through
+  its `settingsNote` relation.
+
+Either id is `null` when its relation is absent, so gate your render on both. Pass `currentNote`
+explicitly from a widget (`resolveConfigNotes(currentNote)`); the default suits a settings note.
+
+Frontend only — backend scripts should keep using the `libSettings.js` require described above.
 
 ### `<SettingsForm schemaNoteId configNoteId />`
 

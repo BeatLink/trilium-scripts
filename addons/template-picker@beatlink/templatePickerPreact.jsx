@@ -1,6 +1,7 @@
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
 import { getTemplates } from "templateRegistry.jsx"
+import { resolveConfigNotes } from "libSettingsUI.jsx"
 
 const NONE_OPTION = { noteId: "none", title: "None" }
 
@@ -14,11 +15,7 @@ export default defineWidget({
         const noteId = useNoteProperty(note, "noteId")
         useEffect(() => {
             (async () => {
-                const schemaNoteId = await currentNote.getRelationValue("schemaNote")
-                const settingsNoteId = await currentNote.getRelationValue("settingsNote")
-                const configNoteId = await api.runOnBackend((settingsNoteId) => {
-                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
-                }, [settingsNoteId])
+                const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
                 const templates = await getTemplates(schemaNoteId, configNoteId)
 
                 // An install that has never been scanned has an empty registry —

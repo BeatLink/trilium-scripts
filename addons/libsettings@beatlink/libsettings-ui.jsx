@@ -130,6 +130,32 @@ async function persistValues(schema, configNoteId, values) {
     )
 }
 
+// Resolves the pair of note ids every settings consumer needs, from whichever
+// note is calling. Two wirings exist and both appear across addons, so this
+// accepts either:
+//
+//   - a *settings* note (the render-note case, what `SettingsPage` uses): the
+//     schema and config hang off this note directly, as `schemaNote` and
+//     `AddonData:config`.
+//   - a *widget* script note: it carries `schemaNote` itself but reaches config
+//     indirectly, via its `settingsNote` relation — so the config lookup needs a
+//     backend hop to read a relation off a note that isn't the current one.
+//
+// Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
+// relation is absent — callers already gate their render on that.
+export async function resolveConfigNotes(note = api.currentNote) {
+    const schemaNoteId = await note.getRelationValue("schemaNote")
+    const settingsNoteId = await note.getRelationValue("settingsNote")
+    // No `settingsNote` means this *is* the settings note: read config locally.
+    const configNoteId = settingsNoteId
+        ? await api.runOnBackend(
+            (id) => api.getNote(id).getRelationValue("AddonData:config"),
+            [settingsNoteId]
+        )
+        : await note.getRelationValue("AddonData:config")
+    return { schemaNoteId, configNoteId }
+}
+
 // Exported so other frontend code (e.g. a note-context-aware widget) can read merged
 // settings without duplicating the schema/config-loading logic.
 export async function loadSettings(schemaNoteId, configNoteId) {
@@ -725,5 +751,30 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
                 </div>
             )}
         </div>
+    )
+}
+
+// The whole of a typical addon's settings note: resolve this note's schema and
+// config, then render the form. Every addon's settings.jsx was otherwise the
+// same twenty lines of resolve-then-render boilerplate differing only by
+// function name, so they now just re-export this. Extra props (`extraPanels`,
+// `only`, `onSaved`) pass straight through to `SettingsForm`, which is what lets
+// an addon needing more than a bare form — template-picker's Scan button — still
+// use this rather than hand-rolling the resolution again.
+export function SettingsPage(props) {
+    const [notes, setNotes] = useState(null)
+
+    useEffect(() => {
+        (async () => setNotes(await resolveConfigNotes()))()
+    }, [])
+
+    if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>
+
+    return (
+        <SettingsForm
+            schemaNoteId={notes.schemaNoteId}
+            configNoteId={notes.configNoteId}
+            {...props}
+        />
     )
 }

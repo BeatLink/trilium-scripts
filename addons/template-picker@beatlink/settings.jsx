@@ -1,5 +1,5 @@
 import { useState, useEffect } from "trilium:preact"
-import { SettingsForm } from "libSettingsUI.jsx"
+import { SettingsForm, resolveConfigNotes } from "libSettingsUI.jsx"
 import { scanTemplates } from "templateRegistry.jsx"
 
 // The Scan button above the registry editor. Scan writes config directly, so the
@@ -51,19 +51,16 @@ function TemplatesPanel({ schemaNoteId, configNoteId }) {
     )
 }
 
+// Not `SettingsPage`, because the Scan button stacks *above* the form rather
+// than living in a tab — only the note resolution is shared.
 export default function TemplatePickerSettings() {
-    const [schemaNoteId, setSchemaNoteId] = useState(null)
-    const [configNoteId, setConfigNoteId] = useState(null)
+    const [notes, setNotes] = useState(null)
 
     useEffect(() => {
-        (async () => {
-            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
-            setConfigNoteId(target.noteId)
-        })()
+        (async () => setNotes(await resolveConfigNotes()))()
     }, [])
 
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+    if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>
 
-    return <TemplatesPanel schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+    return <TemplatesPanel schemaNoteId={notes.schemaNoteId} configNoteId={notes.configNoteId} />
 }

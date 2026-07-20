@@ -1,19 +1,3 @@
-import { useState, useEffect } from "trilium:preact"
-import { SettingsForm } from "libSettingsUI.jsx"
+import { SettingsPage } from "libSettingsUI.jsx"
 
-export default function PriorityPickerSettings() {
-    const [schemaNoteId, setSchemaNoteId] = useState(null)
-    const [configNoteId, setConfigNoteId] = useState(null)
-
-    useEffect(() => {
-        (async () => {
-            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
-            setConfigNoteId(target.noteId)
-        })()
-    }, [])
-
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
-
-    return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-}
+export default SettingsPage

@@ -6,7 +6,7 @@
 
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote, log } from "trilium:api"
-import { loadSettings } from "libSettingsUI.jsx"
+import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
 const NONE_OPTION = { label: "none", title: "None" }
 
@@ -23,11 +23,7 @@ export default defineWidget({
         const noteId = useNoteProperty(note, "noteId")
         useEffect(() => {
             (async () => {
-                const schemaNoteId = await currentNote.getRelationValue("schemaNote")
-                const settingsNoteId = await currentNote.getRelationValue("settingsNote")
-                const configNoteId = await api.runOnBackend((settingsNoteId) => {
-                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
-                }, [settingsNoteId])
+                const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
                 const { areas } = await loadSettings(schemaNoteId, configNoteId)
 
                 setVisible(
