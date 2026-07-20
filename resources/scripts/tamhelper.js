@@ -530,7 +530,7 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
 
     const exportTitleCache = new Map();
     function resolveExportTitle(depId, exportKey) {
-        const key = depId + " " + exportKey;
+        const key = depId + ":" + exportKey;
         if (exportTitleCache.has(key)) return exportTitleCache.get(key);
         let title = null;
         const depFile = path.join("addons", depId, MANIFEST_NAME);
@@ -1523,10 +1523,27 @@ function cmdPublishRelease(args) {
     const notes = `Auto-published from \`${sha}\``;
 
     function publishTo(tag, title, latest) {
-        spawnSync("gh", [
+        // `create` fails whenever the release already exists — always true for the
+        // floating `latest` tag after the first publish, and true for
+        // `publish-<run>` on a re-run. That is expected, so its failure is not
+        // fatal; but every *other* create failure (bad token, missing permission)
+        // must not fall through to `upload`, which would then fail with the far
+        // more confusing "release not found". So: tolerate the already-exists
+        // case by confirming the release is really there, and surface anything
+        // else with the actual stderr rather than discarding it.
+        const created = spawnSync("gh", [
             "release", "create", tag, "--title", title, "--notes", notes,
             ...(latest ? ["--latest"] : []),
-        ], { stdio: ["inherit", "inherit", "ignore"] });
+        ], { encoding: "utf8" });
+
+        if (created.status !== 0) {
+            const view = spawnSync("gh", ["release", "view", tag], { stdio: "ignore" });
+            if (view.status !== 0) {
+                process.stderr.write(created.stderr || "");
+                die(`Could not create or find release '${tag}'`);
+            }
+        }
+
         const r = spawnSync("gh", ["release", "upload", tag, ...files, "--clobber"], { stdio: "inherit" });
         if (r.status !== 0) process.exit(r.status || 1);
     }
