@@ -373,25 +373,32 @@ Writes `values` to the config note, keeping only keys present in the schema.
 Declare this addon as a dependency and pull in its `ui` export as a child of your settings widget
 note (`{"parent": "settings", "addon": "libsettings@beatlink", "child": "ui"}`):
 
-For the common case — a settings note that is nothing but the form — the whole file is a re-export:
+For the common case — a settings note that is nothing but the form:
 
 ```jsx
 import { SettingsPage } from "libSettingsUI.jsx"
 
-export default SettingsPage
+export default function MySettings() {
+    return <SettingsPage note={api.currentNote} />
+}
 ```
 
-### `<SettingsPage />`
+### `<SettingsPage note />`
 
-Resolves the current note's `schemaNote` and `AddonData:config` relations itself, then renders a
-`SettingsForm` for them, showing `Loading...` until both resolve. Any other prop (`extraPanels`,
-`only`, `onSaved`) passes straight through to `SettingsForm`.
+Resolves `note`'s `schemaNote` and `AddonData:config` relations, then renders a `SettingsForm` for
+them, showing `Loading...` until both resolve. Any other prop (`extraPanels`, `only`, `onSaved`)
+passes straight through to `SettingsForm`.
+
+**`note` is required, and must be read in your own module.** Reading `api.currentNote` inside this
+library yields *the library's* note, not your settings note — it has no `schemaNote` or
+`AddonData:config` relation, so resolution silently yields nothing and the page never leaves
+`Loading...`. That is why this is a prop rather than a default.
 
 Reach for `SettingsForm` directly only when the page is more than the form — e.g. content stacked
 *above* it rather than in a tab, as `template-picker@beatlink` does with its Scan button. In that
 case use `resolveConfigNotes()` so you still don't hand-roll the relation lookups.
 
-### `resolveConfigNotes(note = api.currentNote)`
+### `resolveConfigNotes(note)`
 
 Returns `{ schemaNoteId, configNoteId }` for a note, handling both wirings:
 
@@ -399,8 +406,10 @@ Returns `{ schemaNoteId, configNoteId }` for a note, handling both wirings:
 * a **widget script note**, which carries `schemaNote` itself but reaches config indirectly through
   its `settingsNote` relation.
 
-Either id is `null` when its relation is absent, so gate your render on both. Pass `currentNote`
-explicitly from a widget (`resolveConfigNotes(currentNote)`); the default suits a settings note.
+Either id is `null` when its relation is absent, so gate your render on both.
+
+`note` is required, for the reason given above: pass `api.currentNote` from a settings note's own
+module, or the `currentNote` imported from `trilium:api` from a widget.
 
 Frontend only — backend scripts should keep using the `libSettings.js` require described above.
 

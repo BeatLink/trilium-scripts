@@ -57,7 +57,9 @@ export default function TemplatePickerSettings() {
     const [notes, setNotes] = useState(null)
 
     useEffect(() => {
-        (async () => setNotes(await resolveConfigNotes()))()
+        // `api.currentNote` must be read here, in this addon's own module —
+        // inside libsettings it resolves to the library's note instead.
+        (async () => setNotes(await resolveConfigNotes(api.currentNote)))()
     }, [])
 
     if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>

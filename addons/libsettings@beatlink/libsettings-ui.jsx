@@ -141,9 +141,17 @@ async function persistValues(schema, configNoteId, values) {
 //     indirectly, via its `settingsNote` relation — so the config lookup needs a
 //     backend hop to read a relation off a note that isn't the current one.
 //
+// `note` is required and must be the *consumer's* own note — do not default it
+// to `api.currentNote`. Inside this module `api.currentNote` is the library's
+// note, not the settings/widget note that owns the `schemaNote` and
+// `AddonData:config` relations, so a default silently resolves nothing and
+// strands the caller on its loading state. Settings notes pass `api.currentNote`
+// from their own module; widgets pass the `currentNote` they import from
+// `trilium:api`.
+//
 // Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
 // relation is absent — callers already gate their render on that.
-export async function resolveConfigNotes(note = api.currentNote) {
+export async function resolveConfigNotes(note) {
     const schemaNoteId = await note.getRelationValue("schemaNote")
     const settingsNoteId = await note.getRelationValue("settingsNote")
     // No `settingsNote` means this *is* the settings note: read config locally.
@@ -767,12 +775,12 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
 // `only`, `onSaved`) pass straight through to `SettingsForm`, which is what lets
 // an addon needing more than a bare form — template-picker's Scan button — still
 // use this rather than hand-rolling the resolution again.
-export function SettingsPage(props) {
+export function SettingsPage({ note, ...props }) {
     const [notes, setNotes] = useState(null)
 
     useEffect(() => {
-        (async () => setNotes(await resolveConfigNotes()))()
-    }, [])
+        (async () => setNotes(await resolveConfigNotes(note)))()
+    }, [note])
 
     if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>
 
