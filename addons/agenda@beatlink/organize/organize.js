@@ -371,6 +371,151 @@ async function assignStartDate(noteId, dateStr, timeStr) {
     }, [noteId, dateStr, timeStr])
 }
 
+// Find INVALID buckets: structural bucket notes whose identity no longer maps to
+// a current dimension value. A bucket carries #agendaOrganizeArea=<areaSlug> plus
+// #agendaOrganizeBucket=<bucketSlug>; it's invalid when its area slug is not a
+// current root-dimension value OR its bucket slug is not a current bucket-
+// dimension value — the orphan left behind when the user deletes or renames an
+// Area or Type value in the Dimensions editor. (mergeStaleBuckets only auto-
+// resolves buckets it CAN map via aliases; these are the residue it reports as
+// `skipped` — surfaced here so the user can act on them.)
+//
+// `rootDim` / `bucketDim` are the two scaffolding dimensions
+// ({ label, values: [{ key, name }] }). Returns
+//   { invalid: [{ noteId, title, path, area, bucket, childCount,
+//                 areaInvalid, bucketInvalid, reason }],
+//     targets: [{ noteId, label }] }
+// where `targets` is every VALID bucket (a merge destination), labelled by its
+// tree path so the user can tell "Home › Tasks" from "Career › Tasks".
+async function getInvalidBuckets(rootDim, bucketDim) {
+    return api.runOnBackend((labels, rootDim, bucketDim) => {
+        const areaKeys = new Set(rootDim.values.map(v => v.key))
+        const bucketKeys = new Set(bucketDim.values.map(v => v.key))
+        const areaNameByKey = {}
+        for (const v of rootDim.values) areaNameByKey[v.key] = v.name
+        const bucketNameByKey = {}
+        for (const v of bucketDim.values) bucketNameByKey[v.key] = v.name
+
+        function pathOf(note) {
+            const parts = []
+            let cur = note.getParentNotes()[0]
+            while (cur && cur.noteId !== "root") {
+                parts.unshift(cur.title)
+                cur = cur.getParentNotes()[0]
+            }
+            return parts.join(" › ")
+        }
+
+        // Every structural bucket: carries the bucket label (area roots don't).
+        const bucketNotes = api.searchForNotes(`#${labels.bucket}`)
+
+        const invalid = []
+        const targets = []
+        for (const note of bucketNotes) {
+            const area = note.getLabelValue(labels.area) || ""
+            const bucket = note.getLabelValue(labels.bucket) || ""
+            const areaInvalid = !areaKeys.has(area)
+            const bucketInvalid = !bucketKeys.has(bucket)
+
+            if (!areaInvalid && !bucketInvalid) {
+                // A valid bucket — offer it as a merge destination.
+                const path = pathOf(note)
+                targets.push({
+                    noteId: note.noteId,
+                    label: (path ? path + " › " : "") + note.title
+                })
+                continue
+            }
+
+            const reasons = []
+            if (areaInvalid) reasons.push(`area "${area || "(none)"}" is not a current area`)
+            if (bucketInvalid) reasons.push(`type "${bucket || "(none)"}" is not a current type`)
+            invalid.push({
+                noteId: note.noteId,
+                title: note.title,
+                path: pathOf(note),
+                area,
+                bucket,
+                childCount: note.getChildNotes().length,
+                areaInvalid,
+                bucketInvalid,
+                reason: reasons.join("; ")
+            })
+        }
+        return { invalid, targets }
+    }, [LABELS, rootDim, bucketDim])
+}
+
+// Merge one bucket into another: move every child of `fromNoteId` into
+// `toNoteId`, append the source's own body under a heading (buckets are usually
+// empty, but losing content would be data loss), then delete the emptied source
+// — but ONLY after confirming it has no remaining children and no content, the
+// same verified-empty discipline mergeStaleBuckets uses (deleting a note the user
+// may have filled is the one irreversible step). Returns
+//   { moved, movedContent, deleted, keptReason }.
+async function mergeBucketInto(fromNoteId, toNoteId) {
+    return api.runOnBackend((fromNoteId, toNoteId) => {
+        if (!fromNoteId || !toNoteId || fromNoteId === toNoteId) {
+            return { moved: 0, movedContent: false, deleted: false, keptReason: "invalid merge target" }
+        }
+        const from = api.getNote(fromNoteId)
+        const to = api.getNote(toNoteId)
+        if (!from || !to) {
+            return { moved: 0, movedContent: false, deleted: false, keptReason: "note not found" }
+        }
+
+        function bodyOf(n) {
+            if (n.type !== "text") return ""
+            try {
+                const b = n.getContent()
+                return b && typeof b === "string" ? b : ""
+            } catch (e) { return "" }
+        }
+        function isBlank(html) {
+            return !String(html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim()
+        }
+
+        // Move each child, then confirm the move from the CHILD's own parent list
+        // (re-reading from.getChildNotes() would read a cached entity still listing
+        // the moved children, so nothing would ever verify as empty).
+        const children = from.getChildNotes()
+        const stuck = []
+        for (const child of children) {
+            api.toggleNoteInParent(true, child.noteId, toNoteId, "")
+            api.toggleNoteInParent(false, child.noteId, fromNoteId, "")
+            const moved = api.getNote(child.noteId)
+            const parentIds = moved ? moved.getParentNotes().map(p => p.noteId) : []
+            if (!moved || parentIds.indexOf(toNoteId) === -1 || parentIds.indexOf(fromNoteId) !== -1) {
+                stuck.push(child.title)
+            }
+        }
+
+        // Migrate the source body before emptying it.
+        const huskBody = bodyOf(from)
+        const movedContent = !isBlank(huskBody)
+        let contentStuck = false
+        if (movedContent) {
+            if (to.type === "text") {
+                to.setContent(`${bodyOf(to)}<h2>Merged from ${from.title}</h2>${huskBody}`)
+                from.setContent("")
+            } else {
+                contentStuck = true
+            }
+        }
+
+        let keptReason = ""
+        if (stuck.length > 0) keptReason = `${stuck.length} child note(s) did not move: ${stuck.join(", ")}`
+        else if (contentStuck) keptReason = "destination is not a text note; content left in place"
+
+        let deleted = false
+        if (!keptReason) {
+            from.deleteNote()
+            deleted = true
+        }
+        return { moved: children.length, movedContent, deleted, keptReason }
+    }, [fromNoteId, toNoteId])
+}
+
 // Delete a note outright (all its clones), used by the Organize queues' Delete
 // action to drop junk captured into the Inbox. deleteNote() is Trilium's own
 // cascade delete, the same call TAM uses to remove notes.
@@ -386,6 +531,8 @@ async function deleteNote(noteId) {
 module.exports = {
     getOrganizeCandidates,
     getMisfiledNotes,
+    getInvalidBuckets,
+    mergeBucketInto,
     assignStartDate,
     refileNote,
     deleteNote

@@ -36,10 +36,12 @@ tab):
 - **Organize** — a two-tab page: **Triage** (a one-at-a-time queue over every note under the Inbox /
   Area subtrees, with one section per triaged dimension assigning its missing value — **`#area`** (+
   `#color`), **`#type`** (+ `~template`), **`#priority`** (+ `#color`), or any dimension you add —
-  plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`) and a **Misfiled Notes**
-  fixer for notes whose area/type disagrees with where they're filed) and **Dimensions** (the
-  vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time buttons use the times
-  on the Agenda Editor's **Organize › Times** tab.
+  plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`), a **Misfiled Notes**
+  fixer for notes whose area/type disagrees with where they're filed, and an **Invalid Buckets**
+  section listing scaffolded buckets whose area/type slug no longer maps to a current dimension value,
+  each with **Merge into `<bucket>`** (fold its notes into a valid bucket) or **Delete**) and
+  **Dimensions** (the vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time
+  buttons use the times on the Agenda Editor's **Organize › Times** tab.
 
   Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
   Note** picker on the Agenda Editor's **Organize › Organize Note** tab. Selecting a note converts it into a render note

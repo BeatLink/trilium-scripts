@@ -108,6 +108,15 @@ leaves its queue. Sections:
    differs from its ancestor bucket, with Move / Set-area / Set-type fixes (the last two call
    `assignDimension` on the root/bucket dimension). Stays two-dimensional by design (the tree has one
    root axis and one bucket axis); if more than one dimension scaffolds, the first of each is used.
+4. **Invalid Buckets** — structural bucket notes (`#agendaOrganizeBucket`) whose area or type slug no
+   longer maps to a current dimension value — the orphan left behind when an Area or Type value is
+   deleted or renamed in the Dimensions editor. `getInvalidBuckets(rootDim, bucketDim)` returns them
+   plus the list of *valid* buckets as merge destinations. Each card offers **Merge into `<bucket>`**
+   for every valid bucket (`mergeBucketInto` moves the invalid bucket's children into the chosen one,
+   migrates its body under a "Merged from" heading, then deletes the emptied husk on verified-empty)
+   and **Delete** (cascade — the confirm warns when the bucket still holds notes). This is the manual
+   counterpart to `mergeStaleBuckets`, which only auto-resolves buckets it can map via an alias; these
+   are the residue it reports as `skipped`.
 
 ## 4. Provisioning model — runtime find-or-create
 

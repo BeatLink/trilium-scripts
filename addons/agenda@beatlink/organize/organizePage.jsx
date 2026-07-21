@@ -4,8 +4,8 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const {
-    getOrganizeCandidates, getMisfiledNotes,
-    assignStartDate, refileNote, deleteNote
+    getOrganizeCandidates, getMisfiledNotes, getInvalidBuckets,
+    assignStartDate, refileNote, deleteNote, mergeBucketInto
 } = require("organize.js")
 const { getDimensions, assignDimension } = require("dimensions.js")
 
@@ -115,7 +115,7 @@ function DueDatePicker({ item, act, busy, times, onAssigned }) {
 // render-prop supplies the buttons; `act(fn)` runs an async action while the
 // card is disabled (busy). Delete removes the note (with a confirm). Sharing this
 // shell keeps every Organize section visually and behaviorally identical.
-function QueueSection({ heading, items, renderActions, onDelete, emptyMessage }) {
+function QueueSection({ heading, items, renderActions, onDelete, emptyMessage, confirmMessage }) {
     const [index, setIndex] = useState(0)
     const [busy, setBusy] = useState(false)
 
@@ -144,7 +144,10 @@ function QueueSection({ heading, items, renderActions, onDelete, emptyMessage })
     }
     async function remove() {
         if (!current || busy) return
-        if (!window.confirm(`Delete note "${current.title || "(untitled)"}"? This cannot be undone.`)) return
+        const msg = confirmMessage
+            ? confirmMessage(current)
+            : `Delete note "${current.title || "(untitled)"}"? This cannot be undone.`
+        if (!window.confirm(msg)) return
         await act(() => onDelete(current))
     }
 
@@ -252,11 +255,14 @@ function TriagePanel() {
     const [dimensions, setDimensions] = useState(null)
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
+    const [invalidBuckets, setInvalidBuckets] = useState(null)
+    const [bucketTargets, setBucketTargets] = useState([])
     const [times, setTimes] = useState(null)
 
     async function reload() {
         setCandidates(null)
         setMisfiled(null)
+        setInvalidBuckets(null)
         // The dimension vocabulary drives every queue and the misfiled check, so
         // load it first. The two scaffolding dimensions (root = Area, bucket =
         // Type) are the misfiled axes; the type dimension's actionable values gate
@@ -266,20 +272,24 @@ function TriagePanel() {
         const bucketDim = dims.find(d => d.scaffoldsBuckets) || { label: "type", values: [] }
         const actionableTypes = bucketDim.values.filter(v => v.actionable).map(v => v.key)
 
-        const [cands, mis, tms] = await Promise.all([
+        const [cands, mis, invalid, tms] = await Promise.all([
             getOrganizeCandidates(dims.map(d => d.label), actionableTypes),
             getMisfiledNotes(rootDim, bucketDim),
+            getInvalidBuckets(rootDim, bucketDim),
             loadTimeSettings()
         ])
         setDimensions(dims)
         setCandidates(cands)
         setMisfiled(mis)
+        setInvalidBuckets(invalid.invalid)
+        setBucketTargets(invalid.targets)
         setTimes(tms)
     }
 
     useEffect(() => { reload() }, [])
 
-    if (candidates === null || dimensions === null || misfiled === null || times === null) {
+    if (candidates === null || dimensions === null || misfiled === null ||
+        invalidBuckets === null || times === null) {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
@@ -305,6 +315,9 @@ function TriagePanel() {
     }
     function dropMisfiled(noteId) {
         setMisfiled(ms => ms.filter(m => m.noteId !== noteId))
+    }
+    function dropInvalidBucket(noteId) {
+        setInvalidBuckets(bs => bs.filter(b => b.noteId !== noteId))
     }
 
     // The dimensions that get a triage queue, in config order. A queue lists the
@@ -441,6 +454,57 @@ function TriagePanel() {
                 }}
                 onDelete={async (item) => { await deleteNote(item.noteId); dropMisfiled(item.noteId) }}
                 emptyMessage="Nothing misfiled — every note's area and type match where it lives."
+            />
+
+            <QueueSection
+                heading="Invalid Buckets"
+                items={invalidBuckets}
+                renderActions={(item, act, busy) => {
+                    const buttons = [
+                        <div key="reason" className="workflow-organize-reason">
+                            {item.reason}.
+                            {item.childCount > 0
+                                ? ` Holds ${item.childCount} note${item.childCount === 1 ? "" : "s"} — merge to keep them, or delete to discard.`
+                                : " Empty — safe to delete."}
+                        </div>
+                    ]
+                    if (bucketTargets.length === 0) {
+                        buttons.push(
+                            <div key="none" className="workflow-organize-reason">
+                                No valid bucket to merge into. Provision the structure or add the type
+                                back, then reload — or delete this bucket.
+                            </div>
+                        )
+                    }
+                    for (const target of bucketTargets) {
+                        buttons.push(
+                            <button
+                                key={target.noteId}
+                                className="workflow-organize-option-btn"
+                                disabled={busy}
+                                onClick={() => act(async () => {
+                                    const r = await mergeBucketInto(item.noteId, target.noteId)
+                                    if (r.deleted) {
+                                        dropInvalidBucket(item.noteId)
+                                    } else {
+                                        window.alert(
+                                            `Merged ${r.moved} note${r.moved === 1 ? "" : "s"} into ${target.label}, ` +
+                                            `but the empty bucket was kept: ${r.keptReason}.`)
+                                    }
+                                })}
+                            >
+                                Merge into {target.label}
+                            </button>
+                        )
+                    }
+                    return buttons
+                }}
+                onDelete={async (item) => { await deleteNote(item.noteId); dropInvalidBucket(item.noteId) }}
+                confirmMessage={(item) =>
+                    item.childCount > 0
+                        ? `Delete bucket "${item.title || "(untitled)"}" AND the ${item.childCount} note${item.childCount === 1 ? "" : "s"} inside it? This cannot be undone.`
+                        : `Delete empty bucket "${item.title || "(untitled)"}"? This cannot be undone.`}
+                emptyMessage="No invalid buckets — every scaffolded bucket maps to a current area and type."
             />
         </div>
     )
