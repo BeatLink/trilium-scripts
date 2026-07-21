@@ -23,6 +23,7 @@ const {
     AREA_TEMPLATE_TITLE, TYPE_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE,
     AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE, SPECIAL_TYPE
 } = require("organizeStructure.js")
+const { matchTemplatesByName } = require("dimensions.js")
 
 // Structural #type values that changed name, not just shape, when the numeric
 // prefixes were dropped: old value -> new.
@@ -52,27 +53,27 @@ const SPECIAL_LABEL = "agendaOrganizeSpecial"
 const LEGACY_LABEL = "workflowNote"
 
 // Removed/renamed areas that fold into a surviving one: old name -> surviving
-// name (both lowercase). When an area is dropped (e.g. Health folded into
-// Fitness), its name no longer appears in area-picker's list, so migrateAreaSlugs
+// name (both lowercase). When an area value is dropped (e.g. Health folded into
+// Fitness), its key no longer appears in the area dimension, so migrateAreaSlugs
 // can't re-key it by name alone — this alias points the old name at the survivor.
 const AREA_ALIASES = {
     health: "fitness",
     productivity: "tech"
 }
 
-// Renamed item templates that fold into a surviving one: old slug -> surviving
-// slug. slugify() (organizeTemplates.jsx) collapses every non-alphanumeric run
-// to a dash, so it cannot be inverted — once a template is renamed, nothing in
-// the tree connects its old bucket key to the new slug. This map is that link;
-// add an entry when renaming a template that already has buckets in the wild.
+// Renamed bucket (type) values that fold into a surviving one: old key ->
+// surviving key. A bucket note carries the old key in its identity label, and
+// there is no way to recover the new key from it — so once a type value is
+// renamed, this map is the only link between its old buckets and the new key.
+// Add an entry when renaming a type value that already has buckets in the wild.
 const TEMPLATE_ALIASES = {}
 
 // Normalize every note's #area onto area-picker's stable keys.
 //
 // Area keys used to be "<NN>-<name>" ("01-career"), so the number changed
 // whenever areas were reordered and every tagged note had to be rewritten.
-// area-picker now stores order-free stable slugs ("career") — order lives in the
-// config list's position (see libAgendaConfig.getSortValueMaps) — so this
+// the area dimension now stores order-free stable slugs ("career") — order lives
+// in the value list's position (see dimensions.getSortValueMaps) — so this
 // migration runs one way: strip a leading "<NN>-" when present, then resolve
 // through AREA_ALIASES for areas that were folded into another (health ->
 // fitness). #color is re-asserted from the resolved area.
@@ -495,12 +496,27 @@ async function provisionNode(parentNoteId, node, templateId) {
 }
 
 // Walk the whole structure depth-first, provisioning each node under its
-// resolved parent. Top-level nodes go under "root". `areaList` is area-picker's
-// vocabulary ([{ slug, name, color }]); `templateList` is agenda's enabled
-// managed templates ([{ slug, name, ... }], in order) — together they drive
-// which Area notes and per-template buckets are built. Returns a flat result log
+// resolved parent. Top-level nodes go under "root".
+//
+// `dimensions` is agenda's full dimension list; the two scaffolding dimensions
+// drive the tree: the root dimension (scaffoldsAreas) becomes the Area notes,
+// the bucket dimension (scaffoldsBuckets) the per-type buckets inside each. Both
+// are reduced here to the { slug, name, color } / { slug, name, icon } shapes the
+// builder and migrations expect. Returns a flat result log
 // [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
-async function provisionStructure(areaList, templateList) {
+async function provisionStructure(dimensions) {
+    const rootDim = dimensions.find(d => d.scaffoldsAreas)
+    const bucketDim = dimensions.find(d => d.scaffoldsBuckets)
+    const areaList = (rootDim ? rootDim.values : [])
+        .map(v => ({ slug: v.key, name: v.name, color: v.color }))
+    const templateList = (bucketDim ? bucketDim.values : [])
+        .map(v => ({ slug: v.key, name: v.name, icon: v.icon, noteId: v.templateNoteId }))
+
+    // Fill any blank bucket-value template notes by title match, so a fresh
+    // install ends up with each bucket's ~template set even though note ids can't
+    // ship as defaults.
+    await matchTemplatesByName()
+
     // Resolve the two templates once up front, then map each node's template
     // title to a real id inside the walk.
     const templateIds = {

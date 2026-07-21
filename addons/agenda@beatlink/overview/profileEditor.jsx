@@ -1,10 +1,9 @@
 import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
 import { getAgendaSettings } from "agendaSettings.jsx"
-import { getAreaSettings } from "organizeAreas.jsx"
-import { getTemplateConfig } from "organizeTemplates.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
+const { getDimensions } = require("dimensions.js")
 
 // The icon stamped on the note that hosts the Organize UI.
 const ORGANIZE_ICON = "bx bx-sort-down"
@@ -128,8 +127,7 @@ function WorkflowSetup() {
         setError(null)
         setOutcome(null)
         try {
-            const [areas, templateList] = await Promise.all([getAreaSettings(), getTemplateConfig()])
-            setOutcome(await provisionStructure(areas, templateList.filter(t => t.enabled)))
+            setOutcome(await provisionStructure(await getDimensions()))
         } catch (e) {
             setError(String(e && e.message ? e.message : e))
         } finally {

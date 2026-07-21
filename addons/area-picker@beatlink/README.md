@@ -13,7 +13,6 @@ note's `#color` label when that area is selected).
 ## Sharing the area list with other addons
 
 The settings note is tagged **`#areaConfig`** so other addons can discover and reuse the same area
-vocabulary at runtime (the same pattern agenda uses with `#agendaConfig`). A consumer searches for
-`#areaConfig`, reads the anchor's `schemaNote` and `AddonData:config` relations, and calls
-libsettings' `loadSettings(schemaNoteId, configNoteId)` to get the `areas` list. `agenda@beatlink`'s
-Organize workflow consumes it this way.
+vocabulary at runtime. A consumer searches for `#areaConfig`, reads the anchor's `schemaNote` and
+`AddonData:config` relations, and calls libsettings' `loadSettings(schemaNoteId, configNoteId)` to
+get the `areas` list.

@@ -126,16 +126,16 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
     }, [overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes])
 }
 
-// Promoted attribute definitions shown on the overview's cards/rows.
-function promotedAttributesForConstants(constants = {}) {
+// Promoted attribute definitions shown on the overview's cards/rows: the fixed
+// date/display columns, then one per registered dimension (so a dimension the
+// user adds gets its own column with no code change).
+function promotedAttributesForConstants(constants = {}, dimensions = []) {
     const specs = [
         [constants.START_DATETIME_LABEL, "promoted,single,datetime", "Start"],
         [constants.DUE_DATETIME_LABEL, "promoted,single,datetime", "Due"],
         ["durationDisplay", "promoted,single,text", "Duration"],
         ["recurrenceDisplay", "promoted,single,text", "Recurrence"],
-        ["priority", "promoted,single,text", "Priority"],
-        ["area", "promoted,single,text", "Area"],
-        ["type", "promoted,single,text", "Type"]
+        ...dimensions.map(dim => [dim.label, "promoted,single,text", dim.name])
     ]
     return specs
         .filter(([name]) => name)
@@ -188,7 +188,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
             await refreshDisplayLabels(noteId, constants)
         }
 
-        const promotedAttributes = promotedAttributesForConstants(constants)
+        const promotedAttributes = promotedAttributesForConstants(constants, data.dimensions)
         await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes)
 
         const prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)

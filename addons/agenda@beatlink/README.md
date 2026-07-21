@@ -10,33 +10,36 @@ workflow, all sharing one configuration.
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
 - **Task** — a right-pane editor that appears on any note carrying the **`#agendaTaskWidget`** label,
-  for editing a task's start/due dates, duration, recurrence, and quick actions (complete, start
-  today/tomorrow, Zen, Hoist). Completing a task advances it to its next recurrence, or archives it
-  when the recurrence is exhausted.
+  for editing a task's classification (one dropdown per dimension — area, type, priority, or any you
+  add), start/due dates, duration, recurrence, and quick actions (complete, start today/tomorrow,
+  Zen, Hoist). Completing a task advances it to its next recurrence, or archives it when the
+  recurrence is exhausted.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
 
 ## Organize (GTD triage)
 
-An opinionated Collect → Organize workflow on top of the widgets above (uses the bundled item-type
-templates and [`area-picker@beatlink`](../area-picker@beatlink/README.md) for the area vocabulary):
+An opinionated Collect → Organize workflow on top of the widgets above, driven by agenda's own
+open-ended **dimensions** (area, type and priority ship as defaults; add your own in the Dimensions
+tab):
 
 - **Workflow Setup** — a tab in the Agenda Editor's **Settings › Workflow Setup**: one button
   provisions the notebook structure by find-or-create: **Inbox**, **My Day**, **Agenda**, and one note
-  per Area (the areas defined in area-picker's settings, each with Ideas / Goals / Routines / Projects
-  / Future / Notes buckets below it). Every structural note is tagged with its identity labels
-  (**`#agendaOrganizeArea`** / **`#agendaOrganizeBucket`** / **`#agendaOrganizeSpecial`** — this
-  addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so it can be resolved later; re-running
-  adopts hand-made notes rather than duplicating, and re-keys stale `#area` slugs after an area
-  reorder. See [organize/README.md](organize/README.md) for the taxonomy and provisioning model.
+  per value of the root dimension (Area, each with an Ideas / Goals / Routines / Tasks / Future /
+  Projects / Notes bucket per value of the bucket dimension below it). Every structural note is tagged
+  with its identity labels (**`#agendaOrganizeArea`** / **`#agendaOrganizeBucket`** /
+  **`#agendaOrganizeSpecial`** — this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so
+  it can be resolved later; re-running adopts hand-made notes rather than duplicating, and re-keys
+  stale slugs after a reorder. See [organize/README.md](organize/README.md) for the taxonomy and
+  provisioning model.
 - **Organize** — a two-tab page: **Triage** (a one-at-a-time queue over every note under the Inbox /
-  Area subtrees, whose five sections assign the missing attributes agenda reads: **template** (type),
-  **`#area`** (+ `#color`), **priority** (from priority-widget's active profile), and **start date**
-  (`#startDateTime`/`#startDate`/`#startTime`), plus a **Misfiled Notes** fixer for notes whose
-  area/type disagrees with where they're filed) and **Templates** (which `#template` notes the
-  workflow uses and their order, edited in template-picker's shared registry). The Morning / Noon / Evening / Night
-  quick-time buttons use the times on the Agenda Editor's **Organize › Times** tab.
+  Area subtrees, with one section per triaged dimension assigning its missing value — **`#area`** (+
+  `#color`), **`#type`** (+ `~template`), **`#priority`** (+ `#color`), or any dimension you add —
+  plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`) and a **Misfiled Notes**
+  fixer for notes whose area/type disagrees with where they're filed) and **Dimensions** (the
+  vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time buttons use the times
+  on the Agenda Editor's **Organize › Times** tab.
 
   Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
   Note** picker on the Agenda Editor's **Organize › Organize Note** tab. Selecting a note converts it into a render note
@@ -53,27 +56,29 @@ by Trilium and the Template Picker widget). Template content is yours to customi
 tracked via `AddonData:` relations, so a future update that changes a default prompts an Update Review
 rather than overwriting your edits.
 
-**Which templates the Organize workflow uses comes from
-[`template-picker@beatlink`](../template-picker@beatlink/)**, not from agenda — one shared registry,
-edited on the Organize page's **Templates** tab (also under the Agenda Editor's **Organize ›
-Templates**), so the picker dropdown and the workflow can't drift. Per row you set whether it's
-**enabled** (offered in the assign queue + gets a scaffolding bucket); the row's position sets the
-assign/bucket sequence and how those types sort across agenda's views.
+Which item types the Organize workflow offers is agenda's own **type dimension** (in the Dimensions
+tab), one value per type. Each value's **Name** is the bucket/dropdown label, its **Key** the stored
+`#type` value, and its **Template Note** the `~template` relation assigned along with it (fill these
+in with **Match Templates By Name**, which pairs each value's Name to a `#template` note by title —
+Workflow Setup runs it too, so a fresh install self-heals). The value list's order sets the
+assign/bucket sequence and how types sort across agenda's views.
 
-Two things are read off the **template note's own labels** instead of config: a template is
-**actionable** (flows through the priority/start-date queues, mounts the Task editor) when it carries
-`#agendaTaskWidget`, and its items carry a priority when it declares `#label:priority`. Set those on
-the template note directly — agenda reads them and never writes them back. The priority vocabulary
-itself comes from [`priority-widget@beatlink`](../priority-widget@beatlink/). See
-[organize/README.md](organize/README.md#types--template-pickers-registry).
+Whether a type is **actionable** — its items flow through the priority/start-date queues — is a
+per-value checkbox on the type dimension. This is separate from the **`#agendaTaskWidget`** label,
+which still gates whether the Task editor *mounts* on a note; set that on the template note as before.
+
+Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
+chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).
 
 ## Shared configuration
 
 The config lives in one settings note holding a `schema.json`/`config.json` pair (label-name
-vocabulary, the inbox note, the managed item templates, profiles, and the
+vocabulary, the inbox note, the **dimensions** registry, profiles, and the
 searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference). That note is
 tagged **`#agendaConfig`**; every widget finds it at runtime via `agendaSettings.jsx`, so a change made
-in the Agenda Editor is seen by all three widgets at once.
+in the Agenda Editor is seen by all three widgets at once. The prefix/color/grouping/filter variants
+for each dimension are **derived** from the registry at read time, so adding a dimension yields all
+four with no extra setup and they can never drift from the vocabulary.
 
 The Agenda Editor groups its tabs under five workflow categories — **Collect**, **Organize**,
 **Review**, **Execute**, **Settings** — using [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s
@@ -82,8 +87,8 @@ Setup tab):
 
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
-- **Organize** — Times, the managed Templates registry, and the Organize-note picker (which note hosts
-  the Organize triage UI).
+- **Organize** — Times, the Dimensions registry, and the Organize-note picker (which note hosts the
+  Organize triage UI).
 - **Review** — Overview Note, Active Profile, Profiles, Searches, Filters, Sorts, Prefixes, Colors,
   Groupings, Date Rules (everything that shapes what the overview shows).
 - **Execute** — My Day.

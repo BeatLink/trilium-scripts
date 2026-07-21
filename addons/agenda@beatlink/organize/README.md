@@ -3,8 +3,8 @@
 Design doc for the opinionated GTD Organize workflow that ships inside `agenda@beatlink` (the
 `organize/` module + the **Organize** render page and the **Workflow Setup** tab in the Agenda
 Editor). It bakes a specific notebook structure and triage flow on top of agenda's generic engine,
-with a **user-managed template taxonomy**. It reuses agenda's mechanism (config, filters, colors,
-kanban, task widget) — it does not fork it.
+driven by agenda's own open-ended **dimensions** vocabulary. It reuses agenda's mechanism (config,
+filters, colors, kanban, task widget) — it does not fork it.
 
 ## 1. Purpose / workflow
 
@@ -15,65 +15,57 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
   is a setting (Agenda Editor → **Collect › Inbox**, `inboxNoteId` in the shared config), preselected
   to Trilium's own inbox (a `#inbox`-tagged note) on first open and exposed via `getAgendaSettings()`
   so collection addons can file into the same place.
-- **Organize** — set each item's **type** (template), **`#area`**, **`#priority`** (MoSCoW), and
-  **start date**, and fix misfiled notes. This is the fully-built page (`organizePage.jsx`).
+- **Organize** — set each item's dimension values (**`#area`**, **`#type`**, **`#priority`**, or any
+  you add) and **start date**, and fix misfiled notes. This is the fully-built page
+  (`organizePage.jsx`).
 - **Review** — Daily: Must Do + overdue, date-sorted. Weekly: sweep by Area to catch drift. These map
   onto agenda's Task View page modes + sorts; no separate code.
 - **Execute** — work the daily list. Uses the same agenda views.
 
-## 2. Taxonomy
+## 2. Dimensions
 
-### Areas
-The area vocabulary comes from **[`area-picker@beatlink`](../../area-picker@beatlink/)**, not this
-module. Organize discovers area-picker's settings note by its `#areaConfig` label and loads its
-`areas` list (`{ key, title, color }`, `key` = the `#area` slug like `career` — stable and
-order-free, so reordering areas never rewrites a tagged note) via
-[`organizeAreas.jsx`](organizeAreas.jsx) → `getAreaSettings()`, which normalizes it to
-`{ slug, name, color }`. The assign-area picker, the misfiled check, and Setup provisioning all read
-this one list, so editing areas in area-picker's settings changes them everywhere. area-picker ships
-the same 13 defaults agenda's four area registries in
-[`common/schema.json`](../common/schema.json) use (`filterGroups.area`/`prefixes.area`/`colors.area`/
-`groupings.area`) — keep those in sync with area-picker if you change the defaults. Folds/renames are
-handled at migration time by `AREA_ALIASES` in `organizeProvision.js` (`health`→`fitness`,
-`productivity`→`tech`), so existing notes re-tag on the next Setup provision.
+Agenda owns one open-ended **`dimensions`** registry in [`common/schema.json`](../common/schema.json),
+loaded by [`../common/dimensions.js`](../common/dimensions.js) → `getDimensions()`. A dimension is one
+note label plus its ordered vocabulary of values `[{ key, name, color, templateNoteId, actionable,
+icon }]`; area, type and priority ship as defaults, but the set is open-ended. Everything —
+Task-pane pickers, triage queues, sort ordinals, and the derived prefix/color/grouping/filter variants
+— enumerates the registered dimensions, so adding one needs no code change. `key` is the stored value
+(stable and order-free, so reordering never rewrites a tagged note); position IS the order.
 
-### Types — template-picker's registry
-The item-type taxonomy comes from **[`template-picker@beatlink`](../../template-picker@beatlink/)**,
-not this module — the same shared-vocabulary arrangement Areas use. Organize discovers its settings
-note by `#templatePickerConfig` and reads the `templates` registry via
-[`organizeTemplates.jsx`](organizeTemplates.jsx) → `getTemplateConfig()`. The **Templates** tab
-(Organize page, and the Agenda Editor's **Organize › Templates**) edits *template-picker's* config
-directly, so the picker dropdown and the workflow can never drift. Scan lives in template-picker's own
-settings page.
+`assignDimension(noteId, dim, value)` is the single write path (shared by the Task pane and the triage
+queues). It writes `#<label>=<key>`, optionally mirrors `#color` (`writeColor`), and — for the type
+dimension — sets `~template` from the value's `templateNoteId`. Per-dimension flags:
 
-Two properties agenda needs are read off each **template note's own labels**, not from config, so the
-note is the single source of truth:
+| Flag               | Effect |
+|--------------------|--------|
+| `triage`           | Gives the dimension a "Notes Without X" queue. |
+| `actionableOnly`   | Restricts that queue to notes whose `#type` is an **actionable** value (and non-subtasks). |
+| `writeColor`       | Also writes `#color` from the chosen value. |
+| `picker`           | Shows the dimension's dropdown in the Task pane. |
+| `scaffoldsAreas`   | Workflow Setup builds one root note per value (the Area axis). |
+| `scaffoldsBuckets` | Workflow Setup builds one bucket per value inside every root (the Type axis). |
+| value `actionable` | Items of this type flow through the actionable-only queues. |
+| value `templateNoteId` | Assigning the value also sets `~template` to this note. |
+| value `icon`       | The bucket's icon (type dimension). |
 
-| Source                     | Effect |
-|----------------------------|--------|
-| registry `enabled`         | Offered in the "Notes Without Templates" assign queue **and** given its own scaffolding bucket. |
-| registry row position      | Assign-queue + bucket order, and the order these types sort in across agenda's views (via `getSortValueMaps`). |
-| `#agendaTaskWidget` (note) | **Actionable**: its notes flow through the priority + start-date queues and mount the Task editor. |
-| `#label:priority` (note)   | Its notes carry a priority at all. |
+**Type note ids** can't ship as defaults (install-specific), so the shipped type values leave
+`templateNoteId` blank. `matchTemplatesByName()` fills each blank one by matching its Name against a
+`#template` note's title; it runs at the end of provisioning (fresh installs self-heal) and behind the
+**Match Templates By Name** button in the Dimensions panel. The structural templates (`AreaCollection`,
+`TypeCollection`, `Special`) are just not listed as type values, so scaffolding is never assignable.
 
-Making a type actionable is therefore one label on the template note, not a config row to keep in
-sync. `applyTemplateLabels()` (the Templates form's `onSaved`) re-derives only `#type` — it never
-writes `#agendaTaskWidget` or `#label:priority`, since agenda *reads* those and writing them back
-would clear the user's choice. The structural templates (`AreaCollection`, `TypeCollection`,
-`Special`) are filtered out of the vocabulary by title so scaffolding is never assignable.
+**Actionable** used to be read off each template note's `#agendaTaskWidget` label; it is now the type
+value's own `actionable` flag. `#agendaTaskWidget` still exists but only gates whether the **Task
+editor mounts** on a note — two separate concepts that used to be one.
 
-### Priorities
-The priority vocabulary comes from **[`priority-widget@beatlink`](../../priority-widget@beatlink/)**,
-discovered by `#priorityConfig` and read by [`organizePriority.js`](organizePriority.js) →
-`getPriorityOptions()`. The active profile supplies **both** the ordered levels and the **label name**
-they are written to (`priority` for the bundled MoSCoW/Standard profiles, `color` for the Color one),
-so the triage queue always writes where the picker widget reads. `agenda` no longer carries its own
-MoSCoW list.
+Folds/renames are handled at migration time by `AREA_ALIASES` / `TEMPLATE_ALIASES` in
+`organizeProvision.js` (`health`→`fitness`, `productivity`→`tech`), so existing notes re-tag on the
+next Setup provision.
 
 ### Notebook structure
 Three top-level container singletons — **Inbox** (`bxs-inbox`), **My Day** (`bx-task`), **Agenda**
-(`bx-calendar`) — then one note per Area (`bxs-circle`), each containing **one bucket per enabled
-template** (in registry order), titled by the template's name.
+(`bx-calendar`) — then one note per value of the root dimension (Area, `bxs-circle`), each containing
+**one bucket per value of the bucket dimension** (Type, in config order), titled by the value's name.
 
 Each kind of container has its own structural template, and the public `#area` / `#type` labels are
 what tell them apart:
@@ -91,52 +83,40 @@ alongside `#agendaOrganizeArea=<areaSlug>`.
 
 ## 3. The Organize page (`organizePage.jsx`)
 
-Three tabs: **Triage** (the one-at-a-time queues), **Areas** (the life-area vocabulary), and
-**Templates** (`TemplatesPanel` from `organizeTemplates.jsx`). Areas and Templates are the same thin
-shape: each resolves *another addon's* schema/config note ids and hands them to the single-tab
-`SettingsForm` that addon's own settings page uses, so the vocabulary has exactly one home. When the
-owning addon isn't installed, the tab explains that instead of erroring.
+Two tabs: **Triage** (the one-at-a-time queues) and **Dimensions** (`DimensionsPanel` from
+[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits agenda's OWN
+`#agendaConfig` — a single-tab `SettingsForm` scoped `only="Dimensions"`, plus the **Match Templates
+By Name** button. Editing a value's **Name** or reordering the list is safe; editing its **Key**
+orphans every note carrying that value.
 
-**Templates** edits template-picker's registry (`only="Templates"`), with
-`onSaved=applyTemplateLabels` so Save persists the rows and re-derives agenda's `#type`. Scan lives in
-template-picker's own settings page, so there's no Scan button here.
+The Triage tab loads the dimension list up front, then `organize.js` does a single backend walk of the
+Inbox / Area subtrees, excluding the structural (identity-labelled) notes, tagging each candidate with
+its per-dimension `assigned` map (`{ [label]: value }`), a `suggested` map (nearest ancestor's value
+per dimension), its `#type`, and `isSubtask` / `hasStartDate` / `path` / `preview`. The page keeps that
+list in state and filters it per section; a mutation patches the list in place so the acted-on note
+leaves its queue. Sections:
 
-The **Areas** tab (`AreasPanel` from `organizeAreas.jsx`) edits **area-picker's** config via
-`#areaConfig` discovery (`only="Areas"`). Editing an area's **Title** is safe (buckets re-key by name
-on the next provision run); editing its **Key** orphans every note carrying that `#area` value.
-
-The Triage tab loads three vocabularies up front — area-picker's areas (`getAreaSettings()`),
-template-picker's enabled templates (`getTemplateConfig()`), and priority-widget's active profile
-(`getPriorityOptions()`) — then `organize.js` does a single backend walk of
-the Inbox / Area subtrees, excluding the structural (identity-labelled) notes, tagging each candidate with
-the flags each section filters on (`hasTemplate` / `templateId` / `hasArea` / `hasPriority` /
-`hasStartDate` / `isSubtask` / `suggestedArea` / `path` / `preview`). The page keeps that list in state
-and filters it per section; a mutation patches the list in place so the acted-on note leaves its queue.
-Sections:
-
-1. **Notes Without Templates** — buttons are the **enabled** templates (in registry order), resolved
-   from template-picker's config to real notes; assigns `~template`.
-2. **Notes Without Areas** — buttons are area-picker's areas (via `getAreaSettings()`), color-coded;
-   the ancestor area is highlighted as the suggestion; assigns `#area` + `#color`.
-3. **Tasks Without Priority** — **actionable** templates only (those whose template note carries
-   `#agendaTaskWidget`); buttons are the active priority profile's levels, written to that profile's
-   own label. The profile resolves *before* the candidate walk, because its label is what
-   `hasPriority` tests — scanning with the wrong one would re-queue already-prioritized notes.
-4. **Tasks Without a Start Date** — a two-step date + time picker; writes `#startDateTime`,
+1. **One "Notes Without X" queue per triaged dimension**, in config order — buttons are the
+   dimension's values (color-coded); the nearest-ancestor value is highlighted as the suggestion;
+   clicking calls `assignDimension`. An `actionableOnly` dimension (priority by default) restricts to
+   actionable-typed, non-subtask notes. Add a dimension and a fourth queue appears with no code change.
+2. **Tasks Without a Start Date** — a two-step date + time picker; writes `#startDateTime`,
    `#startDate`, `#startTime` (agenda's default label names). Subtasks (parent is itself an actionable
    note) are excluded. The Morning / Noon / Evening / Night times come from agenda's config (Agenda
    Editor → **Organize › Times** tab), read via `getAgendaSettings()`.
-5. **Misfiled Notes** — flags a note whose `#area` differs from its ancestor Area, or whose template's
-   slug differs from its ancestor bucket's template slug (bucket = template), with Move / Set-area /
-   Set-type fixes.
+3. **Misfiled Notes** — flags a note whose `#area` differs from its ancestor Area, or whose `#type`
+   differs from its ancestor bucket, with Move / Set-area / Set-type fixes (the last two call
+   `assignDimension` on the root/bucket dimension). Stays two-dimensional by design (the tree has one
+   root axis and one bucket axis); if more than one dimension scaffolds, the first of each is used.
 
 ## 4. Provisioning model — runtime find-or-create
 
 The notebook *structure* is provisioned by the **Workflow Setup** button (Agenda Editor → Settings ›
 Workflow Setup), not cloned in via the manifest, so it merges with notes the user already created by
-hand. `organizeStructure.js`'s `buildStructure(areaList, templateList)` assembles the tree from
-area-picker's area list **and** agenda's enabled template list (both loaded by the button's handler via
-`getAreaSettings()` / `getTemplateConfig()`); the walk/find-or-create logic is `organizeProvision.js`.
+hand. `provisionStructure(dimensions)` (`organizeProvision.js`) reduces the two scaffolding dimensions
+to `{ slug, name, color }` / `{ slug, name, icon }` lists and hands them to
+`organizeStructure.js`'s `buildStructure(areaList, templateList)`; the walk/find-or-create logic is
+`organizeProvision.js`.
 
 - **Identity:** carried by three independent labels — this addon's analogue of TAM's `#TAMFILEID`,
   scoped to user notes:
@@ -156,26 +136,26 @@ area-picker's area list **and** agenda's enabled template list (both loaded by t
   bucket's `#alwaysExpanded` are re-asserted on *every* run (self-healing). Note content and
   `seedLabels` are written only on creation, so user edits survive.
 - **Area-slug migration:** after the walk, `migrateAreaSlugs()` normalizes every note carrying
-  `#area` onto area-picker's stable keys — stripping the legacy `<NN>-` prefix and applying
+  `#area` onto the area dimension's stable keys — stripping the legacy `<NN>-` prefix and applying
   `AREA_ALIASES` for folded areas — rewriting `#area` + `#color` when the value changes. Idempotent:
   an already-stable value resolves to itself, so re-running migrates nothing. Reordering areas no
-  longer rewrites notes at all; display order comes from the config list's position (see
-  `getSortValueMaps` in [`../overview/libAgendaConfig.js`](../overview/libAgendaConfig.js)).
+  longer rewrites notes at all; display order comes from the value list's position (see
+  `getSortValueMaps` in [`../common/dimensions.js`](../common/dimensions.js)).
 - **Structural templates** are resolved live by title (`AreaCollection` for area roots,
   `TypeCollection` for the per-type buckets, `Special` for the three singletons), so provisioning
   degrades gracefully if a template note is missing — the note is still created and tagged, just
-  without a `~template` relation. The *item* templates that buckets are named after come from
-  template-picker's registry, not here.
+  without a `~template` relation. The *item* templates that buckets are named after come from the type
+  dimension's `templateNoteId` (filled by `matchTemplatesByName()`), set on the items, not the buckets.
 - **`#type` migration:** `migrateTypeSlugs()` strips the legacy `<order>-` prefix from every `#type`
   (`3-task` → `task`), and re-keys the old structural values (`7-area` → `areacollection`,
-  `8-special` → `special`). Ordering moved out of the label value into the registry's row position,
-  so reordering types no longer rewrites tagged notes. Only values resolving to a *current* template
-  slug or container marker are touched — an unrecognized `#type` is left alone, since it may be a
+  `8-special` → `special`). Ordering moved out of the label value into the value list's position,
+  so reordering types no longer rewrites tagged notes. Only values resolving to a *current* type value
+  or container marker are touched — an unrecognized `#type` is left alone, since it may be a
   vocabulary the user maintains by hand.
-- **Bucket drift:** changing a template's name changes its bucket key/title, so re-running Setup
+- **Bucket drift:** changing a type value's key changes its bucket key/title, so re-running Setup
   provisions the new bucket rather than renaming the old one — old buckets from a prior taxonomy are
   left in place (surfaced, not auto-deleted) for you to clean up. Reordering no longer drifts anything:
-  order is the registry's row position, not part of any key.
+  order is the value's position, not part of any key.
 - Items filed into a bucket get their `~template` + `#area` set **programmatically at creation** (not
   via inheritable attributes on the bucket), so a note keeps its identity wherever it's later moved.
 
@@ -189,17 +169,14 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
 `reconcileOrganizeNote` in [`../overview/profileEditor.jsx`](../overview/profileEditor.jsx).)
 
-`organizePage.jsx` imports `getAgendaSettings` (`agendaSettings.jsx`), `getAreaSettings`
-(`organizeAreas.jsx`), and `getTemplateConfig` + `TemplatesPanel` (`organizeTemplates.jsx`), and
-requires `organize.js`, `organizeStructure.js` + `organizePriority.js`. `organizeTemplates.jsx` in
-turn imports `getTemplates` from template-picker's `templateRegistry.jsx`, wired as a cross-addon
-child (`template-picker@beatlink` export `registry`) under every note that imports it.
-Workflow Setup is no longer a separate render page —
-it's a tab folded into the Agenda Editor (`profileEditor.jsx`), which imports `organizeAreas.jsx` +
-`organizeTemplates.jsx` and requires `organizeProvision.js` (→ requires `organizeStructure.js`). Per
-TAM's direct-child require rule, `organize-structure` is a child of every note that requires it
-(`organize-page-src`, `organize-provision`), `organize-templates` and `organize-areas` are children of
-both entry notes (`organize-page-src`, `profile-editor`), and libsettings' `ui` is wired under every
-note that calls `loadSettings`/`SettingsForm` (`organize-areas`, `organize-templates`, `profile-editor`,
-`agenda-settings`). `area-picker@beatlink` is an agenda dependency so its `#areaConfig` note resolves.
-Styling is `organize.css` (`appCss`).
+`organizePage.jsx` imports `getAgendaSettings` (`agendaSettings.jsx`) and `DimensionsPanel`
+(`organizeDimensions.jsx`), and requires `organize.js` + `dimensions.js`. The vocabulary lives in
+agenda's own config, so there are no cross-addon vocabulary imports any more. Workflow Setup is a tab
+folded into the Agenda Editor (`profileEditor.jsx`), which requires `organizeProvision.js` (→ requires
+`organizeStructure.js` + `dimensions.js`) and `dimensions.js`. Per TAM's direct-child require rule,
+`dimensions` is a child of every note that requires it (`agenda-settings`, `lib-config`,
+`dimension-picker`, `organize-page-src`, `organize-dimensions`, `organize-provision`, `profile-editor`),
+`organize-structure` is a child of both `organize-page-src` and `organize-provision`, and libsettings'
+`ui` is wired under every note that calls `loadSettings`/`SettingsForm` (`dimensions`,
+`organize-dimensions`, `profile-editor`, `agenda-settings`, `lib-config`). Styling is `organize.css`
+(`appCss`).

@@ -3,16 +3,15 @@
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by organizeProvision.js / the Setup page).
 //
-// The opinionated notebook layout this addon provisions. Two vocabularies feed
-// it, both discovered at runtime rather than hard-coded here:
-//   - the AREA list from area-picker@beatlink (via #areaConfig, see
-//     organizeAreas.jsx): [{ slug, name, color }].
-//   - the TEMPLATE list from agenda's own managed-templates config (via
-//     #agendaConfig, see organizeTemplates.jsx): the enabled item templates,
-//     [{ noteId, name, slug, order, actionable }] in order.
+// The opinionated notebook layout this addon provisions. Two of agenda's own
+// `dimensions` feed it (provisionStructure derives these shapes from the config):
+//   - the AREA list — the values of the root dimension (scaffoldsAreas):
+//     [{ slug, name, color }].
+//   - the TEMPLATE list — the values of the bucket dimension (scaffoldsBuckets):
+//     [{ slug, name, icon, noteId }] in order.
 // This module supplies only the fixed structural parts (the three top-level
-// container singletons, the two structural template titles, the priority
-// vocabulary) and assembles the full tree.
+// container singletons, the two structural template titles, the container type
+// markers) and assembles the full tree.
 //
 // buildStructure(areaList, templateList) returns an array of nodes;
 // organizeProvision.js walks it, find-or-creating each note by title at its
@@ -60,13 +59,13 @@
 // notes. seedLabels and note content are only touched at creation.
 
 // Structural (non-item) template titles, one per kind of container:
-//   AreaCollection — an area root (holds one bucket per enabled item template)
+//   AreaCollection — an area root (holds one bucket per bucket value)
 //   TypeCollection — a per-type bucket inside an area (holds items of one type)
 //   Special        — the Inbox / My Day / Agenda singletons, which belong to no area
 // The two collection templates are told apart by the labels their notes carry:
 // an AreaCollection has #area alone, a TypeCollection has #area plus #type.
-// None of the three are part of the managed item-template config — they're fixed
-// scaffolding (see the STRUCTURAL_TITLES exclusion in organizeTemplates.jsx).
+// None of the three are part of the type dimension — they're fixed scaffolding,
+// never offered as an assignable type value.
 const AREA_TEMPLATE_TITLE = "AreaCollection"
 const TYPE_TEMPLATE_TITLE = "TypeCollection"
 const SPECIAL_TEMPLATE_TITLE = "Special"
@@ -80,23 +79,15 @@ const AREA_COLLECTION_TYPE = "areacollection"
 const TYPE_COLLECTION_TYPE = "typecollection"
 const SPECIAL_TYPE = "special"
 
-// A BoxIcons class for a bucket, chosen from the template slug so the common
-// bundled templates keep their familiar icons; anything else gets a neutral one.
-const BUCKET_ICONS = {
-    ideas:    "bx-bulb",
-    goal:     "bxs-star-half",
-    routine:  "bx-sync",
-    task:     "bx-check",
-    project:  "bx-check-double",
-    future:   "bx-time-five",
-    note:     "bx-notepad"
-}
-function bucketIcon(slug) {
-    return BUCKET_ICONS[slug] || "bx-folder"
+// A BoxIcons class for a bucket comes from the bucket value's own `icon`
+// (configured per value in the Dimensions editor); anything blank gets a neutral
+// folder.
+function bucketIcon(tpl) {
+    return tpl.icon || "bx-folder"
 }
 
-// Build one Area node (+ one bucket per enabled template) from an area-picker
-// area { slug, name, color } and the managed template list. `slug` is the #area
+// Build one Area node (+ one bucket per bucket value) from a root value
+// { slug, name, color } and the bucket value list. `slug` is the #area
 // value (e.g. "03-legal"); the area root carries #agendaOrganizeArea=<slug> and
 // each bucket carries that SAME area label plus #agendaOrganizeBucket=<tplSlug>,
 // its title the template's name, and its ~template the area/Special container
@@ -125,7 +116,7 @@ function buildAreaNode(area, templateList) {
             area: area.slug,
             bucket: tpl.slug,
             title: tpl.name,
-            icon: bucketIcon(tpl.slug),
+            icon: bucketIcon(tpl),
             // Buckets inherit their area's color; no other seed labels.
             color: area.color,
             template: TYPE_TEMPLATE_TITLE,

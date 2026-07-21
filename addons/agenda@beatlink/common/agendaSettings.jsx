@@ -1,5 +1,7 @@
 import { loadSettings } from "libSettingsUI.jsx"
 
+const { normalizeDimensions } = require("dimensions.js")
+
 export async function getAgendaSettings() {
     const anchors = await api.searchForNotes("#agendaConfig")
     if (!anchors.length) return null
@@ -50,5 +52,10 @@ export async function getAgendaSettings() {
         inboxNoteId: settings.inboxNoteId || ""
     }
 
-    return { constants, profileContext, myDay, organize, collect, schemaNoteId, configNoteId, icalNoteId }
+    // The classification axes (area/type/priority and any the user adds). Handed
+    // out here so callers that already load settings don't round-trip a second
+    // time; dimensions.js owns the shape.
+    const dimensions = normalizeDimensions(settings)
+
+    return { constants, profileContext, myDay, organize, collect, dimensions, schemaNoteId, configNoteId, icalNoteId }
 }

@@ -13,6 +13,7 @@ import {
 } from "trilium:preact";
 
 import { FormToggleButton } from "FormToggleButton.jsx"
+import { DimensionPicker } from "DimensionPicker.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
@@ -358,8 +359,8 @@ function MainWidget(){
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
-            const { constants } = settings
-            setIds({ constants })
+            const { constants, dimensions } = settings
+            setIds({ constants, dimensions: dimensions.filter(d => d.picker) })
         })()
     }, [])
 
@@ -412,6 +413,16 @@ function MainWidget(){
     return (
         <RightPanelWidget title="Task">
             <div className="agenda-widget">
+                {ids.dimensions.length > 0 && (
+                    <div>
+                        <label>Classification</label>
+                        <div className="agenda-dimension-pickers">
+                            {ids.dimensions.map(dim => (
+                                <DimensionPicker key={dim.id} dimension={dim} />
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <div>
                     <label>Dates and Duration</label>
                     <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>

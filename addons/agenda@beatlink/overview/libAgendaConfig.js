@@ -1,4 +1,9 @@
 const { loadSettings, saveSettings } = require("libSettingsUI.jsx")
+const { normalizeDimensions, getSortValueMaps } = require("dimensions.js")
+
+// Derived registry ids are prefixed so they can never collide with a
+// hand-written one.
+const DERIVED_PREFIX = "dim-"
 
 function reshapeVariant(variant) {
     if (!variant) return variant
@@ -110,90 +115,124 @@ function mapEntries(source, mapValue) {
 async function loadData(schemaNoteId, configNoteId) {
     const values = await loadSettings(schemaNoteId, configNoteId)
     const searchGroups = values.searchGroups || {}
-    const filterGroups = values.filterGroups || {}
+    const dimensions = normalizeDimensions(values)
+    // Derived groups are merged in BEFORE the profile reshape, so a profile's
+    // filter checklist sees them alongside the hand-written ones.
+    const filterGroups = {
+        ...(values.filterGroups || {}),
+        ...derivedFilterGroups(dimensions, values.filterGroups || {}, Object.keys(values.profiles || {}))
+    }
 
     return {
+        dimensions,
         dateRules: mapEntries(values.dateRules, reshapeDateRule),
         sorts: mapEntries(values.sorts, reshapeSort),
-        prefixes: mapEntries(values.prefixes, reshapeVariant),
-        colors: mapEntries(values.colors, reshapeVariant),
-        groupings: mapEntries(values.groupings, reshapeGrouping),
+        prefixes: { ...mapEntries(values.prefixes, reshapeVariant), ...derivedPrefixes(dimensions) },
+        colors: { ...mapEntries(values.colors, reshapeVariant), ...derivedColors(dimensions) },
+        groupings: { ...mapEntries(values.groupings, reshapeGrouping), ...derivedGroupings(dimensions) },
         profiles: mapEntries(values.profiles, (profile, id) =>
             reshapeProfile(profile, searchGroups, filterGroups, id))
     }
 }
 
-// Ordinal maps for sorting attributes whose stored values carry no intrinsic
-// order, in libMultisort's `valueMaps` shape: { attribute: { value: ordinal } }.
+// Prefix / color / grouping / filter variants DERIVED from the registered
+// dimensions, so adding a dimension yields all four for free and none of them can
+// drift from the vocabulary. They used to be hardcoded copies of the area and
+// priority lists in schema.json, which had already gone stale (the area filter
+// group listed 4 of 13 areas).
 //
-// #area and #type are both stable, order-free slugs ("career", "task"),
-// deliberately carrying no ordinal so reordering the vocabulary never rewrites a
-// tagged note — but that means sorting them as strings yields alphabetical, not
-// the configured order. So the order is resolved here, from each value's position
-// in the list that defines it, and handed to the sort layer:
-//   #area -> area-picker's `areas` list (the same list its dropdown renders)
-//   #type -> template-picker's `templates` registry (the same list its dropdown
-//            renders), in registry key order
-//
-// Both vocabularies live in their owning addon, discovered by label (#areaConfig /
-// #templatePickerConfig) rather than duplicated here. Each half degrades
-// independently: a missing source contributes no map, so that attribute falls back
-// to plain string comparison rather than throwing.
-async function getSortValueMaps() {
-    return { ...(await getAreaSortMap()), ...(await getTypeSortMap()) }
+// Emitted already reshaped — the same shape reshapeVariant/reshapeGrouping
+// produce — and merged over the user's own entries under a `dim-` id. This is
+// strictly read-path: a derived registry must never reach saveSettings, or
+// filterRegistryBySchema would record it as user edits and freeze the
+// derivation. loadData is the only place they are injected, and the save
+// helpers below all go through loadSettings instead.
+function derivedPrefixes(dimensions) {
+    const out = {}
+    for (const dim of dimensions) {
+        if (!dim.values.length) continue
+        const children = {}
+        for (const value of dim.values) children[value.key] = value.name
+        out[DERIVED_PREFIX + dim.id] = {
+            name: dim.name, type: "label", label: dim.label, children, noValue: ""
+        }
+    }
+    return out
 }
 
-async function getAreaSortMap() {
-    const anchors = await api.searchForNotes("#areaConfig")
-    if (!anchors.length) return {}
-
-    const anchor = anchors[0]
-    const schemaNoteId = anchor.getRelationValue("schemaNote")
-    const configNoteId = anchor.getRelationValue("AddonData:config")
-    if (!schemaNoteId || !configNoteId) return {}
-
-    const settings = await loadSettings(schemaNoteId, configNoteId)
-    const areas = settings.areas || []
-    if (!areas.length) return {}
-
-    const area = {}
-    areas.forEach((entry, index) => {
-        if (entry && entry.key) area[entry.key] = index
-    })
-    return { area }
+function derivedColors(dimensions) {
+    const out = {}
+    for (const dim of dimensions) {
+        if (!dim.values.length) continue
+        const children = {}
+        for (const value of dim.values) children[value.key] = value.color || "gray"
+        out[DERIVED_PREFIX + dim.id] = {
+            name: dim.name, type: "label", label: dim.label, children, noValue: ""
+        }
+    }
+    return out
 }
 
-// #type ordinals from template-picker's registry (found by #templatePickerConfig,
-// the same discovery organizeTemplates.jsx uses). Keyed by each row's slug — the
-// same slugify() the #type label is derived from — and ordered by the registry's
-// own key order, which is what template-picker's row-move controls rewrite. There
-// is no `order` field to read: position IS the order, exactly as it is for areas.
+function derivedGroupings(dimensions) {
+    const out = {}
+    for (const dim of dimensions) {
+        if (!dim.values.length) continue
+        const children = {}
+        for (const value of dim.values) {
+            children[value.key] = { display: value.name, color: value.color || "gray" }
+        }
+        out[DERIVED_PREFIX + dim.id] = {
+            name: `By ${dim.name}`,
+            type: "label",
+            label: dim.label,
+            children,
+            noValue: { display: `No ${dim.name}`, color: "" }
+        }
+    }
+    return out
+}
+
+// Filter groups are the hybrid case: the CHILDREN are derived from the
+// vocabulary, but each child's `enabled` flag is user state, not derivation. So
+// the stored group (if any) is merged over the derived one by child id, and the
+// group keeps its `profileId` so the profile checklist still resolves it.
 //
-// Slugified inline rather than imported to keep this module free of a require() on
-// the organize/ tree — it loads in every widget, including ones with no Organize
-// wiring.
-async function getTypeSortMap() {
-    const anchors = await api.searchForNotes("#templatePickerConfig")
-    if (!anchors.length) return {}
+// A group whose children are all enabled is a no-op (getFilteredNotes ANDs the
+// groups, ORs within one), so a newly added dimension never silently hides
+// notes.
+function derivedFilterGroups(dimensions, stored, profileIds) {
+    const out = {}
+    for (const dim of dimensions) {
+        if (!dim.values.length) continue
+        const id = DERIVED_PREFIX + dim.id
+        const storedGroup = stored[id]
+        const storedChildren = (storedGroup && storedGroup.children) || {}
 
-    const anchor = anchors[0]
-    const schemaNoteId = anchor.getRelationValue("schemaNote")
-    const configNoteId = anchor.getRelationValue("AddonData:config")
-    if (!schemaNoteId || !configNoteId) return {}
+        const children = {}
+        for (const value of dim.values) {
+            const storedChild = storedChildren[value.key]
+            children[value.key] = {
+                name: value.name,
+                type: "search",
+                rule: `#${dim.label}='${value.key}'`,
+                enabled: storedChild ? !!storedChild.enabled : true
+            }
+        }
+        const noneStored = storedChildren.none
+        children.none = {
+            name: `No ${dim.name}`,
+            type: "search",
+            rule: `#!${dim.label} OR #${dim.label}=''`,
+            enabled: noneStored ? !!noneStored.enabled : true
+        }
 
-    const settings = await loadSettings(schemaNoteId, configNoteId)
-    const templates = Object.values(settings.templates || {})
-    if (!templates.length) return {}
-
-    const type = {}
-    templates.forEach((entry, index) => {
-        const slug = String(entry.name || "")
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")
-        if (slug) type[slug] = index
-    })
-    return { type }
+        out[id] = {
+            name: dim.name,
+            profileId: (storedGroup && storedGroup.profileId) || profileIds[0] || "",
+            children
+        }
+    }
+    return out
 }
 
 async function saveProfile(profile) {
@@ -249,6 +288,8 @@ async function saveSectionState({ schemaNoteId, configNoteId }, profileId, state
 
 module.exports = {
     loadData,
+    // Re-exported from dimensions.js so libAgendaQuery's zero-arg call site
+    // (config.getSortValueMaps()) is unchanged.
     getSortValueMaps,
     saveProfile,
     getAllProfiles,

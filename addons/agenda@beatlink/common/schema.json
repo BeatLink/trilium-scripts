@@ -157,6 +157,98 @@
         "label": "Section State",
         "default": {}
     },
+    "dimensions": {
+        "type": "registry",
+        "label": "Dimensions",
+        "description": "The classification axes notes are tagged with. Each dimension is one note label plus its ordered vocabulary of values. Adding a dimension here gives you a picker in the Task pane, a triage queue in Organize, a sort ordinal, and a derived prefix/color/grouping/filter variant, with no code change. Value order is this list's order, so reordering never rewrites a tagged note.",
+        "category": "Organize",
+        "tab": "Dimensions",
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Dimension" },
+            "label": { "type": "string", "label": "Note Label", "description": "The note label values are written to, without the leading #.", "default": "" },
+            "writeColor": { "type": "boolean", "label": "Also Write #color", "description": "Mirror the chosen value's colour onto the note's #color label, tinting it in the tree.", "default": false },
+            "picker": { "type": "boolean", "label": "Show Picker In Task Pane", "default": true },
+            "triage": { "type": "boolean", "label": "Triage Unassigned Notes", "description": "Give this dimension a queue in Organize listing notes that lack a value.", "default": true },
+            "actionableOnly": { "type": "boolean", "label": "Triage Only Actionable Notes", "description": "Restrict that queue to notes whose type is marked Actionable.", "default": false },
+            "scaffoldsAreas": { "type": "boolean", "label": "Scaffold A Root Note Per Value", "description": "Workflow Setup builds one notebook root note per value of this dimension.", "default": false },
+            "scaffoldsBuckets": { "type": "boolean", "label": "Scaffold A Bucket Per Value", "description": "Workflow Setup builds one bucket per value of this dimension inside every root note.", "default": false },
+            "values": {
+                "type": "registry",
+                "label": "Values",
+                "default": {},
+                "itemSchema": {
+                    "name": { "type": "string", "label": "Name", "default": "" },
+                    "key": { "type": "string", "label": "Label Value", "description": "The stored value. Changing it orphans every note already tagged with the old one.", "default": "" },
+                    "color": { "type": "color", "label": "Color", "default": "gray" },
+                    "templateNoteId": { "type": "note", "label": "Template Note", "description": "Assigning this value also sets the note's ~template relation to this note. Use Match Templates By Name to fill these in.", "default": "" },
+                    "actionable": { "type": "boolean", "label": "Actionable", "description": "Items of this value flow through the priority and start-date triage queues.", "default": false },
+                    "icon": { "type": "string", "label": "Bucket Icon", "default": "" }
+                }
+            }
+        },
+        "default": {
+            "area": {
+                "name": "Area",
+                "label": "area",
+                "writeColor": true,
+                "picker": true,
+                "triage": true,
+                "actionableOnly": false,
+                "scaffoldsAreas": true,
+                "scaffoldsBuckets": false,
+                "values": {
+                    "career": { "name": "Career", "key": "career", "color": "red" },
+                    "finances": { "name": "Finances", "key": "finances", "color": "red" },
+                    "legal": { "name": "Legal", "key": "legal", "color": "red" },
+                    "home": { "name": "Home", "key": "home", "color": "darkorange" },
+                    "car": { "name": "Car", "key": "car", "color": "darkorange" },
+                    "tech": { "name": "Tech", "key": "tech", "color": "darkorange" },
+                    "fitness": { "name": "Fitness", "key": "fitness", "color": "gold" },
+                    "grooming": { "name": "Grooming", "key": "grooming", "color": "gold" },
+                    "sexual": { "name": "Sexual", "key": "sexual", "color": "gold" },
+                    "social": { "name": "Social", "key": "social", "color": "lime" },
+                    "mental": { "name": "Mental", "key": "mental", "color": "lime" },
+                    "identity": { "name": "Identity", "key": "identity", "color": "lime" },
+                    "fun": { "name": "Fun", "key": "fun", "color": "magenta" }
+                }
+            },
+            "type": {
+                "name": "Type",
+                "label": "type",
+                "writeColor": false,
+                "picker": true,
+                "triage": true,
+                "actionableOnly": false,
+                "scaffoldsAreas": false,
+                "scaffoldsBuckets": true,
+                "values": {
+                    "ideas": { "name": "Ideas", "key": "ideas", "color": "gray", "icon": "bx-bulb", "actionable": false },
+                    "goal": { "name": "Goal", "key": "goal", "color": "gray", "icon": "bxs-star-half", "actionable": false },
+                    "routine": { "name": "Routine", "key": "routine", "color": "gray", "icon": "bx-sync", "actionable": true },
+                    "task": { "name": "Task", "key": "task", "color": "gray", "icon": "bx-check", "actionable": true },
+                    "future": { "name": "Future", "key": "future", "color": "gray", "icon": "bx-time-five", "actionable": true },
+                    "project": { "name": "Project", "key": "project", "color": "gray", "icon": "bx-check-double", "actionable": true },
+                    "note": { "name": "Note", "key": "note", "color": "gray", "icon": "bx-notepad", "actionable": false }
+                }
+            },
+            "priority": {
+                "name": "Priority",
+                "label": "priority",
+                "writeColor": true,
+                "picker": true,
+                "triage": true,
+                "actionableOnly": true,
+                "scaffoldsAreas": false,
+                "scaffoldsBuckets": false,
+                "values": {
+                    "4-critical": { "name": "Must Do", "key": "4-critical", "color": "red" },
+                    "3-high": { "name": "Should Do", "key": "3-high", "color": "gold" },
+                    "2-medium": { "name": "Could Do", "key": "2-medium", "color": "lime" },
+                    "1-low": { "name": "Want to Do", "key": "1-low", "color": "cyan" }
+                }
+            }
+        }
+    },
     "profiles": {
         "type": "registry",
         "label": "Profiles",
@@ -190,8 +282,8 @@
                 "viewType": "list",
                 "sortSelected": "startDate",
                 "prefixSelected": "interval",
-                "colorSelected": "priority",
-                "groupingSelected": "priority"
+                "colorSelected": "dim-priority",
+                "groupingSelected": "dim-priority"
             }
         }
     },
@@ -269,17 +361,6 @@
             }
         },
         "default": {
-            "priority": {
-                "name": "Priority",
-                "profileId": "default",
-                "children": {
-                    "must": { "name": "Must Do", "type": "search", "rule": "#priority='4-critical'", "enabled": true },
-                    "should": { "name": "Should Do", "type": "search", "rule": "#priority='3-high'", "enabled": true },
-                    "could": { "name": "Could Do", "type": "search", "rule": "#priority='2-medium'", "enabled": true },
-                    "want": { "name": "Want To Do", "type": "search", "rule": "#priority='1-low'", "enabled": true },
-                    "none": { "name": "No Priority", "type": "search", "rule": "#!priority OR #priority=''", "enabled": false }
-                }
-            },
             "date": {
                 "name": "Date",
                 "profileId": "default",
@@ -305,26 +386,6 @@
                     "monthly": { "name": "Monthly", "type": "search", "rule": "#recurrence *=* MONTHLY", "enabled": true },
                     "yearly": { "name": "Yearly", "type": "search", "rule": "#recurrence *=* YEARLY", "enabled": true },
                     "noRecurrence": { "name": "No Recurrence", "type": "search", "rule": "#!recurrence OR (#recurrence='')", "enabled": true }
-                }
-            },
-            "area": {
-                "name": "Area",
-                "profileId": "default",
-                "children": {
-                    "career": { "name": "Career", "type": "search", "rule": "#area='career'", "enabled": true },
-                    "finances": { "name": "Finances", "type": "search", "rule": "#area='finances'", "enabled": true },
-                    "legal": { "name": "Legal", "type": "search", "rule": "#area='legal'", "enabled": true },
-                    "home": { "name": "Home", "type": "search", "rule": "#area='home'", "enabled": true },
-                    "car": { "name": "Car", "type": "search", "rule": "#area='car'", "enabled": true },
-                    "tech": { "name": "Tech", "type": "search", "rule": "#area='tech'", "enabled": true },
-                    "fitness": { "name": "Fitness", "type": "search", "rule": "#area='fitness'", "enabled": true },
-                    "grooming": { "name": "Grooming", "type": "search", "rule": "#area='grooming'", "enabled": true },
-                    "sexual": { "name": "Sexual", "type": "search", "rule": "#area='sexual'", "enabled": true },
-                    "social": { "name": "Social", "type": "search", "rule": "#area='social'", "enabled": true },
-                    "mental": { "name": "Mental", "type": "search", "rule": "#area='mental'", "enabled": true },
-                    "identity": { "name": "Identity", "type": "search", "rule": "#area='identity'", "enabled": true },
-                    "fun": { "name": "Fun", "type": "search", "rule": "#area='fun'", "enabled": true },
-                    "none": { "name": "No Area", "type": "search", "rule": "#!area OR #area=''", "enabled": true }
                 }
             }
         }
@@ -356,7 +417,7 @@
             ] },
             "typePriorityStartDate": { "name": "Type → Priority → Start Date", "criteria": [
                 { "attribute": "type", "desc": false, "caseInsensitive": false },
-                { "attribute": "priority", "desc": true, "caseInsensitive": false },
+                { "attribute": "priority", "desc": false, "caseInsensitive": false },
                 { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
             ] },
             "typeStartDate": { "name": "Type → Start Date", "criteria": [
@@ -368,11 +429,11 @@
                 { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
             ] },
             "priorityStartDate": { "name": "Priority → Start Date", "criteria": [
-                { "attribute": "priority", "desc": true, "caseInsensitive": false },
+                { "attribute": "priority", "desc": false, "caseInsensitive": false },
                 { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
             ] },
             "priorityTypeStartDate": { "name": "Priority → Type → Start Date", "criteria": [
-                { "attribute": "priority", "desc": true, "caseInsensitive": false },
+                { "attribute": "priority", "desc": false, "caseInsensitive": false },
                 { "attribute": "type", "desc": false, "caseInsensitive": false },
                 { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
             ] }
@@ -410,33 +471,6 @@
             "noValuePrefix": { "type": "string", "label": "No-Value Prefix", "default": "" }
         },
         "default": {
-            "priority": {
-                "name": "Priority", "type": "label", "label": "priority",
-                "children": {
-                    "4-critical": { "labelValue": "4-critical", "display": "Must Do" },
-                    "3-high": { "labelValue": "3-high", "display": "Should Do" },
-                    "2-medium": { "labelValue": "2-medium", "display": "Could Do" },
-                    "1-low": { "labelValue": "1-low", "display": "Want to Do" }
-                }
-            },
-            "area": {
-                "name": "Area", "type": "label", "label": "area",
-                "children": {
-                    "career": { "labelValue": "career", "display": "Career" },
-                    "finances": { "labelValue": "finances", "display": "Finances" },
-                    "legal": { "labelValue": "legal", "display": "Legal" },
-                    "home": { "labelValue": "home", "display": "Home" },
-                    "car": { "labelValue": "car", "display": "Car" },
-                    "tech": { "labelValue": "tech", "display": "Tech" },
-                    "fitness": { "labelValue": "fitness", "display": "Fitness" },
-                    "grooming": { "labelValue": "grooming", "display": "Grooming" },
-                    "sexual": { "labelValue": "sexual", "display": "Sexual" },
-                    "social": { "labelValue": "social", "display": "Social" },
-                    "mental": { "labelValue": "mental", "display": "Mental" },
-                    "identity": { "labelValue": "identity", "display": "Identity" },
-                    "fun": { "labelValue": "fun", "display": "Fun" }
-                }
-            },
             "interval": {
                 "name": "Interval", "type": "dayjs",
                 "intervals": {
@@ -485,33 +519,6 @@
             "noValueColor": { "type": "color", "label": "No-Value Color", "default": "" }
         },
         "default": {
-            "priority": {
-                "name": "Priority", "type": "label", "label": "priority",
-                "children": {
-                    "4-critical": { "labelValue": "4-critical", "display": "red" },
-                    "3-high": { "labelValue": "3-high", "display": "gold" },
-                    "2-medium": { "labelValue": "2-medium", "display": "lime" },
-                    "1-low": { "labelValue": "1-low", "display": "cyan" }
-                }
-            },
-            "area": {
-                "name": "Area", "type": "label", "label": "area",
-                "children": {
-                    "career": { "labelValue": "career", "display": "red" },
-                    "finances": { "labelValue": "finances", "display": "red" },
-                    "legal": { "labelValue": "legal", "display": "red" },
-                    "home": { "labelValue": "home", "display": "darkorange" },
-                    "car": { "labelValue": "car", "display": "darkorange" },
-                    "tech": { "labelValue": "tech", "display": "darkorange" },
-                    "fitness": { "labelValue": "fitness", "display": "gold" },
-                    "grooming": { "labelValue": "grooming", "display": "gold" },
-                    "sexual": { "labelValue": "sexual", "display": "gold" },
-                    "social": { "labelValue": "social", "display": "lime" },
-                    "mental": { "labelValue": "mental", "display": "lime" },
-                    "identity": { "labelValue": "identity", "display": "lime" },
-                    "fun": { "labelValue": "fun", "display": "magenta" }
-                }
-            },
             "interval": {
                 "name": "Interval", "type": "dayjs",
                 "intervals": {
@@ -563,33 +570,6 @@
             "noValueColor": { "type": "color", "label": "No-Value Column Color", "default": "" }
         },
         "default": {
-            "priority": {
-                "name": "By Priority", "type": "label", "label": "priority",
-                "children": {
-                    "4-critical": { "labelValue": "4-critical", "display": "Must Do", "color": "red" },
-                    "3-high": { "labelValue": "3-high", "display": "Should Do", "color": "gold" },
-                    "2-medium": { "labelValue": "2-medium", "display": "Could Do", "color": "lime" },
-                    "1-low": { "labelValue": "1-low", "display": "Want to Do", "color": "cyan" }
-                }
-            },
-            "area": {
-                "name": "By Area", "type": "label", "label": "area",
-                "children": {
-                    "career": { "labelValue": "career", "display": "Career", "color": "red" },
-                    "finances": { "labelValue": "finances", "display": "Finances", "color": "red" },
-                    "legal": { "labelValue": "legal", "display": "Legal", "color": "red" },
-                    "home": { "labelValue": "home", "display": "Home", "color": "darkorange" },
-                    "car": { "labelValue": "car", "display": "Car", "color": "darkorange" },
-                    "tech": { "labelValue": "tech", "display": "Tech", "color": "darkorange" },
-                    "fitness": { "labelValue": "fitness", "display": "Fitness", "color": "gold" },
-                    "grooming": { "labelValue": "grooming", "display": "Grooming", "color": "gold" },
-                    "sexual": { "labelValue": "sexual", "display": "Sexual", "color": "gold" },
-                    "social": { "labelValue": "social", "display": "Social", "color": "lime" },
-                    "mental": { "labelValue": "mental", "display": "Mental", "color": "lime" },
-                    "identity": { "labelValue": "identity", "display": "Identity", "color": "lime" },
-                    "fun": { "labelValue": "fun", "display": "Fun", "color": "magenta" }
-                }
-            },
             "interval": {
                 "name": "By Interval", "type": "dayjs",
                 "intervals": {

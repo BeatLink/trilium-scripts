@@ -1,14 +1,13 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { getAgendaSettings } from "agendaSettings.jsx"
-import { getAreaSettings, AreasPanel } from "organizeAreas.jsx"
-import { getTemplateConfig, TemplatesPanel } from "organizeTemplates.jsx"
+import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const {
-    getItemTemplates, getOrganizeCandidates, getMisfiledNotes,
-    assignTemplate, assignArea, assignPriority, assignStartDate, refileNote, deleteNote
+    getOrganizeCandidates, getMisfiledNotes,
+    assignStartDate, refileNote, deleteNote
 } = require("organize.js")
-const { getPriorityOptions } = require("organizePriority.js")
+const { getDimensions, assignDimension } = require("dimensions.js")
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -208,7 +207,7 @@ function QueueSection({ heading, items, renderActions, onDelete, emptyMessage })
     )
 }
 
-// One-click option button used by the "assign" sections (template / area).
+// One-click option button used by the per-dimension "assign" sections.
 function OptionButton({ opt, busy, onClick }) {
     return (
         <button
@@ -246,54 +245,58 @@ async function loadTimeSettings() {
 }
 
 // The Triage tab. Loads the candidate notes, the misfiled notes, and the
-// template/area vocabularies once, then renders the triage sections. Mutations
-// update the in-memory lists in place so an acted-on note leaves its queue.
+// dimension vocabulary once, then renders one triage queue per triaged dimension
+// (plus the start-date queue and the misfiled queue). Mutations update the
+// in-memory lists in place so an acted-on note leaves its queue.
 function TriagePanel() {
-    const [templates, setTemplates] = useState(null)
-    const [areas, setAreas] = useState(null)
+    const [dimensions, setDimensions] = useState(null)
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
     const [times, setTimes] = useState(null)
-    // The set of template note ids that are actionable — i.e. whose template note
-    // carries #agendaTaskWidget. Drives the priority/start-date queues.
-    const [actionableIds, setActionableIds] = useState(null)
-    // The active priority profile from priority-widget ({ label, options }), or
-    // null when priority-widget isn't installed.
-    const [priority, setPriority] = useState(undefined)
 
     async function reload() {
         setCandidates(null)
         setMisfiled(null)
-        // Areas (area-picker) and enabled templates (agenda config) drive the
-        // queues + misfiled check, so load both vocabularies first.
-        const [ars, tplList] = await Promise.all([getAreaSettings(), getTemplateConfig()])
-        const enabled = tplList.filter(t => t.enabled)
-        const actionable = new Set(enabled.filter(t => t.actionable).map(t => t.noteId))
-        // The priority profile must resolve before the candidate walk: its label
-        // is what `hasPriority` tests, so scanning with the wrong one would put
-        // already-prioritized notes back in the queue.
-        const prio = await getPriorityOptions()
-        const [tpls, cands, mis, tms] = await Promise.all([
-            getItemTemplates(enabled),
-            getOrganizeCandidates([...actionable], prio ? prio.label : "priority"),
-            getMisfiledNotes(ars, enabled),
+        // The dimension vocabulary drives every queue and the misfiled check, so
+        // load it first. The two scaffolding dimensions (root = Area, bucket =
+        // Type) are the misfiled axes; the type dimension's actionable values gate
+        // the actionable-only queues.
+        const dims = await getDimensions()
+        const rootDim = dims.find(d => d.scaffoldsAreas) || { label: "area", values: [] }
+        const bucketDim = dims.find(d => d.scaffoldsBuckets) || { label: "type", values: [] }
+        const actionableTypes = bucketDim.values.filter(v => v.actionable).map(v => v.key)
+
+        const [cands, mis, tms] = await Promise.all([
+            getOrganizeCandidates(dims.map(d => d.label), actionableTypes),
+            getMisfiledNotes(rootDim, bucketDim),
             loadTimeSettings()
         ])
-        setTemplates(tpls)
-        setAreas(ars)
-        setActionableIds(actionable)
+        setDimensions(dims)
         setCandidates(cands)
         setMisfiled(mis)
         setTimes(tms)
-        setPriority(prio)
     }
 
     useEffect(() => { reload() }, [])
 
-    if (candidates === null || templates === null || areas === null || misfiled === null || times === null || actionableIds === null || priority === undefined) {
+    if (candidates === null || dimensions === null || misfiled === null || times === null) {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
+    // The two scaffolding dimensions drive the misfiled queue's fix buttons: the
+    // root (Area) fix re-tags #area, the bucket (Type) fix re-tags #type. The set
+    // of actionable #type values gates the actionable-only queues.
+    const rootDim = dimensions.find(d => d.scaffoldsAreas)
+    const bucketDim = dimensions.find(d => d.scaffoldsBuckets)
+    const actionableTypes = new Set(
+        (bucketDim ? bucketDim.values : []).filter(v => v.actionable).map(v => v.key))
+
+    // Record a dimension value onto a candidate's in-memory `assigned` map so the
+    // acted-on note leaves that dimension's queue.
+    function patchAssigned(noteId, label, key) {
+        setCandidates(cs => cs.map(c =>
+            c.noteId === noteId ? { ...c, assigned: { ...c.assigned, [label]: key } } : c))
+    }
     function patch(noteId, changes) {
         setCandidates(cs => cs.map(c => c.noteId === noteId ? { ...c, ...changes } : c))
     }
@@ -304,86 +307,55 @@ function TriagePanel() {
         setMisfiled(ms => ms.filter(m => m.noteId !== noteId))
     }
 
-    const untemplated = candidates.filter(c => !c.hasTemplate)
-    const arealess = candidates.filter(c => !c.hasArea)
-    // Actionable items (per the managed-templates config) that have no #priority yet.
-    const noPriority = candidates.filter(c =>
-        !c.hasPriority && actionableIds.has(c.templateId))
+    // The dimensions that get a triage queue, in config order. A queue lists the
+    // candidates with no value for that dimension; an actionableOnly dimension
+    // restricts to actionable-typed items (and, being about scheduling-shaped
+    // work, excludes subtasks the same way the start-date queue does).
+    const triaged = dimensions.filter(d => d.triage && d.values.length)
+    function queueItems(dim) {
+        return candidates.filter(c => {
+            if (c.assigned[dim.label]) return false
+            if (dim.actionableOnly && !(actionableTypes.has(c.type) && !c.isSubtask)) return false
+            return true
+        })
+    }
+
     // Actionable items with no start date (#startDateTime) yet. Subtasks (filed
     // under a parent actionable note) are excluded — scheduled with the parent.
     const noStartDate = candidates.filter(c =>
-        !c.hasStartDate && !c.isSubtask && actionableIds.has(c.templateId))
+        !c.hasStartDate && !c.isSubtask && actionableTypes.has(c.type))
 
     return (
         <div className="workflow-organize">
-            {templates.length === 0 && (
+            {dimensions.length === 0 && (
                 <div className="workflow-window-placeholder">
-                    No item templates found. Reinstall or update the Agenda addon so its bundled
-                    templates are present and there are types to assign.
+                    No dimensions configured. Add area/type/priority (or your own) in the Dimensions
+                    tab so there are values to assign.
                 </div>
             )}
 
-            <QueueSection
-                heading="Notes Without Templates"
-                items={untemplated}
-                renderActions={(item, act, busy) =>
-                    templates.map(t => (
-                        <OptionButton
-                            key={t.noteId}
-                            opt={{ label: t.title }}
-                            busy={busy}
-                            onClick={() => act(async () => {
-                                await assignTemplate(item.noteId, t.noteId)
-                                patch(item.noteId, { hasTemplate: true })
-                            })}
-                        />
-                    ))
-                }
-                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
-                emptyMessage="Nothing to organize — every note under your Inbox and Areas already has a template."
-            />
-
-            <QueueSection
-                heading="Notes Without Areas"
-                items={arealess}
-                renderActions={(item, act, busy) =>
-                    areas.map(a => (
-                        <OptionButton
-                            key={a.slug}
-                            opt={{ label: a.name, color: a.color, highlighted: a.slug === item.suggestedArea }}
-                            busy={busy}
-                            onClick={() => act(async () => {
-                                await assignArea(item.noteId, a.slug, a.color)
-                                patch(item.noteId, { hasArea: true })
-                            })}
-                        />
-                    ))
-                }
-                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
-                emptyMessage="Nothing to organize — every note under your Inbox and Areas already has an area."
-            />
-
-            <QueueSection
-                heading="Tasks Without Priority"
-                items={noPriority}
-                renderActions={(item, act, busy) =>
-                    (priority ? priority.options : []).map(p => (
-                        <OptionButton
-                            key={p.value}
-                            opt={{ label: p.label, color: p.color }}
-                            busy={busy}
-                            onClick={() => act(async () => {
-                                await assignPriority(item.noteId, p.value, priority.label)
-                                patch(item.noteId, { hasPriority: true })
-                            })}
-                        />
-                    ))
-                }
-                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
-                emptyMessage={priority
-                    ? "Nothing to organize — every actionable item has a priority."
-                    : "Priority Picker isn't installed, so there's no priority vocabulary to assign."}
-            />
+            {triaged.map(dim => (
+                <QueueSection
+                    key={dim.id}
+                    heading={`Notes Without ${dim.name}`}
+                    items={queueItems(dim)}
+                    renderActions={(item, act, busy) =>
+                        dim.values.map(v => (
+                            <OptionButton
+                                key={v.key}
+                                opt={{ label: v.name, color: v.color, highlighted: v.key === item.suggested[dim.label] }}
+                                busy={busy}
+                                onClick={() => act(async () => {
+                                    await assignDimension(item.noteId, dim, v)
+                                    patchAssigned(item.noteId, dim.label, v.key)
+                                })}
+                            />
+                        ))
+                    }
+                    onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                    emptyMessage={`Nothing to organize — every note under your Inbox and Areas already has ${dim.name.toLowerCase()}.`}
+                />
+            ))}
 
             <QueueSection
                 heading="Tasks Without a Start Date"
@@ -433,33 +405,35 @@ function TriagePanel() {
                             </button>
                         )
                     }
-                    if (item.areaMisfiled && f.updateAreaTo) {
+                    if (item.areaMisfiled && f.updateAreaTo && rootDim) {
                         buttons.push(
                             <button
                                 key="area"
                                 className="workflow-organize-option-btn"
                                 disabled={busy}
                                 onClick={() => act(async () => {
-                                    await assignArea(item.noteId, f.updateAreaTo, f.updateAreaColor)
+                                    await assignDimension(item.noteId, rootDim,
+                                        { key: f.updateAreaTo, color: f.updateAreaColor })
                                     dropMisfiled(item.noteId)
                                 })}
                             >
-                                Set area to {f.updateAreaTo}
+                                Set {rootDim.name.toLowerCase()} to {f.updateAreaTo}
                             </button>
                         )
                     }
-                    if (item.typeMisfiled && f.updateTypeToId) {
+                    if (item.typeMisfiled && f.updateTypeTo && bucketDim) {
                         buttons.push(
                             <button
                                 key="type"
                                 className="workflow-organize-option-btn"
                                 disabled={busy}
                                 onClick={() => act(async () => {
-                                    await assignTemplate(item.noteId, f.updateTypeToId)
+                                    const v = bucketDim.values.find(x => x.key === f.updateTypeTo)
+                                    await assignDimension(item.noteId, bucketDim, v || { key: f.updateTypeTo })
                                     dropMisfiled(item.noteId)
                                 })}
                             >
-                                Set type to {f.updateTypeToTitle}
+                                Set {bucketDim.name.toLowerCase()} to {f.updateTypeToTitle}
                             </button>
                         )
                     }
@@ -472,22 +446,11 @@ function TriagePanel() {
     )
 }
 
-// The Organize page: three tabs — Triage (the one-at-a-time triage queues),
-// Areas (the life-area vocabulary the notebook is scaffolded from), and
-// Templates (manage which #template notes the workflow uses, their order, and
-// whether each is actionable). Templates edits the shared #agendaConfig, so it
-// needs the schema/config note ids agendaSettings resolves; Areas edits
-// area-picker's own config and resolves its ids itself.
+// The Organize page: two tabs — Triage (the one-at-a-time triage queues) and
+// Dimensions (the vocabulary the notebook is scaffolded from and the pickers/
+// queues assign). Both read agenda's own #agendaConfig.
 export default function OrganizePanel() {
     const [tab, setTab] = useState("triage")
-    const [ids, setIds] = useState(null)
-
-    useEffect(() => {
-        (async () => {
-            const settings = await getAgendaSettings()
-            if (settings) setIds({ schemaNoteId: settings.schemaNoteId, configNoteId: settings.configNoteId })
-        })()
-    }, [])
 
     return (
         <div className="workflow-window">
@@ -499,26 +462,14 @@ export default function OrganizePanel() {
                     Triage
                 </button>
                 <button
-                    className={"workflow-window-tab" + (tab === "areas" ? " workflow-window-tab-active" : "")}
-                    onClick={() => setTab("areas")}
+                    className={"workflow-window-tab" + (tab === "dimensions" ? " workflow-window-tab-active" : "")}
+                    onClick={() => setTab("dimensions")}
                 >
-                    Areas
-                </button>
-                <button
-                    className={"workflow-window-tab" + (tab === "templates" ? " workflow-window-tab-active" : "")}
-                    onClick={() => setTab("templates")}
-                >
-                    Templates
+                    Dimensions
                 </button>
             </div>
             <div className="workflow-window-panel">
-                {tab === "triage" ? (
-                    <TriagePanel />
-                ) : tab === "areas" ? (
-                    <AreasPanel />
-                ) : (
-                    <TemplatesPanel />
-                )}
+                {tab === "triage" ? <TriagePanel /> : <DimensionsPanel />}
             </div>
         </div>
     )
