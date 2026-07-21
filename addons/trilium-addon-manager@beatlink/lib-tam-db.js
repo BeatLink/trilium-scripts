@@ -29,20 +29,6 @@ async function saveDatabase(database) {
 }
 
 
-const addonRootLabel = "addonRoot"
 
-async function getAddonRootNoteId() {
-    return await api.currentNote.getRelationValue(addonRootLabel)
-}
-
-const addonPersistenceLabel = "addonPersistence"
-
-async function getPersistenceNoteId() {
-    return await api.currentNote.getRelationValue(addonPersistenceLabel)
-}
-
-module.exports.getDatabaseNoteId = getDatabaseNoteId
 module.exports.loadDatabase = loadDatabase
 module.exports.saveDatabase = saveDatabase
-module.exports.getAddonRootNoteId = getAddonRootNoteId
-module.exports.getPersistenceNoteId = getPersistenceNoteId

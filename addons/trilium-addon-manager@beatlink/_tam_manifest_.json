@@ -155,12 +155,12 @@
                 "to": "database"
             },
             {
-                "from": "lib-tam-db",
+                "from": "lib-tam",
                 "type": "addonRoot",
                 "to": "addons"
             },
             {
-                "from": "lib-tam-db",
+                "from": "lib-tam",
                 "type": "addonPersistence",
                 "to": "addon-data"
             }

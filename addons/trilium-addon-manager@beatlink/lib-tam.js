@@ -11,6 +11,17 @@
 const marked = require("marked.min.js")
 const db = require("lib-tam-db.js")
 
+const addonRootLabel = "addonRoot"
+
+async function getAddonRootNoteId() {
+    return await api.currentNote.getRelationValue(addonRootLabel)
+}
+
+const addonPersistenceLabel = "addonPersistence"
+
+async function getPersistenceNoteId() {
+    return await api.currentNote.getRelationValue(addonPersistenceLabel)
+}
 
 // =========================================================================
 // Constants: label/relation names, TAM's own id, and the set of "activation"
