@@ -26,18 +26,16 @@ trilium-addon-manager@beatlink  (render note)
 └── Source Code  (JSX render script)
     ├── TAM.jsx  (the entire frontend widget in one file — see below)
     │   └── lib-tam.js  (the entire backend/data layer in one file)
-    │       ├── lib-tam-db.js  (loadDatabase/saveDatabase — owns the currentNote-bound `database` relation)
     │       └── marked.min.js  (vendored markdown renderer)
     └── TAM.css  (appCss stylesheet)
 ```
 
-TAM is deliberately just a handful of source files — `TAM.jsx` (frontend), `lib-tam.js`
-(backend/data), and `lib-tam-db.js` (the database-access layer, split out because its relation
-lookups are `api.currentNote`-bound — see below), plus the vendored `marked.min.js`. Each file is
+TAM is deliberately just a handful of source files — `TAM.jsx` (frontend) and `lib-tam.js`
+(backend/data), plus the vendored `marked.min.js`. Each file is
 organized into clearly-bannered sections (former `TAMShared`/`TAMListViews`/`TAMDetailAndSettings`/
 `TAMDialogs`/`TAMCommands` inside `TAM.jsx`; former `Network`/`Catalog`/`ManifestUtils`/`NoteResolver`/
-`Sync`/`Persistence`/`Uninstall`/`Lifecycle` inside `lib-tam.js`; former `libTAMDatabase` in
-`lib-tam-db.js`) rather than separate notes.
+`Sync`/`Persistence`/`Uninstall`/`Lifecycle`/`libTAMDatabase` inside `lib-tam.js`) rather than
+separate notes.
 
 **Relations wired at install time:**
 
@@ -45,7 +43,7 @@ organized into clearly-bannered sections (former `TAMShared`/`TAMListViews`/`TAM
 |------|----------|----|
 | `trilium-addon-manager@beatlink` | `renderNote` | `TAM.jsx` |
 | `TAM.jsx` | `displayNote` | `trilium-addon-manager@beatlink` |
-| `lib-tam-db.js` | `database` | `Database` |
+| `lib-tam.js` | `database` | `Database` |
 | `lib-tam.js` | `addonRoot` | `Addons` |
 | `lib-tam.js` | `addonPersistence` | `Addon Data` |
 
@@ -57,14 +55,10 @@ organized into clearly-bannered sections (former `TAMShared`/`TAMListViews`/`TAM
 - **lib-tam.js** — TAM's whole backend/data layer in one `require()`d note (its public surface is
   available globally as `libTAMjs`). It runs in the browser but uses `api.runOnBackend`/
   `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access
-  (fetching URLs, creating notes, modifying note content). It `require()`s **lib-tam-db.js** for
-  Database reads/writes, and owns the `addonRoot`/`addonPersistence` `currentNote`-bound lookups
-  itself (their relations are declared `"from"` this note) — everything else receives an id as a
-  parameter instead.
-- **lib-tam-db.js** — the Database note's `loadDatabase`/`saveDatabase` (`require()`d by `lib-tam.js`
-  as a direct child, like `marked.min.js`). It lives in its own note because a `require()`d note's
-  `api.currentNote` is that note itself, not its requirer, so the `database` relation it reads must be
-  declared `"from"` **lib-tam-db.js** for the lookup to resolve.
+  (fetching URLs, creating notes, modifying note content). It owns the
+  `database`/`addonRoot`/`addonPersistence` `currentNote`-bound lookups itself (their relations are
+  declared `"from"` this note) — everything else receives an id as a parameter instead. Its
+  `loadDatabase`/`saveDatabase` read and write the Database note directly.
 - **Source Code** — a plain empty parent note, existing only to group the actual widget code and its
   own children under a clearly-labeled branch of the tree (same shape as any addon's `root` wrapping
   multiple env variants — see CLAUDE.md's "JS/JSX code note mime" section).
