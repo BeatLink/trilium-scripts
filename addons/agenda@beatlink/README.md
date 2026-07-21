@@ -82,21 +82,26 @@ in the Agenda Editor is seen by all three widgets at once. The prefix/color/grou
 for each dimension are **derived** from the registry at read time, so adding a dimension yields all
 four with no extra setup and they can never drift from the vocabulary.
 
-The Agenda Editor groups its tabs under six workflow categories — **Collect**, **Organize**,
-**Review**, **Execute**, **Dimensions**, **Settings** — using [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s
-category level (`_categories` + per-field `category`, plus `extraPanels` for the non-schema Workflow
-Setup, Organize-note and Match-Templates tabs):
+The Agenda Editor groups its tabs under seven workflow categories — **Collect**, **Organize**,
+**Review**, **Display Elements**, **Execute**, **Dimensions**, **Settings** — using
+[`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
+per-field `category`, plus `extraPanels` for the non-schema Workflow Setup, Organize-note and
+Dimensions tabs):
 
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
 - **Organize** — Times and the Organize-note picker (which note hosts the Organize triage UI).
-- **Review** — Overview Note, Active Profile, Profiles, Searches, Filters, Sorts, Prefixes, Colors,
-  Groupings, Date Rules (everything that shapes what the overview shows).
+- **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
+  shows).
+- **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
+  profile references by name. Split out of Review because they're a shared library, not per-profile
+  config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
 - **Execute** — My Day.
-- **Dimensions** — the classification vocabulary registry, plus a **Match Templates** tab (fill each
-  type value's blank Template Note by matching its Name to a `#template` title). The Organize page
-  embeds this same registry on its own **Dimensions** tab.
-- **Settings** — the label-name vocabulary and the Workflow Setup tab (provision button).
+- **Dimensions** — the classification vocabulary registry, with the **Match Templates By Name** button
+  inlined above it (fill each type value's blank Template Note by matching its Name to a `#template`
+  title). The Organize page embeds this same registry on its own **Dimensions** tab.
+- **Settings** — the label-name vocabulary (grouped into **Start** / **Due** / **Task** sub-groups via
+  libsettings' `subgroup`) and the Workflow Setup tab (provision button).
 
 ### Config migrations
 

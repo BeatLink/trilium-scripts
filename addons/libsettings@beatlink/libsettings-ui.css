@@ -275,3 +275,22 @@
         margin-left: 0.25rem !important;
     }
 }
+
+/* A `subgroup` clusters a tab's fields under a labelled fieldset — a third,
+   lightweight grouping level *inside* a tab, for tabs with many related
+   scalar fields (e.g. the label-name vocabulary split into Start / Due / Task). */
+.lst-subgroup {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    padding: 0.25rem 1rem 0.75rem 1rem !important;
+    margin: 1rem 0 !important;
+}
+
+.lst-subgroup-legend {
+    padding: 0 0.5rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    color: var(--muted-text-color) !important;
+}

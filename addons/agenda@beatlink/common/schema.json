@@ -1,5 +1,5 @@
 {
-    "_categories": ["Collect", "Organize", "Review", "Execute", "Dimensions", "Settings"],
+    "_categories": ["Collect", "Organize", "Review", "Display Elements", "Execute", "Dimensions", "Settings"],
     "inboxNoteId": {
         "type": "note",
         "label": "Inbox Note",
@@ -13,56 +13,64 @@
         "label": "Start Datetime Label",
         "default": "startDateTime",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Start"
     },
     "startDateLabel": {
         "type": "string",
         "label": "Start Date Label",
         "default": "startDate",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Start"
     },
     "startTimeLabel": {
         "type": "string",
         "label": "Start Time Label",
         "default": "startTime",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Start"
     },
     "dueDatetimeLabel": {
         "type": "string",
         "label": "Due Datetime Label",
         "default": "dueDateTime",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Due"
     },
     "dueDateLabel": {
         "type": "string",
         "label": "Due Date Label",
         "default": "endDate",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Due"
     },
     "dueTimeLabel": {
         "type": "string",
         "label": "Due Time Label",
         "default": "endTime",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Due"
     },
     "durationLabel": {
         "type": "string",
         "label": "Duration Label",
         "default": "duration",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Task"
     },
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
         "default": "recurrence",
         "category": "Settings",
-        "tab": "Settings"
+        "tab": "Settings",
+        "subgroup": "Task"
     },
     "morningTime": {
         "type": "string",
@@ -393,7 +401,7 @@
     "sorts": {
         "type": "registry",
         "label": "Sorts",
-        "category": "Review",
+        "category": "Display Elements",
         "tab": "Sorts",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Sort" },
@@ -442,7 +450,7 @@
     "prefixes": {
         "type": "registry",
         "label": "Prefixes",
-        "category": "Review",
+        "category": "Display Elements",
         "tab": "Prefixes",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Prefix" },
@@ -490,7 +498,7 @@
     "colors": {
         "type": "registry",
         "label": "Colors",
-        "category": "Review",
+        "category": "Display Elements",
         "tab": "Colors",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Color" },
@@ -537,7 +545,7 @@
     "groupings": {
         "type": "registry",
         "label": "Groupings",
-        "category": "Review",
+        "category": "Display Elements",
         "tab": "Groupings",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Grouping" },
@@ -599,7 +607,7 @@
     "dateRules": {
         "type": "registry",
         "label": "Date Rules",
-        "category": "Review",
+        "category": "Display Elements",
         "tab": "Date Rules",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Date Rule" },

@@ -214,12 +214,15 @@ function WorkflowSetup() {
     )
 }
 
-// The "Match Templates By Name" action, surfaced on its own tab under the
-// Dimensions category. Fills each type value's blank Template Note by matching
-// its Name against a #template note's title — note ids are install-specific so
-// they can't ship as schema defaults. Mirrors the button the Organize page's
-// embedded Dimensions panel already exposes.
-function MatchTemplates() {
+// The Dimensions tab: the classification registry plus the "Match Templates By
+// Name" action inlined above it (rather than on a separate tab). Match Templates
+// fills each type value's blank Template Note by matching its Name against a
+// #template note's title — note ids are install-specific so they can't ship as
+// schema defaults. This mirrors the Organize page's embedded DimensionsPanel;
+// it's injected as an extraPanel so the button and the registry share one tab
+// (extraPanels can only replace a schema tab's body, not append to it, so the
+// registry is re-rendered here via `only="Dimensions"`).
+function DimensionsTab({ schemaNoteId, configNoteId }) {
     const [matching, setMatching] = useState(false)
     const [result, setResult] = useState("")
 
@@ -237,7 +240,7 @@ function MatchTemplates() {
     }
 
     return (
-        <div className="match-templates">
+        <div className="dimensions-tab">
             <p className="workflow-setup-blurb">
                 Fill each type value's blank <strong>Template Note</strong> by matching its Name
                 against a <code>#template</code> note's title. Only blank slots are filled, so a
@@ -247,6 +250,11 @@ function MatchTemplates() {
                 {matching ? "Matching..." : "Match Templates By Name"}
             </button>
             {result && <div className="workflow-setup-summary">{result}</div>}
+            <SettingsForm
+                schemaNoteId={schemaNoteId}
+                configNoteId={configNoteId}
+                only="Dimensions"
+            />
         </div>
     )
 }
@@ -272,11 +280,13 @@ export default function ProfileEditor() {
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    // Two side-effecting pickers/actions the schema can't express, injected
-    // into SettingsForm's own category/tab nav: the Organize-note picker lives
-    // under Organize (it wires which note hosts the Organize triage UI), and
-    // the provision button under Settings › Workflow Setup. Everything else
-    // groups by its own schema `category`.
+    // Panels the schema can't express on its own, injected into SettingsForm's
+    // category/tab nav: the Organize-note picker under Organize (wires which note
+    // hosts the Organize triage UI); the provision button under Settings ›
+    // Workflow Setup; and the Dimensions tab, which OVERRIDES the schema-rendered
+    // `dimensions` registry tab of the same label so the Match Templates button
+    // sits inline above the registry rather than on a separate tab. Everything
+    // else groups by its own schema `category`.
     const extraPanels = [
         {
             category: "Organize",
@@ -296,8 +306,10 @@ export default function ProfileEditor() {
         },
         {
             category: "Dimensions",
-            tab: "Match Templates",
-            render: () => <MatchTemplates />
+            tab: "Dimensions",
+            render: () => (
+                <DimensionsTab schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+            )
         }
     ]
 
@@ -306,13 +318,13 @@ export default function ProfileEditor() {
             <h2>Agenda Editor</h2>
             <p>
                 Override the label-name vocabulary (Settings). Under Review, pick the shared overview
-                note and active profile, build out your profiles, and manage every shared
-                search/filter/sort/prefix/color/date-rule element — each on its own tab. A profile only
-                ever references an element by name; edit the element on its own tab to change it
-                everywhere it's used. Pick the inbox note captures land in under Collect. Set the
-                quick-times and pick the note that hosts the Organize triage UI under Organize; edit the
-                classification vocabulary under Dimensions; provision the notebook structure from
-                Settings › Workflow Setup.
+                note and active profile, build out your profiles, and choose their searches and filters.
+                Under Display Elements, manage the reusable sort/prefix/color/grouping/date-rule building
+                blocks — each on its own tab; a profile only ever references an element by name, so
+                editing the element on its own tab changes it everywhere it's used. Pick the inbox note
+                captures land in under Collect. Set the quick-times and pick the note that hosts the
+                Organize triage UI under Organize; edit the classification vocabulary under Dimensions;
+                provision the notebook structure from Settings › Workflow Setup.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

@@ -37,6 +37,7 @@ library's — schema lives with the addon that defines it):
 | `registry`    | `reference` only | The sibling top-level schema key (must be a `registry` field) this field picks an entry from |
 | `tab`         | no       | Explicit tab label this field is grouped under — see "Tabs" below |
 | `category`    | no       | Optional second grouping level *above* the tab — the tab this field is on lands inside this category — see "Categories" below |
+| `subgroup`    | no       | Optional label that clusters this field with its tab-mates sharing the same `subgroup` under a labelled fieldset *within* the tab — see "Sub-groups" below |
 | `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
 
 Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
@@ -328,6 +329,26 @@ stays visible as the schema grows. A tab whose field carries no `category` (or n
 `_categories`) falls under the first declared category, so no field is ever unreachable. Without
 `_categories`, `category` is ignored and the form renders exactly the flat single tab row described
 above.
+
+### Sub-groups
+
+A tab holding many related scalar fields can read as an undifferentiated wall. Give a field a
+`"subgroup": "Some Label"` and it is rendered inside a labelled `fieldset` grouping it with its
+tab-mates carrying the same `subgroup`:
+
+```json
+{
+    "startDate": {"type": "string", "label": "Start Date", "tab": "Labels", "subgroup": "Start"},
+    "startTime": {"type": "string", "label": "Start Time", "tab": "Labels", "subgroup": "Start"},
+    "dueDate":   {"type": "string", "label": "Due Date",   "tab": "Labels", "subgroup": "Due"},
+    "duration":  {"type": "string", "label": "Duration",   "tab": "Labels"}
+}
+```
+
+Sub-groups appear in first-seen order; fields keep their order inside each group; a field with no
+`subgroup` renders first, ungrouped and unheaded. A tab where no field declares a `subgroup` is
+unaffected — it stays a flat field stack. This is purely presentational: `subgroup` is a `_`-free
+field property but carries no per-user value and does not change what is stored.
 
 ### Saving
 

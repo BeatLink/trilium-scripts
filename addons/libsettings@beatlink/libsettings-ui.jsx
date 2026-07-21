@@ -700,11 +700,43 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
         )
     }
 
+    // Render a tab's schema entries, optionally split into sub-groups. A field
+    // may carry a `subgroup` string; entries sharing one are rendered under a
+    // labelled sub-heading (a fieldset within the tab), in first-seen group
+    // order, with entries keeping their original order inside each group.
+    // Entries with no `subgroup` render first, ungrouped and unheaded, so a tab
+    // that uses no sub-groups behaves exactly as before (a flat field stack).
+    function renderTabEntries(entries, tabLabel) {
+        const hasSubgroups = entries.some(([, def]) => def.subgroup)
+        if (!hasSubgroups) return entries.map(entry => renderEntry(entry, tabLabel))
+
+        const ungrouped = []
+        const groupOrder = []
+        const byGroup = {}
+        for (const entry of entries) {
+            const name = entry[1].subgroup
+            if (!name) { ungrouped.push(entry); continue }
+            if (!(name in byGroup)) { byGroup[name] = []; groupOrder.push(name) }
+            byGroup[name].push(entry)
+        }
+        return (
+            <>
+                {ungrouped.map(entry => renderEntry(entry, tabLabel))}
+                {groupOrder.map(name => (
+                    <fieldset class="lst-subgroup" key={name}>
+                        <legend class="lst-subgroup-legend">{name}</legend>
+                        {byGroup[name].map(entry => renderEntry(entry, tabLabel))}
+                    </fieldset>
+                ))}
+            </>
+        )
+    }
+
     // The content of whichever tab is active: an extra panel's own render
     // output if it owns this tab, otherwise the schema fields grouped onto it.
     const activeContent = extraRender[activeKey]
         ? extraRender[activeKey]()
-        : (tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))
+        : renderTabEntries(tabEntries[activeKey] || [], activeKey)
 
     // The panel body for whichever tabs are in scope: a tab bar plus the
     // active tab's content when there's more than one tab, otherwise just the
