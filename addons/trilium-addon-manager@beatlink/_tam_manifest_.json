@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.4.0",
+    "latestVersion": "5.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -68,6 +68,13 @@
                 "sourceUrl": "lib-tam.js"
             },
             {
+                "id": "lib-tam-db",
+                "title": "lib-tam-db.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib-tam-db.js"
+            },
+            {
                 "id": "marked",
                 "title": "marked.min.js",
                 "type": "code",
@@ -123,6 +130,10 @@
                 "child": "marked"
             },
             {
+                "parent": "lib-tam",
+                "child": "lib-tam-db"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             }
@@ -139,17 +150,17 @@
                 "to": "root"
             },
             {
-                "from": "lib-tam",
+                "from": "lib-tam-db",
                 "type": "database",
                 "to": "database"
             },
             {
-                "from": "lib-tam",
+                "from": "lib-tam-db",
                 "type": "addonRoot",
                 "to": "addons"
             },
             {
-                "from": "lib-tam",
+                "from": "lib-tam-db",
                 "type": "addonPersistence",
                 "to": "addon-data"
             }
@@ -187,6 +198,11 @@
             },
             {
                 "note": "lib-tam",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "lib-tam-db",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             },
