@@ -2,18 +2,17 @@
 // libTAMDatabase / libTAMNetwork / libTAMManifestUtils / libTAMNoteResolver /
 // libTAMCatalog / libTAMSync / libTAMLifecycle / libTAMPersistence /
 // libTAMUninstall (+ this facade); merged into one file so TAM has a single
-// require()-able JS note. Section banners below mark what each former file
-// owned; the public surface is the same one lib-tam.js always exported (bottom).
+// require()-able JS note. Section banners below group the functions by domain;
+// the public surface is the same one lib-tam.js always exported (bottom).
 //
 // Only external dependency: marked (markdown -> HTML for READMEs / renderAsHTML).
 
 const marked = require("marked.min.js")
 
+
 // =========================================================================
-// Database: owns the Database/Addons/Addon-Data note ids and their relations,
-// all resolved via api.currentNote — that only works while this code physically
-// executes in the note the manifest's database/addonRoot/addonPersistence
-// relations point "from".
+// Constants: label/relation names, TAM's own id, and the set of "activation"
+// attribute names enableAddon toggles under a disabled: prefix.
 // =========================================================================
 
 const databaseLabel = "database"
@@ -49,6 +48,12 @@ const addonLabels = [
     "appTheme"
 ]
 
+// =========================================================================
+// Database access: the Database note's read/write and the relation-id getters
+// resolved via api.currentNote — only valid while this code executes in the note
+// the manifest's database/addonRoot/addonPersistence relations point "from".
+// =========================================================================
+
 async function getDatabaseNoteId() {
     return await api.currentNote.getRelationValue(databaseLabel)
 }
@@ -77,11 +82,9 @@ async function getPersistenceNoteId() {
 }
 
 // =========================================================================
-// Network: fetch/retry/version-comparison helpers — pure networking, no
-// note-tree access. fetchWithRetry is duplicated inline inside every
-// api.runOnBackend callback that also needs it throughout this file, since
-// those callbacks are serialized into a separate context that can't close over
-// this module-level copy.
+// Network: fetch/retry/version-comparison helpers — pure networking, no note-tree
+// access. fetchWithRetry is duplicated inline inside every api.runOnBackend callback
+// that also needs it, since those callbacks run in a separate serialized context.
 // =========================================================================
 
 function versionCompare(remote, local) {
@@ -127,9 +130,9 @@ async function fetchManifest(manifestSourceUrl) {
 }
 
 // =========================================================================
-// ManifestUtils: pure manifest-shape helpers — parsing/normalizing a fetched
-// manifest, computing parent/dependency relationships, resolving a stored local
-// id to a live note id. resolveStoredNoteId/applyLabels touch the note tree.
+// Manifest shape: pure helpers operating on a fetched/stored manifest object —
+// parsing, normalizing, computing parent/dependency/closure relationships. No
+// note-tree or Database access lives here.
 // =========================================================================
 
 // Splits children[] into each note's first-declared parent (where it actually
@@ -214,17 +217,6 @@ function resolveDependencyUrl(depEntry, catalogContext) {
     return null
 }
 
-// Resolves a single real note id live, by TAMFILEID, for whichever local id
-// a stored manifest declares (e.g. its own `root`/`settingsNote`). Returns
-// null if the local id is unset or the note doesn't currently exist.
-async function resolveStoredNoteId(addonId, localId) {
-    if (!localId) return null
-    return await api.runOnBackend((tamFileIdLabel, tamFileId) => {
-        const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
-        return (note && !note.isDeleted) ? note.noteId : null
-    }, [tamFileIdLabel, `${addonId}/${localId}`])
-}
-
 // Trilium attribute names support a trailing "(inheritable)" modifier — a
 // convention borrowed from label-definition syntax. Parse it off here so a
 // manifest label like "iconClass(inheritable)" sets a real isInheritable
@@ -232,29 +224,6 @@ async function resolveStoredNoteId(addonId, localId) {
 function parseInheritableName(name) {
     const match = name.match(/^(.*)\(inheritable\)$/)
     return match ? { name: match[1], isInheritable: true } : { name, isInheritable: false }
-}
-
-async function applyLabels(labels, noteMap) {
-    for (const label of labels) {
-        const realNoteId = noteMap[label.note]
-        if (!realNoteId) continue
-        const { name, isInheritable } = parseInheritableName(label.name)
-        await api.runOnBackend((noteId, name, value, isInheritable) => {
-            const note = api.getNote(noteId)
-            // If this addon is currently disabled, its activation labels
-            // live under a "disabled:" prefix — write there instead of
-            // creating a live-named duplicate that would silently re-enable
-            // just this one label the moment it gets reapplied.
-            const disabledName = `disabled:${name}`
-            const targetName = note.hasLabel(disabledName) ? disabledName : name
-            if (isInheritable) {
-                note.removeLabel(targetName)
-                note.addLabel(targetName, value, true)
-            } else {
-                note.setLabel(targetName, value)
-            }
-        }, [realNoteId, name, String(label.value ?? ""), isInheritable])
-    }
 }
 
 // Normalizes a fetched manifest document into the `m` sub-object shape used
@@ -300,22 +269,43 @@ function computeLocalClosure(m, startLocalId) {
 }
 
 // =========================================================================
-// NoteResolver: turns a manifest's notes[]/children[] into real, live Trilium
-// notes tagged #TAMFILEID, idempotently. Works purely from the manifest and
-// note tree it's given — no Database/sync-state knowledge lives here (Sync).
+// Note resolution: turns a manifest's notes[]/children[]/labels[] into real, live
+// Trilium notes tagged #TAMFILEID, idempotently, and prunes ones it no longer
+// declares. Works purely from the manifest and note tree — no Database/sync state.
 // =========================================================================
 
-// Renders an addon's README (its `readmeNote` local id, resolved via #TAMFILEID like any
-// other note) as HTML for the detail view. Null if unset or unresolvable.
-async function fetchReadmeHtml(addonId, readmeLocalId) {
-    const noteId = await resolveStoredNoteId(addonId, readmeLocalId)
-    if (!noteId) return null
-    const markdown = await api.runOnBackend((noteId) => {
-        const note = api.getNote(noteId)
-        return note ? note.getContent() : null
-    }, [noteId])
-    if (markdown === null) return null
-    return marked.parse(markdown)
+// Resolves a single real note id live, by TAMFILEID, for whichever local id
+// a stored manifest declares (e.g. its own `root`/`settingsNote`). Returns
+// null if the local id is unset or the note doesn't currently exist.
+async function resolveStoredNoteId(addonId, localId) {
+    if (!localId) return null
+    return await api.runOnBackend((tamFileIdLabel, tamFileId) => {
+        const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+        return (note && !note.isDeleted) ? note.noteId : null
+    }, [tamFileIdLabel, `${addonId}/${localId}`])
+}
+
+async function applyLabels(labels, noteMap) {
+    for (const label of labels) {
+        const realNoteId = noteMap[label.note]
+        if (!realNoteId) continue
+        const { name, isInheritable } = parseInheritableName(label.name)
+        await api.runOnBackend((noteId, name, value, isInheritable) => {
+            const note = api.getNote(noteId)
+            // If this addon is currently disabled, its activation labels
+            // live under a "disabled:" prefix — write there instead of
+            // creating a live-named duplicate that would silently re-enable
+            // just this one label the moment it gets reapplied.
+            const disabledName = `disabled:${name}`
+            const targetName = note.hasLabel(disabledName) ? disabledName : name
+            if (isInheritable) {
+                note.removeLabel(targetName)
+                note.addLabel(targetName, value, true)
+            } else {
+                note.setLabel(targetName, value)
+            }
+        }, [realNoteId, name, String(label.value ?? ""), isInheritable])
+    }
 }
 
 // Resolves every note in scope against the live tree by #TAMFILEID, find-or-create (idempotent
@@ -743,8 +733,77 @@ async function cleanupEmptyPersistenceRoots() {
 }
 
 // =========================================================================
-// Sync: the install/update entry point (syncAddon) and everything only it
-// needs — dependency resolution/recording, promptOnUpdate queue bookkeeping.
+// Update prompts: the promptOnUpdate queue — snapshotting a shipped default that
+// diverged from the user's persisted copy, then reading/applying/clearing the
+// pending decisions the UI surfaces.
+// =========================================================================
+
+async function collectPendingPrompts(addonId, m) {
+    let database = await loadDatabase()
+    const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes || {}
+
+    const prompts = []
+    for (const noteDef of (m.notes || [])) {
+        if (!noteDef.promptOnUpdate) continue
+
+        // Find the AddonData relation that targets this note
+        const rel = (m.relations || []).find(r =>
+            r.to === noteDef.id && r.type.startsWith("AddonData:")
+        )
+        if (!rel) continue
+
+        const key = rel.type.split("AddonData:")[1]
+        const persistedNoteId = persistenceNotes[key]
+        if (!persistedNoteId) continue
+
+        const newContent = noteDef.content ?? ""
+        const currentContent = await api.runOnBackend((id) => {
+            const note = api.getNote(id)
+            return note ? note.getContent() : null
+        }, [persistedNoteId])
+
+        if (currentContent === null) continue
+        if (currentContent === newContent) continue
+
+        prompts.push({
+            noteLocalId: noteDef.id,
+            title: noteDef.title,
+            persistedNoteId,
+            newContent,
+            currentContent
+        })
+    }
+    return prompts
+}
+
+async function getPendingPrompts(addonId) {
+    const database = await loadDatabase()
+    return database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
+}
+
+async function resolvePrompt(addonId, noteLocalId, useNew) {
+    if (!useNew) return
+    const database = await loadDatabase()
+    const prompt = (database.installedAddons?.[addonId]?.persistence?.pendingPrompts || [])
+        .find(p => p.noteLocalId === noteLocalId)
+    if (!prompt) return
+    await api.runOnBackend((noteId, content) => {
+        api.getNote(noteId).setContent(content)
+    }, [prompt.persistedNoteId, prompt.newContent])
+}
+
+async function clearPendingPrompts(addonId) {
+    let database = await loadDatabase()
+    if (database.installedAddons?.[addonId]?.persistence) {
+        delete database.installedAddons[addonId].persistence.pendingPrompts
+    }
+    await saveDatabase(database)
+}
+
+// =========================================================================
+// Install / Sync: the install/update entry point (syncAddon, installByUrl) and the
+// dependency resolution it drives — lazy per-export closure resolution, dependency
+// metadata fetch/record.
 // =========================================================================
 
 // Metadata-only fetch for a dependency — prefers an installed manifestSourceUrl, else
@@ -981,70 +1040,8 @@ async function installByUrl(manifestSourceUrl, options = {}) {
     await syncAddon(manifest.id, { ...options, manifestSourceUrl })
 }
 
-async function collectPendingPrompts(addonId, m) {
-    let database = await loadDatabase()
-    const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes || {}
-
-    const prompts = []
-    for (const noteDef of (m.notes || [])) {
-        if (!noteDef.promptOnUpdate) continue
-
-        // Find the AddonData relation that targets this note
-        const rel = (m.relations || []).find(r =>
-            r.to === noteDef.id && r.type.startsWith("AddonData:")
-        )
-        if (!rel) continue
-
-        const key = rel.type.split("AddonData:")[1]
-        const persistedNoteId = persistenceNotes[key]
-        if (!persistedNoteId) continue
-
-        const newContent = noteDef.content ?? ""
-        const currentContent = await api.runOnBackend((id) => {
-            const note = api.getNote(id)
-            return note ? note.getContent() : null
-        }, [persistedNoteId])
-
-        if (currentContent === null) continue
-        if (currentContent === newContent) continue
-
-        prompts.push({
-            noteLocalId: noteDef.id,
-            title: noteDef.title,
-            persistedNoteId,
-            newContent,
-            currentContent
-        })
-    }
-    return prompts
-}
-
-async function getPendingPrompts(addonId) {
-    const database = await loadDatabase()
-    return database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
-}
-
-async function resolvePrompt(addonId, noteLocalId, useNew) {
-    if (!useNew) return
-    const database = await loadDatabase()
-    const prompt = (database.installedAddons?.[addonId]?.persistence?.pendingPrompts || [])
-        .find(p => p.noteLocalId === noteLocalId)
-    if (!prompt) return
-    await api.runOnBackend((noteId, content) => {
-        api.getNote(noteId).setContent(content)
-    }, [prompt.persistedNoteId, prompt.newContent])
-}
-
-async function clearPendingPrompts(addonId) {
-    let database = await loadDatabase()
-    if (database.installedAddons?.[addonId]?.persistence) {
-        delete database.installedAddons[addonId].persistence.pendingPrompts
-    }
-    await saveDatabase(database)
-}
-
 // =========================================================================
-// Lifecycle: enable/disable, read-only addon listing, update-checking, and
+// Lifecycle / query: enable/disable, read-only addon listing, update-checking, and
 // database validation — the "query and toggle" surface outside install/uninstall.
 // =========================================================================
 
@@ -1333,8 +1330,9 @@ async function fetchCatalogAddons(catalogUrl) {
 }
 
 // =========================================================================
-// Uninstall: removing an addon's own note branches, detecting external
-// references that would dangle, and the recursive "uninstall unused deps" logic.
+// Uninstall / recovery: removing an addon's own note branches, detecting external
+// references that would dangle, the recursive "uninstall unused deps" logic, and
+// the orphan-sweep / full-reinitialize recovery tools.
 // =========================================================================
 
 // User-triggered maintenance sweep: deletes any #TAMFILEID-tagged note with zero parents
@@ -1506,6 +1504,24 @@ async function reinitializeDatabase() {
             }
         }
     })
+}
+
+// =========================================================================
+// UI helpers: rendering support for the TAM.jsx views that isn't part of the
+// install/resolve machinery.
+// =========================================================================
+
+// Renders an addon's README (its `readmeNote` local id, resolved via #TAMFILEID like any
+// other note) as HTML for the detail view. Null if unset or unresolvable.
+async function fetchReadmeHtml(addonId, readmeLocalId) {
+    const noteId = await resolveStoredNoteId(addonId, readmeLocalId)
+    if (!noteId) return null
+    const markdown = await api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId)
+        return note ? note.getContent() : null
+    }, [noteId])
+    if (markdown === null) return null
+    return marked.parse(markdown)
 }
 
 // =========================================================================
