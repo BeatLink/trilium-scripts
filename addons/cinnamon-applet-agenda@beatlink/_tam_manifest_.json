@@ -5,13 +5,14 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.3",
+    "latestVersion": "1.5.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "root",
+        "persistenceRoot": "persist-root",
         "notes": [
             {
                 "id": "root",
@@ -33,6 +34,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "schema.json"
+            },
+            {
+                "id": "persist-root",
+                "title": "User Data",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "config",
@@ -67,6 +75,10 @@
             },
             {
                 "parent": "root",
+                "child": "persist-root"
+            },
+            {
+                "parent": "persist-root",
                 "child": "config"
             },
             {
@@ -91,7 +103,7 @@
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {

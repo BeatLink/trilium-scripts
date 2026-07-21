@@ -1,0 +1,59 @@
+{
+    "id": "tam-persistence-migration@beatlink",
+    "name": "TAM Persistence Migration",
+    "description": "One-time migration off TAM's old copy-on-write persistence (#TAMDATAID) onto the two-roots placement model. Install, enable once, then uninstall.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/tam-persistence-migration@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tam-persistence-migration@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "tam-persistence-migration@beatlink",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "migrate",
+                "title": "migrate.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "migrate.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "migrate"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "migrate",
+                "name": "run",
+                "value": "frontendStartup"
+            }
+        ],
+        "dependencies": [],
+        "exports": {},
+        "readmeNote": "readme"
+    }
+}

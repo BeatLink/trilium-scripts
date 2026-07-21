@@ -9,7 +9,7 @@ export async function getAgendaSettings() {
     const anchor = anchors[0]
 
     const schemaNoteId = anchor.getRelationValue("schemaNote")
-    const configNoteId = anchor.getRelationValue("AddonData:config")
+    const configNoteId = anchor.getRelationValue("configNote")
     const icalNoteId = anchor.getRelationValue("icalNote") || ""
     if (!schemaNoteId || !configNoteId) return null
 

@@ -83,7 +83,6 @@ const COMMAND_LABELS = {
     "enable-addon": "Updating addon",
     "check-updates": "Checking for updates",
     "validate-database": "Validating database",
-    "cleanup-persistence": "Cleaning up persisted data",
     "sweep-orphans": "Sweeping orphaned notes",
     "reinitialize-database": "Reinitializing database"
 }
@@ -103,12 +102,8 @@ function computeStats(addons, catalogs) {
         if (!addonData.installedVersion) continue
         installedCount++
         if (addonData.updateAvailable) updateCount++
-        const persistence = addonData.persistence
-        const hasPersisted = persistence && (
-            persistence.rootNote ||
-            (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
-        )
-        if (hasPersisted) persistedCount++
+        // An addon holds user data if its manifest declares a persistenceRoot subtree.
+        if (addonData.manifest?.persistenceRoot) persistedCount++
     }
     return { catalogCount: catalogs.length, installedCount, persistedCount, updateCount }
 }
@@ -540,7 +535,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onCleanup, onSweepOrphans, onReinitialize, anyUpdateAvailable
+    onValidate, onSweepOrphans, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -594,7 +589,6 @@ function SettingsView({
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
-                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
                     <TamButton
                         className="btn-ghost"
@@ -838,11 +832,6 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         setValidationIssues(await libTAMjs.validateDatabase())
     }
 
-    async function handleCleanupPersistence() {
-        await libTAMjs.cleanupEmptyPersistenceRoots()
-        await reload()
-    }
-
     async function handleSweepOrphans() {
         const removedTamFileIds = await libTAMjs.sweepOrphanedNotes()
         setValidationTitle("Orphaned Notes")
@@ -877,7 +866,6 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "enable-addon": handleEnableAddon,
         "check-updates": handleCheckUpdates,
         "validate-database": handleValidateDatabase,
-        "cleanup-persistence": handleCleanupPersistence,
         "sweep-orphans": handleSweepOrphans,
         "reinitialize-database": handleReinitializeDatabase
     }
@@ -1019,7 +1007,6 @@ export default function RepoManager() {
                 onCheckUpdates={() => dispatch({ command: "check-updates" })}
                 onUpdateAll={() => dispatch({ command: "update-all" })}
                 onValidate={() => dispatch({ command: "validate-database" })}
-                onCleanup={() => dispatch({ command: "cleanup-persistence" })}
                 onSweepOrphans={() => dispatch({ command: "sweep-orphans" })}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />

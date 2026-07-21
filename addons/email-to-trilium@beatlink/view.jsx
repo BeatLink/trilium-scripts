@@ -27,7 +27,7 @@ export default function EmailToTriliumView() {
         (async () => {
             const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
             const settingsNoteId = await api.currentNote.getRelationValue("settingsNote")
-            const configNoteId = (await api.getNote(settingsNoteId)).getRelationValue("AddonData:config")
+            const configNoteId = (await api.getNote(settingsNoteId)).getRelationValue("configNote")
             const s = await loadSettings(schemaNoteId, configNoteId)
             setSettings(s)
             const ids = Object.keys(s.accounts || {})

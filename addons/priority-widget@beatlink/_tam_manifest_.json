@@ -5,13 +5,14 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "root",
+        "persistenceRoot": "persist-root",
         "notes": [
             {
                 "id": "root",
@@ -42,12 +43,18 @@
                 "sourceUrl": "schema.json"
             },
             {
+                "id": "persist-root",
+                "title": "User Data",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json",
-                "promptOnUpdate": true
+                "sourceUrl": "config.json"
             },
             {
                 "id": "settings",
@@ -80,6 +87,10 @@
             },
             {
                 "parent": "root",
+                "child": "persist-root"
+            },
+            {
+                "parent": "persist-root",
                 "child": "config"
             },
             {
@@ -104,7 +115,7 @@
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {

@@ -5,12 +5,13 @@
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
-    "latestVersion": "0.7.4",
+    "latestVersion": "0.8.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/_tam_manifest_.json",
     "manifest": {
         "root": "root",
+        "persistenceRoot": "persist-root",
         "notes": [
             {
                 "id": "root",
@@ -27,12 +28,18 @@
                 "sourceUrl": "trilium-drawio.js"
             },
             {
+                "id": "persist-root",
+                "title": "User Data",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
                 "id": "template",
                 "title": "drawio",
                 "type": "image",
                 "mime": "image/svg+xml",
-                "sourceUrl": "drawio.svg",
-                "promptOnUpdate": true
+                "sourceUrl": "drawio.svg"
             },
             {
                 "id": "readme",
@@ -49,6 +56,10 @@
             },
             {
                 "parent": "root",
+                "child": "persist-root"
+            },
+            {
+                "parent": "persist-root",
                 "child": "template"
             },
             {
@@ -59,7 +70,7 @@
         "relations": [
             {
                 "from": "root",
-                "type": "AddonData:template",
+                "type": "templateNote",
                 "to": "template"
             }
         ],

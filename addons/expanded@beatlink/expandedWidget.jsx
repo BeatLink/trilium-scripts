@@ -54,7 +54,7 @@ export default defineWidget({
                 const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
                 const settingsNoteId = await api.currentNote.getRelationValue("settingsNote")
                 const configNoteId = await api.runOnBackend((settingsNoteId) => {
-                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+                    return api.getNote(settingsNoteId).getRelationValue("configNote")
                 }, [settingsNoteId])
                 const { labelName } = await loadSettings(schemaNoteId, configNoteId)
                 setLabelName(labelName)

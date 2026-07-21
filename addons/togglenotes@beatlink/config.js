@@ -1,4 +1,4 @@
-const CONFIG_RELATION = "AddonData:config"
+const CONFIG_RELATION = "configNote"
 
 async function loadConfig() {
     const configNote = await api.currentNote.getRelationTarget(CONFIG_RELATION)

@@ -167,6 +167,30 @@ function depIds(manifestBody) {
     return out;
 }
 
+// Local ids whose children[] parent chain roots at m.persistenceRoot (inclusive).
+// Same-addon children only. Empty set when no persistenceRoot is declared.
+// MUST stay in sync with persistentLocalIds() in lib-tam.js.
+function persistentLocalIds(m) {
+    const rootId = m.persistenceRoot;
+    const persistent = new Set();
+    if (!rootId) return persistent;
+    persistent.add(rootId);
+    const childrenOf = {};
+    for (const c of (m.children || []).filter((c) => c.child && !c.addon)) {
+        (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child);
+    }
+    const stack = [rootId];
+    while (stack.length) {
+        for (const child of childrenOf[stack.pop()] || []) {
+            if (!persistent.has(child)) {
+                persistent.add(child);
+                stack.push(child);
+            }
+        }
+    }
+    return persistent;
+}
+
 
 function runGit(args, cwd) {
     const result = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -357,12 +381,16 @@ function cmdValidate(args) {
             error(manifestFile, `manifest.root '${rootId}' not found in notes`);
         }
 
-        for (const field of ["settingsNote", "readmeNote"]) {
+        for (const field of ["settingsNote", "readmeNote", "persistenceRoot"]) {
             const localId = m[field];
             if (localId && !noteIds.has(localId)) {
                 error(manifestFile, `manifest.${field} '${localId}' not found in notes`);
             }
         }
+
+        // Local ids whose children[] parent chain roots at persistenceRoot -- these are
+        // "persistent": created once, prompt-on-update, and never touched by uninstall.
+        const persistentIds = persistentLocalIds(m);
 
         // settingsNote should point at a render note, not the raw code note
         const settingsNote = byId[m.settingsNote];
@@ -401,26 +429,21 @@ function cmdValidate(args) {
             }
         }
 
-        // notes unreachable from root via children[] will never be created
+        // notes unreachable from root (or persistenceRoot) via children[] will never be created
         const localChildren = new Set(
             (m.children || []).filter((c) => c.child && !c.addon).map((c) => c.child)
         );
         for (const nid of noteIds) {
-            if (nid !== rootId && !localChildren.has(nid)) {
+            if (nid !== rootId && nid !== m.persistenceRoot && !localChildren.has(nid)) {
                 warn(manifestFile, `note '${nid}' is not attached under any parent in 'children' -- it will never be created`);
             }
         }
 
-        // promptOnUpdate no-ops without a matching AddonData: relation
-        const addonDataTargets = new Set(
-            (m.relations || [])
-                .filter((rel) => String(rel.type || "").startsWith("AddonData:"))
-                .map((rel) => rel.to)
-        );
+        // skipOnUpdate/promptOnUpdate are implied by placement under persistenceRoot -- redundant there
         for (const note of notes) {
             const nid = note.id || note.title || "?";
-            if (note.promptOnUpdate && !addonDataTargets.has(nid)) {
-                warn(manifestFile, `note '${nid}' sets promptOnUpdate but has no matching 'AddonData:${nid}' relation -- the keep-mine/use-new prompt will never fire`);
+            if (persistentIds.has(nid) && (note.skipOnUpdate || note.promptOnUpdate)) {
+                warn(manifestFile, `note '${nid}' is under persistenceRoot, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
             }
         }
 

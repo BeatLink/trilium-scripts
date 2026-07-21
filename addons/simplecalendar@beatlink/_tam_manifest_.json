@@ -5,13 +5,14 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.3",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "settings-page",
+        "persistenceRoot": "persist-root",
         "notes": [
             {
                 "id": "root",
@@ -47,6 +48,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "schema.json"
+            },
+            {
+                "id": "persist-root",
+                "title": "User Data",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "config",
@@ -89,6 +97,10 @@
             },
             {
                 "parent": "root",
+                "child": "persist-root"
+            },
+            {
+                "parent": "persist-root",
                 "child": "config"
             },
             {
@@ -128,7 +140,7 @@
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {

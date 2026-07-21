@@ -149,7 +149,7 @@ function BudgetTable() {
         (async () => {
             const schemaNoteId = await currentNote.getRelationValue("schemaNote")
             const settingsNote = await currentNote.getRelationTarget("settingsNote")
-            const configNote = await settingsNote.getRelationTarget("AddonData:config")
+            const configNote = await settingsNote.getRelationTarget("configNote")
             setSettings(await loadSettings(schemaNoteId, configNote.noteId))
         })()
     }, [])

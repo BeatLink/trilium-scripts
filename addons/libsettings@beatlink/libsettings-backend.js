@@ -6,7 +6,7 @@ function isPlainObject(value) {
 }
 
 // A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (not `AddonData:`-tracked), so it gets fully
+// normal addon-shipped note (under addonRoot, not persistenceRoot), so it gets fully
 // overwritten on every TAM update just like the rest of the addon, meaning a
 // newly-added shipped entry reaches existing installs for free. The
 // persisted (config.json) shape for a registry field is therefore not the

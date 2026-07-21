@@ -50,10 +50,6 @@ async function saveDatabase(database) {
 // =========================================================================
 
 const tamFileIdLabel = "TAMFILEID"
-// Identity of a persisted (AddonData:) note living under "Addon Data". Deliberately a
-// SEPARATE namespace from tamFileIdLabel: every uninstall/prune sweep scans by #TAMFILEID,
-// so a persisted note tagged only with this can never be caught by them. Value: `addonId/key`.
-const tamDataIdLabel = "TAMDATAID"
 const TAM_ID = "trilium-addon-manager@beatlink"
 const addonLabels = [
     "widget",
@@ -300,6 +296,32 @@ function computeLocalClosure(m, startLocalId) {
     return closure
 }
 
+// Local ids whose children[] parent chain roots at m.persistenceRoot (inclusive). Same-addon
+// children only. Empty when no persistenceRoot is declared. A "persistent" note is created once
+// with its shipped default, prompt-on-update thereafter, and never touched by uninstall/prune —
+// all three implied by placement alone (no per-note flags, no AddonData: relation).
+// MUST stay in sync with persistentLocalIds() in resources/scripts/tamhelper.js.
+function persistentLocalIds(m) {
+    const rootId = m.persistenceRoot
+    const persistent = new Set()
+    if (!rootId) return persistent
+    persistent.add(rootId)
+    const childrenOf = {}
+    for (const c of (m.children || []).filter(c => c.child && !c.addon)) {
+        (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child)
+    }
+    const stack = [rootId]
+    while (stack.length) {
+        for (const child of childrenOf[stack.pop()] || []) {
+            if (!persistent.has(child)) {
+                persistent.add(child)
+                stack.push(child)
+            }
+        }
+    }
+    return persistent
+}
+
 // =========================================================================
 // Note resolution: turns a manifest's notes[]/children[]/labels[] into real, live
 // Trilium notes tagged #TAMFILEID, idempotently, and prunes ones it no longer
@@ -347,6 +369,9 @@ async function applyLabels(labels, noteMap) {
 async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, options = {}) {
     const { rootExternallyParented = false, entryLocalId = m.root, scopeLocalIds = null } = options
     const { primaryParent, extraParents } = buildParentMaps(m.children)
+    // A persistent note (under persistenceRoot) is created once with its shipped default, then
+    // never content-overwritten on later syncs — same content behavior as skipOnUpdate.
+    const persistentIds = persistentLocalIds(m)
 
     // A scoped (dependency-export) resolution only sees the export's closure, but a
     // closure note's first-declared parent is usually the addon root, which lives
@@ -486,7 +511,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, manifestBaseUrl, o
                     return note.noteId
                 },
                 [tamFileIdLabel, tamFileId, parentRealId, noteDef.title, effectiveType, effectiveMime, sourceUrlForBackend, explicitContent, isBinary,
-                    !!noteDef.skipOnUpdate, !!noteDef.promptOnUpdate, skipParenting]
+                    !!noteDef.skipOnUpdate || persistentIds.has(localId), !!noteDef.promptOnUpdate, skipParenting]
             )
         } catch (e) {
             console.error(`TAM: failed to resolve note '${localId}' of ${addonId}`, e)
@@ -553,256 +578,78 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
 
 // Deletes any live #TAMFILEID-tagged note of this addon whose local id is no longer
 // declared in the current manifest (resolveNotes only resolves notes it still declares).
+// A persistent note (under persistenceRoot) is never pruned — its content is the user's,
+// so a manifest that drops it must not take the user's data with it.
 async function pruneRemovedNotes(m, addonId) {
-    await api.runOnBackend((tamFileIdLabel, addonId, currentLocalIds) => {
+    const persistentIds = [...persistentLocalIds(m)]
+    await api.runOnBackend((tamFileIdLabel, addonId, currentLocalIds, persistentIds) => {
         const currentSet = new Set(currentLocalIds)
+        const persistentSet = new Set(persistentIds)
         const prefix = `${addonId}/`
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             const value = note.getLabelValue(tamFileIdLabel)
             if (!value || !value.startsWith(prefix)) continue
             const localId = value.slice(prefix.length)
+            if (persistentSet.has(localId)) continue
             if (!currentSet.has(localId)) note.deleteNote()
         }
-    }, [tamFileIdLabel, addonId, m.notes.map(n => n.id)])
+    }, [tamFileIdLabel, addonId, m.notes.map(n => n.id), persistentIds])
 }
 
 // =========================================================================
-// Persistence: persisted user data (AddonData: notes). The persisted copy is a
-// FULL, independent copy under "Addon Data" identified by its own #TAMDATAID
-// (never #TAMFILEID), so no #TAMFILEID uninstall/prune sweep can delete it.
+// Persistence: user data lives in notes placed under persistenceRoot, resolved (like every
+// other note) as real #TAMFILEID notes but anchored under the shared "Addon Data" note, which
+// the uninstall/prune sweeps skip. No copy, no separate #TAMDATAID identity. See resolveNotes /
+// persistentLocalIds. Migration off the old copy-on-write model ships as a separate one-time
+// addon (tam-persistence-migration@beatlink), not as part of this hot path.
 // =========================================================================
 
-// One-time migration off the old design, run BEFORE resolveNotes so it can't clobber user data.
-// In the old model the persisted copy was a duplicateSubtree clone living under "Addon Data" that
-// kept the origin's copied #TAMFILEID; the in-tree origin was deleted. So the clone is now the
-// SOLE bearer of `addonId/key` in the #TAMFILEID namespace — resolveNotes' find-by-#TAMFILEID
-// would adopt it as the in-tree note and overwrite it with the shipped default. Re-tagging the
-// recorded clone to #TAMDATAID first makes that lookup miss it (a fresh throwaway origin is
-// created instead), and connectAddonPersistence then links the relation back to this same note.
-async function migrateLegacyPersistence(addonId) {
-    const database = await loadDatabase()
-    const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes
-    if (!persistenceNotes || Object.keys(persistenceNotes).length === 0) return
-
-    await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, persistenceNotes) => {
-        for (const [key, noteId] of Object.entries(persistenceNotes)) {
-            const note = api.getNote(noteId)
-            if (!note || note.isDeleted) continue
-            if (note.getLabelValue(tamDataIdLabel)) continue // already migrated
-            note.removeLabel(tamFileIdLabel)
-            note.setLabel(tamDataIdLabel, `${addonId}/${key}`)
-        }
-    }, [tamFileIdLabel, tamDataIdLabel, addonId, persistenceNotes])
-}
-
-async function connectAddonPersistence(addonId) {
-    const persistenceRoot = await getPersistenceNoteId()
-    let database = await loadDatabase()
-
-    const addonRecord = database.installedAddons[addonId]
-    if (!addonRecord.persistence) addonRecord.persistence = {}
-    if (!addonRecord.persistence.persistenceNotes) addonRecord.persistence.persistenceNotes = {}
-
-    const addonNoteId = await resolveStoredNoteId(addonId, addonRecord.manifest?.root)
-    if (!addonNoteId) return
-    const existingNotes = addonRecord.persistence.persistenceNotes
-
-    // Single pass so a UI reload can't interrupt it partway: for each AddonData: relation, find
-    // (by #TAMDATAID, else adopt the recorded legacy clone, else make a fresh copy) the persisted
-    // note under "Addon Data". Every reference to the shipped-default origin is then moved to the
-    // copy — the AddonData: relation and any OTHER inbound relation (e.g. templates' `template`
-    // relation on root) — before the origin is deleted, so nothing dangles. Uses removeRelation +
-    // addRelation rather than setRelation, since removeRelation updates becca's reverse index for
-    // the old target, preventing the origin's deleteNote cascade from killing a rewired relation.
-    const outcome = await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonNoteId, persistenceRoot, addonId, existingPersistRoot, existingNotes) => {
-        const result = {}
-        const toDelete = []
-        const originToPersisted = {}
-        let persistRoot = existingPersistRoot
-
-        function tagAsPersisted(note, key) {
-            // A persisted note lives only in the #TAMDATAID namespace. Strip any #TAMFILEID it
-            // inherited (a legacy clone carries the origin's copied tag; duplicateSubtree copies
-            // it too) so no #TAMFILEID sweep can see it, and stamp its stable data identity.
-            note.removeLabel(tamFileIdLabel)
-            note.setLabel(tamDataIdLabel, `${addonId}/${key}`)
-        }
-        function ensurePersistRoot() {
-            if (persistRoot && api.getNote(persistRoot)) return persistRoot
-            const rootResult = api.createTextNote(persistenceRoot, addonId, "")
-            rootResult.note.setLabel("iconClass", "bx bx-customize")
-            persistRoot = rootResult.note.noteId
-            return persistRoot
-        }
-
-        for (const noteId of api.getNote(addonNoteId).getSubtreeNoteIds()) {
-            const note = api.getNote(noteId)
-            // TAM's own root descends into "Addons", the parent of every other addon's tree —
-            // without this guard, TAM's self-sync would corrupt every other addon's bookkeeping.
-            const ownTamFileId = note.getLabelValue(tamFileIdLabel)
-            if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
-            // Snapshot name+value up front: the remove/add below mutates this note's attribute
-            // list, and a note like templates' root carries many AddonData: relations at once.
-            const addonDataRelations = note.getRelations()
-                .filter(r => r.name.includes("AddonData:"))
-                .map(r => ({ name: r.name, value: r.value }))
-            for (const relation of addonDataRelations) {
-                const key = relation.name.split("AddonData:")[1]
-                const origNoteId = relation.value
-
-                // 1. Authoritative link: a persisted note already carrying this data identity.
-                let persisted = api.getNoteWithLabel(tamDataIdLabel, `${addonId}/${key}`)
-                if (persisted && persisted.isDeleted) persisted = null
-
-                // 2. Migration: a legacy clone from the old design, recorded but not yet re-tagged.
-                if (!persisted && existingNotes[key]) {
-                    const legacy = api.getNote(existingNotes[key])
-                    if (legacy && !legacy.isDeleted) {
-                        tagAsPersisted(legacy, key)
-                        persisted = legacy
-                    }
-                }
-
-                // 3. First install: make a full, independent copy of the shipped-default origin.
-                if (!persisted) {
-                    const origTitle = api.getNote(origNoteId).title
-                    const dup = api.duplicateSubtree(origNoteId, ensurePersistRoot())
-                    dup.note.title = origTitle
-                    dup.note.save()
-                    tagAsPersisted(dup.note, key)
-                    persisted = dup.note
-                }
-
-                note.removeRelation(relation.name)
-                note.addRelation(relation.name, persisted.noteId)
-                result[key] = persisted.noteId
-                if (origNoteId !== persisted.noteId) {
-                    toDelete.push(origNoteId)
-                    originToPersisted[origNoteId] = persisted.noteId
-                }
-            }
-        }
-
-        // Move every OTHER inbound relation off each origin onto its persisted copy, so a
-        // reference like templates' `root --template--> special` survives the origin's deletion.
-        // (The AddonData: relation itself was already rewired above.) duplicateSubtree copied the
-        // origin's OUTBOUND relations onto the copy, but inbound ones still point at the origin.
-        for (const [origNoteId, persistedNoteId] of Object.entries(originToPersisted)) {
-            const origin = api.getNote(origNoteId)
-            if (!origin) continue
-            const inbound = origin.getTargetRelations()
-                .filter(r => !r.name.includes("AddonData:"))
-                .map(r => ({ name: r.name, sourceId: r.noteId }))
-            for (const { name, sourceId } of inbound) {
-                const source = api.getNote(sourceId)
-                if (!source) continue
-                source.removeRelation(name)
-                source.addRelation(name, persistedNoteId)
-            }
-        }
-
-        for (const noteId of toDelete) {
-            const note = api.getNote(noteId)
-            if (note) note.deleteNote()
-        }
-
-        if (persistRoot) {
-            const rootNote = api.getNote(persistRoot)
-            if (rootNote && rootNote.getChildNotes().length === 0) {
-                rootNote.deleteNote()
-                persistRoot = null
-            }
-        }
-
-        return { persistRoot, persistenceNotes: result }
-    }, [tamFileIdLabel, tamDataIdLabel, addonNoteId, persistenceRoot, addonId, addonRecord.persistence.rootNote || null, existingNotes])
-
-    if (outcome.persistRoot) {
-        addonRecord.persistence.rootNote = outcome.persistRoot
-    } else {
-        delete addonRecord.persistence.rootNote
-    }
-    addonRecord.persistence.persistenceNotes = {
-        ...existingNotes,
-        ...outcome.persistenceNotes
-    }
-    await saveDatabase(database)
-}
-
-// Removes any recorded persistence root that's now empty and clears the stale reference.
-async function cleanupEmptyPersistenceRoots() {
-    let database = await loadDatabase()
-    let changed = false
-
-    for (const [addonId, addonRecord] of Object.entries(database.installedAddons || {})) {
-        const persistence = addonRecord.persistence
-        const rootNoteId = persistence?.rootNote
-        if (!rootNoteId) continue
-
-        const isEmpty = await api.runOnBackend((rootNoteId) => {
-            const note = api.getNote(rootNoteId)
-            if (!note) return true
-            if (note.getChildNotes().length > 0) return false
-            note.deleteNote()
-            return true
-        }, [rootNoteId])
-
-        if (isEmpty) {
-            delete persistence.rootNote
-            changed = true
-
-            // Nothing installed and nothing left worth keeping — drop the whole record.
-            const hasPersistedNotes = persistence.persistenceNotes &&
-                Object.keys(persistence.persistenceNotes).length > 0
-            if (!addonRecord.installedVersion && !hasPersistedNotes && !persistence.pendingPrompts) {
-                delete database.installedAddons[addonId]
-            }
-        }
-    }
-
-    if (changed) await saveDatabase(database)
-}
-
 // =========================================================================
-// Update prompts: the promptOnUpdate queue — snapshotting a shipped default that
-// diverged from the user's persisted copy, then reading/applying/clearing the
-// pending decisions the UI surfaces.
+// Update prompts: persistent notes (under persistenceRoot) are prompt-on-update by
+// definition — a sync snapshots the shipped default against the user's live note and,
+// if they diverged, queues a Keep-Mine/Use-New decision the UI surfaces.
 // =========================================================================
 
-async function collectPendingPrompts(addonId, m) {
-    let database = await loadDatabase()
-    const persistenceNotes = database.installedAddons?.[addonId]?.persistence?.persistenceNotes || {}
+// Called from syncAddon BEFORE resolveNotes. A persistent note is create-once, so its live
+// content is always the user's copy; here we compare it against the incoming manifest default
+// and queue a prompt on any difference. The live note is found directly by #TAMFILEID.
+async function collectPendingPrompts(addonId, m, manifestBaseUrl) {
+    const persistentIds = persistentLocalIds(m)
+    if (persistentIds.size === 0) return []
 
     const prompts = []
     for (const noteDef of (m.notes || [])) {
-        if (!noteDef.promptOnUpdate) continue
+        if (!persistentIds.has(noteDef.id)) continue
+        if (noteDef.id === m.persistenceRoot) continue // the anchor holds no user content
 
-        // Find the AddonData relation that targets this note
-        const rel = (m.relations || []).find(r =>
-            r.to === noteDef.id && r.type.startsWith("AddonData:")
-        )
-        if (!rel) continue
+        // The incoming default: inline content, else fetched fresh from sourceUrl.
+        let newContent = noteDef.content ?? null
+        if (newContent === null && noteDef.sourceUrl) {
+            try {
+                const url = new URL(noteDef.sourceUrl, manifestBaseUrl).href
+                const response = await fetchWithRetry(url)
+                if (response.ok) newContent = await response.text()
+            } catch (e) {
+                console.error(`TAM: couldn't fetch incoming default for persistent note '${noteDef.id}' of ${addonId}`, e)
+            }
+        }
+        if (newContent === null) continue
 
-        const key = rel.type.split("AddonData:")[1]
-        const persistedNoteId = persistenceNotes[key]
-        if (!persistedNoteId) continue
+        const info = await api.runOnBackend((tamFileIdLabel, tamFileId) => {
+            const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+            return (note && !note.isDeleted) ? { noteId: note.noteId, content: note.getContent() } : null
+        }, [tamFileIdLabel, `${addonId}/${noteDef.id}`])
 
-        const newContent = noteDef.content ?? ""
-        const currentContent = await api.runOnBackend((id) => {
-            const note = api.getNote(id)
-            return note ? note.getContent() : null
-        }, [persistedNoteId])
-
-        if (currentContent === null) continue
-        if (currentContent === newContent) continue
+        if (!info) continue // not yet installed — first install writes the default, nothing to prompt
+        if (info.content === newContent) continue
 
         prompts.push({
             noteLocalId: noteDef.id,
             title: noteDef.title,
-            persistedNoteId,
+            persistedNoteId: info.noteId,
             newContent,
-            currentContent
+            currentContent: info.content
         })
     }
     return prompts
@@ -925,7 +772,7 @@ async function ensureDependencyExport(depId, exportKey, parentRealId, ctx) {
 // children/relations via ensureDependencyExport. Shared by top-level sync and nested
 // dependency resolution.
 async function resolveManifest(m, addonId, parentRealId, manifestSourceUrl, ctx, options = {}) {
-    const { entryLocalId = m.root, scopeLocalIds = null, rootExternallyParented = false } = options
+    const { entryLocalId = m.root, scopeLocalIds = null, rootExternallyParented = false, existingNoteMap = null } = options
     const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
 
     for (const depEntry of (m.dependencies || [])) {
@@ -933,9 +780,14 @@ async function resolveManifest(m, addonId, parentRealId, manifestSourceUrl, ctx,
         if (!ctx.dependencyEntries.has(depId)) ctx.dependencyEntries.set(depId, depEntry)
     }
 
-    const noteMap = await resolveNotes(m, addonId, parentRealId, manifestSourceUrl, {
+    const resolved = await resolveNotes(m, addonId, parentRealId, manifestSourceUrl, {
         entryLocalId, scopeLocalIds, rootExternallyParented
     })
+    // Merge this pass's real ids into the shared map so a cross-anchor relation (a structural
+    // note's ~template pointing into the persistence pass, or vice versa) resolves against notes
+    // created in the OTHER pass. Relations/labels are applied only for this pass's in-scope notes,
+    // but their targets may live in either pass.
+    const noteMap = existingNoteMap ? Object.assign(existingNoteMap, resolved) : resolved
 
     for (const c of (m.children || []).filter(c => c.addon && inScope(c.parent))) {
         const childParentRealId = noteMap[c.parent]
@@ -999,8 +851,8 @@ async function syncAddon(addonId, options = {}) {
 
     if (!m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
 
-    // Snapshot promptOnUpdate diffs against current persisted content first.
-    const pendingPrompts = await collectPendingPrompts(addonId, m)
+    // Snapshot persistent-note diffs (shipped default vs. user's live copy) before resolveNotes.
+    const pendingPrompts = await collectPendingPrompts(addonId, m, fetchUrl)
     if (pendingPrompts.length > 0) {
         if (!database.installedAddons[addonId]) database.installedAddons[addonId] = {}
         if (!database.installedAddons[addonId].persistence) database.installedAddons[addonId].persistence = {}
@@ -1008,14 +860,34 @@ async function syncAddon(addonId, options = {}) {
         await saveDatabase(database)
     }
 
-    // Migrate any legacy persisted clone to the #TAMDATAID model BEFORE resolveNotes runs —
-    // otherwise its find-by-#TAMFILEID would adopt the clone and overwrite user data (see there).
-    await migrateLegacyPersistence(addonId)
+    // The manifest resolves in two anchored passes. Structural notes go under the "Addons"
+    // anchor as always. Persistent notes (the persistenceRoot subtree) go under the shared
+    // "Addon Data" anchor instead — a stable, TAM-owned note the uninstall sweep never touches,
+    // so user data survives an uninstall without any copy or reparenting. Cross-anchor
+    // ~template/relation edges still resolve fine; both passes share one noteMap via ctx.
+    const persistentIds = persistentLocalIds(m)
+    const structuralScope = persistentIds.size
+        ? new Set(m.notes.map(n => n.id).filter(id => !persistentIds.has(id)))
+        : null
 
-    // A directly-installed addon always resolves its whole manifest, unscoped, under the
-    // "Addons" anchor; transitive dependencies resolve lazily/scoped instead (ensureDependencyExport).
     const ctx = { database, catalogContext, depMetaCache: new Map(), dependencyEntries: new Map(), resolvingExports: new Set() }
-    const noteMap = await resolveManifest(m, addonId, await getAddonRootNoteId(), fetchUrl, ctx, { rootExternallyParented: isSelf })
+
+    // Persistence pass FIRST, so persistent notes are in the shared map before the structural
+    // pass applies relations like `templates-root --template--> tpl-special` that point into them.
+    const noteMap = {}
+    if (persistentIds.size) {
+        await resolveManifest(m, addonId, await getPersistenceNoteId(), fetchUrl, ctx, {
+            entryLocalId: m.persistenceRoot,
+            scopeLocalIds: persistentIds,
+            existingNoteMap: noteMap
+        })
+    }
+
+    await resolveManifest(m, addonId, await getAddonRootNoteId(), fetchUrl, ctx, {
+        rootExternallyParented: isSelf,
+        scopeLocalIds: structuralScope,
+        existingNoteMap: noteMap
+    })
     if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
     await pruneRemovedNotes(m, addonId)
@@ -1048,7 +920,6 @@ async function syncAddon(addonId, options = {}) {
     await saveDatabase(database)
 
     if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
-    await connectAddonPersistence(addonId)
 }
 
 // Installs by manifestSourceUrl alone — the caller doesn't need to know the addon's id.
@@ -1166,7 +1037,6 @@ async function checkForAddonUpdates() {
     }
 
     await saveDatabase(database)
-    await cleanupEmptyPersistenceRoots()
 }
 
 // Read-only audit of the installed-addon graph against the real Trilium note tree.
@@ -1176,31 +1046,21 @@ async function validateDatabase() {
     const database = await loadDatabase()
     const issues = []
 
-    const duplicateIds = await api.runOnBackend((tamFileIdLabel, tamDataIdLabel) => {
-        function duplicatesOf(label) {
-            const byValue = {}
-            for (const note of api.getNotesWithLabel(label)) {
-                if (note.isDeleted) continue
-                const value = note.getLabelValue(label)
-                byValue[value] = byValue[value] || []
-                byValue[value].push(note.noteId)
-            }
-            return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
+    const duplicateIds = await api.runOnBackend((tamFileIdLabel) => {
+        const byValue = {}
+        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+            if (note.isDeleted) continue
+            const value = note.getLabelValue(tamFileIdLabel)
+            byValue[value] = byValue[value] || []
+            byValue[value].push(note.noteId)
         }
-        return { tamFileId: duplicatesOf(tamFileIdLabel), tamDataId: duplicatesOf(tamDataIdLabel) }
-    }, [tamFileIdLabel, tamDataIdLabel])
+        return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
+    }, [tamFileIdLabel])
 
-    for (const [tamFileId, noteIds] of duplicateIds.tamFileId) {
+    for (const [tamFileId, noteIds] of duplicateIds) {
         issues.push({
             addonId: tamFileId.split("/")[0],
             message: `TAMFILEID '${tamFileId}' is duplicated across notes ${noteIds.join(", ")}`
-        })
-    }
-
-    for (const [tamDataId, noteIds] of duplicateIds.tamDataId) {
-        issues.push({
-            addonId: tamDataId.split("/")[0],
-            message: `TAMDATAID '${tamDataId}' is duplicated across notes ${noteIds.join(", ")} (persisted data note has a conflicting copy)`
         })
     }
 
@@ -1209,77 +1069,37 @@ async function validateDatabase() {
         // A lazily-resolved dependency (see ensureDependencyExport) never forces its own root
         // note into existence, so a missing root is only an issue for a manually-installed addon.
         const requiresOwnRoot = isInstalled && !!addon.manuallyInstalled
-        const persistence = addon.persistence || {}
         const manifest = addon.manifest || {}
+        const persistentIds = isInstalled ? [...persistentLocalIds(manifest)] : []
 
-        const backendIssues = await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot) => {
+        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistentIds, requiresOwnRoot) => {
             const found = []
 
-            function noteExists(noteId) {
-                if (!noteId) return false
-                const note = api.getNote(noteId)
-                return !!(note && !note.isDeleted)
-            }
             function resolveLocal(localId) {
                 if (!localId) return null
                 const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
                 return (note && !note.isDeleted) ? note.noteId : null
             }
 
-            let rootNoteId = resolveLocal(manifest.root)
             if (requiresOwnRoot) {
-                if (!rootNoteId) {
+                if (!resolveLocal(manifest.root)) {
                     found.push(`root note ('${manifest.root}') is missing`)
                 }
-
                 if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
                     found.push(`settings note ('${manifest.settingsNote}') is missing`)
                 }
             }
 
-            if (persistence.rootNote && !noteExists(persistence.rootNote)) {
-                found.push(`persistence root note (${persistence.rootNote}) is missing`)
-            }
-
-            for (const [key, realId] of Object.entries(persistence.persistenceNotes || {})) {
-                const note = noteExists(realId) ? api.getNote(realId) : null
-                if (!note) {
-                    found.push(`persisted note '${key}' (${realId}) is missing`)
-                    continue
-                }
-                // A persisted note must live purely in the #TAMDATAID namespace: carrying
-                // #TAMFILEID means it is still entangled with the addon's structural tree and
-                // an uninstall/prune sweep could delete it (the hazard this model removes).
-                if (note.getLabelValue(tamFileIdLabel)) {
-                    found.push(`persisted note '${key}' (${realId}) still carries a #TAMFILEID label — not migrated to the #TAMDATAID model; re-sync ${addonId} to fix`)
-                }
-                if (note.getLabelValue(tamDataIdLabel) !== `${addonId}/${key}`) {
-                    found.push(`persisted note '${key}' (${realId}) is missing its #TAMDATAID '${addonId}/${key}'`)
-                }
-            }
-
-            if (isInstalled && rootNoteId) {
-                for (const noteId of api.getNote(rootNoteId).getSubtreeNoteIds()) {
-                    const note = api.getNote(noteId)
-                    if (!note) continue
-                    // Same guard as connectAddonPersistence/enableAddon (see there for why).
-                    const ownTamFileId = note.getLabelValue(tamFileIdLabel)
-                    if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
-                    for (const relation of note.getRelations()) {
-                        if (!relation.name.includes("AddonData:")) continue
-                        const key = relation.name.split("AddonData:")[1]
-                        const expected = (persistence.persistenceNotes || {})[key]
-                        if (!expected) {
-                            found.push(`relation '${relation.name}' on note ${noteId} has no matching persistence record for key '${key}'`)
-                        } else if (relation.value !== expected) {
-                            found.push(`relation '${relation.name}' on note ${noteId} points at ${relation.value}, expected persisted note ${expected}`)
-                        }
-                    }
+            // Persistent notes (under persistenceRoot) are ordinary #TAMFILEID notes that must
+            // survive; flag any the manifest declares but the tree no longer has.
+            for (const localId of persistentIds) {
+                if (!resolveLocal(localId)) {
+                    found.push(`persistent note ('${localId}') is missing — user data may have been lost`)
                 }
             }
 
             return found
-        }, [tamFileIdLabel, tamDataIdLabel, addonId, manifest, persistence, isInstalled, requiresOwnRoot])
+        }, [tamFileIdLabel, addonId, manifest, persistentIds, requiresOwnRoot])
 
         for (const message of backendIssues) {
             issues.push({ addonId, message })
@@ -1374,22 +1194,20 @@ async function sweepOrphanedNotes() {
 // a later manifest version (and so is absent from whatever manifest snapshot is on record)
 // still gets found and cleaned up here, since this never depends on any particular stored
 // manifest matching what's actually still in the tree.
-async function detachAddonOwnedBranches(addonId) {
+async function detachAddonOwnedBranches(addonId, persistentIds = []) {
     const anchorIds = [await getAddonRootNoteId()].filter(Boolean)
 
-    await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, anchorIds) => {
+    await api.runOnBackend((tamFileIdLabel, addonId, anchorIds, persistentIds) => {
         const prefix = `${addonId}/`
+        const persistentSet = new Set(persistentIds)
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             const tamFileId = note.getLabelValue(tamFileIdLabel)
             if (!tamFileId || !tamFileId.startsWith(prefix)) continue
 
-            // A persisted (AddonData:) note must survive uninstall. It normally carries only
-            // #TAMDATAID and so never reaches this #TAMFILEID scan, but a legacy clone from the
-            // old design can still carry a copied #TAMFILEID until its first re-sync migrates it —
-            // guard against deleting one here regardless.
-            const dataId = note.getLabelValue(tamDataIdLabel)
-            if (dataId && dataId.startsWith(prefix)) continue
+            // A persistent note (under persistenceRoot) holds the user's data and must survive
+            // uninstall. Identified by its local id, so it's simply skipped by this sweep.
+            if (persistentSet.has(tamFileId.slice(prefix.length))) continue
 
             const parentsToDetach = []
             let keepsAnyParent = false
@@ -1422,27 +1240,19 @@ async function detachAddonOwnedBranches(addonId) {
                 api.ensureNoteIsAbsentFromParent(note.noteId, parentNote.noteId)
             }
         }
-    }, [tamFileIdLabel, tamDataIdLabel, addonId, anchorIds])
+    }, [tamFileIdLabel, addonId, anchorIds, persistentIds])
 }
 
 async function deleteAddon(addonId) {
     if (!addonId.trim()) return
     let database = await loadDatabase()
     const addonRecord = database.installedAddons[addonId]
-    await detachAddonOwnedBranches(addonId)
+    // Persistent notes (under persistenceRoot) are left in the tree, still tagged #TAMFILEID, so a
+    // later reinstall re-adopts them and the user's data survives. Everything else is detached.
+    const persistentIds = [...persistentLocalIds(addonRecord?.manifest || {})]
+    await detachAddonOwnedBranches(addonId, persistentIds)
 
-    const persistence = addonRecord?.persistence
-    const hasPersistedData = persistence && (
-        persistence.rootNote ||
-        (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
-    )
-
-    if (hasPersistedData) {
-        // Keep the persisted user data around — it must survive uninstall.
-        database.installedAddons[addonId] = { persistence }
-    } else {
-        delete database.installedAddons[addonId]
-    }
+    delete database.installedAddons[addonId]
     await saveDatabase(database)
 }
 
@@ -1564,5 +1374,4 @@ module.exports.resolvePrompt = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase = validateDatabase
 module.exports.fetchReadmeHtml = fetchReadmeHtml
-module.exports.cleanupEmptyPersistenceRoots = cleanupEmptyPersistenceRoots
 module.exports.sweepOrphanedNotes = sweepOrphanedNotes

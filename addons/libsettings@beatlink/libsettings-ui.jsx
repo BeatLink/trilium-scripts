@@ -14,7 +14,7 @@ function isPlainObject(value) {
 }
 
 // A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (not `AddonData:`-tracked), so it gets fully
+// normal addon-shipped note (under addonRoot, not persistenceRoot), so it gets fully
 // overwritten on every TAM update just like the rest of the addon, meaning a
 // newly-added shipped entry reaches existing installs for free. The
 // persisted (config.json) shape for a registry field is therefore not the
@@ -136,7 +136,7 @@ async function persistValues(schema, configNoteId, values) {
 //
 //   - a *settings* note (the render-note case, what `SettingsPage` uses): the
 //     schema and config hang off this note directly, as `schemaNote` and
-//     `AddonData:config`.
+//     `configNote`.
 //   - a *widget* script note: it carries `schemaNote` itself but reaches config
 //     indirectly, via its `settingsNote` relation — so the config lookup needs a
 //     backend hop to read a relation off a note that isn't the current one.
@@ -144,10 +144,13 @@ async function persistValues(schema, configNoteId, values) {
 // `note` is required and must be the *consumer's* own note — do not default it
 // to `api.currentNote`. Inside this module `api.currentNote` is the library's
 // note, not the settings/widget note that owns the `schemaNote` and
-// `AddonData:config` relations, so a default silently resolves nothing and
+// `configNote` relations, so a default silently resolves nothing and
 // strands the caller on its loading state. Settings notes pass `api.currentNote`
 // from their own module; widgets pass the `currentNote` they import from
 // `trilium:api`.
+//
+// The config note is a persistent note (under the addon's persistenceRoot); the
+// `configNote` relation points at it directly and TAM never overwrites its content.
 //
 // Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
 // relation is absent — callers already gate their render on that.
@@ -155,18 +158,12 @@ export async function resolveConfigNotes(note) {
     const schemaNoteId = await note.getRelationValue("schemaNote")
     const settingsNoteId = await note.getRelationValue("settingsNote")
     // No `settingsNote` means this *is* the settings note: read config locally.
-    // Note the asymmetry — the local read goes through `getRelationTarget().noteId`,
-    // not `getRelationValue()`. On a *frontend* note `getRelationValue` does not
-    // resolve `AddonData:config` (it yields undefined, which strands every caller
-    // on its loading state); the backend note objects reached via `api.getNote`
-    // are the ones where `getRelationValue` works, which is why the
-    // `settingsNote` branch below can use it inside `runOnBackend`.
     const configNoteId = settingsNoteId
         ? await api.runOnBackend(
-            (id) => api.getNote(id).getRelationValue("AddonData:config"),
+            (id) => api.getNote(id).getRelationValue("configNote"),
             [settingsNoteId]
         )
-        : (await note.getRelationTarget("AddonData:config"))?.noteId
+        : (await note.getRelationTarget("configNote"))?.noteId
     return { schemaNoteId, configNoteId }
 }
 

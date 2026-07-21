@@ -5,13 +5,14 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.1.0",
+    "latestVersion": "2.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "settingsNote": "profile-editor-page",
+        "persistenceRoot": "persist-root",
         "notes": [
             { "id": "root", "title": "agenda@beatlink", "type": "text", "mime": "text/html", "sourceUrl": null },
 
@@ -61,17 +62,18 @@
             { "id": "organize-dimensions", "title": "organizeDimensions.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "organize/organizeDimensions.jsx" },
             { "id": "organize-css", "title": "organize.css", "type": "code", "mime": "text/css", "sourceUrl": "organize/organize.css" },
 
-            { "id": "templates-root", "title": "Templates", "type": "text", "mime": "text/html", "sourceUrl": null, "skipOnUpdate": true },
-            { "id": "tpl-idea", "title": "Ideas", "type": "text", "mime": "text/html", "sourceUrl": "templates/ideas.html", "promptOnUpdate": true },
-            { "id": "tpl-goal", "title": "Goal", "type": "text", "mime": "text/html", "sourceUrl": "templates/goal.html", "promptOnUpdate": true },
-            { "id": "tpl-routine", "title": "Routine", "type": "text", "mime": "text/html", "sourceUrl": "templates/routine.html", "promptOnUpdate": true },
-            { "id": "tpl-task", "title": "Task", "type": "text", "mime": "text/html", "sourceUrl": "templates/task.html", "promptOnUpdate": true },
-            { "id": "tpl-future", "title": "Future", "type": "text", "mime": "text/html", "sourceUrl": "templates/future.html", "promptOnUpdate": true },
-            { "id": "tpl-project", "title": "Project", "type": "text", "mime": "text/html", "sourceUrl": "templates/project.html", "promptOnUpdate": true },
-            { "id": "tpl-note", "title": "Note", "type": "text", "mime": "text/html", "sourceUrl": "templates/note.html", "promptOnUpdate": true },
-            { "id": "tpl-area", "title": "AreaCollection", "type": "text", "mime": "text/html", "sourceUrl": "templates/areaCollection.html", "promptOnUpdate": true },
-            { "id": "tpl-typecollection", "title": "TypeCollection", "type": "text", "mime": "text/html", "sourceUrl": "templates/typeCollection.html", "promptOnUpdate": true },
-            { "id": "tpl-special", "title": "Special", "type": "text", "mime": "text/html", "sourceUrl": "templates/special.html", "promptOnUpdate": true },
+            { "id": "persist-root", "title": "User Data", "type": "text", "mime": "text/html", "sourceUrl": null },
+            { "id": "templates-root", "title": "Templates", "type": "text", "mime": "text/html", "sourceUrl": null },
+            { "id": "tpl-idea", "title": "Ideas", "type": "text", "mime": "text/html", "sourceUrl": "templates/ideas.html" },
+            { "id": "tpl-goal", "title": "Goal", "type": "text", "mime": "text/html", "sourceUrl": "templates/goal.html" },
+            { "id": "tpl-routine", "title": "Routine", "type": "text", "mime": "text/html", "sourceUrl": "templates/routine.html" },
+            { "id": "tpl-task", "title": "Task", "type": "text", "mime": "text/html", "sourceUrl": "templates/task.html" },
+            { "id": "tpl-future", "title": "Future", "type": "text", "mime": "text/html", "sourceUrl": "templates/future.html" },
+            { "id": "tpl-project", "title": "Project", "type": "text", "mime": "text/html", "sourceUrl": "templates/project.html" },
+            { "id": "tpl-note", "title": "Note", "type": "text", "mime": "text/html", "sourceUrl": "templates/note.html" },
+            { "id": "tpl-area", "title": "AreaCollection", "type": "text", "mime": "text/html", "sourceUrl": "templates/areaCollection.html" },
+            { "id": "tpl-typecollection", "title": "TypeCollection", "type": "text", "mime": "text/html", "sourceUrl": "templates/typeCollection.html" },
+            { "id": "tpl-special", "title": "Special", "type": "text", "mime": "text/html", "sourceUrl": "templates/special.html" },
 
             { "id": "readme", "title": "README.md", "type": "code", "mime": "text/markdown", "sourceUrl": "README.md" }
         ],
@@ -81,15 +83,17 @@
             { "parent": "root", "child": "grp-myday" },
             { "parent": "root", "child": "grp-task" },
             { "parent": "root", "child": "grp-organize" },
-            { "parent": "root", "child": "templates-root" },
+            { "parent": "root", "child": "persist-root" },
             { "parent": "root", "child": "readme" },
+
+            { "parent": "persist-root", "child": "config" },
+            { "parent": "persist-root", "child": "templates-root" },
 
             { "parent": "grp-common", "child": "agenda-settings" },
             { "parent": "grp-common", "child": "dimensions" },
             { "parent": "grp-common", "child": "migrate" },
             { "parent": "grp-common", "child": "common-css" },
             { "parent": "grp-common", "child": "schema" },
-            { "parent": "grp-common", "child": "config" },
             { "parent": "grp-common", "child": "settings" },
             { "parent": "grp-common", "child": "ical" },
 
@@ -179,24 +183,14 @@
             { "parent": "organize-provision", "child": "dimensions" }
         ],
         "relations": [
-            { "from": "settings", "type": "AddonData:config", "to": "config" },
+            { "from": "settings", "type": "configNote", "to": "config" },
             { "from": "settings", "type": "schemaNote", "to": "schema" },
             { "from": "settings", "type": "icalNote", "to": "ical" },
             { "from": "profile-editor-page", "type": "renderNote", "to": "profile-editor" },
             { "from": "overview", "type": "profileEditorNote", "to": "profile-editor-page" },
             { "from": "my-day", "type": "nowNote", "to": "now-note" },
 
-            { "from": "templates-root", "type": "template", "to": "tpl-special" },
-            { "from": "templates-root", "type": "AddonData:idea", "to": "tpl-idea" },
-            { "from": "templates-root", "type": "AddonData:goal", "to": "tpl-goal" },
-            { "from": "templates-root", "type": "AddonData:routine", "to": "tpl-routine" },
-            { "from": "templates-root", "type": "AddonData:task", "to": "tpl-task" },
-            { "from": "templates-root", "type": "AddonData:future", "to": "tpl-future" },
-            { "from": "templates-root", "type": "AddonData:project", "to": "tpl-project" },
-            { "from": "templates-root", "type": "AddonData:note", "to": "tpl-note" },
-            { "from": "templates-root", "type": "AddonData:area", "to": "tpl-area" },
-            { "from": "templates-root", "type": "AddonData:typecollection", "to": "tpl-typecollection" },
-            { "from": "templates-root", "type": "AddonData:special", "to": "tpl-special" }
+            { "from": "templates-root", "type": "template", "to": "tpl-special" }
         ],
         "labels": [
             { "note": "ical", "name": "customResourceProvider", "value": "agendaCalendar.ical" },
@@ -253,6 +247,7 @@
             { "note": "organize-css", "name": "iconClass", "value": "bx bx-task" },
             { "note": "readme", "name": "iconClass", "value": "bx bx-task" },
 
+            { "note": "persist-root", "name": "iconClass", "value": "bx bx-data" },
             { "note": "templates-root", "name": "iconClass", "value": "bx bx-task" },
 
             { "note": "tpl-idea", "name": "template", "value": "" },

@@ -66,7 +66,7 @@ async function getDimensionConfigIds() {
     if (!anchors.length) return null
     const anchor = anchors[0]
     const schemaNoteId = anchor.getRelationValue("schemaNote")
-    const configNoteId = anchor.getRelationValue("AddonData:config")
+    const configNoteId = anchor.getRelationValue("configNote")
     if (!schemaNoteId || !configNoteId) return null
     return { schemaNoteId, configNoteId }
 }

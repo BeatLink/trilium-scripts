@@ -6,7 +6,7 @@ function expand() {
     // The label to pin on is an addon-wide setting shared with the widget.
     const schemaNoteId = scriptNote.getRelationValue("schemaNote")
     const settingsNoteId = scriptNote.getRelationValue("settingsNote")
-    const configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+    const configNoteId = api.getNote(settingsNoteId).getRelationValue("configNote")
     const { labelName } = loadSettings(schemaNoteId, configNoteId)
 
     var notes = api.searchForNotes(`#${labelName}`)
