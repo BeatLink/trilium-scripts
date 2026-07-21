@@ -49,9 +49,9 @@ separate notes.
 
 ### Key notes
 
-- **Database** — a JSON code note that holds all TAM state: the list of added catalog URLs and, per addon, a single merged record covering its installed state, own manifest structure, persisted data, and pending update prompts (see [The Database Record](#the-database-record) and [Persistence](#persistence)). TAM reads and writes this note on every operation.
+- **Database** — a JSON code note that holds all TAM state: the list of added catalog URLs and, per addon, a single merged record covering its installed state, own manifest structure, and pending update prompts (see [The Database Record](#the-database-record) and [Persistence](#persistence)). TAM reads and writes this note on every operation.
 - **Addons** — the parent note under which all installed addons are placed as children.
-- **Addon Data** — the parent note under which persistence copies of addon data notes are stored (see [Persistence](#persistence)).
+- **Addon Data** — the shared, TAM-owned anchor note under which every addon's persistent notes (its `persistenceRoot` subtree) are resolved, kept safe from uninstall/prune sweeps (see [Persistence](#persistence)).
 - **lib-tam.js** — TAM's whole backend/data layer in one `require()`d note (its public surface is
   available globally as `libTAMjs`). It runs in the browser but uses `api.runOnBackend`/
   `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access
@@ -146,9 +146,9 @@ export being referenced), the same "look it up by TAMFILEID, then clone or creat
 - **Soft deletes are accounted for.** `note.deleteNote()` is a soft delete (`note.isDeleted`), so
   every TAMFILEID lookup treats a deleted match as "not found" rather than resurrecting/cloning a
   note that's on its way out.
-- **Persisted user data uses a sibling identity, `#TAMDATAID`.** A note holding user data (an
-  `AddonData:` target) is *not* tagged `#TAMFILEID` — it carries `#TAMDATAID="{addonId}/{key}"` in a
-  deliberately separate namespace, so no `#TAMFILEID` sweep can ever delete it on uninstall. See
+- **Persisted user data is separated by placement, not by tag.** A note holding user data is an
+  ordinary `#TAMFILEID` note, but it lives under the addon's `persistenceRoot` and is resolved under the
+  shared **Addon Data** anchor, which no uninstall/prune sweep ever touches. See
   [Persistence](#persistence).
 
 ---
@@ -228,6 +228,18 @@ the rendered UI. See `cinnamon-applet-agenda@beatlink`/`cinnamon-applet-inbox@be
 `settingsNote` is `root` and `root` in turn has a `renderNote` relation to the actual settings JSX —
 so the same note opens whether you click the addon's root note directly or the Settings button in
 TAM.
+
+#### `persistenceRoot` *(optional)*
+
+The local ID of a note in `notes[]` whose subtree (walked through `children[]`) holds this addon's
+**persistent** notes — user settings, cached data, customized content that must survive updates *and*
+uninstalls. Declaring it turns on the persistence behaviour described in [Persistence](#persistence):
+those notes are created once, never content-overwritten on update (implicitly prompt-on-update), never
+deleted, and resolved under the shared **Addon Data** anchor instead of the addon's own tree. Omit it
+for addons with no user data to preserve. A note under `persistenceRoot` needs no `skipOnUpdate`/
+`promptOnUpdate` flag — placement alone governs it, and setting one is a redundancy `validate` warns
+about. See `agenda@beatlink` (a `persist-root` holding config + templates) or any migrated addon for the
+pattern.
 
 #### `readmeNote` *(optional)*
 
@@ -354,7 +366,7 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
   "enabled": true,
   "meta": { "name": "...", "description": "...", "author": "...", "license": "...", "type": "...", "homepage": "..." },
   "manifest": { "root": "...", "settingsNote": "...", "readmeNote": "...", "notes": [...], "children": [...], "relations": [...], "labels": [...], "dependencies": [...], "exports": {...} },
-  "persistence": { "rootNote": "...", "persistenceNotes": {...}, "pendingPrompts": [...] }
+  "persistence": { "pendingPrompts": [...] }
 }
 ```
 
@@ -387,8 +399,9 @@ addon's own record — nothing is pushed or maintained as edges change, so nothi
 sync. Used by `checkForAddonUpdates`'s update-propagation and `uninstallAddon`'s
 cascade-uninstall-if-unused check.
 
-`persistence` is the one part of the record allowed to survive after `installedVersion`/`manifest`/
-etc. disappear on uninstall — see [Persistence](#persistence).
+`persistence` holds only transient **`pendingPrompts`** — the update-review diffs collected during a
+sync, cleared once the user applies them. The persistent *notes* themselves survive uninstall by living
+under the Addon Data anchor, not by anything stored in this record — see [Persistence](#persistence).
 
 ### Hidden libraries, resolved lazily and rootlessly
 
@@ -414,10 +427,10 @@ entry actually references it:
   with its full fetched manifest (not just the resolved closure — every lookup already tolerates "not
   found"), so update-checking and dependent-tracking work exactly as for a directly-installed addon.
   `pruneRemovedNotes` still runs on every resolution.
-- **Known, deliberate gap:** `connectAddonPersistence` and the enable/disable label-toggling machinery
+- **Known, deliberate gap:** the persistence pass and the enable/disable label-toggling machinery
   aren't wired into the lazy dependency path — both assume a single addon-owned root note whose
   subtree *is* the whole addon, which doesn't fit a partially-resolved closure. No current library in
-  this repo needs `AddonData:` persistence or independent enable/disable.
+  this repo declares a `persistenceRoot` or needs independent enable/disable.
 
 `deleteAddon` is branch-scoped, not a direct `note.deleteNote()` on the root: `detachAddonOwnedBranches`
 scans every live `#TAMFILEID`-tagged note whose value starts with `{addonId}/` and detaches it from
@@ -480,13 +493,12 @@ for a clean slate.
 
 1. Fetch the addon's manifest from `manifestSourceUrl`.
 2. `collectPendingPrompts` snapshots any `promptOnUpdate` diffs against currently persisted content, before anything touches it (see [`promptOnUpdate`](#promptonupdate)).
-3. `resolveManifest` resolves the addon's own notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate`/`promptOnUpdate` says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — it lives above the Addons tree (wherever it was manually ZIP-imported), so its own parent is never touched. A note that is an `AddonData:` target is resolved here as an ordinary throwaway "origin" carrying the shipped default — the persisted copy that holds user data lives under Addon Data and is handled in step 8, not here.
+3. `resolveManifest` resolves the addon's notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate` (or persistent placement) says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — it lives above the Addons tree (wherever it was manually ZIP-imported), so its own parent is never touched. This step runs twice when the addon declares a `persistenceRoot`: a **persistence pass** resolving that subtree under the shared **Addon Data** anchor first, then a **structural pass** resolving everything else under the Addons tree — both writing into one shared note map so cross-anchor relations resolve (see [Persistence](#persistence)). A persistent note is never content-overwritten once it exists.
 4. `reconcileNoteParenting` clones every note into every parent its manifest currently declares and detaches it from any parent it's no longer declared under — scoped to only ever detach a branch *this addon's own* manifest created, so a lazily-resolved dependency export shared by multiple consumers is never mistaken as stale by another consumer's clone.
 5. Labels/relations are (re)applied, scoped to whatever was just resolved. Both are disable-state aware — if the addon is currently disabled, writes go to the `disabled:`-prefixed name instead of live-reactivating it. A trailing `(inheritable)` suffix on a label name sets a real `isInheritable` attribute.
 6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
-7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`/`persistence`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
-8. Persistence is migrated then (re)connected (see [Persistence](#persistence)): `migrateLegacyPersistence` runs *before* step 3 to re-tag any old-design clone to `#TAMDATAID` so `resolveNotes` can't clobber it, and `connectAddonPersistence` runs here to copy/adopt the persisted note under Addon Data and point every `AddonData:` (and other inbound) relation at it. Runs unconditionally for the top-level addon, so a newly-added `AddonData:` relation on an existing addon is picked up on its next sync. Not wired into the lazy dependency path.
-9. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
+7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
+8. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
 
 There is no cascade to a dependent when its own dependency updates: a dependency's notes resolve in
 place (the real note id a dependent's clone points at never changes across a version bump), so there's
@@ -505,18 +517,16 @@ queue is empty.
 The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits every installed
 addon against the live Trilium note tree — read-only, never fixes anything:
 
-- **Duplicate `#TAMFILEID`s / `#TAMDATAID`s** — no two live notes claim the same `{addonId}/{localId}`
-  structural id, and no two claim the same `{addonId}/{key}` persisted-data id (the one thing a
-  live-lookup design can't self-correct, since `getNoteWithLabel` just returns whichever match it finds
+- **Duplicate `#TAMFILEID`s** — no two live notes claim the same `{addonId}/{localId}` id (the one thing
+  a live-lookup design can't self-correct, since `getNoteWithLabel` just returns whichever match it finds
   first).
 - **Missing dependency** — a declared `manifest.dependencies` entry that isn't actually installed.
 - **Note existence** — the stored `manifest.root`/`manifest.settingsNote` local ids still resolve,
   checked only for an addon that's both installed *and* `manuallyInstalled` — a lazily-resolved
   dependency's root is never forced into existence at all (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)), so a missing one there is expected, not an issue.
-- **Persistence integrity** — `persistence.rootNote` and every `persistence.persistenceNotes` entry
-  still exist; every persisted note carries its `#TAMDATAID` and *no* `#TAMFILEID` (a stray one means it
-  is still entangled with the structural tree and a re-sync is needed); and every live `AddonData:key`
-  relation in an installed addon's subtree still points at the persisted note TAM's database says it should.
+- **Persistence integrity** — for an addon that declares a `persistenceRoot`, every persistent note (the
+  `persistenceRoot` subtree) still resolves by its `#TAMFILEID` under the Addon Data anchor. A missing one
+  means the note was lost and a re-sync is needed.
 
 Returns a flat list of `{ addonId, message }` issues, rendered as a dismissible panel. **There is no
 offline "repair" action** — an addon flagged here should just be reinstalled/updated, since `syncAddon`
@@ -595,21 +605,26 @@ During a sync, `resolveNotes` skips content writes (and the sourceUrl fetch that
 
 ## `promptOnUpdate`
 
-Set `"promptOnUpdate": true` on notes that users are expected to customize, but where upstream changes may also be meaningful and should be surfaced. This is a middle ground between "always overwrite" (default) and "never overwrite" (`skipOnUpdate`).
+Every **persistent** note (one under `persistenceRoot` — see [Persistence](#persistence)) is
+prompt-on-update *by default*: TAM never overwrites it silently, but it does surface an upstream change so
+the user can opt in. There is no per-note `promptOnUpdate` flag to set — placement under `persistenceRoot`
+is what enables this behaviour.
 
-Before an update:
-1. TAM reads the note's current content from its persisted copy.
-2. TAM reads the new content from the incoming manifest (fetched fresh from its `sourceUrl`).
+Before an update, for each persistent note:
+1. TAM reads the note's current content (the live persistent note).
+2. TAM reads the new content from the incoming manifest (fetched fresh from its `sourceUrl`, or the
+   inline default).
 3. If they differ, TAM stores a pending prompt (both versions of the content plus the note title).
 
 After reinstallation, if there are pending prompts, TAM shows the **Update Review** screen:
 - Each changed note is shown with two side-by-side panels: **Keep Mine** (current) and **Use New Default** (incoming).
 - The default selection is **Keep Mine**.
 - The user can switch any note to "Use New Default" before clicking Apply.
-- Choosing "Use New Default" writes the new content to the persisted note. Choosing "Keep Mine" leaves it untouched.
+- Choosing "Use New Default" writes the new content to the persistent note. Choosing "Keep Mine" leaves it untouched.
 - Once all choices are applied, the review is dismissed and the addon UI reloads.
 
-`promptOnUpdate` only makes sense on notes that are also tracked by an `AddonData:key` relation (i.e., notes in the persistence tree). If a note has `promptOnUpdate` but no `AddonData:` relation, it will be skipped.
+Setting `promptOnUpdate` or `skipOnUpdate` on a note that is already under `persistenceRoot` is redundant
+(the placement already governs it) and `validate` warns about it.
 
 ---
 
