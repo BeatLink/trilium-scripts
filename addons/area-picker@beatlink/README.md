@@ -14,5 +14,5 @@ note's `#color` label when that area is selected).
 
 The settings note is tagged **`#areaConfig`** so other addons can discover and reuse the same area
 vocabulary at runtime. A consumer searches for `#areaConfig`, reads the anchor's `schemaNote` and
-`AddonData:config` relations, and calls libsettings' `loadSettings(schemaNoteId, configNoteId)` to
+`configNote` relations, and calls libsettings' `loadSettings(schemaNoteId, configNoteId)` to
 get the `areas` list.

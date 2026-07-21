@@ -54,8 +54,8 @@ Bundled under a **Templates** container note is one template per item type — I
 Task, Future, Project, Note — plus three structural containers the Organize workflow scaffolds with:
 **AreaCollection** (an area root), **TypeCollection** (a per-type bucket inside an area), and
 **Special** (the Inbox / My Day / Agenda singletons). Each carries `#template` (so it is discoverable
-by Trilium and the Template Picker widget). Template content is yours to customize — the templates are
-tracked via `AddonData:` relations, so a future update that changes a default prompts an Update Review
+by Trilium and the Template Picker widget). Template content is yours to customize — the templates live
+under the addon's `persistenceRoot`, so a future update that changes a default prompts an Update Review
 rather than overwriting your edits.
 
 Which item types the Organize workflow offers is agenda's own **type dimension** (in the Dimensions

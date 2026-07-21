@@ -2,8 +2,8 @@
 
 Stateless, schema-driven settings engine for TriliumNext addons — inspired by Cinnamon's
 `settings-schema.json` model. An addon defines its own `schema.json` (what fields exist, their type,
-label, description, and default) and keeps its own persisted `config.json` (an
-[`AddonData:` persisted note](../trilium-addon-manager@beatlink/README.md#persistence)); this
+label, description, and default) and keeps its own persisted `config.json` (a
+[persistent note under its `persistenceRoot`](../trilium-addon-manager@beatlink/README.md#persistence)); this
 library reads/merges/saves those two notes for you, and can render a settings form from that same
 schema.
 
@@ -109,8 +109,8 @@ position instead).
 
 A `registry`'s `default` isn't just "the value when the key is missing" (as for every other field
 type) — it's also the *shipped* entry set, reconciled against the user's own additions/edits/deletions
-on every read and write. This works because `schema.json` is a normal addon-shipped note (not tracked
-by `AddonData:`), so it gets fully overwritten on every TAM update — same mechanism as any other
+on every read and write. This works because `schema.json` is a normal addon-shipped note (structural,
+*not* under `persistenceRoot`), so it gets fully overwritten on every TAM update — same mechanism as any other
 shipped note — meaning a new default entry you add to `default` in a later addon version reaches
 existing installs automatically, without a migration:
 
@@ -375,7 +375,7 @@ const { loadSettings, saveSettings } = require("libSettings.js")
 // however your addon resolves its own noteIds — this library doesn't do it for you
 const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 const configNoteId = api.getNote(api.currentNote.getRelationValue("settingsNote"))
-    .getRelationValue("AddonData:config")
+    .getRelationValue("configNote")
 
 const values = loadSettings(schemaNoteId, configNoteId)
 ```
@@ -406,13 +406,13 @@ export default function MySettings() {
 
 ### `<SettingsPage note />`
 
-Resolves `note`'s `schemaNote` and `AddonData:config` relations, then renders a `SettingsForm` for
+Resolves `note`'s `schemaNote` and `configNote` relations, then renders a `SettingsForm` for
 them, showing `Loading...` until both resolve. Any other prop (`extraPanels`, `only`, `onSaved`)
 passes straight through to `SettingsForm`.
 
 **`note` is required, and must be read in your own module.** Reading `api.currentNote` inside this
 library yields *the library's* note, not your settings note — it has no `schemaNote` or
-`AddonData:config` relation, so resolution silently yields nothing and the page never leaves
+`configNote` relation, so resolution silently yields nothing and the page never leaves
 `Loading...`. That is why this is a prop rather than a default.
 
 Reach for `SettingsForm` directly only when the page is more than the form — e.g. content stacked
@@ -423,7 +423,7 @@ case use `resolveConfigNotes()` so you still don't hand-roll the relation lookup
 
 Returns `{ schemaNoteId, configNoteId }` for a note, handling both wirings:
 
-* a **settings note**, where `schemaNote` and `AddonData:config` both hang off the note directly;
+* a **settings note**, where `schemaNote` and `configNote` both hang off the note directly;
 * a **widget script note**, which carries `schemaNote` itself but reaches config indirectly through
   its `settingsNote` relation.
 
@@ -511,5 +511,5 @@ into a shared library function that reads, patches, and writes settings, not jus
 
 [`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and
 [`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/) both consume this library —
-their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `AddonData:config`) a
-consumer needs to declare.
+their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `configNote`) a
+consumer needs to declare, with `config.json` placed under the addon's `persistenceRoot`.

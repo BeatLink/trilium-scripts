@@ -27,7 +27,7 @@ tagged under one profile keep their old label until re-set under the new one.
 
 The settings note is tagged **`#priorityConfig`** so other addons can discover and reuse the same
 priority vocabulary at runtime (the same pattern `area-picker@beatlink` uses with `#areaConfig`). A
-consumer searches for `#priorityConfig`, reads the anchor's `schemaNote` and `AddonData:config`
+consumer searches for `#priorityConfig`, reads the anchor's `schemaNote` and `configNote`
 relations, and calls libsettings' `loadSettings(schemaNoteId, configNoteId)` to get `selected` and
 `profiles`.
 

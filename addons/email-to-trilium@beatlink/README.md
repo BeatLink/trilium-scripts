@@ -66,7 +66,7 @@ a note also trashes the source email.
 ## Security notes
 
 - OAuth **client secrets and refresh tokens are stored in Trilium notes** (the addon's `config.json`,
-  an `AddonData:`-persisted note). This is appropriate for a personal instance; anyone with access to
+  a persistent note under the addon's `persistenceRoot`). This is appropriate for a personal instance; anyone with access to
   your Trilium database can read them. Refresh tokens are exchanged for short-lived access tokens on
   every request and access tokens are never stored.
 - Clearing an account's **Refresh Token** field in Settings forces re-authorization.
