@@ -542,7 +542,7 @@ async function migrateLegacyPersistence(addonId) {
 }
 
 async function connectAddonPersistence(addonId) {
-    const persistenceRoot = await db.getPersistenceNoteId()
+    const persistenceRoot = await getPersistenceNoteId()
     let database = await db.loadDatabase()
 
     const addonRecord = database.installedAddons[addonId]
@@ -967,7 +967,7 @@ async function syncAddon(addonId, options = {}) {
     // A directly-installed addon always resolves its whole manifest, unscoped, under the
     // "Addons" anchor; transitive dependencies resolve lazily/scoped instead (ensureDependencyExport).
     const ctx = { database, catalogContext, depMetaCache: new Map(), dependencyEntries: new Map(), resolvingExports: new Set() }
-    const noteMap = await resolveManifest(m, addonId, await db.getAddonRootNoteId(), fetchUrl, ctx, { rootExternallyParented: isSelf })
+    const noteMap = await resolveManifest(m, addonId, await getAddonRootNoteId(), fetchUrl, ctx, { rootExternallyParented: isSelf })
     if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
     await pruneRemovedNotes(m, addonId)
@@ -1335,7 +1335,7 @@ async function sweepOrphanedNotes() {
 // still gets found and cleaned up here, since this never depends on any particular stored
 // manifest matching what's actually still in the tree.
 async function detachAddonOwnedBranches(addonId) {
-    const anchorIds = [await db.getAddonRootNoteId()].filter(Boolean)
+    const anchorIds = [await getAddonRootNoteId()].filter(Boolean)
 
     await api.runOnBackend((tamFileIdLabel, tamDataIdLabel, addonId, anchorIds) => {
         const prefix = `${addonId}/`

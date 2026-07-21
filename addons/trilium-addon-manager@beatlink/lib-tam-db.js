@@ -1,3 +1,9 @@
+// The Database note's read/write, split out of lib-tam.js into its own
+// require()-able note. The `database` relation is resolved via api.currentNote,
+// which for a required note is that note itself (Trilium builds a
+// FrontendScriptApi per note in the bundle) — so the relation is declared
+// "from" lib-tam-db, not from lib-tam. lib-tam.js require()s this as `db`.
+
 const databaseLabel = "database"
 
 async function loadDatabase() {
@@ -27,8 +33,6 @@ async function saveDatabase(database) {
         [databaseNoteId, database]
     )
 }
-
-
 
 module.exports.loadDatabase = loadDatabase
 module.exports.saveDatabase = saveDatabase
