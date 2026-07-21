@@ -141,40 +141,42 @@ async function migrateTypeSlugs(templateList) {
     }, [templateList, [AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE], LEGACY_TYPE_VALUES])
 }
 
-// Find buckets whose #workflowNote key is stale — created under an area or
-// template name that has since been renamed, folded, or dropped — and fold each
-// into the surviving bucket for the same (area, template) pair.
+// Fold duplicate and stale buckets down to a single survivor per (area, bucket)
+// identity. Three duplication scenarios collapse to one problem -- more than one
+// note claims the same LIVE bucket identity -- handled uniformly:
 //
-// A bucket is identified by (areaSlug, templateSlug), and either half can drift:
-// an area can be renamed or folded, and a template rename re-slugs its buckets.
+//   A. Two live buckets, same current key (e.g. two "Task" buckets both tagged
+//      area=home bucket=task). Neither is stale; the old code skipped both.
+//   B. A tagged bucket plus a hand-made same-titled sibling with no identity
+//      labels (provisioning adopted the tagged one, orphaning the twin).
+//   C. A bucket whose key is stale (area folded via AREA_ALIASES, or bucket key
+//      renamed via TEMPLATE_ALIASES) and should resolve onto a current key.
 //
-// Area keys are stable slugs, so they look up directly — through AREA_ALIASES
-// for folded areas, and with a legacy "<NN>-" prefix stripped for buckets
-// provisioned before the stable-key migration. A template slug carries no such
-// remnant: slugify() is lossy, so a renamed template's old slug resolves only
-// via an explicit TEMPLATE_ALIASES entry. Unresolvable keys are reported in
-// `skipped` rather than guessed at.
-// If the rebuilt key differs and a live bucket already holds it, the stale
-// bucket is a duplicate of it.
+// Every candidate is resolved to its live identity, grouped by it, and each
+// group with >1 note keeps ONE survivor (a member already at the live identity,
+// else the note with the most children, then the longest body, then the lowest
+// noteId -- the one most likely to be the real bucket) and folds the rest in.
 //
-// Folding migrates BOTH halves of the stale bucket into the survivor:
-//   - children, via toggleNoteInParent (add to survivor, remove from stale),
+// Folding migrates both halves of each husk into the survivor:
+//   - children, via toggleNoteInParent (add to survivor, remove from husk),
 //     which preserves any clones of those notes living elsewhere;
-//   - the bucket note's own body content, appended to the survivor's body under
-//     a "Merged from <title>" heading. Buckets are containers whose body is
-//     near-always empty, but when one isn't, dropping it would be data loss.
+//   - the husk's own body, appended under a "Merged from <title>" heading.
+//     Buckets are containers whose body is near-always empty, but when one
+//     isn't, dropping it would be data loss.
 //
-// The emptied husk is then deleted — but only after re-reading it and CONFIRMING
-// it has no remaining children and no remaining content. If anything survives
-// the migration (a child that failed to move, a body that didn't append), the
-// husk is kept and reported with `deleted: false` plus the reason. Deleting a
-// bucket the user hand-made during adoption is the one irreversible step here,
-// so it happens only against a note verified empty, never on assumption.
+// A husk is deleted only after re-reading it and CONFIRMING it has no remaining
+// children and no remaining content; anything that survives the migration keeps
+// the husk (reported `deleted: false` + reason). Deleting a note the user may
+// have hand-made is the one irreversible step, so it happens only against a note
+// verified empty, never on assumption.
 //
-// `dryRun` reports what would happen without writing — the Setup page previews
-// before the user commits. Returns
+// A lone stale bucket (no other note at its live identity) is re-keyed in place
+// so provisionStructure adopts it -- reported `rekeyedInPlace: true`.
+//
+// `dryRun` reports what would happen without writing. Returns
 // { merges: [{ fromNoteId, fromKey, fromTitle, toNoteId, toKey, toTitle,
-//              movedCount, movedTitles, movedContent, deleted, keptReason }],
+//              movedCount, movedTitles, movedContent, deleted, keptReason,
+//              rekeyedInPlace }],
 //   skipped: [...] }.
 async function mergeStaleBuckets(areaList, templateList, dryRun) {
     return api.runOnBackend((areaList, templateList, aliases, templateAliases, labels, dryRun) => {
@@ -184,27 +186,18 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
         for (const a of areaList) areaSlugByName[a.slug.replace(/^\d\d-/, "")] = a.slug
         const templateSlugs = new Set(templateList.map(t => t.slug))
 
-        const tagged = api.searchForNotes(`#${labels.area}`)
         const identityOf = n => ({
             area: n.getLabelValue(labels.area) || "",
             bucket: n.getLabelValue(labels.bucket) || ""
         })
-        // NUL-delimited so an (area, bucket) pair can never collide with another
-        // pairing — no slug can contain it. Written as an escape rather than a
-        // raw byte so the file stays text to git (a literal NUL makes diffs
-        // binary).
-        const idKey = id => id.bucket ? `${id.area}\u0000${id.bucket}` : id.area
-
-        // Index live structural notes by identity so a stale note can find its
-        // survivor. Reading two labels replaces parsing a composite key.
-        const byIdentity = {}
-        for (const n of tagged) byIdentity[idKey(identityOf(n))] = n
+        // Pipe-delimited: a slug is [a-z0-9-] only, so "|" can never appear in
+        // either half and an (area, bucket) pair can never collide with another.
+        const idKey = id => id.bucket ? `${id.area}|${id.bucket}` : id.area
 
         // Resolve a note's identity to today's vocabulary, or null if either
         // half is unresolvable. Area keys are stable, so they resolve directly
         // (a legacy "<NN>-" prefix is stripped first, and AREA_ALIASES covers
-        // folds); template slugs retain nothing (slugify() is lossy), so a
-        // renamed template resolves only via an explicit alias.
+        // folds); a renamed bucket key resolves only via an explicit alias.
         function currentIdentityFor(id) {
             const areaName = id.area.replace(/^\d\d-/, "")
             const liveArea = areaSlugByName[aliases[areaName] || areaName]
@@ -217,120 +210,173 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
             return { area: liveArea, bucket: liveBucket }
         }
 
+        function bodyOf(n) {
+            if (n.type !== "text") return ""
+            try {
+                const body = n.getContent()
+                return body && typeof body === "string" ? body : ""
+            } catch (e) { return "" }
+        }
+        function isBlank(html) {
+            return !String(html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim()
+        }
+        // Weight for survivor selection: most children, then longest body.
+        function weightOf(n) {
+            return n.getChildNotes().length * 1e6 + bodyOf(n).length
+        }
+
         const merges = []
         const skipped = []
 
+        // 1. Group candidate BUCKETS by live identity. Area roots are singletons
+        //    per area, so they're excluded. Tagged notes resolve through
+        //    currentIdentityFor (covers scenarios A and C); unresolvable ones are
+        //    reported and skipped.
+        const tagged = api.searchForNotes(`#${labels.area}`)
+        const groups = {}            // liveKey -> [{ note, wasStale, untagged }]
+        const liveIdentityByKey = {} // liveKey -> resolved identity
+        const areaRoots = {}         // areaKey -> area root note
+
+        for (const n of tagged) {
+            const id = identityOf(n)
+            if (id.area && !id.bucket) areaRoots[id.area] = n
+        }
+
         for (const note of tagged) {
             const identity = identityOf(note)
-            if (!identity.area) continue
-            const key = idKey(identity)
+            if (!identity.area || !identity.bucket) continue   // area root, not a bucket
 
             const target = currentIdentityFor(identity)
-            if (!target) {
-                // Neither half resolves — an area or template the user removed
-                // entirely. Not ours to fold; report so it's visible.
-                skipped.push({ noteId: note.noteId, key, title: note.title, reason: "no current area/template matches" })
+            if (!target || !target.bucket) {
+                skipped.push({ noteId: note.noteId, key: idKey(identity), title: note.title, reason: "no current area/template matches" })
                 continue
             }
-            const targetKey = idKey(target)
-            if (targetKey === key) continue
-
-            const survivor = byIdentity[targetKey]
-            if (!survivor) {
-                // The re-keyed bucket doesn't exist yet. Don't create it here —
-                // provisionStructure builds buckets; re-stamping this note's
-                // identity labels lets it be adopted in place instead.
-                if (!dryRun) {
-                    note.setLabel(labels.area, target.area)
-                    if (target.bucket) note.setLabel(labels.bucket, target.bucket)
-                    else note.removeLabel(labels.bucket)
-                }
-                merges.push({
-                    fromNoteId: note.noteId, fromKey: key, fromTitle: note.title,
-                    toNoteId: note.noteId, toKey: targetKey, toTitle: note.title,
-                    movedCount: 0, movedTitles: [], movedContent: false,
-                    deleted: false, keptReason: "", rekeyedInPlace: true
-                })
-                continue
-            }
-            if (survivor.noteId === note.noteId) continue
-
-            const children = note.getChildNotes()
-            const movedTitles = children.map(c => c.title)
-
-            function bodyOf(n) {
-                if (n.type !== "text") return ""
-                try {
-                    const body = n.getContent()
-                    return body && typeof body === "string" ? body : ""
-                } catch (e) { return "" }
-            }
-            function isBlank(html) {
-                return !String(html || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim()
-            }
-
-            const staleBody = bodyOf(note)
-            const movedContent = !isBlank(staleBody)
-            let deleted = false
-            let keptReason = ""
-
-            if (!dryRun) {
-                // Move each child and confirm the move from the CHILD's own
-                // parent list. Re-reading the husk's getChildNotes() instead
-                // would read a cached entity that still lists the children we
-                // just moved, so every husk would look non-empty and never be
-                // deleted.
-                const stuck = []
-                for (const child of children) {
-                    api.toggleNoteInParent(true, child.noteId, survivor.noteId, "")
-                    api.toggleNoteInParent(false, child.noteId, note.noteId, "")
-                    const moved = api.getNote(child.noteId)
-                    const parentIds = moved ? moved.getParentNotes().map(p => p.noteId) : []
-                    if (!moved || parentIds.indexOf(survivor.noteId) === -1 ||
-                        parentIds.indexOf(note.noteId) !== -1) {
-                        stuck.push(child.title)
-                    }
-                }
-
-                // Migrate the husk's own body onto the survivor before emptying
-                // it, so deletion can't drop content.
-                let contentStuck = false
-                if (movedContent) {
-                    const target = api.getNote(survivor.noteId)
-                    if (target && target.type === "text") {
-                        const existing = bodyOf(target)
-                        target.setContent(`${existing}<h2>Merged from ${note.title}</h2>${staleBody}`)
-                        note.setContent("")
-                    } else {
-                        contentStuck = true
-                        keptReason = "survivor is not a text note; content left in place"
-                    }
-                }
-
-                // Delete only on verified-empty: every child confirmed re-parented
-                // and the body confirmed migrated.
-                if (stuck.length > 0) {
-                    keptReason = `${stuck.length} child note(s) did not move: ${stuck.join(", ")}`
-                }
-                if (!keptReason && !contentStuck) {
-                    note.deleteNote()
-                    deleted = true
-                } else {
-                    // Kept for inspection — drop the identity labels so
-                    // provisioning stops resolving to it, and point at where it
-                    // folded.
-                    note.removeLabel(labels.area)
-                    note.removeLabel(labels.bucket)
-                    note.setLabel("agendaOrganizeMerged", targetKey)
-                }
-            }
-
-            merges.push({
-                fromNoteId: note.noteId, fromKey: key, fromTitle: note.title,
-                toNoteId: survivor.noteId, toKey: targetKey, toTitle: survivor.title,
-                movedCount: children.length, movedTitles, movedContent,
-                deleted, keptReason, rekeyedInPlace: false
+            const liveKey = idKey(target)
+            liveIdentityByKey[liveKey] = target
+            ;(groups[liveKey] || (groups[liveKey] = [])).push({
+                note, wasStale: liveKey !== idKey(identity), untagged: false
             })
+        }
+
+        // 2. Scenario B: pull in hand-made same-titled twins that carry NO bucket
+        //    label. For each known live bucket identity, look under the same area
+        //    root for untagged siblings sharing a group member's title.
+        for (const [liveKey, members] of Object.entries(groups)) {
+            const target = liveIdentityByKey[liveKey]
+            const root = areaRoots[target.area]
+            if (!root) continue
+            const titles = new Set(members.map(m => m.note.title))
+            const known = new Set(members.map(m => m.note.noteId))
+            for (const child of root.getChildNotes()) {
+                if (known.has(child.noteId)) continue
+                if (child.getLabelValue(labels.bucket)) continue  // has its own identity
+                if (!titles.has(child.title)) continue
+                members.push({ note: child, wasStale: true, untagged: true })
+            }
+        }
+
+        // 3. Fold each group down to one survivor.
+        for (const [liveKey, members] of Object.entries(groups)) {
+            const target = liveIdentityByKey[liveKey]
+
+            // Survivor: prefer a member ALREADY at the live identity (not stale,
+            // not an untagged twin), then heaviest, then lowest noteId.
+            members.sort((a, b) => {
+                if (a.wasStale !== b.wasStale) return a.wasStale ? 1 : -1
+                const wa = weightOf(a.note), wb = weightOf(b.note)
+                if (wa !== wb) return wb - wa
+                return a.note.noteId < b.note.noteId ? -1 : 1
+            })
+            const survivor = members[0].note
+            const husks = members.slice(1)
+
+            // Ensure the survivor carries the live identity (a whole group that
+            // drifted has a stale/untagged survivor, re-keyed here).
+            if (!dryRun && (members[0].wasStale || members[0].untagged)) {
+                survivor.setLabel(labels.area, target.area)
+                survivor.setLabel(labels.bucket, target.bucket)
+                survivor.removeLabel("agendaOrganizeMerged")
+            }
+            if (husks.length === 0) {
+                // Lone bucket. Only report it if it was re-keyed in place.
+                if (members[0].wasStale || members[0].untagged) {
+                    merges.push({
+                        fromNoteId: survivor.noteId, fromKey: idKey(identityOf(survivor)),
+                        fromTitle: survivor.title, toNoteId: survivor.noteId, toKey: liveKey,
+                        toTitle: survivor.title, movedCount: 0, movedTitles: [],
+                        movedContent: false, deleted: false, keptReason: "", rekeyedInPlace: true
+                    })
+                }
+                continue
+            }
+
+            for (const { note } of husks) {
+                const fromKey = idKey(identityOf(note))
+                const children = note.getChildNotes()
+                const movedTitles = children.map(c => c.title)
+                const huskBody = bodyOf(note)
+                const movedContent = !isBlank(huskBody)
+                let deleted = false
+                let keptReason = ""
+
+                if (!dryRun) {
+                    // Move each child and confirm the move from the CHILD's own
+                    // parent list. Re-reading the husk's getChildNotes() instead
+                    // would read a cached entity that still lists the children we
+                    // just moved, so every husk would look non-empty and never be
+                    // deleted.
+                    const stuck = []
+                    for (const child of children) {
+                        api.toggleNoteInParent(true, child.noteId, survivor.noteId, "")
+                        api.toggleNoteInParent(false, child.noteId, note.noteId, "")
+                        const moved = api.getNote(child.noteId)
+                        const parentIds = moved ? moved.getParentNotes().map(p => p.noteId) : []
+                        if (!moved || parentIds.indexOf(survivor.noteId) === -1 ||
+                            parentIds.indexOf(note.noteId) !== -1) {
+                            stuck.push(child.title)
+                        }
+                    }
+
+                    // Migrate the husk's own body onto the survivor before
+                    // emptying it, so deletion can't drop content.
+                    let contentStuck = false
+                    if (movedContent) {
+                        const survivorNote = api.getNote(survivor.noteId)
+                        if (survivorNote && survivorNote.type === "text") {
+                            const existing = bodyOf(survivorNote)
+                            survivorNote.setContent(`${existing}<h2>Merged from ${note.title}</h2>${huskBody}`)
+                            note.setContent("")
+                        } else {
+                            contentStuck = true
+                            keptReason = "survivor is not a text note; content left in place"
+                        }
+                    }
+
+                    // Delete only on verified-empty: every child confirmed
+                    // re-parented and the body confirmed migrated.
+                    if (stuck.length > 0) {
+                        keptReason = `${stuck.length} child note(s) did not move: ${stuck.join(", ")}`
+                    }
+                    if (!keptReason && !contentStuck) {
+                        note.deleteNote()
+                        deleted = true
+                    } else {
+                        // Kept for inspection -- drop the identity labels so
+                        // provisioning stops resolving to it, and point at where
+                        // it folded.
+                        note.removeLabel(labels.area)
+                        note.removeLabel(labels.bucket)
+                        note.setLabel("agendaOrganizeMerged", liveKey)
+                    }
+                }
+
+                merges.push({
+                    fromNoteId: note.noteId, fromKey, fromTitle: note.title,
+                    toNoteId: survivor.noteId, toKey: liveKey, toTitle: survivor.title,
+                    movedCount: children.length, movedTitles, movedContent,
+                    deleted, keptReason, rekeyedInPlace: false
+                })
+            }
         }
 
         return { merges, skipped }
