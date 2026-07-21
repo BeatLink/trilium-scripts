@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -23,6 +23,7 @@
 
             { "id": "agenda-settings", "title": "agendaSettings.jsx", "type": "code", "mime": "text/jsx", "sourceUrl": "common/agendaSettings.jsx" },
             { "id": "dimensions", "title": "dimensions.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "common/dimensions.js" },
+            { "id": "migrate", "title": "migrate.js", "type": "code", "mime": "application/javascript;env=frontend", "sourceUrl": "common/migrate.js" },
             { "id": "common-css", "title": "agendaCommon.css", "type": "code", "mime": "text/css", "sourceUrl": "common/agendaCommon.css" },
             { "id": "schema", "title": "schema.json", "type": "code", "mime": "application/json", "sourceUrl": "common/schema.json" },
             { "id": "config", "title": "config.json", "type": "code", "mime": "application/json", "sourceUrl": "common/config.json" },
@@ -85,6 +86,7 @@
 
             { "parent": "grp-common", "child": "agenda-settings" },
             { "parent": "grp-common", "child": "dimensions" },
+            { "parent": "grp-common", "child": "migrate" },
             { "parent": "grp-common", "child": "common-css" },
             { "parent": "grp-common", "child": "schema" },
             { "parent": "grp-common", "child": "config" },
@@ -118,6 +120,7 @@
 
             { "parent": "agenda-settings", "addon": "libsettings@beatlink", "child": "ui" },
             { "parent": "agenda-settings", "child": "dimensions" },
+            { "parent": "agenda-settings", "child": "migrate" },
 
             { "parent": "dimensions", "addon": "libsettings@beatlink", "child": "ui" },
 
@@ -218,6 +221,7 @@
             { "note": "grp-organize", "name": "iconClass", "value": "bx bx-task" },
             { "note": "agenda-settings", "name": "iconClass", "value": "bx bx-task" },
             { "note": "dimensions", "name": "iconClass", "value": "bx bx-task" },
+            { "note": "migrate", "name": "iconClass", "value": "bx bx-task" },
             { "note": "common-css", "name": "iconClass", "value": "bx bx-task" },
             { "note": "schema", "name": "iconClass", "value": "bx bx-task" },
             { "note": "config", "name": "iconClass", "value": "bx bx-task" },

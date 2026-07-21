@@ -3,7 +3,7 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
-const { getDimensions } = require("dimensions.js")
+const { getDimensions, matchTemplatesByName } = require("dimensions.js")
 
 // The icon stamped on the note that hosts the Organize UI.
 const ORGANIZE_ICON = "bx bx-sort-down"
@@ -214,6 +214,43 @@ function WorkflowSetup() {
     )
 }
 
+// The "Match Templates By Name" action, surfaced on its own tab under the
+// Dimensions category. Fills each type value's blank Template Note by matching
+// its Name against a #template note's title — note ids are install-specific so
+// they can't ship as schema defaults. Mirrors the button the Organize page's
+// embedded Dimensions panel already exposes.
+function MatchTemplates() {
+    const [matching, setMatching] = useState(false)
+    const [result, setResult] = useState("")
+
+    async function runMatch() {
+        setMatching(true)
+        setResult("")
+        try {
+            const count = await matchTemplatesByName()
+            setResult(count
+                ? `Matched ${count} value${count === 1 ? "" : "s"} to a template note.`
+                : "No blank template notes matched a #template title.")
+        } finally {
+            setMatching(false)
+        }
+    }
+
+    return (
+        <div className="match-templates">
+            <p className="workflow-setup-blurb">
+                Fill each type value's blank <strong>Template Note</strong> by matching its Name
+                against a <code>#template</code> note's title. Only blank slots are filled, so a
+                hand-picked template is never overwritten. Workflow Setup runs this too.
+            </p>
+            <button className="workflow-setup-button" disabled={matching} onClick={runMatch}>
+                {matching ? "Matching..." : "Match Templates By Name"}
+            </button>
+            {result && <div className="workflow-setup-summary">{result}</div>}
+        </div>
+    )
+}
+
 export default function ProfileEditor() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
@@ -256,6 +293,11 @@ export default function ProfileEditor() {
             category: "Settings",
             tab: "Workflow Setup",
             render: () => <WorkflowSetup />
+        },
+        {
+            category: "Dimensions",
+            tab: "Match Templates",
+            render: () => <MatchTemplates />
         }
     ]
 
@@ -268,8 +310,9 @@ export default function ProfileEditor() {
                 search/filter/sort/prefix/color/date-rule element — each on its own tab. A profile only
                 ever references an element by name; edit the element on its own tab to change it
                 everywhere it's used. Pick the inbox note captures land in under Collect. Set the
-                quick-times, manage the item templates, and pick the note that hosts the Organize triage
-                UI under Organize; provision the notebook structure from Settings › Workflow Setup.
+                quick-times and pick the note that hosts the Organize triage UI under Organize; edit the
+                classification vocabulary under Dimensions; provision the notebook structure from
+                Settings › Workflow Setup.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

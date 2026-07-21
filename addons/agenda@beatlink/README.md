@@ -80,19 +80,33 @@ in the Agenda Editor is seen by all three widgets at once. The prefix/color/grou
 for each dimension are **derived** from the registry at read time, so adding a dimension yields all
 four with no extra setup and they can never drift from the vocabulary.
 
-The Agenda Editor groups its tabs under five workflow categories — **Collect**, **Organize**,
-**Review**, **Execute**, **Settings** — using [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s
+The Agenda Editor groups its tabs under six workflow categories — **Collect**, **Organize**,
+**Review**, **Execute**, **Dimensions**, **Settings** — using [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s
 category level (`_categories` + per-field `category`, plus `extraPanels` for the non-schema Workflow
-Setup tab):
+Setup, Organize-note and Match-Templates tabs):
 
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
-- **Organize** — Times, the Dimensions registry, and the Organize-note picker (which note hosts the
-  Organize triage UI).
+- **Organize** — Times and the Organize-note picker (which note hosts the Organize triage UI).
 - **Review** — Overview Note, Active Profile, Profiles, Searches, Filters, Sorts, Prefixes, Colors,
   Groupings, Date Rules (everything that shapes what the overview shows).
 - **Execute** — My Day.
+- **Dimensions** — the classification vocabulary registry, plus a **Match Templates** tab (fill each
+  type value's blank Template Note by matching its Name to a `#template` title). The Organize page
+  embeds this same registry on its own **Dimensions** tab.
 - **Settings** — the label-name vocabulary and the Workflow Setup tab (provision button).
+
+### Config migrations
+
+Adding a new default dimension/sort/colour/etc. reaches existing installs for free — a registry's
+`default` in `schema.json` is its *shipped* entry set, reconciled into every install on read/write, so
+no migration is needed for additive changes. Reshaping data the user already owns (renaming a stored
+key, moving a value between fields, dropping a field) is what [`common/migrate.js`](common/migrate.js)
+handles: an ordered list of one-time transforms of the raw persisted config, gated by a
+`#agendaConfigVersion` label on the `#agendaConfig` note so each step runs exactly once per install.
+`getAgendaSettings()` runs any pending steps before the first read, so every widget sees migrated
+config. The shipped list is empty (nothing to reshape yet); adding a step is push-one-entry +
+bump the version.
 
 Task edits broadcast an `agenda:tasksChanged` event over
 [`libipc@beatlink`](../libipc@beatlink/README.md); the Overview widget subscribes and re-files the

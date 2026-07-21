@@ -1,6 +1,7 @@
 import { loadSettings } from "libSettingsUI.jsx"
 
 const { normalizeDimensions } = require("dimensions.js")
+const { runMigrations } = require("migrate.js")
 
 export async function getAgendaSettings() {
     const anchors = await api.searchForNotes("#agendaConfig")
@@ -11,6 +12,11 @@ export async function getAgendaSettings() {
     const configNoteId = anchor.getRelationValue("AddonData:config")
     const icalNoteId = anchor.getRelationValue("icalNote") || ""
     if (!schemaNoteId || !configNoteId) return null
+
+    // Bring an older install's persisted config up to the current shape before
+    // anything reads it. Idempotent and near-free once the version is current
+    // (a single label read short-circuits). See migrate.js.
+    await runMigrations(anchor.noteId, configNoteId)
 
     const settings = await loadSettings(schemaNoteId, configNoteId)
 
