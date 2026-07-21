@@ -59,6 +59,40 @@ const addonLabels = [
 ]
 
 // =========================================================================
+// Helpers: Extractors, guards, and formatters for common patterns to reduce
+// duplication across the module. These are pure functions with no side effects.
+// =========================================================================
+
+// Checks if a note's #TAMFILEID belongs to the specified addon.
+function isOwnTamFileId(note, addonId) {
+    const tamFileId = note.getLabelValue(tamFileIdLabel)
+    return tamFileId && tamFileId.startsWith(`${addonId}/`)
+}
+
+// Encodes a TAM file ID from addon ID and local note ID.
+function encodeTamFileId(addonId, localId) {
+    return `${addonId}/${localId}`
+}
+
+// Decodes a TAM file ID into [addonId, localId].
+function decodeTamFileId(tamFileId) {
+    const [addonId, ...rest] = tamFileId.split("/")
+    return [addonId, rest.join("/")]
+}
+
+// Extracts metadata fields from a manifest for storage in the database.
+function extractAddonMeta(manifest) {
+    return {
+        name: manifest.name,
+        description: manifest.description,
+        author: manifest.author,
+        license: manifest.license,
+        type: manifest.type,
+        homepage: manifest.homepage
+    }
+}
+
+// =========================================================================
 // Network: fetch/retry/version-comparison helpers — pure networking, no note-tree
 // access. fetchWithRetry is duplicated inline inside every api.runOnBackend callback
 // that also needs it, since those callbacks run in a separate serialized context.
@@ -802,14 +836,7 @@ async function fetchDependencyMeta(depId, ctx) {
                 m: normalizeManifest(manifestFetched),
                 manifestSourceUrl: depUrl,
                 latestVersion: manifestFetched.latestVersion,
-                meta: {
-                    name: manifestFetched.name,
-                    description: manifestFetched.description,
-                    author: manifestFetched.author,
-                    license: manifestFetched.license,
-                    type: manifestFetched.type,
-                    homepage: manifestFetched.homepage
-                }
+                meta: extractAddonMeta(manifestFetched)
             }
         } catch (e) {
             console.error(`TAM: failed to fetch dependency manifest for ${depId}`, e)
@@ -973,14 +1000,7 @@ async function syncAddon(addonId, options = {}) {
     await pruneRemovedNotes(m, addonId)
 
     const storedManifest = stripManifestForStorage(m)
-    const meta = {
-        name: manifest.name,
-        description: manifest.description,
-        author: manifest.author,
-        license: manifest.license,
-        type: manifest.type,
-        homepage: manifest.homepage
-    }
+    const meta = extractAddonMeta(manifest)
 
     if (!wasInstalled) {
         // Preserve any persistence data surviving from a previous install of this addonId.
@@ -1032,8 +1052,7 @@ async function enableAddon(addonId, enabled) {
             const note = api.getNote(id)
             // TAM's own root descends into "Addons" — without this guard, disabling TAM
             // would disable every other installed addon too (see connectAddonPersistence).
-            const ownTamFileId = note.getLabelValue(tamFileIdLabel)
-            if (!ownTamFileId || !ownTamFileId.startsWith(`${addonId}/`)) continue
+            if (!note.getLabelValue(tamFileIdLabel)?.startsWith(`${addonId}/`)) continue
             for (const attribute of note.getAttributes() || []) {
                 const isDisabledAttr = attribute.name.toLowerCase().includes("disabled:")
                 if (enabled ? !isDisabledAttr : !addonLabels.includes(attribute.name)) continue
