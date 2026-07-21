@@ -38,8 +38,8 @@ tab):
   `#color`), **`#type`** (+ `~template`), **`#priority`** (+ `#color`), or any dimension you add —
   plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`), a **Misfiled Notes**
   fixer for notes whose area/type disagrees with where they're filed, and an **Invalid Buckets**
-  section listing scaffolded buckets whose area/type slug no longer maps to a current dimension value,
-  each with **Merge into `<bucket>`** (fold its notes into a valid bucket) or **Delete**) and
+  table listing scaffolded buckets whose area/type slug no longer maps to a current dimension value,
+  each row offering **Merge** into a chosen valid bucket or **Delete**) and
   **Dimensions** (the vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time
   buttons use the times on the Agenda Editor's **Organize › Times** tab.
 

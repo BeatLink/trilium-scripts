@@ -111,12 +111,14 @@ leaves its queue. Sections:
 4. **Invalid Buckets** — structural bucket notes (`#agendaOrganizeBucket`) whose area or type slug no
    longer maps to a current dimension value — the orphan left behind when an Area or Type value is
    deleted or renamed in the Dimensions editor. `getInvalidBuckets(rootDim, bucketDim)` returns them
-   plus the list of *valid* buckets as merge destinations. Each card offers **Merge into `<bucket>`**
-   for every valid bucket (`mergeBucketInto` moves the invalid bucket's children into the chosen one,
-   migrates its body under a "Merged from" heading, then deletes the emptied husk on verified-empty)
-   and **Delete** (cascade — the confirm warns when the bucket still holds notes). This is the manual
-   counterpart to `mergeStaleBuckets`, which only auto-resolves buckets it can map via an alias; these
-   are the residue it reports as `skipped`.
+   plus the list of *valid* buckets as merge destinations. Unlike the one-at-a-time queues above, this
+   is a **table** (all invalid buckets at once — it's a cleanup list, not a triage flow): a row per
+   bucket showing its title/path, why it's invalid, its note count, and a merge-target `<select>` +
+   **Merge** / **Delete** actions. Merge (`mergeBucketInto`) moves the bucket's children into the
+   selected valid bucket, migrates its body under a "Merged from" heading, then deletes the emptied
+   husk on verified-empty; Delete cascade-deletes it (the confirm warns when the bucket still holds
+   notes). This is the manual counterpart to `mergeStaleBuckets`, which only auto-resolves buckets it
+   can map via an alias; these are the residue it reports as `skipped`.
 
 ## 4. Provisioning model — runtime find-or-create
 

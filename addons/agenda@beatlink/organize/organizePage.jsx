@@ -115,7 +115,7 @@ function DueDatePicker({ item, act, busy, times, onAssigned }) {
 // render-prop supplies the buttons; `act(fn)` runs an async action while the
 // card is disabled (busy). Delete removes the note (with a confirm). Sharing this
 // shell keeps every Organize section visually and behaviorally identical.
-function QueueSection({ heading, items, renderActions, onDelete, emptyMessage, confirmMessage }) {
+function QueueSection({ heading, items, renderActions, onDelete, emptyMessage }) {
     const [index, setIndex] = useState(0)
     const [busy, setBusy] = useState(false)
 
@@ -144,10 +144,7 @@ function QueueSection({ heading, items, renderActions, onDelete, emptyMessage, c
     }
     async function remove() {
         if (!current || busy) return
-        const msg = confirmMessage
-            ? confirmMessage(current)
-            : `Delete note "${current.title || "(untitled)"}"? This cannot be undone.`
-        if (!window.confirm(msg)) return
+        if (!window.confirm(`Delete note "${current.title || "(untitled)"}"? This cannot be undone.`)) return
         await act(() => onDelete(current))
     }
 
@@ -224,6 +221,120 @@ function OptionButton({ opt, busy, onClick }) {
         >
             {opt.label}
         </button>
+    )
+}
+
+// One row of the Invalid Buckets table: the offending bucket, why it's invalid,
+// its note count, and the merge-target picker + Merge / Delete actions. Merge
+// folds the bucket's notes into the selected valid bucket (mergeBucketInto) then
+// drops the row; Delete cascade-deletes it (confirm warns when it holds notes).
+function InvalidBucketRow({ item, targets, onMerged, onDeleted }) {
+    const [targetId, setTargetId] = useState(targets[0] ? targets[0].noteId : "")
+    const [busy, setBusy] = useState(false)
+
+    async function run(fn) {
+        if (busy) return
+        setBusy(true)
+        try { await fn() } finally { setBusy(false) }
+    }
+
+    async function merge() {
+        const target = targets.find(t => t.noteId === targetId)
+        if (!target) return
+        await run(async () => {
+            const r = await mergeBucketInto(item.noteId, target.noteId)
+            if (r.deleted) onMerged(item.noteId)
+            else window.alert(
+                `Merged ${r.moved} note${r.moved === 1 ? "" : "s"} into ${target.label}, ` +
+                `but the empty bucket was kept: ${r.keptReason}.`)
+        })
+    }
+
+    async function remove() {
+        const msg = item.childCount > 0
+            ? `Delete bucket "${item.title || "(untitled)"}" AND the ${item.childCount} note${item.childCount === 1 ? "" : "s"} inside it? This cannot be undone.`
+            : `Delete empty bucket "${item.title || "(untitled)"}"? This cannot be undone.`
+        if (!window.confirm(msg)) return
+        await run(async () => { await deleteNote(item.noteId); onDeleted(item.noteId) })
+    }
+
+    return (
+        <tr className="invalid-buckets-row">
+            <td className="invalid-buckets-name">
+                <span
+                    className="invalid-buckets-title"
+                    title="Open this note"
+                    onClick={() => activateNote(item.noteId)}
+                >
+                    {item.title || "(untitled)"}
+                </span>
+                {item.path && <span className="invalid-buckets-path">{item.path}</span>}
+            </td>
+            <td className="invalid-buckets-reason">{item.reason}</td>
+            <td className="invalid-buckets-count">{item.childCount}</td>
+            <td className="invalid-buckets-actions">
+                {targets.length > 0 ? (
+                    <>
+                        <select
+                            className="invalid-buckets-select"
+                            value={targetId}
+                            disabled={busy}
+                            onChange={e => setTargetId(e.target.value)}
+                        >
+                            {targets.map(t => (
+                                <option key={t.noteId} value={t.noteId}>{t.label}</option>
+                            ))}
+                        </select>
+                        <button className="workflow-organize-option-btn" disabled={busy} onClick={merge}>
+                            Merge
+                        </button>
+                    </>
+                ) : (
+                    <span className="invalid-buckets-notarget">No valid bucket to merge into</span>
+                )}
+                <button className="workflow-organize-delete" disabled={busy} onClick={remove}>
+                    Delete
+                </button>
+            </td>
+        </tr>
+    )
+}
+
+// The Invalid Buckets section: all invalid buckets at once as a table (they're a
+// cleanup list, not a one-at-a-time triage flow), a row per bucket. Empty state
+// mirrors the queue sections' "done" message.
+function InvalidBucketsTable({ items, targets, onMerged, onDeleted }) {
+    return (
+        <section className="workflow-organize-section">
+            <h3 className="workflow-organize-heading">Invalid Buckets</h3>
+            {items.length === 0 ? (
+                <div className="workflow-organize-done">
+                    No invalid buckets — every scaffolded bucket maps to a current area and type.
+                </div>
+            ) : (
+                <table className="invalid-buckets-table">
+                    <thead>
+                        <tr>
+                            <th>Bucket</th>
+                            <th>Why Invalid</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map(item => (
+                            <InvalidBucketRow
+                                key={item.noteId}
+                                item={item}
+                                targets={targets}
+                                onMerged={onMerged}
+                                onDeleted={onDeleted}
+                            />
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </section>
     )
 }
 
@@ -456,55 +567,11 @@ function TriagePanel() {
                 emptyMessage="Nothing misfiled — every note's area and type match where it lives."
             />
 
-            <QueueSection
-                heading="Invalid Buckets"
+            <InvalidBucketsTable
                 items={invalidBuckets}
-                renderActions={(item, act, busy) => {
-                    const buttons = [
-                        <div key="reason" className="workflow-organize-reason">
-                            {item.reason}.
-                            {item.childCount > 0
-                                ? ` Holds ${item.childCount} note${item.childCount === 1 ? "" : "s"} — merge to keep them, or delete to discard.`
-                                : " Empty — safe to delete."}
-                        </div>
-                    ]
-                    if (bucketTargets.length === 0) {
-                        buttons.push(
-                            <div key="none" className="workflow-organize-reason">
-                                No valid bucket to merge into. Provision the structure or add the type
-                                back, then reload — or delete this bucket.
-                            </div>
-                        )
-                    }
-                    for (const target of bucketTargets) {
-                        buttons.push(
-                            <button
-                                key={target.noteId}
-                                className="workflow-organize-option-btn"
-                                disabled={busy}
-                                onClick={() => act(async () => {
-                                    const r = await mergeBucketInto(item.noteId, target.noteId)
-                                    if (r.deleted) {
-                                        dropInvalidBucket(item.noteId)
-                                    } else {
-                                        window.alert(
-                                            `Merged ${r.moved} note${r.moved === 1 ? "" : "s"} into ${target.label}, ` +
-                                            `but the empty bucket was kept: ${r.keptReason}.`)
-                                    }
-                                })}
-                            >
-                                Merge into {target.label}
-                            </button>
-                        )
-                    }
-                    return buttons
-                }}
-                onDelete={async (item) => { await deleteNote(item.noteId); dropInvalidBucket(item.noteId) }}
-                confirmMessage={(item) =>
-                    item.childCount > 0
-                        ? `Delete bucket "${item.title || "(untitled)"}" AND the ${item.childCount} note${item.childCount === 1 ? "" : "s"} inside it? This cannot be undone.`
-                        : `Delete empty bucket "${item.title || "(untitled)"}"? This cannot be undone.`}
-                emptyMessage="No invalid buckets — every scaffolded bucket maps to a current area and type."
+                targets={bucketTargets}
+                onMerged={dropInvalidBucket}
+                onDeleted={dropInvalidBucket}
             />
         </div>
     )

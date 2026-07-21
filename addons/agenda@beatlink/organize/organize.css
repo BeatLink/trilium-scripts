@@ -266,3 +266,73 @@
 .workflow-organize-restart:hover {
     opacity: 1;
 }
+
+/* --- Invalid Buckets table --- */
+
+.invalid-buckets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.invalid-buckets-table th,
+.invalid-buckets-table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--main-border-color, #ccc);
+    vertical-align: top;
+}
+
+.invalid-buckets-table th {
+    font-weight: bold;
+    opacity: 0.75;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.invalid-buckets-title {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.invalid-buckets-title:hover {
+    text-decoration: underline;
+}
+
+.invalid-buckets-path {
+    display: block;
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
+.invalid-buckets-reason {
+    opacity: 0.85;
+}
+
+.invalid-buckets-count {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.invalid-buckets-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.invalid-buckets-select {
+    padding: 5px 8px;
+    max-width: 220px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.invalid-buckets-notarget {
+    opacity: 0.7;
+    font-size: 0.9em;
+}
