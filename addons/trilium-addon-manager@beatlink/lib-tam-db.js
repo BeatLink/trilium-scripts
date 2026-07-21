@@ -1,36 +1,41 @@
-// TAM's database-access layer: the Database note's read/write and the three
-// relation-id getters. Split out of lib-tam.js into its own require()-able note
-// so the database/addonRoot/addonPersistence relations resolve against THIS
-// note's api.currentNote — a required note's api.currentNote is the required
-// note itself (Trilium builds a FrontendScriptApi per note in the bundle), so
-// those relations are declared "from" lib-tam-db, not from lib-tam.
-
 const databaseLabel = "database"
-const addonRootLabel = "addonRoot"
-const addonPersistenceLabel = "addonPersistence"
-
-async function getDatabaseNoteId() {
-    return await api.currentNote.getRelationValue(databaseLabel)
-}
 
 async function loadDatabase() {
-    const database = await api.runOnBackend((databaseId) => {
-        return JSON.parse(api.getNote(databaseId).getContent())
-    }, [await getDatabaseNoteId()])
+    const databaseNoteId = await api.currentNote.getRelationValue(databaseLabel)
+    const database = await api.runOnBackend(
+        (databaseId) => {
+            const note = api.getNote(databaseId)
+            const content = note.getContent()
+            const json = JSON.parse(content)
+            return json
+        },
+        [databaseNoteId]
+    )
     if (!database.catalogs) database.catalogs = []
     if (!database.installedAddons) database.installedAddons = {}
     return database
 }
 
 async function saveDatabase(database) {
-    return await api.runOnBackend((databaseId, database) => {
-        return api.getNote(databaseId).setContent(JSON.stringify(database, null, 4))
-    }, [await getDatabaseNoteId(), database])
+    const databaseNoteId = await api.currentNote.getRelationValue(databaseLabel)
+    return await api.runOnBackend(
+        (databaseId, database) => {
+            const note = api.getNote(databaseId)
+            const json = JSON.stringify(database, null, 4)
+            return note.setContent(json)
+        },
+        [databaseNoteId, database]
+    )
 }
+
+
+const addonRootLabel = "addonRoot"
 
 async function getAddonRootNoteId() {
     return await api.currentNote.getRelationValue(addonRootLabel)
 }
+
+const addonPersistenceLabel = "addonPersistence"
 
 async function getPersistenceNoteId() {
     return await api.currentNote.getRelationValue(addonPersistenceLabel)
