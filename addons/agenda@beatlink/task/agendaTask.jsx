@@ -16,7 +16,6 @@ import { FormToggleButton } from "FormToggleButton.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByOption, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
-const { publish } = require("libIpc.js")
 
 const durationOptions = [
     { key: "", name: "None"},
@@ -417,7 +416,7 @@ function MainWidget(){
     // Broadcast only; the overview widget subscribes and re-files. Do not
     // import libAgendaOverview here (keeps this decoupled from Overview).
     function afterChange() {
-        publish("agenda:tasksChanged")
+        api.triggerEvent("agenda:tasksChanged")
     }
 
     const actions = [

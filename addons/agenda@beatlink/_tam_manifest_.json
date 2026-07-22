@@ -394,13 +394,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
-            },
-            {
-                "id": "libipc-lib",
-                "title": "libIpc.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libipc/libipc.js"
             }
         ],
         "children": [
@@ -617,10 +610,6 @@
                 "child": "collapsible"
             },
             {
-                "parent": "overview",
-                "child": "libipc-lib"
-            },
-            {
                 "parent": "profile-editor-page",
                 "child": "profile-editor"
             },
@@ -679,10 +668,6 @@
             {
                 "parent": "task",
                 "child": "lib-task"
-            },
-            {
-                "parent": "task",
-                "child": "libipc-lib"
             },
             {
                 "parent": "organize-page-src",
