@@ -21,8 +21,10 @@ TAM is itself an addon. Once installed, its note tree looks like this:
 ```
 trilium-addon-manager@beatlink  (render note)
 ├── Database  (JSON code note)
-│   ├── Addons  (text note — addon root)
-│   └── Addon Data  (JSON code note — persistence root)
+│   ├── Addons  (text note — global addon-root anchor)
+│   │   └── <Addon Name>  (TAM-owned, per-addon root — an addon's own `root` note nests here)
+│   └── Addon Data  (JSON code note — global persistence anchor)
+│       └── <Addon Name>  (TAM-owned, per-addon persistence root — an addon's `persistenceRoot` nests here)
 └── Source Code  (JSX render script)
     ├── TAM.jsx  (the entire frontend widget in one file — see below)
     │   └── lib-tam.js  (the entire backend/data layer in one file)
@@ -50,8 +52,8 @@ separate notes.
 ### Key notes
 
 - **Database** — a JSON code note that holds all TAM state: the list of added catalog URLs and, per addon, a single merged record covering its installed state, own manifest structure, and pending update prompts (see [The Database Record](#the-database-record) and [Persistence](#persistence)). TAM reads and writes this note on every operation.
-- **Addons** — the parent note under which all installed addons are placed as children.
-- **Addon Data** — the shared, TAM-owned anchor note under which every addon's persistent notes (its `persistenceRoot` subtree) are resolved, kept safe from uninstall/prune sweeps (see [Persistence](#persistence)).
+- **Addons** — the global anchor under which every addon gets its own TAM-owned root note (titled and `#addonId`-tagged after the addon), created on first sync via `ensureAddonAnchor`. An addon's manifest `root` note is placed as a child of *that* note, never directly under **Addons** and never something the addon itself creates — the addon can only attach children to it.
+- **Addon Data** — the global anchor under which every addon gets its own TAM-owned persistence root (same naming/tagging), the parent for that addon's `persistenceRoot` subtree. Kept safe from uninstall/prune sweeps alongside the persistent notes it holds (see [Persistence](#persistence)).
 - **lib-tam.js** — TAM's whole backend/data layer in one `require()`d note (its public surface is
   available globally as `libTAMjs`). It runs in the browser but uses `api.runOnBackend`/
   `api.runAsyncOnBackendWithManualTransactionHandling` for operations that need backend access
@@ -215,7 +217,10 @@ re-fetches to check for a newer version, and what a catalog's `tam-addons[]` lis
 
 #### `root`
 
-The local ID of the note that becomes the addon's root note, placed as a child of the Addons parent note.
+The local ID of the note that becomes the addon's root note, placed as a child of that addon's
+own TAM-owned root anchor (itself a child of the global **Addons** note — see [Key notes](#key-notes)).
+An addon's manifest can never declare or reparent that anchor itself; it only ever attaches `root`
+(and anything under it) as a child.
 
 #### `settingsNote` *(optional)*
 
@@ -235,7 +240,8 @@ The local ID of a note in `notes[]` whose subtree (walked through `children[]`) 
 **persistent** notes — user settings, cached data, customized content that must survive updates *and*
 uninstalls. Declaring it turns on the persistence behaviour described in [Persistence](#persistence):
 those notes are created once, never content-overwritten on update (implicitly prompt-on-update), never
-deleted, and resolved under the shared **Addon Data** anchor instead of the addon's own tree. Omit it
+deleted, and resolved under that addon's own TAM-owned persistence root (a child of the global
+**Addon Data** anchor) instead of the addon's own structural tree. Omit it
 for addons with no user data to preserve. A note under `persistenceRoot` needs no `skipOnUpdate`/
 `promptOnUpdate` flag — placement alone governs it, and setting one is a redundancy `validate` warns
 about. See `agenda@beatlink` (a `persist-root` holding config + templates) or any migrated addon for the
@@ -493,7 +499,7 @@ for a clean slate.
 
 1. Fetch the addon's manifest from `manifestSourceUrl`.
 2. `collectPendingPrompts` snapshots any `promptOnUpdate` diffs against currently persisted content, before anything touches it (see [`promptOnUpdate`](#promptonupdate)).
-3. `resolveManifest` resolves the addon's notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate` (or persistent placement) says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — it lives above the Addons tree (wherever it was manually ZIP-imported), so its own parent is never touched. This step runs twice when the addon declares a `persistenceRoot`: a **persistence pass** resolving that subtree under the shared **Addon Data** anchor first, then a **structural pass** resolving everything else under the Addons tree — both writing into one shared note map so cross-anchor relations resolve (see [Persistence](#persistence)). A persistent note is never content-overwritten once it exists.
+3. `ensureAddonAnchor` find-or-creates this addon's own TAM-owned root anchor (under **Addons**) and, if it declares a `persistenceRoot`, its own persistence anchor (under **Addon Data**) — titled and `#addonId`-tagged after the addon, never something the addon's manifest declares itself. `resolveManifest` then resolves the addon's notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate` (or persistent placement) says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — it lives above the Addons tree (wherever it was manually ZIP-imported) and skips the per-addon anchor entirely, so its own parent is never touched. This step runs twice when the addon declares a `persistenceRoot`: a **persistence pass** resolving that subtree under this addon's own persistence anchor first, then a **structural pass** resolving everything else under this addon's own root anchor — both writing into one shared note map so cross-anchor relations resolve (see [Persistence](#persistence)). A persistent note is never content-overwritten once it exists.
 4. `reconcileNoteParenting` clones every note into every parent its manifest currently declares and detaches it from any parent it's no longer declared under — scoped to only ever detach a branch *this addon's own* manifest created, so a lazily-resolved dependency export shared by multiple consumers is never mistaken as stale by another consumer's clone.
 5. Labels/relations are (re)applied, scoped to whatever was just resolved. Both are disable-state aware — if the addon is currently disabled, writes go to the `disabled:`-prefixed name instead of live-reactivating it. A trailing `(inheritable)` suffix on a label name sets a real `isInheritable` attribute.
 6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
@@ -525,8 +531,8 @@ addon against the live Trilium note tree — read-only, never fixes anything:
   checked only for an addon that's both installed *and* `manuallyInstalled` — a lazily-resolved
   dependency's root is never forced into existence at all (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)), so a missing one there is expected, not an issue.
 - **Persistence integrity** — for an addon that declares a `persistenceRoot`, every persistent note (the
-  `persistenceRoot` subtree) still resolves by its `#TAMFILEID` under the Addon Data anchor. A missing one
-  means the note was lost and a re-sync is needed.
+  `persistenceRoot` subtree) still resolves by its `#TAMFILEID` under that addon's own persistence anchor
+  (a child of Addon Data). A missing one means the note was lost and a re-sync is needed.
 
 Returns a flat list of `{ addonId, message }` issues, rendered as a dismissible panel. **There is no
 offline "repair" action** — an addon flagged here should just be reinstalled/updated, since `syncAddon`
@@ -566,16 +572,18 @@ prompt-on-update — see [`promptOnUpdate`](#promptonupdate)), and they are **ne
 ### Two anchors, two passes
 
 Persistent notes are ordinary `#TAMFILEID` notes — same identity as any structural note — but they are
-resolved under a different, stable anchor. Structural notes hang under the **Addons** tree (which an
-uninstall tears down); persistent notes hang under a shared, TAM-owned **Addon Data** note that no
-uninstall or prune sweep ever touches. So survival is a property of *which anchor a note lives under*,
-not of a separate tag namespace.
+resolved under a different, stable anchor. Structural notes hang under this addon's own TAM-owned root
+anchor (a child of **Addons**, torn down on uninstall); persistent notes hang under this addon's own
+TAM-owned persistence anchor (a child of **Addon Data**) that no uninstall or prune sweep ever touches.
+So survival is a property of *which anchor a note lives under*, not of a separate tag namespace. Both
+per-addon anchors are created by `ensureAddonAnchor`, titled/`#addonId`-tagged after the addon — an
+addon's own manifest never declares or reparents either one, only attaches children beneath them.
 
 `syncAddon` therefore resolves an addon in two passes over the same shared note map:
 
-1. **Persistence pass** — resolves the `persistenceRoot` subtree under **Addon Data**. Runs first so
-   persistent notes are already in the note map before any relation is applied.
-2. **Structural pass** — resolves everything else under the addon's **Addons** subtree. A cross-anchor
+1. **Persistence pass** — resolves the `persistenceRoot` subtree under this addon's persistence anchor.
+   Runs first so persistent notes are already in the note map before any relation is applied.
+2. **Structural pass** — resolves everything else under this addon's root anchor. A cross-anchor
    relation (e.g. `settings --configNote--> config`, where `config` is persistent) resolves cleanly
    because the persistence pass already populated its target.
 
@@ -586,9 +594,11 @@ its shipped `sourceUrl`/inline content exactly once.
 ### Sweeps skip persistent notes
 
 Every uninstall/prune sweep (`detachAddonOwnedBranches`, `pruneRemovedNotes`) is passed the addon's
-persistent id set and leaves those notes in place. `deleteAddon` computes the same set and tears down only
-the structural tree; the persistent subtree under Addon Data remains, and a later reinstall of the same
-addonId re-adopts each note by its `#TAMFILEID`, user data intact.
+persistent id set — which `deleteAddon` extends with the persistence anchor's own synthetic local id, so
+the anchor holding those notes survives alongside them — and leaves all of it in place. The structural
+root anchor is not protected, so it (and everything under it) is torn down along with the rest of the
+structural tree; the persistence anchor and its subtree remain under Addon Data, and a later reinstall of
+the same addonId re-adopts each note by its `#TAMFILEID`, user data intact.
 
 ---
 

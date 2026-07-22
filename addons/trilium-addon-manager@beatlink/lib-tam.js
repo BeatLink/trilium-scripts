@@ -21,6 +21,36 @@ async function getPersistenceNoteId() {
     return await api.currentNote.getRelationValue(addonPersistenceLabel)
 }
 
+// Synthetic local ids for the per-addon anchor notes TAM itself owns (never declared by an
+// addon's own manifest). "root" anchors under the global Addons note; "persistence" anchors
+// under the global Addon Data note. Both share the addon's #TAMFILEID prefix so the existing
+// prefix-scan in detachAddonOwnedBranches finds them for free; the persistence one is kept
+// alive across uninstall by passing it in persistentIds, same as any other persistent note.
+const addonAnchorRootLocalId = "__tamAddonRoot__"
+const addonAnchorPersistenceLocalId = "__tamAddonPersistenceRoot__"
+
+// Find-or-create the one note that owns every note this addon resolves under (structural or
+// persistent), named/tagged after the addon so it reads clearly in the tree. addons can only
+// ever attach children to it — they never declare or reparent it themselves.
+async function ensureAddonAnchor(addonId, addonName, localId, parentRealId) {
+    const tamFileId = `${addonId}/${localId}`
+    return await api.runOnBackend((tamFileIdLabel, tamFileId, addonId, addonName, parentRealId) => {
+        let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
+        if (existing && existing.isDeleted) existing = null
+        if (existing) {
+            if (existing.title !== addonName) {
+                existing.title = addonName
+                existing.save()
+            }
+            return existing.noteId
+        }
+        const { note } = api.createTextNote(parentRealId, addonName, "")
+        note.setLabel(tamFileIdLabel, tamFileId)
+        note.setLabel("addonId", addonId)
+        return note.noteId
+    }, [tamFileIdLabel, tamFileId, addonId, addonName, parentRealId])
+}
+
 const databaseLabel = "database"
 
 // Database read/write. The `database` relation lives on this note (lib-tam), read
@@ -860,11 +890,14 @@ async function syncAddon(addonId, options = {}) {
         await saveDatabase(database)
     }
 
-    // The manifest resolves in two anchored passes. Structural notes go under the "Addons"
-    // anchor as always. Persistent notes (the persistenceRoot subtree) go under the shared
-    // "Addon Data" anchor instead — a stable, TAM-owned note the uninstall sweep never touches,
-    // so user data survives an uninstall without any copy or reparenting. Cross-anchor
-    // ~template/relation edges still resolve fine; both passes share one noteMap via ctx.
+    // The manifest resolves in two anchored passes. Structural notes go under this addon's own
+    // TAM-owned root anchor (itself a child of the global "Addons" note), so every addon's tree
+    // reads as a distinct, named/tagged branch instead of a flat dump. Persistent notes (the
+    // persistenceRoot subtree) go under this addon's own TAM-owned persistence anchor (a child
+    // of the global "Addon Data" note) — stable, uninstall never touches it, so user data
+    // survives an uninstall without any copy or reparenting. Cross-anchor ~template/relation
+    // edges still resolve fine; both passes share one noteMap via ctx. TAM never lets an addon
+    // declare or reparent these anchors itself — only attach children beneath them.
     const persistentIds = persistentLocalIds(m)
     const structuralScope = persistentIds.size
         ? new Set(m.notes.map(n => n.id).filter(id => !persistentIds.has(id)))
@@ -872,18 +905,25 @@ async function syncAddon(addonId, options = {}) {
 
     const ctx = { database, catalogContext, depMetaCache: new Map(), dependencyEntries: new Map(), resolvingExports: new Set() }
 
+    const addonRootAnchorId = isSelf
+        ? await getAddonRootNoteId()
+        : await ensureAddonAnchor(addonId, manifest.name, addonAnchorRootLocalId, await getAddonRootNoteId())
+
     // Persistence pass FIRST, so persistent notes are in the shared map before the structural
     // pass applies relations like `templates-root --template--> tpl-special` that point into them.
     const noteMap = {}
     if (persistentIds.size) {
-        await resolveManifest(m, addonId, await getPersistenceNoteId(), fetchUrl, ctx, {
+        const persistenceAnchorId = isSelf
+            ? await getPersistenceNoteId()
+            : await ensureAddonAnchor(addonId, manifest.name, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
+        await resolveManifest(m, addonId, persistenceAnchorId, fetchUrl, ctx, {
             entryLocalId: m.persistenceRoot,
             scopeLocalIds: persistentIds,
             existingNoteMap: noteMap
         })
     }
 
-    await resolveManifest(m, addonId, await getAddonRootNoteId(), fetchUrl, ctx, {
+    await resolveManifest(m, addonId, addonRootAnchorId, fetchUrl, ctx, {
         rootExternallyParented: isSelf,
         scopeLocalIds: structuralScope,
         existingNoteMap: noteMap
@@ -1248,8 +1288,10 @@ async function deleteAddon(addonId) {
     let database = await loadDatabase()
     const addonRecord = database.installedAddons[addonId]
     // Persistent notes (under persistenceRoot) are left in the tree, still tagged #TAMFILEID, so a
-    // later reinstall re-adopts them and the user's data survives. Everything else is detached.
-    const persistentIds = [...persistentLocalIds(addonRecord?.manifest || {})]
+    // later reinstall re-adopts them and the user's data survives. The TAM-owned persistence
+    // anchor that holds them must survive alongside them, or its removal would orphan the data
+    // it parents. Everything else (including the structural root anchor) is detached.
+    const persistentIds = [...persistentLocalIds(addonRecord?.manifest || {}), addonAnchorPersistenceLocalId]
     await detachAddonOwnedBranches(addonId, persistentIds)
 
     delete database.installedAddons[addonId]
