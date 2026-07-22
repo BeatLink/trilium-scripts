@@ -33,7 +33,8 @@ function createDefaultRecurrenceState() {
             mode: "day",
             day: "",
             ordinal: "1",
-            weekday: ""
+            weekday: "",
+            month: "1"
         },
         time: {
             hour: "",
@@ -66,6 +67,11 @@ function applyMonthlyOptions(state, options) {
     }
 }
 
+function applyYearlyOptions(state, options) {
+    applyMonthlyOptions(state, options)
+    if (options.bymonth != null) state.month.month = String(firstOf(options.bymonth))
+}
+
 function applyTimeOptions(state, options) {
     const hour = firstOf(options.byhour)
     const minute = firstOf(options.byminute)
@@ -96,6 +102,7 @@ function RRuleToObj(rruleString) {
 
     if (state.interval === "WEEKLY") applyWeeklyOptions(state, options)
     if (state.interval === "MONTHLY") applyMonthlyOptions(state, options)
+    if (state.interval === "YEARLY") applyYearlyOptions(state, options)
     applyTimeOptions(state, options)
     applyStopOptions(state, options)
 
@@ -115,7 +122,7 @@ function buildRRuleOptions(state) {
             .map(([weekday]) => libRRule.RRule[weekday])
     }
 
-    if (state.interval === "MONTHLY") {
+    if (state.interval === "MONTHLY" || state.interval === "YEARLY") {
         const usesWeekday = state.month.mode === "weekday" && state.month.weekday
         const usesMonthDay = state.month.mode === "day" && state.month.day !== "" && state.month.day != null
         if (usesWeekday) {
@@ -123,6 +130,10 @@ function buildRRuleOptions(state) {
         } else if (usesMonthDay) {
             options.bymonthday = Number(state.month.day)
         }
+    }
+
+    if (state.interval === "YEARLY" && state.month.month !== "" && state.month.month != null) {
+        options.bymonth = Number(state.month.month)
     }
 
     if (state.time.hour !== "" && state.time.hour != null) options.byhour = Number(state.time.hour)
