@@ -246,19 +246,11 @@ where `settingsNote` points at a `launcher` note (attached directly under the re
 parent) that in turn has a `renderNote` relation to the actual settings JSX — so the same note opens
 whether you click the addon's root in the tree or the Settings button in TAM.
 
-#### `persistenceRoot` — removed, see the reserved `"persistence"` parent keyword
+#### `"persistence"` parent keyword
 
-Persistent notes — user settings, cached data, customized content that must survive updates *and*
-uninstalls — are declared by attaching them (directly or via further nesting) under the reserved
-`"persistence"` parent keyword in `children[]`, the same way `"root"` works for the structural tree.
-Anything reachable from `"persistence"` through `children[]` gets the persistence behaviour
-described in [Persistence](#persistence): created once, never content-overwritten on update
-(implicitly prompt-on-update), never deleted, resolved under that addon's own TAM-owned persistence
-anchor (a child of the global **Addon Data** note) instead of the addon's structural tree. Omit it
-entirely for addons with no user data to preserve. A note under `"persistence"` needs no
-`skipOnUpdate`/`promptOnUpdate` flag — placement alone governs it, and setting one is a redundancy
-`validate` warns about. See `agenda@beatlink` (config + templates attached under `"persistence"`)
-or any other addon with user data for the pattern.
+Notes that must survive updates and uninstalls (user settings, cached data, customized content)
+are attached under the reserved `"persistence"` parent keyword in `children[]`, the same way
+`"root"` works for the structural tree. See [Persistence](#persistence) for the full behaviour.
 
 #### `readmeNote` *(optional)*
 
@@ -303,7 +295,7 @@ Defines the parent-child tree structure. There are two forms:
 
 **Local child** — the child note is in this manifest; the parent is either another local note or
 one of the reserved anchor keywords, `"root"`/`"persistence"` (see [`root`](#root-tam-only) and
-[`persistenceRoot`](#persistenceroot--removed-see-the-reserved-persistence-parent-keyword)):
+[`"persistence"` parent keyword](#persistence-parent-keyword)):
 ```json
 {"parent": "root", "child": "script-note"}
 ```

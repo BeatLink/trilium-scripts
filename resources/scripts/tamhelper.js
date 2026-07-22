@@ -437,7 +437,7 @@ async function cmdValidate(args) {
             }
         }
 
-        // notes unreachable from root (or persistenceRoot) via children[] will never be created
+        // notes unreachable from "root" (or "persistence") via children[] will never be created
         const localChildren = new Set(
             (m.children || []).filter((c) => c.child).map((c) => c.child)
         );

@@ -25,8 +25,8 @@ const libTAMjs = require("lib-tam.js")
 // type-color palette, command labels, and the useAddonFilter hook.
 // =========================================================================
 
-// Same palette as scripts/generate_pages.py's TYPE_COLORS, so TAM's own UI
-// matches the GitHub Pages catalog's badge colors exactly.
+// Same palette as tamhelper.js's TYPE_COLORS, so TAM's own UI matches the
+// GitHub Pages catalog's badge colors exactly.
 const TYPE_COLORS = {
     widget: "#2563eb",
     theme: "#7c3aed",
@@ -103,8 +103,9 @@ function computeStats(addons, catalogs) {
         if (!addonData.installedVersion) continue
         installedCount++
         if (addonData.updateAvailable) updateCount++
-        // An addon holds user data if its manifest declares a persistenceRoot subtree.
-        if (addonData.manifest?.persistenceRoot) persistedCount++
+        // An addon holds user data if its manifest attaches anything under the reserved
+        // "persistence" parent keyword.
+        if (addonData.manifest?.children?.some(c => c.parent === "persistence")) persistedCount++
     }
     return { catalogCount: catalogs.length, installedCount, persistedCount, updateCount }
 }
