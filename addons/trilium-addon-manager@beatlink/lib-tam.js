@@ -1025,6 +1025,39 @@ async function sweepOrphanedNotes() {
     }, [tamFileIdLabel])
 }
 
+// User-triggered maintenance sweep: deletes any note under the global Addons root (never
+// Addon Data — persisted user data must survive this) that either carries no #TAMFILEID at
+// all, or one whose addonId prefix isn't a currently-installed addon (e.g. left behind by an
+// addon removed outside TAM's own uninstall flow). Returns the list of { noteId, title,
+// tamFileId } removed.
+async function sweepInvalidAddonTreeNotes() {
+    const database = await loadDatabase()
+    const installedIds = Object.keys(database.installedAddons || {})
+    const addonsRootId = await getAddonRootNoteId()
+    if (!addonsRootId) return []
+
+    return await api.runOnBackend((tamFileIdLabel, addonsRootId, installedIds) => {
+        const installedSet = new Set(installedIds)
+        const rootNote = api.getNote(addonsRootId)
+        if (!rootNote) return []
+
+        const removed = []
+        for (const noteId of rootNote.getSubtreeNoteIds()) {
+            if (noteId === addonsRootId) continue
+            const note = api.getNote(noteId)
+            if (!note || note.isDeleted) continue
+
+            const tamFileId = note.getLabelValue(tamFileIdLabel)
+            const addonId = tamFileId ? tamFileId.split("/")[0] : null
+            if (tamFileId && installedSet.has(addonId)) continue
+
+            removed.push({ noteId: note.noteId, title: note.title, tamFileId })
+            note.deleteNote()
+        }
+        return removed
+    }, [tamFileIdLabel, addonsRootId, installedIds])
+}
+
 // Removes every branch this addon owns, never a blanket note-level delete — a note only
 // disappears once none of its parents are left, so a clone held by a dependent survives.
 // Scans the live tree by #TAMFILEID prefix rather than walking a stored manifest's notes[]
@@ -1197,3 +1230,4 @@ module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase = validateDatabase
 module.exports.fetchReadmeHtml = fetchReadmeHtml
 module.exports.sweepOrphanedNotes = sweepOrphanedNotes
+module.exports.sweepInvalidAddonTreeNotes = sweepInvalidAddonTreeNotes

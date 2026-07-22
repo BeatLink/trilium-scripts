@@ -456,6 +456,12 @@ maintenance action — never run automatically — that deletes any `#TAMFILEID`
 parents anywhere. Nothing in normal operation should ever produce one; it's a safety net for a partial
 sync failure, not a routine cleanup step.
 
+**`sweepInvalidAddonTreeNotes`** (Settings' "Sweep Invalid Addon Tree Notes" button) is another
+user-triggered maintenance action, scoped to descendants of the global **Addons** root only (never
+**Addon Data** — persisted user data must survive this). It deletes any note there with no
+`#TAMFILEID` at all, or one whose addonId prefix doesn't match a currently-installed addon — e.g. a
+stray manually-created note, or leftovers from an addon removed outside TAM's own uninstall flow.
+
 ---
 
 ## Catalog Format

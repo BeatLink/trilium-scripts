@@ -84,6 +84,7 @@ const COMMAND_LABELS = {
     "check-updates": "Checking for updates",
     "validate-database": "Validating database",
     "sweep-orphans": "Sweeping orphaned notes",
+    "sweep-invalid-tree": "Sweeping invalid addon tree notes",
     "reinitialize-database": "Reinitializing database"
 }
 
@@ -535,7 +536,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onSweepOrphans, onReinitialize, anyUpdateAvailable
+    onValidate, onSweepOrphans, onSweepInvalidTree, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -590,6 +591,7 @@ function SettingsView({
                     {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
+                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Invalid Addon Tree Notes" onClick={onSweepInvalidTree} />
                     <TamButton
                         className="btn-ghost"
                         icon="bx bx-trash"
@@ -827,6 +829,18 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         await reload()
     }
 
+    async function handleSweepInvalidTree() {
+        const removed = await libTAMjs.sweepInvalidAddonTreeNotes()
+        setValidationTitle("Invalid Addon Tree Notes")
+        setValidationIssues(removed.map(({ title, tamFileId }) => ({
+            addonId: tamFileId ? tamFileId.split("/")[0] : "(none)",
+            message: tamFileId
+                ? `removed note '${title}' with TAMFILEID '${tamFileId}' for an addon that isn't installed`
+                : `removed note '${title}' with no TAMFILEID`
+        })))
+        await reload()
+    }
+
     async function handleReinitializeDatabase() {
         await libTAMjs.reinitializeDatabase()
         await reloadAndActivate()
@@ -852,6 +866,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "check-updates": handleCheckUpdates,
         "validate-database": handleValidateDatabase,
         "sweep-orphans": handleSweepOrphans,
+        "sweep-invalid-tree": handleSweepInvalidTree,
         "reinitialize-database": handleReinitializeDatabase
     }
 
@@ -988,6 +1003,7 @@ export default function RepoManager() {
                 onUpdateAll={() => dispatch({ command: "update-all" })}
                 onValidate={() => dispatch({ command: "validate-database" })}
                 onSweepOrphans={() => dispatch({ command: "sweep-orphans" })}
+                onSweepInvalidTree={() => dispatch({ command: "sweep-invalid-tree" })}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />
         )
