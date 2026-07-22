@@ -190,7 +190,10 @@ async function fetchBuffer(url) {
     // Every note's sourceUrl is an absolute URL (see lib-tam.js's resolveNotes) --
     // tam-to-zip fetches the same way TAM itself does at install time, rather than
     // reading a local file, so a local build always reflects what's actually published.
-    const response = await fetch(url);
+    // encodeURI leaves an already-escaped URL untouched but escapes raw special
+    // chars (e.g. "@" in an addon dir name) that otherwise make GitHub/CDN caches
+    // key the request differently -- see lib-tam.js's fetchWithRetry.
+    const response = await fetch(encodeURI(url));
     if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
     return Buffer.from(await response.arrayBuffer());
 }

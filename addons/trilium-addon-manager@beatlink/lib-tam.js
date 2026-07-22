@@ -162,7 +162,10 @@ function versionCompare(remote, local) {
 // Retries on HTTP 429, honoring Retry-After when sent, else exponential backoff.
 async function fetchWithRetry(url, maxRetries = 5) {
     for (let attempt = 0; ; attempt++) {
-        const response = await fetch(url)
+        // encodeURI leaves an already-escaped URL untouched (doesn't re-encode "%") but
+        // escapes raw special chars (e.g. "@" in an addon dir name) that otherwise make
+        // GitHub/CDN caches key the request differently, so a pushed update stays stale.
+        const response = await fetch(encodeURI(url))
         if (response.status !== 429 || attempt >= maxRetries) return response
         const retryAfter = Number(response.headers.get("retry-after"))
         const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -179,7 +182,7 @@ async function fetchJson(url) {
         // a separate backend context that can't close over the module-level one.
         async function fetchWithRetry(url, maxRetries = 5) {
             for (let attempt = 0; ; attempt++) {
-                const response = await fetch(url)
+                const response = await fetch(encodeURI(url))
                 if (response.status !== 429 || attempt >= maxRetries) return response
                 const retryAfter = Number(response.headers.get("retry-after"))
                 const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -427,7 +430,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     // this callback runs in a separate backend context that can't close over it.
                     async function fetchWithRetry(url, maxRetries = 5) {
                         for (let attempt = 0; ; attempt++) {
-                            const response = await fetch(url)
+                            const response = await fetch(encodeURI(url))
                             if (response.status !== 429 || attempt >= maxRetries) return response
                             const retryAfter = Number(response.headers.get("retry-after"))
                             const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
