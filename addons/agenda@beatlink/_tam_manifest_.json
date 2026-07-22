@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in four widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and an Actions section with Complete Task and a Reschedule dropdown), Note Actions (a right-pane widget on every note with Zen Mode and Hoist Note quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Note Actions (a right-pane widget on every note with Zen Mode and Hoist Note quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. The Task widget (a note's start/due dates, duration, recurrence, and Complete/Reschedule actions) now lives in the separate agenda-task@beatlink addon, with its own #agendaTaskConfig settings note; this addon clones in its recurrence/reschedule/label-override code so Overview and the Agenda Editor keep working whether or not Task is installed.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.4.1",
+    "latestVersion": "4.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -29,13 +29,6 @@
             {
                 "id": "grp-myday",
                 "title": "My Day",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "grp-task",
-                "title": "Task",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -136,49 +129,35 @@
                 "title": "libAgendaTask.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/libAgendaTask.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libAgendaTask.js"
             },
             {
                 "id": "lib-task-settings",
                 "title": "agendaTaskSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/agendaTaskSettings.js"
-            },
-            {
-                "id": "task-schema",
-                "title": "taskSchema.json",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskSchema.json"
-            },
-            {
-                "id": "task-config",
-                "title": "taskConfig.json",
-                "type": "code",
-                "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskConfig.json"
-            },
-            {
-                "id": "task-settings",
-                "title": "Task Settings",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/agendaTaskSettings.js"
             },
             {
                 "id": "task-labels-panel",
                 "title": "taskLabelsPanel.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskLabelsPanel.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskLabelsPanel.jsx"
             },
             {
                 "id": "lib-recurrence",
                 "title": "libRecurrence.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/libRecurrence.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libRecurrence.js"
+            },
+            {
+                "id": "recurrence-picker",
+                "title": "recurrencePicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/recurrencePicker.jsx"
             },
             {
                 "id": "timer",
@@ -244,7 +223,7 @@
                 "title": "rescheduleOptions.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/rescheduleOptions.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/rescheduleOptions.jsx"
             },
             {
                 "id": "profile-editor-css",
@@ -275,18 +254,11 @@
                 "sourceUrl": null
             },
             {
-                "id": "task",
-                "title": "agendaTask.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/agendaTask.jsx"
-            },
-            {
                 "id": "togglebutton",
                 "title": "FormToggleButton.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/FormToggleButton.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/FormToggleButton.jsx"
             },
             {
                 "id": "organize-page-src",
@@ -459,10 +431,6 @@
             },
             {
                 "parent": "root",
-                "child": "grp-task"
-            },
-            {
-                "parent": "root",
                 "child": "grp-organize"
             },
             {
@@ -532,22 +500,6 @@
             {
                 "parent": "grp-myday",
                 "child": "now-note"
-            },
-            {
-                "parent": "grp-task",
-                "child": "task"
-            },
-            {
-                "parent": "grp-task",
-                "child": "task-settings"
-            },
-            {
-                "parent": "grp-task",
-                "child": "task-schema"
-            },
-            {
-                "parent": "grp-task",
-                "child": "task-config"
             },
             {
                 "parent": "grp-organize",
@@ -715,7 +667,15 @@
             },
             {
                 "parent": "reschedule-options",
-                "child": "task"
+                "child": "recurrence-picker"
+            },
+            {
+                "parent": "recurrence-picker",
+                "child": "togglebutton"
+            },
+            {
+                "parent": "recurrence-picker",
+                "child": "lib-task"
             },
             {
                 "parent": "task-labels-panel",
@@ -736,18 +696,6 @@
             {
                 "parent": "my-day",
                 "child": "lib-overview"
-            },
-            {
-                "parent": "task",
-                "child": "lib-task-settings"
-            },
-            {
-                "parent": "task",
-                "child": "togglebutton"
-            },
-            {
-                "parent": "task",
-                "child": "lib-task"
             },
             {
                 "parent": "organize-page-src",
@@ -827,16 +775,6 @@
                 "to": "ical"
             },
             {
-                "from": "task-settings",
-                "type": "configNote",
-                "to": "task-config"
-            },
-            {
-                "from": "task-settings",
-                "type": "schemaNote",
-                "to": "task-schema"
-            },
-            {
                 "from": "profile-editor-page",
                 "type": "renderNote",
                 "to": "profile-editor"
@@ -899,11 +837,6 @@
                 "value": ""
             },
             {
-                "note": "task",
-                "name": "widget",
-                "value": ""
-            },
-            {
                 "note": "note-actions",
                 "name": "widget",
                 "value": ""
@@ -911,11 +844,6 @@
             {
                 "note": "settings",
                 "name": "agendaConfig",
-                "value": ""
-            },
-            {
-                "note": "task-settings",
-                "name": "agendaTaskConfig",
                 "value": ""
             },
             {
@@ -964,11 +892,6 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "grp-task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "grp-organize",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -1000,16 +923,6 @@
             },
             {
                 "note": "config",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "task-schema",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "task-config",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
@@ -1114,7 +1027,7 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "task",
+                "note": "recurrence-picker",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

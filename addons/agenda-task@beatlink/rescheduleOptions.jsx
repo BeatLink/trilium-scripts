@@ -1,6 +1,6 @@
 import { useState, useEffect, Button, FormTextBox, FormDropdownList } from "trilium:preact"
 import { loadSettings, saveSettings } from "libSettingsUI.jsx"
-import { RecurrencePicker } from "agendaTask.jsx"
+import { RecurrencePicker } from "recurrencePicker.jsx"
 
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 

@@ -1,7 +1,11 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in four widgets plus an Organize
-workflow, all sharing one configuration.
+A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an Organize
+workflow, all sharing one configuration. The Task widget (start/due dates, duration, recurrence,
+Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
+— install it alongside this one for the full Task pane; this addon clones in its recurrence/reschedule
+logic and settings panels either way, so the Agenda Editor and Overview keep working whether or not it's
+installed.
 
 ## Widgets
 
@@ -9,17 +13,6 @@ workflow, all sharing one configuration.
   the active profile's matching notes under a single shared overview note, shown as a built-in
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
-- **Task** — a right-pane editor shown on notes carrying the **`#agendaTaskWidget`** label (inherited
-  from actionable templates): start/due dates, duration, recurrence, and an **Actions** section with
-  Complete Task plus a single Reschedule dropdown button (pick an option and it reschedules
-  immediately, closing the popup). Classification (area, priority, item type) is assigned via each
-  dimension's own dedicated picker addon ([`area-picker@beatlink`](../area-picker@beatlink/README.md),
-  [`priority-widget@beatlink`](../priority-widget@beatlink/README.md),
-  [`template-picker@beatlink`](../template-picker@beatlink/README.md)), not here. Completing a task
-  advances it to its next recurrence, or archives it when the recurrence is exhausted. The Reschedule
-  dropdown's entries are configured on the Agenda Editor's **Settings › Reschedule Options** tab —
-  each is either a fixed number of days from now (ships with Today/Tomorrow) or the next occurrence
-  (from now) of a recurrence rule, in any order you choose.
 - **Note Actions** — a right-pane widget shown on every note with two quick actions, Zen Mode and
   Hoist Note, independent of the Task widget's actionable-note gating.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
@@ -78,21 +71,27 @@ priority/start-date queues. There's nothing to configure on agenda's side; add/r
 templates in template-picker's own settings and Organize's buckets follow on the next **Workflow
 Setup** run.
 
-Whether a note's Task editor shows at all is the separate **`#agendaTaskWidget`** label, set as an
-inheritable label on the template note so notes created from it get it automatically.
+Whether a note's Task editor shows at all (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
+is installed) is the separate **`#agendaTaskWidget`** label, set as an inheritable label on the
+template note so notes created from it get it automatically.
 
 Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
 chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).
 
 ## Shared configuration
 
-The config lives in one settings note holding a `schema.json`/`config.json` pair (label-name
-vocabulary, the inbox note, the **dimensions** registry, profiles, and the
-searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference). That note is
-tagged **`#agendaConfig`**; every widget finds it at runtime via `agendaSettings.jsx`, so a change made
-in the Agenda Editor is seen by all three widgets at once. The prefix/color/grouping/filter variants
-for each dimension are **derived** from the registry at read time, so adding a dimension yields all
-four with no extra setup and they can never drift from the vocabulary.
+The config lives in one settings note holding a `schema.json`/`config.json` pair (the inbox note, the
+**dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
+those profiles reference). That note is tagged **`#agendaConfig`**; every widget in this addon finds it
+at runtime via `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all of them at
+once. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
+read time, so adding a dimension yields all four with no extra setup and they can never drift from the
+vocabulary.
+
+The label-name vocabulary and the Reschedule dropdown's option registry live in a *separate* settings
+note, tagged **`#agendaTaskConfig`** — owned by [`agenda-task@beatlink`](../agenda-task@beatlink/README.md),
+not this addon. The Agenda Editor's **Settings** tab still edits it (via panels that addon exports), so
+there's one editing surface even though the two configs are stored in different notes.
 
 The Agenda Editor groups its tabs under seven workflow categories — **Collect**, **Organize**,
 **Review**, **Display Elements**, **Execute**, **Dimensions**, **Settings** — using
@@ -111,11 +110,12 @@ per-field `category`, plus `extraPanels` for the non-schema Workflow Setup and O
 - **Dimensions** — the classification vocabulary registry (area, priority, any you add). The Organize
   page embeds this same registry on its own **Dimensions** tab. Item type lives in
   template-picker@beatlink's own settings instead, not here.
-- **Settings** — the label-name vocabulary (grouped into **Start** / **Due** / **Task** sub-groups via
-  libsettings' `subgroup`), the Workflow Setup tab (provision button), and Reschedule Options (the
-  Task pane's Reschedule dropdown entries — a custom panel, `rescheduleOptions.jsx`, since a
-  recurrence-mode entry needs the same rich picker the Task pane's own Recurrence section uses, not a
-  raw rrule text box).
+- **Settings** — the Workflow Setup tab (provision button), plus two panels exported by
+  [`agenda-task@beatlink`](../agenda-task@beatlink/README.md): the label-name vocabulary (grouped into
+  **Start** / **Due** / **Task** sub-groups) and Reschedule Options (the Task pane's Reschedule dropdown
+  entries — a custom panel since a recurrence-mode entry needs the same rich picker the Task pane's own
+  Recurrence section uses, not a raw rrule text box). Both read/write `agenda-task@beatlink`'s own
+  `#agendaTaskConfig` note, not this addon's `#agendaConfig`.
 
 ### Config migrations
 
@@ -129,8 +129,18 @@ handles: an ordered list of one-time transforms of the raw persisted config, gat
 config. The shipped list is empty (nothing to reshape yet); adding a step is push-one-entry +
 bump the version.
 
-Task edits broadcast an `agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`;
-the Overview widget subscribes and re-files the overview note live.
+Task edits (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) is installed) broadcast an
+`agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`; the Overview widget
+subscribes and re-files the overview note live.
+
+## Upgrading from 3.x
+
+Version 4.0.0 splits the Task widget out into its own addon,
+[`agenda-task@beatlink`](../agenda-task@beatlink/README.md), with its own `#agendaTaskConfig` settings
+note. **Install `agenda-task@beatlink` to keep the Task pane** — this addon no longer ships it. An
+existing install's label-name overrides and Reschedule Options are copied automatically into the new
+settings note on `agenda-task@beatlink`'s first read after both addons are updated; no manual migration
+step is needed.
 
 ## Upgrading from 2.x
 
