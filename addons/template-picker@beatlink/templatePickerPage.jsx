@@ -31,7 +31,7 @@ function MissingTemplatesQueue({ templates, notes, onAssigned }) {
 
     return (
         <section className="template-picker-page-section">
-            <h3 className="template-picker-page-heading">Missing Templates</h3>
+            <h4 className="template-picker-page-heading">Missing Templates</h4>
             {notes.length === 0 ? (
                 <div className="template-picker-page-done">No notes are missing a template.</div>
             ) : !current ? (

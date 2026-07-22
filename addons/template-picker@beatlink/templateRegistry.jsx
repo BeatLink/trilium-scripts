@@ -12,7 +12,7 @@ import { loadSettings, saveSettings } from "libSettingsUI.jsx"
 // the registry and never touches an existing row.
 
 // Read the registry and drop rows whose note no longer exists. Returns
-// [{ id, noteId, name, enabled }] in registry order.
+// [{ id, noteId, name, enabled, color, actionable, icon }] in registry order.
 export async function getTemplates(schemaNoteId, configNoteId) {
     const settings = await loadSettings(schemaNoteId, configNoteId)
     const entries = Object.entries(settings.templates || {})
@@ -21,7 +21,8 @@ export async function getTemplates(schemaNoteId, configNoteId) {
         return entries
             .filter(([, e]) => e.templateNoteId && api.getNote(e.templateNoteId))
             .map(([id, e]) => ({
-                id, noteId: e.templateNoteId, name: e.name, enabled: e.enabled
+                id, noteId: e.templateNoteId, name: e.name, enabled: e.enabled,
+                color: e.color || "", actionable: !!e.actionable, icon: e.icon || ""
             }))
     }, [entries])
 }

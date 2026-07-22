@@ -26,6 +26,8 @@ Open the addon's settings note and use the **Templates** tab:
 - **Color**, if set, is mirrored onto `#color` whenever this template is assigned.
 - **Actionable** marks this template's notes as representing actionable work — for other addons that
   key off it rather than owning their own type vocabulary.
+- **Bucket Icon**, if set, is used by other addons that scaffold one folder per template (a BoxIcons
+  class without the leading `bx`, e.g. `bx-check`).
 
 Click **Save** to persist your changes.
 

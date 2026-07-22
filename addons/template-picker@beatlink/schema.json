@@ -34,6 +34,12 @@
                 "label": "Actionable",
                 "description": "Whether notes using this template represent actionable work (for other addons that flow actionable notes through priority/scheduling queues).",
                 "default": false
+            },
+            "icon": {
+                "type": "string",
+                "label": "Bucket Icon",
+                "description": "BoxIcons class, without the leading \"bx\" (e.g. \"bx-check\"). Used by other addons that scaffold one folder per template. Leave blank for a generic folder icon.",
+                "default": ""
             }
         }
     },
