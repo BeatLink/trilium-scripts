@@ -22,6 +22,42 @@
                 "label": "Enabled",
                 "description": "Whether this template appears in the picker dropdown.",
                 "default": true
+            },
+            "color": {
+                "type": "color",
+                "label": "Color",
+                "description": "Optional: mirrored onto a note's #color label when this template is assigned. Leave blank for no color.",
+                "default": ""
+            },
+            "actionable": {
+                "type": "boolean",
+                "label": "Actionable",
+                "description": "Whether notes using this template represent actionable work (for other addons that flow actionable notes through priority/scheduling queues).",
+                "default": false
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Template picker widget and skipped by the Missing Templates triage list.",
+        "default": {},
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #template or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
             }
         }
     }

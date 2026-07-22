@@ -28,24 +28,27 @@ function TemplatesPanel({ schemaNoteId, configNoteId }) {
 
     return (
         <div className="template-picker-settings">
-            <p className="template-picker-blurb">
-                The templates the picker dropdown offers. Run <strong>Scan</strong> to pull in every{" "}
-                <code>#template</code> note you have — newly found ones are added enabled, at the end.
-                Existing rows keep their settings and position. Untick <strong>Enabled</strong> to
-                hide a template, use each row's move controls to reorder, then click{" "}
-                <strong>Save</strong>.
-            </p>
-
-            <button className="template-picker-scan" disabled={busy} onClick={onScan}>
-                {busy ? "Scanning..." : "Scan for templates"}
-            </button>
-
-            {status && <div className="template-picker-status">{status}</div>}
-
             <SettingsForm
                 key={reloadKey}
                 schemaNoteId={schemaNoteId}
                 configNoteId={configNoteId}
+                extraPanels={[{
+                    tab: "Scan",
+                    render: () => (
+                        <>
+                            <p className="template-picker-blurb">
+                                Run <strong>Scan</strong> to pull in every <code>#template</code> note
+                                you have — newly found ones are added enabled, at the end, in the{" "}
+                                <strong>Templates</strong> tab. Existing rows keep their settings and
+                                position.
+                            </p>
+                            <button className="template-picker-scan" disabled={busy} onClick={onScan}>
+                                {busy ? "Scanning..." : "Scan for templates"}
+                            </button>
+                            {status && <div className="template-picker-status">{status}</div>}
+                        </>
+                    )
+                }]}
             />
         </div>
     )

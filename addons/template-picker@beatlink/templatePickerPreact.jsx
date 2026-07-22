@@ -1,6 +1,6 @@
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
-import { getTemplates } from "templateRegistry.jsx"
+import { getTemplates, assignTemplate, isExcludedFromPicker } from "templateRegistry.jsx"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 
 const NONE_OPTION = { noteId: "none", title: "None" }
@@ -10,12 +10,21 @@ export default defineWidget({
     position: 1,
     render() {
         const [existingTemplates, setExistingTemplates] = useState([NONE_OPTION])
+        const [templatesById, setTemplatesById] = useState({})
         const [dropdownValue, setDropdownValue] = useState("none")
+        const [excluded, setExcluded] = useState(false)
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         useEffect(() => {
             (async () => {
                 const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
+
+                if (await isExcludedFromPicker(schemaNoteId, configNoteId, noteId)) {
+                    setExcluded(true)
+                    return
+                }
+                setExcluded(false)
+
                 const templates = await getTemplates(schemaNoteId, configNoteId)
 
                 // An install that has never been scanned has an empty registry —
@@ -26,6 +35,8 @@ export default defineWidget({
                     ? templates.filter(t => t.enabled).map(t => ({ noteId: t.noteId, title: t.name }))
                     : (await searchForNotes("#template orderBy note.title"))
                         .map(n => ({ noteId: n.noteId, title: n.title }))
+
+                setTemplatesById(Object.fromEntries(templates.map(t => [t.noteId, t])))
 
                 const currentTemplate = (await getActiveContextNote())
                     .getRelationValue("template") ?? "none"
@@ -44,14 +55,11 @@ export default defineWidget({
                 setDropdownValue(currentTemplate)
             })()
         }, [noteId])
-        const saveTemplate = (template) => {
-            api.runOnBackend((noteId, template) => {
-                if (template != "none") {
-                    api.getNote(noteId).setRelation("template", template)
-                } else {
-                    api.getNote(noteId).removeRelation("template")
-                }
-            }, [note.noteId, template])
+
+        if (excluded) return null
+
+        const saveTemplate = async (template) => {
+            await assignTemplate(note.noteId, template, templatesById[template]?.color)
             setDropdownValue(template)
         }
         return (
