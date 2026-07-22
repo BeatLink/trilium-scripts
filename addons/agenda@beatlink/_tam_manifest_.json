@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in four widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and an Actions section with Complete Task and a Reschedule dropdown), Note Actions (a right-pane widget on every note with Zen Mode and Hoist Note quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.3.0",
+    "latestVersion": "3.4.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -103,6 +103,13 @@
                 "type": "code",
                 "mime": "text/plain",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/calendarEvents.ical"
+            },
+            {
+                "id": "note-actions",
+                "title": "noteActions.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/noteActions.jsx"
             },
             {
                 "id": "lib-overview",
@@ -456,6 +463,10 @@
             {
                 "parent": "grp-common",
                 "child": "ical"
+            },
+            {
+                "parent": "grp-common",
+                "child": "note-actions"
             },
             {
                 "parent": "grp-overview",
@@ -812,6 +823,11 @@
                 "value": ""
             },
             {
+                "note": "note-actions",
+                "name": "widget",
+                "value": ""
+            },
+            {
                 "note": "settings",
                 "name": "agendaConfig",
                 "value": ""
@@ -995,6 +1011,11 @@
                 "note": "task",
                 "name": "iconClass",
                 "value": "bx bx-task"
+            },
+            {
+                "note": "note-actions",
+                "name": "iconClass",
+                "value": "bx bx-move-vertical"
             },
             {
                 "note": "organize-page-src",

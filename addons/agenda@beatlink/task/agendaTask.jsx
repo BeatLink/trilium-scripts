@@ -425,22 +425,6 @@ function MainWidget(){
             icon: "bx bx-check",
             text: "Complete Task",
             onClick: async () => { await complete(noteId, ids.constants); await afterChange() }
-        },
-        {
-            key: "zen",
-            icon: "bx bx-expand",
-            text: "Zen Mode",
-            onClick: () => api.triggerCommand("toggleZenMode")
-        },
-        {
-            key: "hoist",
-            icon: "bx bx-move-vertical",
-            text: "Hoist Note",
-            onClick: () => {
-                api.setHoistedNoteId(
-                    api.getActiveContext().hoistedNoteId === noteId ? "root" : noteId
-                )
-            }
         }
     ]
 
@@ -459,30 +443,6 @@ function MainWidget(){
                         <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
                     </div>
                 )}
-                {isActionable && ids.rescheduleOptions.length > 0 && (
-                    <div>
-                        <label>Reschedule</label>
-                        <div className="reschedule-picker">
-                            <FormDropdownList
-                                values={ids.rescheduleOptions}
-                                currentValue={rescheduleChoice}
-                                onChange={setRescheduleChoice}
-                                keyProperty="id" titleProperty="name"
-                                class="dropdown-component form-control"
-                            />
-                            <Button
-                                icon="bx bx-rocket"
-                                text="Reschedule"
-                                onClick={async () => {
-                                    const option = ids.rescheduleOptions.find(o => o.id === rescheduleChoice)
-                                    if (!option) return
-                                    await rescheduleByOption(noteId, ids.constants, option)
-                                    await afterChange()
-                                }}
-                            />
-                        </div>
-                    </div>
-                )}
                 {isActionable && (
                     <div>
                         <label>Actions</label>
@@ -491,6 +451,24 @@ function MainWidget(){
                                 <Button key={key} icon={icon} text={text} onClick={onClick} />
                             ))}
                         </div>
+                        {ids.rescheduleOptions.length > 0 && (
+                            <div className="reschedule-picker">
+                                <FormDropdownList
+                                    values={ids.rescheduleOptions}
+                                    currentValue={rescheduleChoice}
+                                    text="Reschedule"
+                                    onChange={async value => {
+                                        setRescheduleChoice(value)
+                                        const option = ids.rescheduleOptions.find(o => o.id === value)
+                                        if (!option) return
+                                        await rescheduleByOption(noteId, ids.constants, option)
+                                        await afterChange()
+                                    }}
+                                    keyProperty="id" titleProperty="name"
+                                    class="dropdown-component form-control"
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

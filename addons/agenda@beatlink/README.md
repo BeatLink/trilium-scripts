@@ -1,6 +1,6 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an Organize
+A schema-driven, multi-profile task/agenda system for TriliumNext, in four widgets plus an Organize
 workflow, all sharing one configuration.
 
 ## Widgets
@@ -10,16 +10,18 @@ workflow, all sharing one configuration.
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
 - **Task** — a right-pane editor shown on notes carrying the **`#agendaTaskWidget`** label (inherited
-  from actionable templates): start/due dates, duration, recurrence, a configurable **Reschedule**
-  dropdown, and quick actions (complete, Zen, Hoist). Classification (area, priority, item type) is
-  assigned via each dimension's own dedicated picker addon
-  ([`area-picker@beatlink`](../area-picker@beatlink/README.md),
+  from actionable templates): start/due dates, duration, recurrence, and an **Actions** section with
+  Complete Task plus a single Reschedule dropdown button (pick an option and it reschedules
+  immediately, closing the popup). Classification (area, priority, item type) is assigned via each
+  dimension's own dedicated picker addon ([`area-picker@beatlink`](../area-picker@beatlink/README.md),
   [`priority-widget@beatlink`](../priority-widget@beatlink/README.md),
   [`template-picker@beatlink`](../template-picker@beatlink/README.md)), not here. Completing a task
   advances it to its next recurrence, or archives it when the recurrence is exhausted. The Reschedule
   dropdown's entries are configured on the Agenda Editor's **Settings › Reschedule Options** tab —
   each is either a fixed number of days from now (ships with Today/Tomorrow) or the next occurrence
   (from now) of a recurrence rule, in any order you choose.
+- **Note Actions** — a right-pane widget shown on every note with two quick actions, Zen Mode and
+  Hoist Note, independent of the Task widget's actionable-note gating.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
@@ -127,9 +129,8 @@ handles: an ordered list of one-time transforms of the raw persisted config, gat
 config. The shipped list is empty (nothing to reshape yet); adding a step is push-one-entry +
 bump the version.
 
-Task edits broadcast an `agenda:tasksChanged` event over
-[`libipc@beatlink`](../libipc@beatlink/README.md); the Overview widget subscribes and re-files the
-overview note live.
+Task edits broadcast an `agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`;
+the Overview widget subscribes and re-files the overview note live.
 
 ## Upgrading from 2.x
 
