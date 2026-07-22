@@ -1,21 +1,27 @@
 // === Trilium Code note ===
 // Title: organize.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by the Organize page).
+// Library only (CommonJS, require()'d by the Organize page and organizeProvision.js).
 //
 // Backend helpers for the Organize phase's triage queues:
+//   - getBucketTemplates(): template-picker@beatlink's own registry, resolved
+//     via its #templatePickerConfig anchor — the vocabulary for item TYPE, which
+//     is no longer an agenda dimension (see below).
 //   - getOrganizeCandidates(): every note under the Inbox or an Area subtree, with
 //     its per-dimension assigned value + suggested value (nearest ancestor's),
 //     plus its tree path, content preview, start-date flag and subtask flag.
-//   - getMisfiledNotes(): notes whose area/type disagrees with where they're filed.
+//   - getMisfiledNotes(): notes whose area/bucket disagrees with where they're filed.
 //   - deleteNote / refileNote: the per-note mutations. Dimension writes live in
 //     dimensions.assignDimension, shared with the Task pane.
 //
-// The vocabulary is agenda's own `dimensions` config (dimensions.getDimensions),
-// loaded by the page and passed in. A dimension is one note label plus its
-// ordered values; the type dimension additionally scaffolds buckets and marks
-// some values `actionable`, and one dimension scaffolds Area roots — see the
-// `rootDim`/`bucketDim` arguments below.
+// The classification vocabulary is agenda's own `dimensions` config
+// (dimensions.getDimensions) for everything except item TYPE. A note's type used
+// to be a #type label backed by agenda's own `type` dimension; it is now purely
+// its ~template relation, resolved against template-picker@beatlink's registry
+// (one-directional cross-addon read — agenda depends on template-picker, not the
+// other way around). Bucket scaffolding, the misfiled-bucket check, and the
+// actionable-item set all key on that registry's templateNoteId now, never on a
+// string slug.
 //
 // Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
 // structural notes themselves (anything carrying #agendaOrganizeArea or
@@ -26,6 +32,9 @@
 // are isolated and can't share helpers), and the frontend filters it into each
 // queue — cheaper and simpler than a separate walk per queue.
 
+const { getTemplates } = require("templateRegistry.jsx")
+const { loadSettings } = require("libSettingsUI.jsx")
+
 // Structural identity labels (written by organizeProvision.js). An area root has
 // `area` only; a bucket has `area` + `bucket`; the Inbox / My Day / Agenda
 // singletons have `special`.
@@ -35,24 +44,50 @@ const LABELS = {
     special: "agendaOrganizeSpecial"
 }
 
+// Resolve template-picker's own settings note ids via its #templatePickerConfig
+// anchor — the same discovery shape dimensions.js uses for agenda's own config,
+// pointed at a different addon's settings note. One-directional: template-picker
+// never reads anything back from agenda.
+async function getTemplatePickerConfigIds() {
+    const anchors = await api.searchForNotes("#templatePickerConfig")
+    if (!anchors.length) return null
+    const anchor = anchors[0]
+    const schemaNoteId = anchor.getRelationValue("schemaNote")
+    const configNoteId = anchor.getRelationValue("configNote")
+    if (!schemaNoteId || !configNoteId) return null
+    return { schemaNoteId, configNoteId }
+}
+
+// template-picker's enabled templates — the vocabulary for item TYPE. Returns []
+// when template-picker isn't discoverable, so callers degrade to "no templates"
+// rather than throw. [{ id, noteId, name, enabled, color, actionable, icon }],
+// `noteId` (the ~template target) is what everything else in this file keys on.
+async function getBucketTemplates() {
+    const ids = await getTemplatePickerConfigIds()
+    if (!ids) return []
+    const all = await getTemplates(ids.schemaNoteId, ids.configNoteId)
+    return all.filter(t => t.enabled)
+}
+
 // Collect every non-structural note under the Inbox / Area subtrees, each with:
 //   { noteId, title, path, preview, assigned, suggested, hasStartDate, isSubtask,
-//     type }
+//     templateId }
 // where `assigned` is { [dimension.label]: value } (the note's own value per
 // dimension, "" if unset) and `suggested` is the nearest ancestor's value per
 // dimension (used to pre-highlight a queue button). The frontend filters this
 // into the per-queue work lists (one queue per triaged dimension, plus start
-// date). `type` is the note's #type value, so the frontend can gate the
-// actionable-only queues without a second walk.
+// date). `templateId` is the note's ~template relation target (or ""), so the
+// frontend can gate the actionable-only queues without a second walk.
 //
-// `dimensionLabels` is the ordered list of every dimension's note label.
-// `actionableTypes` is the set of #type values marked actionable (routine/task/
-// future/project by default). `isSubtask` marks a note whose primary parent is
-// itself an actionable-type note (excluded from the no-start-date queue — it's
-// scheduled with its parent).
-async function getOrganizeCandidates(dimensionLabels, actionableTypes) {
-    return api.runOnBackend((labels, dimensionLabels, actionableTypes) => {
-        const actionableSet = new Set(actionableTypes)
+// `dimensionLabels` is the ordered list of every dimension's note label (area,
+// priority, any user-added — no longer includes type). `actionableTemplateIds`
+// is the set of ~template noteIds marked actionable in template-picker's
+// registry. `isSubtask` marks a note whose primary parent's own ~template is
+// itself actionable (excluded from the no-start-date queue — it's scheduled
+// with its parent).
+async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
+    return api.runOnBackend((labels, dimensionLabels, actionableTemplateIds) => {
+        const actionableSet = new Set(actionableTemplateIds)
         // Scope roots: the Inbox note + every Area root. An area root carries
         // the area label and NO bucket label; a bucket carries both and is NOT a
         // scope root (its contents are still reached by descending from the area
@@ -127,13 +162,13 @@ async function getOrganizeCandidates(dimensionLabels, actionableTypes) {
         }
 
         // A note is a subtask when its primary parent is itself an actionable
-        // note (its #type is an actionable value). Subtasks are managed under
-        // their parent, so they're excluded from the "no start date" queue
+        // note (its ~template is an actionable template). Subtasks are managed
+        // under their parent, so they're excluded from the "no start date" queue
         // (scheduled with the parent, not on their own).
         function parentIsActionable(note) {
             const parent = note.getParentNotes()[0]
             if (!parent) return false
-            return actionableSet.has(parent.getLabelValue("type") || "")
+            return actionableSet.has(parent.getRelationValue("template") || "")
         }
 
         // Collect descendants of the scope roots, de-duped (a note can be cloned
@@ -157,7 +192,7 @@ async function getOrganizeCandidates(dimensionLabels, actionableTypes) {
                         preview: previewOf(child),
                         assigned,
                         suggested: ancestorValues(child),
-                        type: child.getLabelValue("type") || "",
+                        templateId: child.getRelationValue("template") || "",
                         hasStartDate: !!child.getLabelValue("startDateTime"),
                         isSubtask: parentIsActionable(child)
                     })
@@ -168,38 +203,39 @@ async function getOrganizeCandidates(dimensionLabels, actionableTypes) {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [LABELS, dimensionLabels, actionableTypes])
+    }, [LABELS, dimensionLabels, actionableTemplateIds])
 }
 
-// Find notes whose area or type disagrees with where they're filed. The tree has
-// two scaffolding axes: an Area root per value of the root dimension, and a
-// bucket per value of the bucket dimension inside each root. A note under
-// "Home > Task" implies #area=home and #type=task; it's misfiled if its own
-// #<rootLabel> differs from the ancestor Area, or its own #<bucketLabel> differs
-// from the ancestor bucket. Only notes inside an Area subtree are checked (Inbox
-// notes aren't filed yet).
+// Find notes whose area or bucket disagrees with where they're filed. The tree
+// has two scaffolding axes: an Area root per value of the area dimension, and a
+// bucket per enabled template-picker entry inside each. A note under
+// "Home > Task" implies #area=home and ~template=<Task's noteId>; it's misfiled
+// if its own #<rootLabel> differs from the ancestor Area, or its own ~template
+// differs from the ancestor bucket's. Only notes inside an Area subtree are
+// checked (Inbox notes aren't filed yet).
 //
-// `rootDim` / `bucketDim` are the two designated dimensions
-// ({ label, values: [{ key, name, color }] }). Returns per note:
+// `rootDim` is the area-scaffolding dimension ({ label, values: [{ key, name,
+// color }] }). `bucketTemplates` is template-picker's registry
+// ([{ noteId, name, color, ... }], as returned by getBucketTemplates). Returns
+// per note:
 //   { noteId, title, path, preview,
 //     areaMisfiled, typeMisfiled,
 //     branchArea, branchBucket, noteArea, noteTemplateTitle,
 //     fixes: { moveTargetNoteId, moveTargetLabel, updateAreaTo, updateAreaColor,
-//              updateTypeTo, updateTypeToTitle } }
-// `branchBucket` is the ancestor bucket's value key. `updateTypeTo` is the value
-// KEY (not a note id) so the frontend assigns it through assignDimension.
-async function getMisfiledNotes(rootDim, bucketDim) {
-    return api.runOnBackend((labels, rootDim, bucketDim) => {
+//              updateTemplateTo, updateTemplateToTitle } }
+// `branchBucket` is the ancestor bucket's ~template noteId. `updateTemplateTo` is
+// that noteId (not a slug) so the frontend sets ~template directly.
+async function getMisfiledNotes(rootDim, bucketTemplates) {
+    return api.runOnBackend((labels, rootDim, bucketTemplates) => {
         const rootLabel = rootDim.label
-        const bucketLabel = bucketDim.label
         const areaTagged = api.searchForNotes(`#${labels.area}`)
         const specialTagged = api.searchForNotes(`#${labels.special}`)
         const structuralIds = new Set(
             areaTagged.concat(specialTagged).map(n => n.noteId))
 
-        // Index structural notes by "<areaKey>" / "<areaKey> <bucketKey>" so we
-        // can resolve "the Task bucket under the Home area" -> a real noteId.
-        const idKey = (areaKey, bucketKey) => bucketKey ? `${areaKey} ${bucketKey}` : areaKey
+        // Index structural notes by "<areaKey>" / "<areaKey> <bucketNoteId>" so
+        // we can resolve "the Task bucket under the Home area" -> a real noteId.
+        const idKey = (areaKey, bucketId) => bucketId ? `${areaKey} ${bucketId}` : areaKey
         const byKey = {}
         for (const n of areaTagged) {
             byKey[idKey(n.getLabelValue(labels.area), n.getLabelValue(labels.bucket))] = n
@@ -211,9 +247,9 @@ async function getMisfiledNotes(rootDim, bucketDim) {
         const colorByKey = {}
         for (const v of rootDim.values) colorByKey[v.key] = v.color || ""
 
-        // bucket value key -> display name (for the "Set type to …" button).
+        // bucket ~template noteId -> display name (for the "Set type to …" button).
         const bucketNameByKey = {}
-        for (const v of bucketDim.values) bucketNameByKey[v.key] = v.name
+        for (const t of bucketTemplates) bucketNameByKey[t.noteId] = t.name
 
         function pathOf(note) {
             const parts = []
@@ -239,9 +275,9 @@ async function getMisfiledNotes(rootDim, bucketDim) {
         }
 
         // Nearest ancestor Area's root value, and nearest ancestor bucket's
-        // value — both read straight off the structural identity labels
-        // (#agendaOrganizeArea / #agendaOrganizeBucket) that scaffolding carries,
-        // so no key parsing is involved.
+        // ~template noteId — both read straight off the structural identity
+        // labels (#agendaOrganizeArea / #agendaOrganizeBucket) that scaffolding
+        // carries, so no key parsing is involved.
         function branchContext(note) {
             let branchArea = ""
             let branchBucket = ""
@@ -271,18 +307,18 @@ async function getMisfiledNotes(rootDim, bucketDim) {
                 if (!structuralIds.has(child.noteId)) {
                     const { branchArea, branchBucket } = branchContext(child)
                     const noteArea = child.getLabelValue(rootLabel) || ""
-                    const noteBucket = child.getLabelValue(bucketLabel) || ""
-                    const noteTemplateTitle = noteBucket ? (bucketNameByKey[noteBucket] || noteBucket) : ""
+                    const noteBucket = child.getRelationValue("template") || ""
+                    const noteTemplateTitle = noteBucket ? (bucketNameByKey[noteBucket] || "") : ""
 
                     const areaMisfiled = !!noteArea && !!branchArea && noteArea !== branchArea
-                    // A note with no bucket value is never type-misfiled (we don't
+                    // A note with no ~template is never type-misfiled (we don't
                     // know where it belongs).
                     const typeMisfiled = !!noteBucket && !!branchBucket && noteBucket !== branchBucket
 
                     if (areaMisfiled || typeMisfiled) {
                         flagged = true
                         // Move target: the note's correct Area (by its own root
-                        // value) and, if it has a bucket value, that bucket under
+                        // value) and, if it has a ~template, that bucket under
                         // that area. Best-effort — fall back to the area root, or
                         // the current area when the note's own value is unknown.
                         let moveTargetNoteId = ""
@@ -298,8 +334,8 @@ async function getMisfiledNotes(rootDim, bucketDim) {
                             }
                         }
 
-                        // "Set type" fix: adopt the branch bucket's own value key.
-                        const canonicalTitle = branchBucket ? (bucketNameByKey[branchBucket] || branchBucket) : ""
+                        // "Set type" fix: adopt the branch bucket's own ~template.
+                        const canonicalTitle = branchBucket ? (bucketNameByKey[branchBucket] || "") : ""
 
                         // The branch this note is filed under (its parent in this
                         // subtree walk) — what a move removes it from.
@@ -322,8 +358,8 @@ async function getMisfiledNotes(rootDim, bucketDim) {
                                 moveTargetLabel,
                                 updateAreaTo: areaMisfiled ? branchArea : "",
                                 updateAreaColor: areaMisfiled ? (colorByKey[branchArea] || "") : "",
-                                updateTypeTo: typeMisfiled && branchBucket ? branchBucket : "",
-                                updateTypeToTitle: typeMisfiled && branchBucket ? canonicalTitle : ""
+                                updateTemplateTo: typeMisfiled && branchBucket ? branchBucket : "",
+                                updateTemplateToTitle: typeMisfiled && branchBucket ? canonicalTitle : ""
                             }
                         })
                     }
@@ -338,7 +374,7 @@ async function getMisfiledNotes(rootDim, bucketDim) {
 
         for (const root of areaRootNotes) visit(root)
         return out
-    }, [LABELS, rootDim, bucketDim])
+    }, [LABELS, rootDim, bucketTemplates])
 }
 
 // Move a note from one parent branch to another (add to new, remove from old),
@@ -371,30 +407,43 @@ async function assignStartDate(noteId, dateStr, timeStr) {
     }, [noteId, dateStr, timeStr])
 }
 
+// Assign (or clear) a note's ~template relation directly — used by the misfiled
+// queue's "Set type" fix, which adopts the branch bucket's own template rather
+// than going through dimensions.assignDimension (there is no type dimension to
+// route it through any more).
+async function assignTemplate(noteId, templateNoteId) {
+    return api.runOnBackend((noteId, templateNoteId) => {
+        const note = api.getNote(noteId)
+        if (!note) return false
+        if (templateNoteId) note.setRelation("template", templateNoteId)
+        else note.removeRelation("template")
+        return true
+    }, [noteId, templateNoteId])
+}
+
 // Find INVALID buckets: structural bucket notes whose identity no longer maps to
-// a current dimension value. A bucket carries #agendaOrganizeArea=<areaSlug> plus
-// #agendaOrganizeBucket=<bucketSlug>; it's invalid when its area slug is not a
-// current root-dimension value OR its bucket slug is not a current bucket-
-// dimension value — the orphan left behind when the user deletes or renames an
-// Area or Type value in the Dimensions editor. (mergeStaleBuckets only auto-
-// resolves buckets it CAN map via aliases; these are the residue it reports as
-// `skipped` — surfaced here so the user can act on them.)
+// a current vocabulary. A bucket carries #agendaOrganizeArea=<areaSlug> plus
+// #agendaOrganizeBucket=<templateNoteId>; it's invalid when its area slug is not
+// a current area-dimension value OR its bucket noteId is not a current enabled
+// template-picker entry — the orphan left behind when the user deletes/disables
+// an Area value or a template, or deletes the template note itself.
 //
-// `rootDim` / `bucketDim` are the two scaffolding dimensions
-// ({ label, values: [{ key, name }] }). Returns
+// `rootDim` is the area-scaffolding dimension ({ label, values: [{ key, name }] }).
+// `bucketTemplates` is template-picker's registry ([{ noteId, name, ... }]).
+// Returns
 //   { invalid: [{ noteId, title, path, area, bucket, childCount,
 //                 areaInvalid, bucketInvalid, reason }],
 //     targets: [{ noteId, label }] }
 // where `targets` is every VALID bucket (a merge destination), labelled by its
 // tree path so the user can tell "Home › Tasks" from "Career › Tasks".
-async function getInvalidBuckets(rootDim, bucketDim) {
-    return api.runOnBackend((labels, rootDim, bucketDim) => {
+async function getInvalidBuckets(rootDim, bucketTemplates) {
+    return api.runOnBackend((labels, rootDim, bucketTemplates) => {
         const areaKeys = new Set(rootDim.values.map(v => v.key))
-        const bucketKeys = new Set(bucketDim.values.map(v => v.key))
+        const bucketKeys = new Set(bucketTemplates.map(t => t.noteId))
         const areaNameByKey = {}
         for (const v of rootDim.values) areaNameByKey[v.key] = v.name
         const bucketNameByKey = {}
-        for (const v of bucketDim.values) bucketNameByKey[v.key] = v.name
+        for (const t of bucketTemplates) bucketNameByKey[t.noteId] = t.name
 
         function pathOf(note) {
             const parts = []
@@ -429,7 +478,7 @@ async function getInvalidBuckets(rootDim, bucketDim) {
 
             const reasons = []
             if (areaInvalid) reasons.push(`area "${area || "(none)"}" is not a current area`)
-            if (bucketInvalid) reasons.push(`type "${bucket || "(none)"}" is not a current type`)
+            if (bucketInvalid) reasons.push(`type "${bucketNameByKey[bucket] || bucket || "(none)"}" is not a current template`)
             invalid.push({
                 noteId: note.noteId,
                 title: note.title,
@@ -443,7 +492,7 @@ async function getInvalidBuckets(rootDim, bucketDim) {
             })
         }
         return { invalid, targets }
-    }, [LABELS, rootDim, bucketDim])
+    }, [LABELS, rootDim, bucketTemplates])
 }
 
 // Merge one bucket into another: move every child of `fromNoteId` into
@@ -529,11 +578,13 @@ async function deleteNote(noteId) {
 }
 
 module.exports = {
+    getBucketTemplates,
     getOrganizeCandidates,
     getMisfiledNotes,
     getInvalidBuckets,
     mergeBucketInto,
     assignStartDate,
+    assignTemplate,
     refileNote,
     deleteNote
 }

@@ -4,8 +4,8 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const {
-    getOrganizeCandidates, getMisfiledNotes, getInvalidBuckets,
-    assignStartDate, refileNote, deleteNote, mergeBucketInto
+    getBucketTemplates, getOrganizeCandidates, getMisfiledNotes, getInvalidBuckets,
+    assignStartDate, assignTemplate, refileNote, deleteNote, mergeBucketInto
 } = require("organize.js")
 const { getDimensions, assignDimension } = require("dimensions.js")
 
@@ -364,6 +364,7 @@ async function loadTimeSettings() {
 // in-memory lists in place so an acted-on note leaves its queue.
 function TriagePanel() {
     const [dimensions, setDimensions] = useState(null)
+    const [bucketTemplates, setBucketTemplates] = useState([])
     const [candidates, setCandidates] = useState(null)
     const [misfiled, setMisfiled] = useState(null)
     const [invalidBuckets, setInvalidBuckets] = useState(null)
@@ -374,22 +375,23 @@ function TriagePanel() {
         setCandidates(null)
         setMisfiled(null)
         setInvalidBuckets(null)
-        // The dimension vocabulary drives every queue and the misfiled check, so
-        // load it first. The two scaffolding dimensions (root = Area, bucket =
-        // Type) are the misfiled axes; the type dimension's actionable values gate
-        // the actionable-only queues.
+        // The dimension vocabulary (area, priority, any user-added) drives the
+        // per-dimension triage queues. Item TYPE is no longer a dimension — the
+        // misfiled axis and the actionable-only gate both key on template-picker's
+        // own registry instead (getBucketTemplates), via ~template.
         const dims = await getDimensions()
         const rootDim = dims.find(d => d.scaffoldsAreas) || { label: "area", values: [] }
-        const bucketDim = dims.find(d => d.scaffoldsBuckets) || { label: "type", values: [] }
-        const actionableTypes = bucketDim.values.filter(v => v.actionable).map(v => v.key)
+        const templates = await getBucketTemplates()
+        const actionableTemplateIds = templates.filter(t => t.actionable).map(t => t.noteId)
 
         const [cands, mis, invalid, tms] = await Promise.all([
-            getOrganizeCandidates(dims.map(d => d.label), actionableTypes),
-            getMisfiledNotes(rootDim, bucketDim),
-            getInvalidBuckets(rootDim, bucketDim),
+            getOrganizeCandidates(dims.map(d => d.label), actionableTemplateIds),
+            getMisfiledNotes(rootDim, templates),
+            getInvalidBuckets(rootDim, templates),
             loadTimeSettings()
         ])
         setDimensions(dims)
+        setBucketTemplates(templates)
         setCandidates(cands)
         setMisfiled(mis)
         setInvalidBuckets(invalid.invalid)
@@ -404,13 +406,13 @@ function TriagePanel() {
         return <div className="workflow-organize"><div>Loading...</div></div>
     }
 
-    // The two scaffolding dimensions drive the misfiled queue's fix buttons: the
-    // root (Area) fix re-tags #area, the bucket (Type) fix re-tags #type. The set
-    // of actionable #type values gates the actionable-only queues.
+    // The Area dimension drives the misfiled queue's area fix (re-tags #area);
+    // the bucket fix re-points ~template instead, using template-picker's
+    // registry. The set of actionable templates' noteIds gates the
+    // actionable-only queues.
     const rootDim = dimensions.find(d => d.scaffoldsAreas)
-    const bucketDim = dimensions.find(d => d.scaffoldsBuckets)
-    const actionableTypes = new Set(
-        (bucketDim ? bucketDim.values : []).filter(v => v.actionable).map(v => v.key))
+    const actionableTemplateIds = new Set(
+        bucketTemplates.filter(t => t.actionable).map(t => t.noteId))
 
     // Record a dimension value onto a candidate's in-memory `assigned` map so the
     // acted-on note leaves that dimension's queue.
@@ -439,7 +441,7 @@ function TriagePanel() {
     function queueItems(dim) {
         return candidates.filter(c => {
             if (c.assigned[dim.label]) return false
-            if (dim.actionableOnly && !(actionableTypes.has(c.type) && !c.isSubtask)) return false
+            if (dim.actionableOnly && !(actionableTemplateIds.has(c.templateId) && !c.isSubtask)) return false
             return true
         })
     }
@@ -447,13 +449,13 @@ function TriagePanel() {
     // Actionable items with no start date (#startDateTime) yet. Subtasks (filed
     // under a parent actionable note) are excluded — scheduled with the parent.
     const noStartDate = candidates.filter(c =>
-        !c.hasStartDate && !c.isSubtask && actionableTypes.has(c.type))
+        !c.hasStartDate && !c.isSubtask && actionableTemplateIds.has(c.templateId))
 
     return (
         <div className="workflow-organize">
             {dimensions.length === 0 && (
                 <div className="workflow-window-placeholder">
-                    No dimensions configured. Add area/type/priority (or your own) in the Dimensions
+                    No dimensions configured. Add area/priority (or your own) in the Dimensions
                     tab so there are values to assign.
                 </div>
             )}
@@ -507,7 +509,7 @@ function TriagePanel() {
                         reasons.push(`area is ${item.noteArea} but it's filed under ${item.branchArea}`)
                     }
                     if (item.typeMisfiled) {
-                        reasons.push(`type is ${item.noteTemplateTitle} but it's in the ${item.branchBucket} bucket`)
+                        reasons.push(`type is ${item.noteTemplateTitle || "(unknown)"} but it's filed in a different bucket`)
                     }
                     const buttons = [
                         <div key="reason" className="workflow-organize-reason">
@@ -545,19 +547,18 @@ function TriagePanel() {
                             </button>
                         )
                     }
-                    if (item.typeMisfiled && f.updateTypeTo && bucketDim) {
+                    if (item.typeMisfiled && f.updateTemplateTo) {
                         buttons.push(
                             <button
                                 key="type"
                                 className="workflow-organize-option-btn"
                                 disabled={busy}
                                 onClick={() => act(async () => {
-                                    const v = bucketDim.values.find(x => x.key === f.updateTypeTo)
-                                    await assignDimension(item.noteId, bucketDim, v || { key: f.updateTypeTo })
+                                    await assignTemplate(item.noteId, f.updateTemplateTo)
                                     dropMisfiled(item.noteId)
                                 })}
                             >
-                                Set {bucketDim.name.toLowerCase()} to {f.updateTypeToTitle}
+                                Set type to {f.updateTemplateToTitle || "(unknown)"}
                             </button>
                         )
                     }

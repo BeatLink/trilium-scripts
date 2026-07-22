@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's classification, start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/type-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area, type and priority ship as defaults, but you can add your own; each dimension gets a Task-pane picker, a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Agenda's config, including that registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's classification, start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a Task-pane picker, a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.3.3",
+    "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -297,55 +297,6 @@
                 "sourceUrl": null
             },
             {
-                "id": "tpl-idea",
-                "title": "Ideas",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/ideas.html"
-            },
-            {
-                "id": "tpl-goal",
-                "title": "Goal",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/goal.html"
-            },
-            {
-                "id": "tpl-routine",
-                "title": "Routine",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/routine.html"
-            },
-            {
-                "id": "tpl-task",
-                "title": "Task",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/task.html"
-            },
-            {
-                "id": "tpl-future",
-                "title": "Future",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/future.html"
-            },
-            {
-                "id": "tpl-project",
-                "title": "Project",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/project.html"
-            },
-            {
-                "id": "tpl-note",
-                "title": "Note",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/note.html"
-            },
-            {
                 "id": "tpl-area",
                 "title": "AreaCollection",
                 "type": "text",
@@ -552,34 +503,6 @@
             {
                 "parent": "grp-organize",
                 "child": "organize-css"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-idea"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-goal"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-routine"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-task"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-future"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-project"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-note"
             },
             {
                 "parent": "templates-root",
@@ -1116,186 +1039,6 @@
                 "note": "templates-root",
                 "name": "iconClass",
                 "value": "bx bx-task"
-            },
-            {
-                "note": "tpl-idea",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-idea",
-                "name": "iconClass",
-                "value": "bx bx-bulb"
-            },
-            {
-                "note": "tpl-idea",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-idea",
-                "name": "type",
-                "value": "ideas"
-            },
-            {
-                "note": "tpl-goal",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-goal",
-                "name": "iconClass",
-                "value": "bx bxs-star-half"
-            },
-            {
-                "note": "tpl-goal",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-goal",
-                "name": "type",
-                "value": "goal"
-            },
-            {
-                "note": "tpl-routine",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-routine",
-                "name": "iconClass",
-                "value": "bx bx-sync"
-            },
-            {
-                "note": "tpl-routine",
-                "name": "agendaTaskWidget(inheritable)",
-                "value": ""
-            },
-            {
-                "note": "tpl-routine",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-routine",
-                "name": "label:priority",
-                "value": "single,text"
-            },
-            {
-                "note": "tpl-routine",
-                "name": "type",
-                "value": "routine"
-            },
-            {
-                "note": "tpl-task",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-task",
-                "name": "iconClass",
-                "value": "bx bx-check"
-            },
-            {
-                "note": "tpl-task",
-                "name": "agendaTaskWidget(inheritable)",
-                "value": ""
-            },
-            {
-                "note": "tpl-task",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-task",
-                "name": "label:priority",
-                "value": "single,text"
-            },
-            {
-                "note": "tpl-task",
-                "name": "type",
-                "value": "task"
-            },
-            {
-                "note": "tpl-future",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-future",
-                "name": "iconClass",
-                "value": "bx bx-time-five"
-            },
-            {
-                "note": "tpl-future",
-                "name": "agendaTaskWidget(inheritable)",
-                "value": ""
-            },
-            {
-                "note": "tpl-future",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-future",
-                "name": "label:priority",
-                "value": "single,text"
-            },
-            {
-                "note": "tpl-future",
-                "name": "type",
-                "value": "future"
-            },
-            {
-                "note": "tpl-project",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-project",
-                "name": "iconClass",
-                "value": "bx bx-check-double"
-            },
-            {
-                "note": "tpl-project",
-                "name": "agendaTaskWidget(inheritable)",
-                "value": ""
-            },
-            {
-                "note": "tpl-project",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-project",
-                "name": "label:priority",
-                "value": "single,text"
-            },
-            {
-                "note": "tpl-project",
-                "name": "type",
-                "value": "project"
-            },
-            {
-                "note": "tpl-note",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-note",
-                "name": "iconClass",
-                "value": "bx bx-notepad"
-            },
-            {
-                "note": "tpl-note",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-note",
-                "name": "type",
-                "value": "note"
             },
             {
                 "note": "tpl-area",

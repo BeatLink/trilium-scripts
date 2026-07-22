@@ -23,21 +23,7 @@ const {
     AREA_TEMPLATE_TITLE, TYPE_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE,
     AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE, SPECIAL_TYPE
 } = require("organizeStructure.js")
-const { matchTemplatesByName } = require("dimensions.js")
-
-// Structural #type values that changed name, not just shape, when the numeric
-// prefixes were dropped: old value -> new.
-//
-// "8-special" maps to the singletons' marker because that is what it becomes for
-// the notes this map can still reach. Buckets also wore it, but they are
-// re-stamped to `typecollection` by provisionNode's derived pass on the same run,
-// which lands after this one — so a bucket briefly mapped to `special` here is
-// corrected before the run ends, and a bucket the walk no longer reaches (a
-// dropped area) is inert scaffolding either way.
-const LEGACY_TYPE_VALUES = {
-    "7-area": AREA_COLLECTION_TYPE,
-    "8-special": SPECIAL_TYPE
-}
+const { getBucketTemplates } = require("organize.js")
 
 // Structural identity, split across three independent labels (see
 // organizeStructure.js). An area root has AREA_LABEL only; a bucket has
@@ -60,13 +46,6 @@ const AREA_ALIASES = {
     health: "fitness",
     productivity: "tech"
 }
-
-// Renamed bucket (type) values that fold into a surviving one: old key ->
-// surviving key. A bucket note carries the old key in its identity label, and
-// there is no way to recover the new key from it — so once a type value is
-// renamed, this map is the only link between its old buckets and the new key.
-// Add an entry when renaming a type value that already has buckets in the wild.
-const TEMPLATE_ALIASES = {}
 
 // Normalize every note's #area onto area-picker's stable keys.
 //
@@ -103,44 +82,6 @@ async function migrateAreaSlugs(areaList) {
     }, [areaList, AREA_ALIASES])
 }
 
-// Normalize every note's #type off the old "<order>-<slug>" shape onto the bare
-// slug ("3-task" -> "task").
-//
-// #type used to bake the template's `order` into its value, so reordering the
-// template list rewrote the label on every tagged note. Order now comes from the
-// registry's position instead (libAgendaConfig.getSortValueMaps, the same
-// mechanism #area has always used), leaving #type a stable, order-free slug.
-//
-// Only values whose stripped form matches a CURRENT template slug are rewritten.
-// A "<NN>-<word>" #type that resolves to no known template is left alone — #type
-// is a public label the user may also be using for a vocabulary of their own, and
-// blind prefix-stripping would silently rewrite it.
-//
-// Idempotent: a bare slug has no prefix to strip and compares equal, so a second
-// run migrates nothing. Returns the count of notes migrated.
-async function migrateTypeSlugs(templateList) {
-    return api.runOnBackend((templateList, containerTypes, renames) => {
-        // The slugs a migrated value is allowed to land on: every managed
-        // template, plus the structural container markers.
-        const known = new Set(templateList.map(t => t.slug))
-        for (const t of containerTypes) known.add(t)
-
-        let migrated = 0
-        for (const note of api.searchForNotes("#type")) {
-            const current = note.getLabelValue("type")
-            if (!current) continue
-            // The structural values changed name as well as shape ("7-area" ->
-            // "areacollection"), so they resolve through an explicit map rather
-            // than by stripping.
-            const target = renames[current] || current.replace(/^\d+-/, "")
-            if (target === current || !known.has(target)) continue
-            note.setLabel("type", target)
-            migrated++
-        }
-        return migrated
-    }, [templateList, [AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE], LEGACY_TYPE_VALUES])
-}
-
 // Fold duplicate and stale buckets down to a single survivor per (area, bucket)
 // identity. Three duplication scenarios collapse to one problem -- more than one
 // note claims the same LIVE bucket identity -- handled uniformly:
@@ -149,8 +90,9 @@ async function migrateTypeSlugs(templateList) {
 //      area=home bucket=task). Neither is stale; the old code skipped both.
 //   B. A tagged bucket plus a hand-made same-titled sibling with no identity
 //      labels (provisioning adopted the tagged one, orphaning the twin).
-//   C. A bucket whose key is stale (area folded via AREA_ALIASES, or bucket key
-//      renamed via TEMPLATE_ALIASES) and should resolve onto a current key.
+//   C. A bucket whose area folded via AREA_ALIASES and should resolve onto the
+//      surviving area (a bucket's own noteId-based identity never goes stale on
+//      its own — only its area half can).
 //
 // Every candidate is resolved to its live identity, grouped by it, and each
 // group with >1 note keeps ONE survivor (a member already at the live identity,
@@ -179,35 +121,36 @@ async function migrateTypeSlugs(templateList) {
 //              rekeyedInPlace }],
 //   skipped: [...] }.
 async function mergeStaleBuckets(areaList, templateList, dryRun) {
-    return api.runOnBackend((areaList, templateList, aliases, templateAliases, labels, dryRun) => {
+    return api.runOnBackend((areaList, templateList, aliases, labels, dryRun) => {
         // Current vocabularies. Area keys are already stable slugs; a legacy
         // "<NN>-" prefix is stripped so pre-migration buckets still resolve.
         const areaSlugByName = {}
         for (const a of areaList) areaSlugByName[a.slug.replace(/^\d\d-/, "")] = a.slug
-        const templateSlugs = new Set(templateList.map(t => t.slug))
+        // Bucket identity is a template noteId, which never gets renamed — no
+        // alias table needed, a bucket's own value either is or isn't a
+        // currently-enabled template.
+        const templateIds = new Set(templateList.map(t => t.noteId))
 
         const identityOf = n => ({
             area: n.getLabelValue(labels.area) || "",
             bucket: n.getLabelValue(labels.bucket) || ""
         })
-        // Pipe-delimited: a slug is [a-z0-9-] only, so "|" can never appear in
-        // either half and an (area, bucket) pair can never collide with another.
+        // Pipe-delimited: a slug is [a-z0-9-] only and a noteId is alphanumeric,
+        // so "|" can never appear in either half and an (area, bucket) pair can
+        // never collide with another.
         const idKey = id => id.bucket ? `${id.area}|${id.bucket}` : id.area
 
         // Resolve a note's identity to today's vocabulary, or null if either
         // half is unresolvable. Area keys are stable, so they resolve directly
         // (a legacy "<NN>-" prefix is stripped first, and AREA_ALIASES covers
-        // folds); a renamed bucket key resolves only via an explicit alias.
+        // folds); a bucket noteId resolves only if it's still a live template.
         function currentIdentityFor(id) {
             const areaName = id.area.replace(/^\d\d-/, "")
             const liveArea = areaSlugByName[aliases[areaName] || areaName]
             if (!liveArea) return null
             if (!id.bucket) return { area: liveArea, bucket: "" }
-            const liveBucket = templateSlugs.has(id.bucket)
-                ? id.bucket
-                : (templateAliases[id.bucket] || "")
-            if (!liveBucket || !templateSlugs.has(liveBucket)) return null
-            return { area: liveArea, bucket: liveBucket }
+            if (!templateIds.has(id.bucket)) return null
+            return { area: liveArea, bucket: id.bucket }
         }
 
         function bodyOf(n) {
@@ -380,7 +323,7 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
         }
 
         return { merges, skipped }
-    }, [areaList, templateList, AREA_ALIASES, TEMPLATE_ALIASES,
+    }, [areaList, templateList, AREA_ALIASES,
         { area: AREA_LABEL, bucket: BUCKET_LABEL, special: SPECIAL_LABEL }, !!dryRun])
 }
 
@@ -544,24 +487,19 @@ async function provisionNode(parentNoteId, node, templateId) {
 // Walk the whole structure depth-first, provisioning each node under its
 // resolved parent. Top-level nodes go under "root".
 //
-// `dimensions` is agenda's full dimension list; the two scaffolding dimensions
-// drive the tree: the root dimension (scaffoldsAreas) becomes the Area notes,
-// the bucket dimension (scaffoldsBuckets) the per-type buckets inside each. Both
-// are reduced here to the { slug, name, color } / { slug, name, icon } shapes the
-// builder and migrations expect. Returns a flat result log
+// `dimensions` is agenda's full dimension list; the root dimension
+// (scaffoldsAreas) becomes the Area notes, reduced here to the
+// { slug, name, color } shape the builder and migrations expect. The per-type
+// buckets no longer come from a dimension — they come straight from
+// template-picker@beatlink's own enabled registry entries
+// ({ noteId, name, icon }), one bucket per entry. Returns a flat result log
 // [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
 async function provisionStructure(dimensions) {
     const rootDim = dimensions.find(d => d.scaffoldsAreas)
-    const bucketDim = dimensions.find(d => d.scaffoldsBuckets)
     const areaList = (rootDim ? rootDim.values : [])
         .map(v => ({ slug: v.key, name: v.name, color: v.color }))
-    const templateList = (bucketDim ? bucketDim.values : [])
-        .map(v => ({ slug: v.key, name: v.name, icon: v.icon, noteId: v.templateNoteId }))
-
-    // Fill any blank bucket-value template notes by title match, so a fresh
-    // install ends up with each bucket's ~template set even though note ids can't
-    // ship as defaults.
-    await matchTemplatesByName()
+    const templateList = (await getBucketTemplates())
+        .map(t => ({ noteId: t.noteId, name: t.name, icon: t.icon }))
 
     // Resolve the two templates once up front, then map each node's template
     // title to a real id inside the walk.
@@ -601,15 +539,10 @@ async function provisionStructure(dimensions) {
     // re-key any note still carrying a stale area slug from a prior ordering.
     const migratedAreaCount = await migrateAreaSlugs(areaList)
 
-    // Same shape for #type: strip the legacy "<order>-" prefix now that ordering
-    // lives in the templates registry's position rather than in the label value.
-    // Runs after the walk so the structural notes' own #type is already current.
-    const migratedTypeCount = await migrateTypeSlugs(templateList)
-
-    return { results, migratedAreaCount, migratedTypeCount, merged, labelMigration }
+    return { results, migratedAreaCount, merged, labelMigration }
 }
 
 module.exports = {
-    provisionStructure, migrateAreaSlugs, migrateTypeSlugs, mergeStaleBuckets, migrateStructuralLabels,
+    provisionStructure, migrateAreaSlugs, mergeStaleBuckets, migrateStructuralLabels,
     AREA_LABEL, BUCKET_LABEL, SPECIAL_LABEL
 }

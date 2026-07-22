@@ -479,12 +479,14 @@ async function cmdValidate(args) {
 
         // children references. "root"/"persistence" are reserved parent keywords meaning
         // "TAM's synthesized structural/persistence anchor" -- never real declared notes.
+        // A cross-addon child (c.addon set) names an export from that OTHER addon's manifest,
+        // not a local id here, so it's exempt from the local noteIds check.
         for (const c of m.children || []) {
             const parent = c.parent, child = c.child;
             if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
                 error(manifestFile, `children: parent '${parent}' not found in notes`);
             }
-            if (child && !noteIds.has(child)) {
+            if (child && !c.addon && !noteIds.has(child)) {
                 error(manifestFile, `children: child '${child}' not found in notes`);
             }
         }

@@ -38,6 +38,15 @@ reporting the note as having no template.
 Before the first scan the registry is empty, and the picker falls back to showing every `#template`
 note sorted by title.
 
+## Bundled templates
+
+This addon ships seven ready-made item templates — **Ideas**, **Goal**, **Routine**, **Task**,
+**Future**, **Project**, **Note** — under its own **Templates** container note, persisted so your
+edits survive updates. They were moved here from `agenda@beatlink` (which still ships the three
+structural templates its Organize workflow scaffolds with — those aren't meant to be picked as an
+item's own type). Run **Scan** to register the bundled ones in your dropdown if they aren't there
+already.
+
 ## Missing Templates
 
 A separate page (its own launcher note, "Missing Templates") lists every non-hidden note that has no
@@ -56,3 +65,12 @@ A filter with a blank query is ignored; an unparseable query is skipped rather t
 
 The `#noTemplatePicker` label is no longer read. To hide a template, scan once and untick its
 **Enabled** box.
+
+## Upgrading from 1.4.x, if you already have agenda@beatlink installed
+
+Version 1.5.0 takes over the seven item templates that used to ship with `agenda@beatlink`. If you
+already have agenda installed, **run
+[`migrate-templates-from-agenda.js`](migrate-templates-from-agenda.js) once, manually, before updating
+either addon** — it re-tags your existing template notes so this addon adopts them in place instead of
+agenda's next sync deleting them and this addon creating fresh blank ones. See that script's own header
+comment for exact steps. A fresh install with no prior agenda has nothing to migrate.

@@ -3,12 +3,13 @@
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by organizeProvision.js / the Setup page).
 //
-// The opinionated notebook layout this addon provisions. Two of agenda's own
-// `dimensions` feed it (provisionStructure derives these shapes from the config):
-//   - the AREA list — the values of the root dimension (scaffoldsAreas):
+// The opinionated notebook layout this addon provisions. Fed by:
+//   - the AREA list — the values of agenda's own root dimension (scaffoldsAreas):
 //     [{ slug, name, color }].
-//   - the TEMPLATE list — the values of the bucket dimension (scaffoldsBuckets):
-//     [{ slug, name, icon, noteId }] in order.
+//   - the TEMPLATE list — template-picker@beatlink's own enabled registry
+//     entries: [{ noteId, name, icon }] in order. Item TYPE is no longer an
+//     agenda dimension, so there is no bucket slug any more — a bucket's
+//     identity IS the template's own noteId.
 // This module supplies only the fixed structural parts (the three top-level
 // container singletons, the two structural template titles, the container type
 // markers) and assembles the full tree.
@@ -19,23 +20,25 @@
 // later (see README.md).
 //
 // Identity is carried by three INDEPENDENT labels rather than one composite key:
-//   #agendaOrganizeArea=<areaSlug>       on an area root AND on every bucket in it
-//   #agendaOrganizeBucket=<templateSlug> on a bucket (alongside the area label)
-//   #agendaOrganizeSpecial=<name>        on the Inbox / My Day / Agenda singletons
+//   #agendaOrganizeArea=<areaSlug>          on an area root AND on every bucket in it
+//   #agendaOrganizeBucket=<templateNoteId>  on a bucket (alongside the area label)
+//   #agendaOrganizeSpecial=<name>           on the Inbox / My Day / Agenda singletons
 // So an area root is "has area, no bucket", a bucket is "has both", and the two
-// slugs are read directly instead of being parsed back out of one string.
+// values are read directly instead of being parsed back out of one string.
 //
 // Those are the addon's PRIVATE identity labels, used to resolve notes during
 // provisioning. Separately, the same notes carry the PUBLIC #area / #type labels
 // that agenda's views and the user's own searches key on — an area root is
 // "#area=<slug> #type=areacollection", a bucket "#area=<slug> #type=typecollection".
-// The two sets are kept distinct on purpose: renaming a template moves the
-// private bucket slug, but the public container markers stay fixed.
+// The two sets are kept distinct on purpose: swapping a bucket's backing
+// template moves the private bucket identity, but the public container markers
+// stay fixed.
 //
 // A node:
 //   key         stable identity for logging/diffing (not written to the note)
 //   area        #agendaOrganizeArea value, when this node belongs to an area
-//   bucket      #agendaOrganizeBucket value, when this node is a bucket
+//   bucket      #agendaOrganizeBucket value (a template noteId), when this node
+//               is a bucket
 //   special     #agendaOrganizeSpecial value, for the top-level singletons
 //   title       the note title matched on / created with
 //   icon        BoxIcons class (without the leading "bx "); re-asserted every run
@@ -44,7 +47,7 @@
 //   areaValue   #area value; re-asserted every run. Omitted -> no #area managed.
 //   typeValue   #type value; re-asserted every run. For structural notes this is
 //               a container marker (areacollection / typecollection), never the
-//               slug of an item type. Omitted -> no #type managed.
+//               noteId of an item template. Omitted -> no #type managed.
 //   template    title of a *structural* bundled template (AreaCollection /
 //               TypeCollection / Special) to set as a ~template relation, resolved
 //               live at provision time: area roots are AreaCollection, per-type
@@ -59,37 +62,36 @@
 // notes. seedLabels and note content are only touched at creation.
 
 // Structural (non-item) template titles, one per kind of container:
-//   AreaCollection — an area root (holds one bucket per bucket value)
-//   TypeCollection — a per-type bucket inside an area (holds items of one type)
+//   AreaCollection — an area root (holds one bucket per template)
+//   TypeCollection — a per-template bucket inside an area (holds items of one type)
 //   Special        — the Inbox / My Day / Agenda singletons, which belong to no area
 // The two collection templates are told apart by the labels their notes carry:
 // an AreaCollection has #area alone, a TypeCollection has #area plus #type.
-// None of the three are part of the type dimension — they're fixed scaffolding,
-// never offered as an assignable type value.
+// None of the three are ever offered as an assignable item template.
 const AREA_TEMPLATE_TITLE = "AreaCollection"
 const TYPE_TEMPLATE_TITLE = "TypeCollection"
 const SPECIAL_TEMPLATE_TITLE = "Special"
 
 // The #type values marking a note as a container rather than an item. They sit in
-// the same namespace as the item slugs (#type=task, #type=goal) and must never
-// collide with one, so a view filtering on an item type never picks up the
-// scaffolding that holds it. These match the #type the manifest stamps on the
-// template notes themselves.
+// the same namespace as a template's own #type (if any) and must never collide
+// with one, so a view filtering on an item type never picks up the scaffolding
+// that holds it. These match the #type the manifest stamps on the template
+// notes themselves.
 const AREA_COLLECTION_TYPE = "areacollection"
 const TYPE_COLLECTION_TYPE = "typecollection"
 const SPECIAL_TYPE = "special"
 
-// A BoxIcons class for a bucket comes from the bucket value's own `icon`
-// (configured per value in the Dimensions editor); anything blank gets a neutral
-// folder.
+// A BoxIcons class for a bucket comes from the template's own `icon`
+// (configured per row in template-picker's registry); anything blank gets a
+// neutral folder.
 function bucketIcon(tpl) {
     return tpl.icon || "bx-folder"
 }
 
-// Build one Area node (+ one bucket per bucket value) from a root value
-// { slug, name, color } and the bucket value list. `slug` is the #area
-// value (e.g. "03-legal"); the area root carries #agendaOrganizeArea=<slug> and
-// each bucket carries that SAME area label plus #agendaOrganizeBucket=<tplSlug>,
+// Build one Area node (+ one bucket per template) from a root value
+// { slug, name, color } and the template list. `slug` is the #area
+// value (e.g. "legal"); the area root carries #agendaOrganizeArea=<slug> and
+// each bucket carries that SAME area label plus #agendaOrganizeBucket=<templateNoteId>,
 // its title the template's name, and its ~template the area/Special container
 // template (a bucket is a container, not an instance of the type it holds).
 function buildAreaNode(area, templateList) {
@@ -112,9 +114,9 @@ function buildAreaNode(area, templateList) {
         typeValue: AREA_COLLECTION_TYPE,
         seedLabels: [],
         children: (templateList || []).map(tpl => ({
-            key: `${key}-${tpl.slug}`,
+            key: `${key}-${tpl.noteId}`,
             area: area.slug,
-            bucket: tpl.slug,
+            bucket: tpl.noteId,
             title: tpl.name,
             icon: bucketIcon(tpl),
             // Buckets inherit their area's color; no other seed labels.
@@ -122,10 +124,11 @@ function buildAreaNode(area, templateList) {
             template: TYPE_TEMPLATE_TITLE,
             // #type is what separates a bucket from its area root: both carry
             // #area, only the bucket carries #type. Its value is the fixed
-            // container marker, NOT the slug of the type it holds — a bucket is a
-            // container, not an instance, so #type=task must keep meaning "a task"
-            // and never "the place tasks live". Which type a bucket holds is
-            // already carried by #agendaOrganizeBucket=<tplSlug>. Derived
+            // container marker, NOT the item template it holds — a bucket is a
+            // container, not an instance, so its own ~template stays
+            // TypeCollection even though it FILES notes whose ~template is
+            // something else. Which item template a bucket holds is already
+            // carried by #agendaOrganizeBucket=<templateNoteId>. Derived
             // (re-asserted every run).
             typeValue: TYPE_COLLECTION_TYPE,
             // Pin buckets open so expanded@beatlink keeps their area expanded in

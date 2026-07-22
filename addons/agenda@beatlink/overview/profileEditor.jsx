@@ -3,7 +3,7 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
-const { getDimensions, matchTemplatesByName } = require("dimensions.js")
+const { getDimensions } = require("dimensions.js")
 
 // The icon stamped on the note that hosts the Organize UI.
 const ORGANIZE_ICON = "bx bx-sort-down"
@@ -214,51 +214,6 @@ function WorkflowSetup() {
     )
 }
 
-// The Dimensions tab: the classification registry plus the "Match Templates By
-// Name" action inlined above it (rather than on a separate tab). Match Templates
-// fills each type value's blank Template Note by matching its Name against a
-// #template note's title — note ids are install-specific so they can't ship as
-// schema defaults. This mirrors the Organize page's embedded DimensionsPanel;
-// it's injected as an extraPanel so the button and the registry share one tab
-// (extraPanels can only replace a schema tab's body, not append to it, so the
-// registry is re-rendered here via `only="Dimensions"`).
-function DimensionsTab({ schemaNoteId, configNoteId }) {
-    const [matching, setMatching] = useState(false)
-    const [result, setResult] = useState("")
-
-    async function runMatch() {
-        setMatching(true)
-        setResult("")
-        try {
-            const count = await matchTemplatesByName()
-            setResult(count
-                ? `Matched ${count} value${count === 1 ? "" : "s"} to a template note.`
-                : "No blank template notes matched a #template title.")
-        } finally {
-            setMatching(false)
-        }
-    }
-
-    return (
-        <div className="dimensions-tab">
-            <p className="workflow-setup-blurb">
-                Fill each type value's blank <strong>Template Note</strong> by matching its Name
-                against a <code>#template</code> note's title. Only blank slots are filled, so a
-                hand-picked template is never overwritten. Workflow Setup runs this too.
-            </p>
-            <button className="workflow-setup-button" disabled={matching} onClick={runMatch}>
-                {matching ? "Matching..." : "Match Templates By Name"}
-            </button>
-            {result && <div className="workflow-setup-summary">{result}</div>}
-            <SettingsForm
-                schemaNoteId={schemaNoteId}
-                configNoteId={configNoteId}
-                only="Dimensions"
-            />
-        </div>
-    )
-}
-
 export default function ProfileEditor() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
@@ -282,11 +237,11 @@ export default function ProfileEditor() {
 
     // Panels the schema can't express on its own, injected into SettingsForm's
     // category/tab nav: the Organize-note picker under Organize (wires which note
-    // hosts the Organize triage UI); the provision button under Settings ›
-    // Workflow Setup; and the Dimensions tab, which OVERRIDES the schema-rendered
-    // `dimensions` registry tab of the same label so the Match Templates button
-    // sits inline above the registry rather than on a separate tab. Everything
-    // else groups by its own schema `category`.
+    // hosts the Organize triage UI) and the provision button under Settings ›
+    // Workflow Setup. The Dimensions tab needs no override any more — item TYPE
+    // moved to template-picker@beatlink's own registry, so there's no "Match
+    // Templates By Name" action left to inject above it. Everything else groups
+    // by its own schema `category`.
     const extraPanels = [
         {
             category: "Organize",
@@ -303,13 +258,6 @@ export default function ProfileEditor() {
             category: "Settings",
             tab: "Workflow Setup",
             render: () => <WorkflowSetup />
-        },
-        {
-            category: "Dimensions",
-            tab: "Dimensions",
-            render: () => (
-                <DimensionsTab schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-            )
         }
     ]
 

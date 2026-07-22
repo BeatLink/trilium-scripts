@@ -179,7 +179,6 @@
             "triage": { "type": "boolean", "label": "Triage Unassigned Notes", "description": "Give this dimension a queue in Organize listing notes that lack a value.", "default": true },
             "actionableOnly": { "type": "boolean", "label": "Triage Only Actionable Notes", "description": "Restrict that queue to notes whose type is marked Actionable.", "default": false },
             "scaffoldsAreas": { "type": "boolean", "label": "Scaffold A Root Note Per Value", "description": "Workflow Setup builds one notebook root note per value of this dimension.", "default": false },
-            "scaffoldsBuckets": { "type": "boolean", "label": "Scaffold A Bucket Per Value", "description": "Workflow Setup builds one bucket per value of this dimension inside every root note.", "default": false },
             "values": {
                 "type": "registry",
                 "label": "Values",
@@ -188,7 +187,6 @@
                     "name": { "type": "string", "label": "Name", "default": "" },
                     "key": { "type": "string", "label": "Label Value", "description": "The stored value. Changing it orphans every note already tagged with the old one.", "default": "" },
                     "color": { "type": "color", "label": "Color", "default": "gray" },
-                    "templateNoteId": { "type": "note", "label": "Template Note", "description": "Assigning this value also sets the note's ~template relation to this note. Use Match Templates By Name to fill these in.", "default": "" },
                     "actionable": { "type": "boolean", "label": "Actionable", "description": "Items of this value flow through the priority and start-date triage queues.", "default": false },
                     "icon": { "type": "string", "label": "Bucket Icon", "default": "" }
                 }
@@ -203,7 +201,6 @@
                 "triage": true,
                 "actionableOnly": false,
                 "scaffoldsAreas": true,
-                "scaffoldsBuckets": false,
                 "values": {
                     "career": { "name": "Career", "key": "career", "color": "red" },
                     "finances": { "name": "Finances", "key": "finances", "color": "red" },
@@ -220,25 +217,6 @@
                     "fun": { "name": "Fun", "key": "fun", "color": "magenta" }
                 }
             },
-            "type": {
-                "name": "Type",
-                "label": "type",
-                "writeColor": false,
-                "picker": true,
-                "triage": true,
-                "actionableOnly": false,
-                "scaffoldsAreas": false,
-                "scaffoldsBuckets": true,
-                "values": {
-                    "ideas": { "name": "Ideas", "key": "ideas", "color": "gray", "icon": "bx-bulb", "actionable": false },
-                    "goal": { "name": "Goal", "key": "goal", "color": "gray", "icon": "bxs-star-half", "actionable": false },
-                    "routine": { "name": "Routine", "key": "routine", "color": "gray", "icon": "bx-sync", "actionable": true },
-                    "task": { "name": "Task", "key": "task", "color": "gray", "icon": "bx-check", "actionable": true },
-                    "future": { "name": "Future", "key": "future", "color": "gray", "icon": "bx-time-five", "actionable": true },
-                    "project": { "name": "Project", "key": "project", "color": "gray", "icon": "bx-check-double", "actionable": true },
-                    "note": { "name": "Note", "key": "note", "color": "gray", "icon": "bx-notepad", "actionable": false }
-                }
-            },
             "priority": {
                 "name": "Priority",
                 "label": "priority",
@@ -247,7 +225,6 @@
                 "triage": true,
                 "actionableOnly": true,
                 "scaffoldsAreas": false,
-                "scaffoldsBuckets": false,
                 "values": {
                     "4-critical": { "name": "Must Do", "key": "4-critical", "color": "red" },
                     "3-high": { "name": "Should Do", "key": "3-high", "color": "gold" },

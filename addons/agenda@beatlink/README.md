@@ -10,7 +10,9 @@ workflow, all sharing one configuration.
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
 - **Task** — a right-pane editor for editing a note's classification (one dropdown per dimension —
-  area, type, priority, or any you add). On notes carrying the **`#agendaTaskWidget`** label
+  area, priority, or any you add; item type is assigned via
+  [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own widget, not a dimension
+  here). On notes carrying the **`#agendaTaskWidget`** label
   (inherited from actionable templates), it also shows start/due dates, duration, recurrence, and
   quick actions (complete, start today/tomorrow, Zen, Hoist). Completing a task advances it to its
   next recurrence, or archives it when the recurrence is exhausted.
@@ -21,13 +23,13 @@ workflow, all sharing one configuration.
 ## Organize (GTD triage)
 
 An opinionated Collect → Organize workflow on top of the widgets above, driven by agenda's own
-open-ended **dimensions** (area, type and priority ship as defaults; add your own in the Dimensions
-tab):
+open-ended **dimensions** (area and priority ship as defaults; add your own in the Dimensions tab) plus
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s registry for item type:
 
 - **Workflow Setup** — a tab in the Agenda Editor's **Settings › Workflow Setup**: one button
   provisions the notebook structure by find-or-create: **Inbox**, **My Day**, **Agenda**, and one note
-  per value of the root dimension (Area, each with an Ideas / Goals / Routines / Tasks / Future /
-  Projects / Notes bucket per value of the bucket dimension below it). Every structural note is tagged
+  per value of the root dimension (Area, each with a bucket per **enabled template** in
+  template-picker's registry below it). Every structural note is tagged
   with its identity labels (**`#agendaOrganizeArea`** / **`#agendaOrganizeBucket`** /
   **`#agendaOrganizeSpecial`** — this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so
   it can be resolved later; re-running adopts hand-made notes rather than duplicating, and re-keys
@@ -35,11 +37,12 @@ tab):
   provisioning model.
 - **Organize** — a two-tab page: **Triage** (a one-at-a-time queue over every note under the Inbox /
   Area subtrees, with one section per triaged dimension assigning its missing value — **`#area`** (+
-  `#color`), **`#type`** (+ `~template`), **`#priority`** (+ `#color`), or any dimension you add —
+  `#color`), **`#priority`** (+ `#color`), or any dimension you add —
   plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`), a **Misfiled Notes**
-  fixer for notes whose area/type disagrees with where they're filed, and an **Invalid Buckets**
-  table listing scaffolded buckets whose area/type slug no longer maps to a current dimension value,
-  each row offering **Merge** into a chosen valid bucket or **Delete**) and
+  fixer for notes whose area/`~template` disagrees with where they're filed, and an **Invalid Buckets**
+  table listing scaffolded buckets whose area/template no longer maps to a current value,
+  each row offering **Merge** into a chosen valid bucket or **Delete**. Note without a `~template` at
+  all are surfaced by template-picker's own **Missing Templates** page, not here.) and
   **Dimensions** (the vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time
   buttons use the times on the Agenda Editor's **Organize › Times** tab.
 
@@ -50,26 +53,28 @@ tab):
 
 ## Templates
 
-Bundled under a **Templates** container note is one template per item type — Ideas, Goal, Routine,
-Task, Future, Project, Note — plus three structural containers the Organize workflow scaffolds with:
-**AreaCollection** (an area root), **TypeCollection** (a per-type bucket inside an area), and
-**Special** (the Inbox / My Day / Agenda singletons). Each carries `#template` (so it is discoverable
-by Trilium and the Template Picker widget). Template content is yours to customize — the templates live
-under the addon's `persistenceRoot`, so a future update that changes a default prompts an Update Review
-rather than overwriting your edits.
+Agenda's own **Templates** container note holds only the three structural templates the Organize
+workflow scaffolds with: **AreaCollection** (an area root), **TypeCollection** (a per-template bucket
+inside an area), and **Special** (the Inbox / My Day / Agenda singletons). The seven item templates —
+Ideas, Goal, Routine, Task, Future, Project, Note — ship with
+[`template-picker@beatlink`](../template-picker@beatlink/README.md) instead (a dependency of this
+addon), since assigning them is entirely its concern now. Each carries `#template` (so it is
+discoverable by Trilium and the Template Picker widget). Template content is yours to customize — every
+template lives under its owning addon's `persistenceRoot`, so a future update that changes a default
+prompts an Update Review rather than overwriting your edits.
 
-Which item types the Organize workflow offers is agenda's own **type dimension** (in the Dimensions
-tab), one value per type. Each value's **Name** is the bucket/dropdown label, its **Key** the stored
-`#type` value, and its **Template Note** the `~template` relation assigned along with it (fill these
-in with **Match Templates By Name**, which pairs each value's Name to a `#template` note by title —
-Workflow Setup runs it too, so a fresh install self-heals). The value list's order sets the
-assign/bucket sequence and how types sort across agenda's views.
+Item type is no longer an agenda dimension — it's owned entirely by
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry, and assigned via
+its own right-pane widget (a note's `~template` relation, not a `#type` label). Agenda reads that
+registry (via its **`#templatePickerConfig`** anchor) for two things only: which enabled entries get an
+Organize bucket, and which entries are marked **Actionable** — those items flow through the
+priority/start-date queues. There's nothing to configure on agenda's side; add/rename/reorder/enable
+templates in template-picker's own settings and Organize's buckets follow on the next **Workflow
+Setup** run.
 
-Whether a type is **actionable** — its items flow through the priority/start-date queues — is a
-per-value checkbox on the type dimension. This is separate from the **`#agendaTaskWidget`** label,
-which gates only the Task editor's dates/duration/recurrence/actions section (classification pickers
-always show); it's set as an inheritable label on the template note, so notes created from it get it
-automatically.
+Whether a note's Task editor shows the actionable dates/duration/recurrence/actions section is the
+separate **`#agendaTaskWidget`** label, set as an inheritable label on the template note so notes
+created from it get it automatically — classification pickers always show regardless.
 
 Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
 chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).
@@ -87,8 +92,7 @@ four with no extra setup and they can never drift from the vocabulary.
 The Agenda Editor groups its tabs under seven workflow categories — **Collect**, **Organize**,
 **Review**, **Display Elements**, **Execute**, **Dimensions**, **Settings** — using
 [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
-per-field `category`, plus `extraPanels` for the non-schema Workflow Setup, Organize-note and
-Dimensions tabs):
+per-field `category`, plus `extraPanels` for the non-schema Workflow Setup and Organize-note tabs):
 
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
@@ -99,9 +103,9 @@ Dimensions tabs):
   profile references by name. Split out of Review because they're a shared library, not per-profile
   config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
 - **Execute** — My Day.
-- **Dimensions** — the classification vocabulary registry, with the **Match Templates By Name** button
-  inlined above it (fill each type value's blank Template Note by matching its Name to a `#template`
-  title). The Organize page embeds this same registry on its own **Dimensions** tab.
+- **Dimensions** — the classification vocabulary registry (area, priority, any you add). The Organize
+  page embeds this same registry on its own **Dimensions** tab. Item type lives in
+  template-picker@beatlink's own settings instead, not here.
 - **Settings** — the label-name vocabulary (grouped into **Start** / **Due** / **Task** sub-groups via
   libsettings' `subgroup`) and the Workflow Setup tab (provision button).
 
@@ -120,3 +124,16 @@ bump the version.
 Task edits broadcast an `agenda:tasksChanged` event over
 [`libipc@beatlink`](../libipc@beatlink/README.md); the Overview widget subscribes and re-files the
 overview note live.
+
+## Upgrading from 2.x
+
+Version 3.0.0 removes the `type` dimension entirely and requires
+[`template-picker@beatlink`](../template-picker@beatlink/README.md) as a dependency. Item
+classification is now purely a note's `~template` relation; agenda no longer writes `#type`. The seven
+item templates (Ideas/Goal/Routine/Task/Future/Project/Note) moved out of agenda's own manifest into
+template-picker's — **if you already have agenda installed, run
+[`template-picker@beatlink/migrate-templates-from-agenda.js`](../template-picker@beatlink/migrate-templates-from-agenda.js)
+once, manually, before updating**, or TAM's next sync will delete your existing (possibly customized)
+template notes and recreate blank ones under template-picker instead. See that script's own header
+comment for exact steps. Notes that only ever carried `#type` (never `~template`) aren't automatically
+migrated — they'll surface in template-picker's **Missing Templates** page for manual re-triage.
