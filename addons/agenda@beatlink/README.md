@@ -9,12 +9,13 @@ workflow, all sharing one configuration.
   the active profile's matching notes under a single shared overview note, shown as a built-in
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
-- **Task** — a right-pane editor for editing a note's classification (one dropdown per dimension —
-  area, priority, or any you add; item type is assigned via
-  [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own widget, not a dimension
-  here). On notes carrying the **`#agendaTaskWidget`** label
-  (inherited from actionable templates), it also shows start/due dates, duration, recurrence, a
-  configurable **Reschedule** dropdown, and quick actions (complete, Zen, Hoist). Completing a task
+- **Task** — a right-pane editor shown on notes carrying the **`#agendaTaskWidget`** label (inherited
+  from actionable templates): start/due dates, duration, recurrence, a configurable **Reschedule**
+  dropdown, and quick actions (complete, Zen, Hoist). Classification (area, priority, item type) is
+  assigned via each dimension's own dedicated picker addon
+  ([`area-picker@beatlink`](../area-picker@beatlink/README.md),
+  [`priority-widget@beatlink`](../priority-widget@beatlink/README.md),
+  [`template-picker@beatlink`](../template-picker@beatlink/README.md)), not here. Completing a task
   advances it to its next recurrence, or archives it when the recurrence is exhausted. The Reschedule
   dropdown's entries are configured on the Agenda Editor's **Settings › Reschedule Options** tab —
   each is either a fixed number of days from now (ships with Today/Tomorrow) or the next occurrence
@@ -75,9 +76,8 @@ priority/start-date queues. There's nothing to configure on agenda's side; add/r
 templates in template-picker's own settings and Organize's buckets follow on the next **Workflow
 Setup** run.
 
-Whether a note's Task editor shows the actionable dates/duration/recurrence/actions section is the
-separate **`#agendaTaskWidget`** label, set as an inheritable label on the template note so notes
-created from it get it automatically — classification pickers always show regardless.
+Whether a note's Task editor shows at all is the separate **`#agendaTaskWidget`** label, set as an
+inheritable label on the template note so notes created from it get it automatically.
 
 Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
 chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).

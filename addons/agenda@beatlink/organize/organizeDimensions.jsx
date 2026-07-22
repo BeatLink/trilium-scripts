@@ -5,8 +5,8 @@ import { getAgendaSettings } from "agendaSettings.jsx"
 // The Dimensions settings panel, surfaced in agenda's Organize page. This is the
 // single source of truth for agenda's classification axes — area and priority
 // ship as defaults, but the set is open-ended. Editing here drives the
-// Task-pane pickers, the triage queues, the notebook scaffolding, and the
-// derived prefix/color/grouping/filter variants all at once.
+// triage queues, the notebook scaffolding, and the derived
+// prefix/color/grouping/filter variants all at once.
 //
 // Item TYPE is no longer a dimension here — it's owned entirely by
 // template-picker@beatlink's own registry (its ~template relation, not a #type
@@ -41,10 +41,10 @@ export function DimensionsPanel() {
         <div className="organize-dimensions">
             <p className="organize-dimensions-blurb">
                 The classification axes notes are tagged with. Each dimension is one note label plus
-                its ordered vocabulary of values. Adding a dimension gives you a Task-pane picker, an
-                Organize triage queue, a sort ordinal, and a derived prefix/color/grouping/filter
-                variant, with no further setup. The order of a dimension's values sets the order they
-                sort and appear in.
+                its ordered vocabulary of values. Adding a dimension gives you an Organize triage
+                queue, a sort ordinal, and a derived prefix/color/grouping/filter variant, with no
+                further setup. The order of a dimension's values sets the order they sort and appear
+                in.
             </p>
             <p className="organize-dimensions-warning">
                 Changing a value's <strong>Key</strong> orphans every note already tagged with the old

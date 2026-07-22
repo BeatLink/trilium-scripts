@@ -1,15 +1,14 @@
 // === Trilium Code note ===
 // Title: dimensions.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by the Organize page, the Task widget and
-// the overview libs).
+// Library only (CommonJS, require()'d by the Organize page and the overview
+// libs).
 //
 // The single source of truth for agenda's classification axes. A "dimension" is
 // one note label plus its ordered vocabulary of values — area and priority ship
 // as defaults, but the set is open-ended: anything registered in agenda's
-// `dimensions` config gets a Task-pane picker, an Organize triage queue, a sort
-// ordinal, and a derived prefix/color/grouping/filter variant, with no code
-// change.
+// `dimensions` config gets an Organize triage queue, a sort ordinal, and a
+// derived prefix/color/grouping/filter variant, with no code change.
 //
 // Agenda OWNS this vocabulary. It used to be discovered at runtime from three
 // other addons (area-picker's #areaConfig, template-picker's
@@ -24,7 +23,7 @@
 // template-picker@beatlink's own registry (see organize.js, which is the only
 // place agenda still reads that registry — bucket scaffolding and the
 // actionable-item set). Assigning a template is template-picker's own widget's
-// job, not a dimension picker's.
+// job, not agenda's.
 //
 // Value order is the registry's own key order, so a value's stored key carries
 // no ordinal and reordering the vocabulary never rewrites a tagged note.
@@ -33,7 +32,7 @@
 const { loadSettings } = require("libSettingsUI.jsx")
 
 // Normalize the `dimensions` registry into the array shape the callers use:
-// [{ id, name, label, writeColor, picker, triage, actionableOnly,
+// [{ id, name, label, writeColor, triage, actionableOnly,
 //    scaffoldsAreas, values: [{ key, name, color, actionable, icon }] }]
 //
 // Registry ids are libsettings-generated and meaningless — `key` is the stored
@@ -47,7 +46,6 @@ function normalizeDimensions(settings) {
             name: dim.name || dim.label,
             label: dim.label,
             writeColor: !!dim.writeColor,
-            picker: dim.picker !== false,
             triage: dim.triage !== false,
             actionableOnly: !!dim.actionableOnly,
             scaffoldsAreas: !!dim.scaffoldsAreas,

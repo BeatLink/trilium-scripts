@@ -28,10 +28,10 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 Agenda owns one open-ended **`dimensions`** registry in [`common/schema.json`](../common/schema.json),
 loaded by [`../common/dimensions.js`](../common/dimensions.js) → `getDimensions()`. A dimension is one
 note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
-priority ship as defaults, but the set is open-ended. Task-pane pickers, triage queues, sort ordinals,
-and the derived prefix/color/grouping/filter variants all enumerate the registered dimensions, so
-adding one needs no code change. `key` is the stored value (stable and order-free, so reordering never
-rewrites a tagged note); position IS the order.
+priority ship as defaults, but the set is open-ended. Triage queues, sort ordinals, and the derived
+prefix/color/grouping/filter variants all enumerate the registered dimensions, so adding one needs no
+code change. `key` is the stored value (stable and order-free, so reordering never rewrites a tagged
+note); position IS the order.
 
 Item **type** is deliberately NOT one of these dimensions — it moved out entirely to
 [`template-picker@beatlink`](../../template-picker@beatlink/README.md)'s own registry. A note's type is
@@ -43,8 +43,8 @@ scaffolding and the actionable-item set only. See
 [template-picker's README](../../template-picker@beatlink/README.md) for its own registry fields
 (Name, Template Note, Enabled, Color, Actionable, Bucket Icon).
 
-`assignDimension(noteId, dim, value)` is the single write path for agenda's own dimensions (shared by
-the Task pane and the triage queues). It writes `#<label>=<key>` and optionally mirrors `#color`
+`assignDimension(noteId, dim, value)` is the single write path for agenda's own dimensions (used by
+the Organize triage queues). It writes `#<label>=<key>` and optionally mirrors `#color`
 (`writeColor`). Per-dimension flags:
 
 | Flag               | Effect |
@@ -52,13 +52,13 @@ the Task pane and the triage queues). It writes `#<label>=<key>` and optionally 
 | `triage`           | Gives the dimension a "Notes Without X" queue. |
 | `actionableOnly`   | Restricts that queue to notes whose `~template` is a template-picker entry marked **Actionable** (and non-subtasks). |
 | `writeColor`       | Also writes `#color` from the chosen value. |
-| `picker`           | Shows the dimension's dropdown in the Task pane. |
 | `scaffoldsAreas`   | Workflow Setup builds one root note per value (the Area axis). |
 
 **Actionable** and the per-template **Bucket Icon** live on template-picker's own registry rows now,
-not on any agenda dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it only gates
-the Task editor's **dates/duration/recurrence/actions section** — classification pickers show
-regardless. It's set as an inheritable label on the template note.
+not on any agenda dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it gates
+whether the Task editor shows at all. It's set as an inheritable label on the template note.
+Classification (area, priority, item type) is assigned via each dimension's own dedicated picker
+addon, not the Task editor.
 
 Area folds/renames are handled at migration time by `AREA_ALIASES` in `organizeProvision.js`
 (`health`→`fitness`, `productivity`→`tech`), so existing notes re-tag on the next Setup provision.
@@ -197,7 +197,7 @@ depends on template-picker, template-picker knows nothing about agenda. Workflow
 into the Agenda Editor (`profileEditor.jsx`), which requires `organizeProvision.js` (→ requires
 `organizeStructure.js` + `organize.js`, for `getBucketTemplates`) and `dimensions.js`. Per TAM's
 direct-child require rule, `dimensions` is a child of every note that requires it (`agenda-settings`,
-`lib-config`, `dimension-picker`, `organize-page-src`, `organize-dimensions`, `organize-provision`,
+`lib-config`, `organize-page-src`, `organize-dimensions`, `organize-provision`,
 `profile-editor`), `organize-structure` is a child of both `organize-page-src` and `organize-provision`,
 and libsettings' `ui` is wired under every note that calls `loadSettings`/`SettingsForm` (`dimensions`,
 `organize-dimensions`, `profile-editor`, `agenda-settings`, `lib-config`). Styling is `organize.css`

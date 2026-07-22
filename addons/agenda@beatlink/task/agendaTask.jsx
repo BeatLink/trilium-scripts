@@ -13,7 +13,6 @@ import {
 } from "trilium:preact";
 
 import { FormToggleButton } from "FormToggleButton.jsx"
-import { DimensionPicker } from "DimensionPicker.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByOption, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
@@ -405,15 +404,15 @@ function MainWidget(){
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
-            const { constants, dimensions, rescheduleOptions } = settings
-            setIds({ constants, dimensions: dimensions.filter(d => d.picker), rescheduleOptions })
+            const { constants, rescheduleOptions } = settings
+            setIds({ constants, rescheduleOptions })
             if (rescheduleOptions.length > 0) setRescheduleChoice(rescheduleOptions[0].id)
         })()
     }, [])
 
     if (!ids) return null
     const isActionable = agendaTaskWidget === ''
-    if (!isActionable && ids.dimensions.length === 0) return null
+    if (!isActionable) return null
 
     // Broadcast only; the overview widget subscribes and re-files. Do not
     // import libAgendaOverview here (keeps this decoupled from Overview).
@@ -449,16 +448,6 @@ function MainWidget(){
     return (
         <RightPanelWidget title="Task">
             <div className="agenda-widget">
-                {ids.dimensions.length > 0 && (
-                    <div>
-                        <label>Classification</label>
-                        <div className="agenda-dimension-pickers">
-                            {ids.dimensions.map(dim => (
-                                <DimensionPicker key={dim.id} dimension={dim} />
-                            ))}
-                        </div>
-                    </div>
-                )}
                 {isActionable && (
                     <div>
                         <label>Dates and Duration</label>
