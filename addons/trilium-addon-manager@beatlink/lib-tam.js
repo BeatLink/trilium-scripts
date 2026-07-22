@@ -28,6 +28,10 @@ async function getPersistenceNoteId() {
 // alive across uninstall by passing it in persistentIds, same as any other persistent note.
 const addonAnchorRootLocalId = "__tamAddonRoot__"
 const addonAnchorPersistenceLocalId = "__tamAddonPersistenceRoot__"
+// Since neither anchor id is ever in a manifest's notes[], anything that prunes/detaches by
+// "local id declared in the current manifest" (pruneRemovedNotes) must exempt both explicitly —
+// they're synthesized by TAM, not something a manifest update could ever legitimately drop.
+const synthesizedAnchorLocalIds = [addonAnchorRootLocalId, addonAnchorPersistenceLocalId]
 
 // Find-or-create the one note that owns every note this addon resolves under (structural or
 // persistent), named/tagged after the addon so it reads clearly in the tree. addons can only
@@ -568,22 +572,25 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
 // Deletes any live #TAMFILEID-tagged note of this addon whose local id is no longer
 // declared in the current manifest (resolveNotes only resolves notes it still declares).
 // A persistent note (under persistenceRoot) is never pruned — its content is the user's,
-// so a manifest that drops it must not take the user's data with it.
+// so a manifest that drops it must not take the user's data with it. TAM's own synthesized
+// anchor notes (see synthesizedAnchorLocalIds) are exempt for a different reason: they're
+// never declared in m.notes at all, so without this exemption this function would delete the
+// anchor it (or resolveNotes) just created/reused earlier in the very same syncAddon call.
 async function pruneRemovedNotes(m, addonId) {
-    const persistentIds = [...persistentLocalIds(m), addonAnchorRootLocalId, addonAnchorPersistenceLocalId]
-    await api.runOnBackend((tamFileIdLabel, addonId, currentLocalIds, persistentIds) => {
+    const exemptIds = [...persistentLocalIds(m), ...synthesizedAnchorLocalIds]
+    await api.runOnBackend((tamFileIdLabel, addonId, currentLocalIds, exemptIds) => {
         const currentSet = new Set(currentLocalIds)
-        const persistentSet = new Set(persistentIds)
+        const exemptSet = new Set(exemptIds)
         const prefix = `${addonId}/`
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             const value = note.getLabelValue(tamFileIdLabel)
             if (!value || !value.startsWith(prefix)) continue
             const localId = value.slice(prefix.length)
-            if (persistentSet.has(localId)) continue
+            if (exemptSet.has(localId)) continue
             if (!currentSet.has(localId)) note.deleteNote()
         }
-    }, [tamFileIdLabel, addonId, m.notes.map(n => n.id), persistentIds])
+    }, [tamFileIdLabel, addonId, m.notes.map(n => n.id), exemptIds])
 }
 
 // =========================================================================
