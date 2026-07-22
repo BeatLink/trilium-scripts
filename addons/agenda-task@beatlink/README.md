@@ -19,11 +19,10 @@ rule evaluated from now).
 
 Task owns its own settings note (`schema.json`/`config.json`) tagged `#agendaTaskConfig`, independent
 of `agenda@beatlink`'s `#agendaConfig` — the label names it reads/writes (start/due date/time,
-duration, recurrence) and the Reschedule dropdown's option registry. There's no standalone settings
-page for this addon; if `agenda@beatlink` is installed, its Agenda Editor embeds Task's settings panels
-(**Settings** and **Reschedule Options** tabs) via this addon's exported panel components. Without
-`agenda@beatlink`, Task keeps working off schema defaults — there's just nowhere in the UI to change
-them.
+duration, recurrence) and the Reschedule dropdown's option registry. This addon's own **Task Settings**
+page (TAM's "Addon Settings" button) edits it directly. If `agenda@beatlink` is also installed, its
+Agenda Editor embeds the same two panels (**Settings** and **Reschedule Options** tabs) instead, so
+there's one editing surface either way — both read/write the same `#agendaTaskConfig` note.
 
 ## Exports
 

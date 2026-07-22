@@ -10,6 +10,7 @@
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
     "manifest": {
+        "settingsNote": "task-settings",
         "exports": {
             "task": "task",
             "lib-task": "lib-task",
@@ -80,9 +81,16 @@
             {
                 "id": "task-settings",
                 "title": "Task Settings",
-                "type": "text",
+                "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
+            },
+            {
+                "id": "settings-source",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/settings.jsx"
             },
             {
                 "id": "task-labels-panel",
@@ -172,6 +180,18 @@
                 "child": "reschedule-options"
             },
             {
+                "parent": "task-settings",
+                "child": "settings-source"
+            },
+            {
+                "parent": "settings-source",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings-source",
+                "child": "reschedule-options"
+            },
+            {
                 "parent": "task",
                 "child": "recurrence-picker"
             },
@@ -239,11 +259,16 @@
         "relations": [
             {
                 "from": "task-settings",
+                "type": "renderNote",
+                "to": "settings-source"
+            },
+            {
+                "from": "settings-source",
                 "type": "configNote",
                 "to": "task-config"
             },
             {
-                "from": "task-settings",
+                "from": "settings-source",
                 "type": "schemaNote",
                 "to": "task-schema"
             }
@@ -255,7 +280,7 @@
                 "value": ""
             },
             {
-                "note": "task-settings",
+                "note": "settings-source",
                 "name": "agendaTaskConfig",
                 "value": ""
             },
@@ -311,6 +336,11 @@
             },
             {
                 "note": "task-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings-source",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
