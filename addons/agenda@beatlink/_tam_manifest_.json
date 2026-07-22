@@ -737,6 +737,10 @@
             },
             {
                 "parent": "organize-provision",
+                "child": "organize-lib"
+            },
+            {
+                "parent": "organize-provision",
                 "child": "dimensions"
             },
             {
@@ -748,6 +752,10 @@
                 "parent": "organize-lib",
                 "addon": "template-picker@beatlink",
                 "child": "registry"
+            },
+            {
+                "parent": "organize-lib",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
