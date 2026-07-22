@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.3.2",
+    "latestVersion": "2.3.3",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -1158,7 +1158,7 @@
             },
             {
                 "note": "tpl-routine",
-                "name": "agendaTaskWidget",
+                "name": "agendaTaskWidget(inheritable)",
                 "value": ""
             },
             {
@@ -1188,7 +1188,7 @@
             },
             {
                 "note": "tpl-task",
-                "name": "agendaTaskWidget",
+                "name": "agendaTaskWidget(inheritable)",
                 "value": ""
             },
             {
@@ -1218,7 +1218,7 @@
             },
             {
                 "note": "tpl-future",
-                "name": "agendaTaskWidget",
+                "name": "agendaTaskWidget(inheritable)",
                 "value": ""
             },
             {
@@ -1248,7 +1248,7 @@
             },
             {
                 "note": "tpl-project",
-                "name": "agendaTaskWidget",
+                "name": "agendaTaskWidget(inheritable)",
                 "value": ""
             },
             {

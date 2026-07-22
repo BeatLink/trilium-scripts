@@ -364,8 +364,9 @@ function MainWidget(){
         })()
     }, [])
 
-    if (agendaTaskWidget !== '') {return null;}
     if (!ids) return null
+    const isActionable = agendaTaskWidget === ''
+    if (!isActionable && ids.dimensions.length === 0) return null
 
     // Broadcast only; the overview widget subscribes and re-files. Do not
     // import libAgendaOverview here (keeps this decoupled from Overview).
@@ -423,22 +424,28 @@ function MainWidget(){
                         </div>
                     </div>
                 )}
-                <div>
-                    <label>Dates and Duration</label>
-                    <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
-                </div>
-                <div>
-                    <label>Recurrence</label>
-                    <RecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
-                </div>
-                <div>
-                    <label>Actions</label>
+                {isActionable && (
                     <div>
-                        {actions.map(({ key, icon, text, onClick }) => (
-                            <Button key={key} icon={icon} text={text} onClick={onClick} />
-                        ))}
+                        <label>Dates and Duration</label>
+                        <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
                     </div>
-                </div>
+                )}
+                {isActionable && (
+                    <div>
+                        <label>Recurrence</label>
+                        <RecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
+                    </div>
+                )}
+                {isActionable && (
+                    <div>
+                        <label>Actions</label>
+                        <div>
+                            {actions.map(({ key, icon, text, onClick }) => (
+                                <Button key={key} icon={icon} text={text} onClick={onClick} />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </RightPanelWidget>
     )

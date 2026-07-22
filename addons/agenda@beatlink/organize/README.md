@@ -55,8 +55,9 @@ dimension — sets `~template` from the value's `templateNoteId`. Per-dimension 
 `TypeCollection`, `Special`) are just not listed as type values, so scaffolding is never assignable.
 
 **Actionable** used to be read off each template note's `#agendaTaskWidget` label; it is now the type
-value's own `actionable` flag. `#agendaTaskWidget` still exists but only gates whether the **Task
-editor mounts** on a note — two separate concepts that used to be one.
+value's own `actionable` flag. `#agendaTaskWidget` still exists but only gates the Task editor's
+**dates/duration/recurrence/actions section** — classification pickers show regardless — two separate
+concepts that used to be one. It's set as an inheritable label on the template note.
 
 Folds/renames are handled at migration time by `AREA_ALIASES` / `TEMPLATE_ALIASES` in
 `organizeProvision.js` (`health`→`fitness`, `productivity`→`tech`), so existing notes re-tag on the

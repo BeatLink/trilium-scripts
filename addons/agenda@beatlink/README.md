@@ -9,11 +9,11 @@ workflow, all sharing one configuration.
   the active profile's matching notes under a single shared overview note, shown as a built-in
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
-- **Task** — a right-pane editor that appears on any note carrying the **`#agendaTaskWidget`** label,
-  for editing a task's classification (one dropdown per dimension — area, type, priority, or any you
-  add), start/due dates, duration, recurrence, and quick actions (complete, start today/tomorrow,
-  Zen, Hoist). Completing a task advances it to its next recurrence, or archives it when the
-  recurrence is exhausted.
+- **Task** — a right-pane editor for editing a note's classification (one dropdown per dimension —
+  area, type, priority, or any you add). On notes carrying the **`#agendaTaskWidget`** label
+  (inherited from actionable templates), it also shows start/due dates, duration, recurrence, and
+  quick actions (complete, start today/tomorrow, Zen, Hoist). Completing a task advances it to its
+  next recurrence, or archives it when the recurrence is exhausted.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
@@ -67,7 +67,9 @@ assign/bucket sequence and how types sort across agenda's views.
 
 Whether a type is **actionable** — its items flow through the priority/start-date queues — is a
 per-value checkbox on the type dimension. This is separate from the **`#agendaTaskWidget`** label,
-which still gates whether the Task editor *mounts* on a note; set that on the template note as before.
+which gates only the Task editor's dates/duration/recurrence/actions section (classification pickers
+always show); it's set as an inheritable label on the template note, so notes created from it get it
+automatically.
 
 Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
 chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).
