@@ -664,17 +664,6 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         setCatalogAddons(merged)
     }
 
-    // Bare-id dependency resolution during a sync needs a { [id]: manifestSourceUrl }
-    // map to look uninstalled deps up against — same derivation as RepoManager builds for
-    // install. Update/reinstall/update-all all resolve dependencies too (a freshly
-    // added dependency of an already-installed addon is otherwise unresolvable, since
-    // its own `dependencies` entries are bare ids with no URL), so they must thread
-    // this through just like install does — not doing so is what left new deps
-    // "could not be resolved (not installed, and no manifestSourceUrl available)".
-    function buildCatalogContext() {
-        return Object.fromEntries(Object.values(catalogAddons).map(e => [e.id, e.manifestSourceUrl]))
-    }
-
     // Shared tail of most mutating commands: reload state, return to the note the widget
     // was opened from, and hard-reload the page so every other widget picks up the change.
     async function reloadAndActivate() {
@@ -737,10 +726,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     }
 
     async function handleInstallAddon(command) {
-        await libTAMjs.syncAddon(command.addon, {
-            manifestSourceUrl: command.manifestSourceUrl,
-            catalogContext: command.catalogContext
-        })
+        await libTAMjs.syncAddon(command.addon, { manifestSourceUrl: command.manifestSourceUrl })
         await reloadAndActivate()
     }
 
@@ -767,7 +753,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     }
 
     async function handleUpdateAddon(command) {
-        await libTAMjs.syncAddon(command.addon, { catalogContext: buildCatalogContext() })
+        await libTAMjs.syncAddon(command.addon)
         const prompts = await libTAMjs.getPendingPrompts(command.addon)
         if (prompts.length > 0) {
             setPendingPrompts(prompts)
@@ -778,7 +764,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     }
 
     async function handleReinstallAddon(command) {
-        await libTAMjs.syncAddon(command.addon, { catalogContext: buildCatalogContext() })
+        await libTAMjs.syncAddon(command.addon)
         const prompts = await libTAMjs.getPendingPrompts(command.addon)
         if (prompts.length > 0) {
             setPendingPrompts(prompts)
@@ -804,12 +790,11 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
             .filter(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
             .map(a => a.id)
 
-        const catalogContext = buildCatalogContext()
         const queue = []
         for (let i = 0; i < targets.length; i++) {
             const addonId = targets[i]
             setProgressDetail(`${addonId} (${i + 1}/${targets.length})`)
-            await libTAMjs.syncAddon(addonId, { catalogContext })
+            await libTAMjs.syncAddon(addonId)
             const prompts = await libTAMjs.getPendingPrompts(addonId)
             if (prompts.length > 0) queue.push(addonId)
         }
@@ -978,15 +963,10 @@ export default function RepoManager() {
 
     const anyUpdateAvailable = Object.values(addons).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
 
-    // Dependency resolution during install needs to look up bare-id deps
-    // against whatever catalogs are known — built once from the merged
-    // catalogAddons map so it covers every added catalog, not just one.
-    const catalogContext = Object.fromEntries(Object.values(catalogAddons).map(e => [e.id, e.manifestSourceUrl]))
     const handleInstall = entryData => dispatch({
         command: "install-addon",
         addon: entryData.id,
-        manifestSourceUrl: entryData.manifestSourceUrl,
-        catalogContext
+        manifestSourceUrl: entryData.manifestSourceUrl
     })
 
     let bodyContent

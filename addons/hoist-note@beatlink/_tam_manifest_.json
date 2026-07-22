@@ -24,21 +24,21 @@
                 "title": "setupButtons.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "setupButtons.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/hoist-note@beatlink/setupButtons.js"
             },
             {
                 "id": "hoistNote",
                 "title": "hoistNote.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "hoistNote.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/hoist-note@beatlink/hoistNote.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/hoist-note@beatlink/README.md"
             }
         ],
         "children": [
@@ -69,8 +69,6 @@
                 "value": "frontendStartup"
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

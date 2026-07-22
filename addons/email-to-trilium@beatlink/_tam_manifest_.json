@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/email-to-trilium@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/_tam_manifest_.json",
@@ -26,14 +26,14 @@
                 "title": "view.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "view.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/view.jsx"
             },
             {
                 "id": "style",
                 "title": "emailToTrilium.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "view.css"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/view.css"
             },
             {
                 "id": "settings-page",
@@ -47,14 +47,14 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "settings.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "schema.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/schema.json"
             },
             {
                 "id": "persist-root",
@@ -68,21 +68,56 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/config.json"
             },
             {
                 "id": "backend",
                 "title": "emailToTriliumBackend.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "emailBackend.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/emailBackend.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/email-to-trilium@beatlink/README.md"
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -119,19 +154,28 @@
                 "child": "backend"
             },
             {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
                 "parent": "view",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "backend",
-                "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "libsettings-backend"
             },
             {
                 "parent": "root",
@@ -190,12 +234,18 @@
                 "note": "style",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [
-            "libsettings@beatlink"
-        ],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

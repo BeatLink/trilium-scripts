@@ -17,14 +17,14 @@
                 "title": "whitebluelegacy@beatlink",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "whitebluelegacy@beatlink.css"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluelegacy@beatlink/whitebluelegacy@beatlink.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluelegacy@beatlink/README.md"
             }
         ],
         "children": [
@@ -41,8 +41,6 @@
                 "value": "WhiteBlueLegacy"
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

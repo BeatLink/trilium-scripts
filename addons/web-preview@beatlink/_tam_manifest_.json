@@ -24,21 +24,21 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/README.md"
             },
             {
                 "id": "widget",
                 "title": "webViewToolbarWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "webViewToolbarWidget.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/webViewToolbarWidget.jsx"
             },
             {
                 "id": "lib",
                 "title": "libWebPreview.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libWebPreview.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/libWebPreview.js"
             }
         ],
         "children": [
@@ -63,8 +63,6 @@
                 "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

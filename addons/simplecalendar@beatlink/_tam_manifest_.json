@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/_tam_manifest_.json",
@@ -26,7 +26,7 @@
                 "title": "view.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "view.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/view.jsx"
             },
             {
                 "id": "settings-page",
@@ -40,14 +40,14 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "settings.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "schema.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/schema.json"
             },
             {
                 "id": "persist-root",
@@ -61,21 +61,112 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/config.json"
             },
             {
                 "id": "feed",
                 "title": "simpleCalendarFeed.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "simpleCalendarFeed.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/simpleCalendarFeed.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/README.md"
+            },
+            {
+                "id": "calendarwidget",
+                "title": "CalendarWidget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendarwidget/CalendarWidget.jsx"
+            },
+            {
+                "id": "calendarwidget-css",
+                "title": "CalendarWidget.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendarwidget/CalendarWidget.css"
+            },
+            {
+                "id": "fc-core",
+                "title": "fullcalendar.global.min.js",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libfullcalendar/fullcalendar.global.min.js"
+            },
+            {
+                "id": "fc-icalendar",
+                "title": "fullcalendar-icalendar.global.min.js",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libfullcalendar/fullcalendar-icalendar.global.min.js"
+            },
+            {
+                "id": "ical-lib",
+                "title": "ical.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+            },
+            {
+                "id": "ical-resource",
+                "title": "ical.min.js (resource)",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libcalendar-backend",
+                "title": "libCalendar.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendar/libCalendar.js"
+            },
+            {
+                "id": "libcalendar-ical-backend",
+                "title": "ical.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
             }
         ],
         "children": [
@@ -108,29 +199,60 @@
                 "child": "feed"
             },
             {
-                "parent": "view",
-                "addon": "libcalendarwidget@beatlink",
-                "child": "lib"
+                "parent": "calendarwidget",
+                "child": "calendarwidget-css"
+            },
+            {
+                "parent": "calendarwidget",
+                "child": "fc-core"
+            },
+            {
+                "parent": "fc-core",
+                "child": "fc-icalendar"
+            },
+            {
+                "parent": "calendarwidget",
+                "child": "ical-lib"
+            },
+            {
+                "parent": "ical-lib",
+                "child": "ical-resource"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "libcalendar-backend",
+                "child": "libcalendar-ical-backend"
             },
             {
                 "parent": "view",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "calendarwidget"
+            },
+            {
+                "parent": "view",
+                "child": "libsettings-ui"
             },
             {
                 "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "feed",
-                "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "libsettings-backend"
             },
             {
                 "parent": "feed",
-                "addon": "libcalendar@beatlink",
-                "child": "backend"
+                "child": "libcalendar-backend"
             },
             {
                 "parent": "root",
@@ -184,14 +306,38 @@
                 "note": "feed",
                 "name": "customRequestHandler",
                 "value": "simpleCalendarFeed"
+            },
+            {
+                "note": "calendarwidget-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "fc-core",
+                "name": "customResourceProvider",
+                "value": "libFullCalendar.js"
+            },
+            {
+                "note": "fc-icalendar",
+                "name": "customResourceProvider",
+                "value": "libFullCalendarICalendar.js"
+            },
+            {
+                "note": "ical-resource",
+                "name": "customResourceProvider",
+                "value": "libIcal.js"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [
-            "libcalendarwidget@beatlink",
-            "libcalendar@beatlink",
-            "libsettings@beatlink"
-        ],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

@@ -17,7 +17,7 @@
                 "title": "whitebluenext@beatlink",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/README.md",
                 "renderAsHTML": true
             },
             {
@@ -25,7 +25,7 @@
                 "title": "theme.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "whitebluenext@beatlink.css"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/whitebluenext@beatlink.css"
             }
         ],
         "children": [
@@ -47,8 +47,6 @@
                 "value": "WhiteBlueNext"
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

@@ -1,11 +1,11 @@
 {
     "id": "cinnamon-applet-first-child@beatlink",
     "name": "Cinnamon Applet First Child",
-    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet \u2014 surfaces the first child (in Trilium sort order) of a configured parent note.",
+    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first child (in Trilium sort order) of a configured parent note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-first-child@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.3.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/_tam_manifest_.json",
@@ -26,14 +26,14 @@
                 "title": "cinnamon-applet-first-child.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "cinnamon-applet-first-child.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/cinnamon-applet-first-child.js"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "schema.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/schema.json"
             },
             {
                 "id": "persist-root",
@@ -47,21 +47,56 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/config.json"
             },
             {
                 "id": "settings",
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "settings.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/settings.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/README.md"
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -87,13 +122,23 @@
             },
             {
                 "parent": "script",
-                "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
             },
             {
                 "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "root",
@@ -132,12 +177,18 @@
                 "note": "script",
                 "name": "customRequestHandler",
                 "value": "first_child_panel"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [
-            "libsettings@beatlink"
-        ],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

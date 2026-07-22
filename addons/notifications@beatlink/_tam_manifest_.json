@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/notifications@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.2",
+    "latestVersion": "1.2.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/notifications@beatlink/_tam_manifest_.json",
@@ -24,14 +24,21 @@
                 "title": "notifications.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "notifications.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/notifications@beatlink/notifications.js"
+            },
+            {
+                "id": "lib",
+                "title": "libNotification.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/notifications@beatlink/README.md"
             }
         ],
         "children": [
@@ -41,7 +48,6 @@
             },
             {
                 "parent": "script",
-                "addon": "libnotification@beatlink",
                 "child": "lib"
             },
             {
@@ -57,10 +63,6 @@
                 "value": "frontendStartup"
             }
         ],
-        "dependencies": [
-            "libnotification@beatlink"
-        ],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

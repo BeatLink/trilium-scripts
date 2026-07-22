@@ -1,7 +1,7 @@
 {
     "id": "drawio@siriusxt",
     "name": "Draw.io",
-    "description": "Integrates Draw.io diagram editing into TriliumNext \u2014 click any SVG note to edit it inline using the embedded Draw.io editor",
+    "description": "Integrates Draw.io diagram editing into TriliumNext — click any SVG note to edit it inline using the embedded Draw.io editor",
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
@@ -25,7 +25,7 @@
                 "title": "trilium-drawio",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "trilium-drawio.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/trilium-drawio.js"
             },
             {
                 "id": "persist-root",
@@ -39,14 +39,14 @@
                 "title": "drawio",
                 "type": "image",
                 "mime": "image/svg+xml",
-                "sourceUrl": "drawio.svg"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/drawio.svg"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/README.md"
             }
         ],
         "children": [
@@ -86,8 +86,6 @@
                 "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

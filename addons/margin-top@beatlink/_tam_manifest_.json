@@ -17,14 +17,14 @@
                 "title": "margin-top@beatlink",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "margin-top@beatlink.css"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/margin-top@beatlink/margin-top@beatlink.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/margin-top@beatlink/README.md"
             }
         ],
         "children": [
@@ -41,8 +41,6 @@
                 "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }

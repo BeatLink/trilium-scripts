@@ -5,14 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.7.0",
+    "latestVersion": "6.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
-        "dependencies": [],
-        "exports": {},
         "notes": [
             {
                 "id": "root",
@@ -27,7 +25,7 @@
                 "title": "Database",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "database.json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/database.json",
                 "skipOnUpdate": true
             },
             {
@@ -58,35 +56,35 @@
                 "title": "TAM.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "TAM.jsx"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/TAM.jsx"
             },
             {
                 "id": "lib-tam",
                 "title": "lib-tam.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "lib-tam.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/lib-tam.js"
             },
             {
                 "id": "marked",
                 "title": "marked.min.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "marked.min.js"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/marked.min.js"
             },
             {
                 "id": "tam-css",
                 "title": "TAM.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "tam.css"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/tam.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/README.md"
             }
         ],
         "children": [

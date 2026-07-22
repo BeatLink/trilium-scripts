@@ -157,18 +157,8 @@ function uniqueName(base, used) {
 }
 
 
-function depIds(manifestBody) {
-    // Bare dependency ids from a manifest's inner body (string or {id,...}).
-    const out = [];
-    for (const d of manifestBody.dependencies || []) {
-        const did = typeof d === "string" ? d : d.id;
-        if (did) out.push(did);
-    }
-    return out;
-}
-
 // Local ids whose children[] parent chain roots at m.persistenceRoot (inclusive).
-// Same-addon children only. Empty set when no persistenceRoot is declared.
+// Empty set when no persistenceRoot is declared.
 // MUST stay in sync with persistentLocalIds() in lib-tam.js.
 function persistentLocalIds(m) {
     const rootId = m.persistenceRoot;
@@ -176,7 +166,7 @@ function persistentLocalIds(m) {
     if (!rootId) return persistent;
     persistent.add(rootId);
     const childrenOf = {};
-    for (const c of (m.children || []).filter((c) => c.child && !c.addon)) {
+    for (const c of (m.children || []).filter((c) => c.child)) {
         (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child);
     }
     const stack = [rootId];
@@ -196,6 +186,16 @@ function runGit(args, cwd) {
     const result = spawnSync("git", args, { cwd, encoding: "utf8" });
     if (result.error || result.status !== 0) return null;
     return result.stdout.trim();
+}
+
+
+async function fetchBuffer(url) {
+    // Every note's sourceUrl is an absolute URL (see lib-tam.js's resolveNotes) --
+    // tam-to-zip fetches the same way TAM itself does at install time, rather than
+    // reading a local file, so a local build always reflects what's actually published.
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+    return Buffer.from(await response.arrayBuffer());
 }
 
 
@@ -266,7 +266,7 @@ const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "lic
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
 
 
-function cmdValidate(args) {
+async function cmdValidate(args) {
     const errors = [], warnings = [], fixes = [];
 
     const error = (p, msg) => errors.push(`ERROR   ${p}: ${msg}`);
@@ -421,17 +421,21 @@ function cmdValidate(args) {
         for (const note of notes) {
             const nid = note.id || note.title || "?";
             const sourceUrl = note.sourceUrl || "";
-            if (sourceUrl.endsWith(".js") && !/^https?:\/\//.test(sourceUrl)) {
-                const sourcePath = path.join(addonDir, sourceUrl);
-                if (exists(sourcePath) && exportRe.test(readText(sourcePath))) {
-                    warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
+            if (sourceUrl.endsWith(".js")) {
+                try {
+                    const src = await (await fetchBuffer(sourceUrl)).toString("utf8");
+                    if (exportRe.test(src)) {
+                        warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
+                    }
+                } catch (e) {
+                    warn(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' fetch failed (${e.message})`);
                 }
             }
         }
 
         // notes unreachable from root (or persistenceRoot) via children[] will never be created
         const localChildren = new Set(
-            (m.children || []).filter((c) => c.child && !c.addon).map((c) => c.child)
+            (m.children || []).filter((c) => c.child).map((c) => c.child)
         );
         for (const nid of noteIds) {
             if (nid !== rootId && nid !== m.persistenceRoot && !localChildren.has(nid)) {
@@ -455,13 +459,15 @@ function cmdValidate(args) {
             }
         }
 
-        // sourceUrl files must exist
+        // sourceUrl files must be fetchable
         for (const note of notes) {
             const nid = note.id || note.title || "?";
             const sourceUrl = note.sourceUrl;
-            if (sourceUrl && !/^https?:\/\//.test(sourceUrl)) {
-                if (!exists(path.join(addonDir, sourceUrl))) {
-                    error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' not found on disk`);
+            if (sourceUrl) {
+                try {
+                    await fetchBuffer(sourceUrl);
+                } catch (e) {
+                    error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' fetch failed (${e.message})`);
                 }
             }
         }
@@ -472,7 +478,7 @@ function cmdValidate(args) {
             if (parent && !noteIds.has(parent)) {
                 error(manifestFile, `children: parent '${parent}' not found in notes`);
             }
-            if (!c.addon && child && !noteIds.has(child)) {
+            if (child && !noteIds.has(child)) {
                 error(manifestFile, `children: child '${child}' not found in notes`);
             }
         }
@@ -483,7 +489,7 @@ function cmdValidate(args) {
             if (fromId && !noteIds.has(fromId)) {
                 error(manifestFile, `relations: from '${fromId}' not found in notes`);
             }
-            if (toId && !rel.addon && !noteIds.has(toId)) {
+            if (toId && !noteIds.has(toId)) {
                 warn(manifestFile, `relations: to '${toId}' not found in notes (may be a literal noteId)`);
             }
         }
@@ -497,26 +503,7 @@ function cmdValidate(args) {
         }
 
         // require()/import targets must be co-installed in the requiring note's subtree
-        validateRequireReachability(manifestFile, m, notes, addonDir, requireRe, importRe, warn);
-
-        // dependencies must be a bare id or {id, manifestSourceUrl}
-        const deps = m.dependencies || [];
-        if (!Array.isArray(deps)) {
-            error(manifestFile, "manifest.dependencies must be an array");
-        } else {
-            for (const dep of deps) {
-                if (typeof dep === "string") {
-                    continue;
-                }
-                if (dep && typeof dep === "object" && typeof dep.id === "string") {
-                    if (!dep.manifestSourceUrl) {
-                        error(manifestFile, `dependencies: entry for '${dep.id}' is missing 'manifestSourceUrl'`);
-                    }
-                } else {
-                    error(manifestFile, `manifest.dependencies entries must be a string or a {id, manifestSourceUrl} object, got: ${JSON.stringify(dep)}`);
-                }
-            }
-        }
+        await validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn);
     }
 
     for (const msg of [...fixes, ...warnings, ...errors]) {
@@ -531,7 +518,7 @@ function cmdValidate(args) {
 }
 
 
-function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe, importRe, warn) {
+async function validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn) {
     // A code note that require()s/imports another note by title resolves it
     // within its own installed subtree. Warn when a target isn't reachable there.
     const idToTitle = {};
@@ -540,37 +527,11 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
     }
     const localTitles = new Set(Object.values(idToTitle).filter(Boolean));
 
-    const localChildEdges = {}, crossEdges = {};
+    const localChildEdges = {};
     for (const c of m.children || []) {
         const parent = c.parent;
-        if (!parent) continue;
-        if (c.addon) {
-            (crossEdges[parent] ||= []).push([c.addon, c.child]);
-        } else if (c.child) {
-            (localChildEdges[parent] ||= []).push(c.child);
-        }
-    }
-
-    const exportTitleCache = new Map();
-    function resolveExportTitle(depId, exportKey) {
-        const key = depId + ":" + exportKey;
-        if (exportTitleCache.has(key)) return exportTitleCache.get(key);
-        let title = null;
-        const depFile = path.join("addons", depId, MANIFEST_NAME);
-        if (exists(depFile)) {
-            try {
-                const dm = JSON.parse(readText(depFile)).manifest || {};
-                const localId = (dm.exports || {})[exportKey] ?? exportKey;
-                for (const dn of dm.notes || []) {
-                    if ((dn.id || dn.title) === localId) {
-                        title = dn.title;
-                        break;
-                    }
-                }
-            } catch { /* ignore */ }
-        }
-        exportTitleCache.set(key, title);
-        return title;
+        if (!parent || !c.child) continue;
+        (localChildEdges[parent] ||= []).push(c.child);
     }
 
     function descendants(startId) {
@@ -590,11 +551,14 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
         const mime = note.mime || "";
         if (!(mime.startsWith("application/javascript") || mime.includes("jsx"))) continue;
         const sourceUrl = note.sourceUrl || "";
-        if (!sourceUrl || /^https?:\/\//.test(sourceUrl)) continue;
-        const sourcePath = path.join(addonDir, sourceUrl);
-        if (!exists(sourcePath)) continue;
+        if (!sourceUrl) continue;
 
-        const src = readText(sourcePath);
+        let src;
+        try {
+            src = (await fetchBuffer(sourceUrl)).toString("utf8");
+        } catch (e) {
+            continue; // already reported by the sourceUrl-must-be-fetchable check above
+        }
         const targets = new Set();
         for (const mm of src.matchAll(requireRe)) targets.add(mm[1]);
         for (const mm of src.matchAll(importRe)) targets.add(mm[1]);
@@ -605,19 +569,13 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
         const subtree = descendants(nid);
         const reachable = new Set();
         for (const d of subtree) reachable.add(idToTitle[d] || "");
-        for (const parentId of subtree) {
-            for (const [depId, childKey] of crossEdges[parentId] || []) {
-                const t = resolveExportTitle(depId, childKey);
-                if (t) reachable.add(t);
-            }
-        }
 
         for (const t of [...filtered].sort()) {
             if (reachable.has(t)) continue;
             if (localTitles.has(t)) {
                 warn(manifestFile, `note '${nid}': require/import of '${t}' resolves to a local note wired outside this note's subtree -- it won't be found at runtime`);
             } else {
-                warn(manifestFile, `note '${nid}': require/import of '${t}' is not installed in this note's subtree -- wire the providing addon's export under '${nid}' via children[]`);
+                warn(manifestFile, `note '${nid}': require/import of '${t}' is not installed in this note's subtree -- wire it under '${nid}' via children[]`);
             }
         }
     }
@@ -636,7 +594,7 @@ function safeName(title) {
 }
 
 
-function processManifest(fullManifest, addonDir, depsMap) {
+async function processManifest(fullManifest) {
     // Build ZIP entries for one manifest.
     // Returns { rootEntry, zipFiles, warnings, uuidMap }.
     const m = fullManifest.manifest || {};
@@ -646,20 +604,14 @@ function processManifest(fullManifest, addonDir, depsMap) {
     const uuidMap = {};
     for (const lid of Object.keys(notesById)) uuidMap[lid] = randChoices(ID_CHARS, 12);
 
-    // A local child listed under >1 parent builds only on first occurrence;
-    // later occurrences become isClone references to the same generated noteId.
-    const childrenMap = {}, seenLocalChildren = new Set();
+    // A child listed under >1 parent builds only on first occurrence; later
+    // occurrences become isClone references to the same generated noteId.
+    const childrenMap = {}, seenChildren = new Set();
     for (const c of m.children || []) {
-        if (c.addon) continue;
         const childLid = c.child;
-        const isCloneRef = seenLocalChildren.has(childLid);
-        seenLocalChildren.add(childLid);
+        const isCloneRef = seenChildren.has(childLid);
+        seenChildren.add(childLid);
         (childrenMap[c.parent] ||= []).push([childLid, isCloneRef]);
-    }
-
-    const depChildrenMap = {};
-    for (const c of m.children || []) {
-        if (c.addon) (depChildrenMap[c.parent] ||= []).push(c);
     }
 
     const noteLabels = {}, noteRelations = {};
@@ -674,7 +626,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         return uniqueName(base, set);
     }
 
-    function buildEntry(localId, notePosition, dirPrefix, notePath) {
+    async function buildEntry(localId, notePosition, dirPrefix, notePath) {
         const noteDef = notesById[localId];
         const noteUuid = uuidMap[localId];
         // Match Python's dict.get(key, default): a present-but-empty value
@@ -684,8 +636,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         const title = noteDef.title;
 
         const localChildren = childrenMap[localId] || [];
-        const depChildren = depChildrenMap[localId] || [];
-        const hasChildren = Boolean(localChildren.length || depChildren.length);
+        const hasChildren = Boolean(localChildren.length);
         const currentPath = [...notePath, noteUuid];
 
         const ext = noteType === "render" ? ".html" : (MIME_TO_EXT[noteMime] || ".html");
@@ -705,12 +656,11 @@ function processManifest(fullManifest, addonDir, depsMap) {
             content = Buffer.alloc(0);
         } else {
             const sourceUrl = noteDef.sourceUrl;
-            if (sourceUrl && !/^https?:\/\//.test(sourceUrl)) {
-                const src = path.join(addonDir, sourceUrl);
-                if (exists(src)) {
-                    content = fs.readFileSync(src);
-                } else {
-                    warnings.push(`note '${localId}': sourceUrl '${sourceUrl}' not found -- empty content used`);
+            if (sourceUrl) {
+                try {
+                    content = await fetchBuffer(sourceUrl);
+                } catch (e) {
+                    warnings.push(`note '${localId}': sourceUrl '${sourceUrl}' fetch failed (${e.message}) -- empty content used`);
                     content = Buffer.alloc(0);
                 }
             } else if (noteDef.content != null) {
@@ -744,16 +694,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         }
 
         for (const rel of noteRelations[localId] || []) {
-            let target;
-            if (rel.addon) {
-                target = (depsMap[rel.addon] || {})[rel.to];
-                if (!target) {
-                    warnings.push(`relation '${localId}' type '${rel.type}': dep '${rel.addon}' export '${rel.to}' not resolved -- skipped`);
-                    continue;
-                }
-            } else {
-                target = uuidMap[rel.to] ?? rel.to;
-            }
+            const target = uuidMap[rel.to] ?? rel.to;
             attrs.push({
                 type: "relation", name: rel.type, value: target,
                 isInheritable: false, position: pos,
@@ -780,21 +721,9 @@ function processManifest(fullManifest, addonDir, depsMap) {
             if (isCloneRef) {
                 childEntries.push(cloneEntry(uuidMap[childLid], [...currentPath, uuidMap[childLid]], i * 10));
             } else {
-                childEntries.push(buildEntry(childLid, i * 10, childPrefix, currentPath));
+                childEntries.push(await buildEntry(childLid, i * 10, childPrefix, currentPath));
             }
             i++;
-        }
-
-        let j = localChildren.length + 1;
-        for (const depC of depChildren) {
-            const depNoteId = (depsMap[depC.addon] || {})[depC.child];
-            if (!depNoteId) {
-                warnings.push(`child clone: parent '${localId}' addon '${depC.addon}' export '${depC.child}' not resolved -- skipped`);
-                j++;
-                continue;
-            }
-            childEntries.push(cloneEntry(depNoteId, [depNoteId], j * 10));
-            j++;
         }
 
         const entry = {
@@ -812,7 +741,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
     }
 
     const rootLid = m.root;
-    const rootEntry = buildEntry(rootLid, 10, "", []);
+    const rootEntry = await buildEntry(rootLid, 10, "", []);
     if (!("dirFileName" in rootEntry)) {
         rootEntry.dirFileName = safeName(notesById[rootLid].title);
     }
@@ -820,22 +749,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
 }
 
 
-function directDeps(mf) {
-    const ids = new Set();
-    for (const c of mf.children || []) {
-        if (c.addon) ids.add(c.addon);
-    }
-    for (const r of mf.relations || []) {
-        if (r.addon) ids.add(r.addon);
-    }
-    // manifest.dependencies is the source of truth for "must be installed",
-    // independent of whether the dep is cloned as a child/relation.
-    for (const id of depIds(mf)) ids.add(id);
-    return ids;
-}
-
-
-function buildZip(manifestPath, outPath, addonsDirArg) {
+async function buildZip(manifestPath, outPath) {
     if (!exists(manifestPath)) {
         die(`ERROR: ${manifestPath} not found`);
     }
@@ -854,109 +768,28 @@ function buildZip(manifestPath, outPath, addonsDirArg) {
         die("ERROR: manifest.root is required");
     }
 
-    const addonsDir = addonsDirArg ? addonsDirArg : path.dirname(addonDir);
-
-    function explicitDepIds(mf) {
-        return new Set((mf.dependencies || []).filter((d) => d && typeof d === "object").map((d) => d.id));
-    }
-
-    const allWarnings = [];
-
-    // Discover the full transitive dependency set (deps of deps of ...).
-    const depManifests = {};
-    const allExplicitDepIds = new Set(explicitDepIds(m));
-    const toVisit = [...directDeps(m)], visited = new Set();
-    while (toVisit.length) {
-        const depId = toVisit.pop();
-        if (visited.has(depId)) continue;
-        visited.add(depId);
-
-        const depDir = path.join(addonsDir, depId);
-        const depMpath = path.join(depDir, MANIFEST_NAME);
-        if (!exists(depMpath)) {
-            if (allExplicitDepIds.has(depId)) {
-                allWarnings.push(`dep '${depId}': declared with an explicit manifestSourceUrl, no local sibling folder -- cannot be bundled into an offline ZIP, skipped`);
-            } else {
-                allWarnings.push(`dep '${depId}': manifest not found at ${depMpath} -- skipped`);
-            }
-            continue;
-        }
-        const depFull = JSON.parse(readText(depMpath));
-        const depM = depFull.manifest || {};
-        if (!depM.root) {
-            allWarnings.push(`dep '${depId}': no manifest.root -- skipped`);
-            continue;
-        }
-
-        depManifests[depId] = [depDir, depFull, depM];
-        for (const id of explicitDepIds(depM)) allExplicitDepIds.add(id);
-        for (const id of directDeps(depM)) {
-            if (!visited.has(id)) toVisit.push(id);
-        }
-    }
-
-    // Process deps in dependency order so cross-addon children resolve.
-    const depsMap = {}, depRootEntries = [], depZipFiles = [];
-    const remaining = { ...depManifests };
-    while (Object.keys(remaining).length) {
-        let progressed = false;
-        for (const depId of Object.keys(remaining)) {
-            const [depDir, depFull, depM] = remaining[depId];
-            const dd = directDeps(depM);
-            let subset = true;
-            for (const d of dd) {
-                if (!(d in depsMap)) { subset = false; break; }
-            }
-            if (!subset) continue;
-            const { rootEntry: depRoot, zipFiles: depZf, warnings: depW, uuidMap: depUuids } =
-                processManifest(depFull, depDir, depsMap);
-            depRootEntries.push(depRoot);
-            depZipFiles.push(...depZf);
-            for (const w of depW) allWarnings.push(`[dep:${depId}] ${w}`);
-            const depExports = depM.exports || {};
-            const mapped = {};
-            for (const [exp, lid] of Object.entries(depExports)) {
-                if (lid in depUuids) mapped[exp] = depUuids[lid];
-            }
-            depsMap[depId] = mapped;
-            delete remaining[depId];
-            progressed = true;
-        }
-        if (!progressed) {
-            for (const depId of Object.keys(remaining)) {
-                allWarnings.push(`dep '${depId}': could not resolve its own dependencies (cycle or missing) -- skipped`);
-            }
-            break;
-        }
-    }
-
-    const { rootEntry, zipFiles, warnings } = processManifest(fullManifest, addonDir, depsMap);
-    allWarnings.push(...warnings);
+    const { rootEntry, zipFiles, warnings } = await processManifest(fullManifest);
 
     const triliumMeta = {
         formatVersion: 2, appVersion: TRILIUM_APP_VERSION,
-        files: [rootEntry, ...depRootEntries],
+        files: [rootEntry],
     };
-    const allZipFiles = [...zipFiles, ...depZipFiles];
 
     writeZip(outPath, [
         ["!!!meta.json", Buffer.from(jsonDumps(triliumMeta, 2))],
-        ...allZipFiles,
+        ...zipFiles,
     ]);
 
-    if (allWarnings.length) {
+    if (warnings.length) {
         console.log("Warnings:");
-        for (const w of allWarnings) console.log(`  ${w}`);
+        for (const w of warnings) console.log(`  ${w}`);
     }
 
-    const skipped = allWarnings.filter((w) => w.includes("skipped")).length;
-    const bundled = depRootEntries.length ? `, ${depRootEntries.length} dep(s) bundled` : "";
-    const skippedStr = skipped ? `, ${skipped} skipped` : "";
-    console.log(`Written: ${outPath}  (${allZipFiles.length} content files${bundled}${skippedStr})`);
+    console.log(`Written: ${outPath}  (${zipFiles.length} content files)`);
 }
 
 
-function cmdTamToZip(args) {
+async function cmdTamToZip(args) {
     if (args.all) {
         if (args.manifest || args.out) {
             die("ERROR: --all cannot be combined with a manifest path or --out");
@@ -970,7 +803,7 @@ function cmdTamToZip(args) {
         }
         for (const manifestPath of manifestPaths) {
             const addonId = JSON.parse(readText(manifestPath)).id || "export";
-            buildZip(manifestPath, path.join(outDir, `${addonId}.zip`), args.addonsDir);
+            await buildZip(manifestPath, path.join(outDir, `${addonId}.zip`));
         }
         return;
     }
@@ -982,7 +815,7 @@ function cmdTamToZip(args) {
     if (isDir(manifestPath)) {
         manifestPath = path.join(manifestPath, MANIFEST_NAME);
     }
-    buildZip(manifestPath, args.out || null, args.addonsDir);
+    await buildZip(manifestPath, args.out || null);
 }
 
 
@@ -1051,6 +884,11 @@ function cmdZipToTam(args) {
         assignIds(filesArray, idMap, seenIds);
         const rootLocalId = idMap[filesArray[0].noteId];
 
+        // Every other manifest's sourceUrl is absolute (see lib-tam.js's resolveNotes) --
+        // scaffold the same shape here whenever the manifest's own future URL is
+        // knowable; only fall back to a bare relative filename if it isn't.
+        const manifestSourceUrl = detectManifestSourceUrl(outDir);
+
         const notes = [], children = [], relations = [], labels = [];
         const usedFilenames = new Set();
 
@@ -1118,7 +956,7 @@ function cmdZipToTam(args) {
             latestVersion: "1.0.0", type: "widget", readme: "README.md",
             ...(manifestSourceUrl ? { manifestSourceUrl } : {}),
             manifest: {
-                root: rootLocalId, dependencies: [], exports: {},
+                root: rootLocalId,
                 notes, children, relations, labels,
             },
         };
@@ -1203,83 +1041,8 @@ function page(baseHtml, title, body, css = "style.css") {
 }
 
 
-// --- Dependency graph -> Mermaid (same shape as TAM's in-browser widget) ----
-
-function buildDepGraph(addons) {
-    const metas = {};
-    for (const a of addons) metas[a.meta.id] = a.meta;
-    const edges = {};
-    for (const [aid, m] of Object.entries(metas)) {
-        edges[aid] = depIds(m.manifest || {}).filter((d) => d in metas);
-    }
-    return { metas, edges };
-}
-
-
-function nodeId(addonId) {
-    return "n_" + [...addonId].map((c) => /[a-zA-Z0-9]/.test(c) ? c : "_").join("");
-}
-
-
-function mermaidBody(nodeIds, edges, metas, focus = null) {
-    const lines = ["flowchart LR"];
-    for (const aid of nodeIds) {
-        const label = (metas[aid].name || aid).replace(/"/g, "'");
-        lines.push(`    ${nodeId(aid)}["${label}"]`);
-    }
-    const nodeSet = new Set(nodeIds);
-    for (const aid of nodeIds) {
-        for (const dep of edges[aid] || []) {
-            if (nodeSet.has(dep)) {
-                lines.push(`    ${nodeId(aid)} --> ${nodeId(dep)}`);
-            }
-        }
-    }
-    for (const aid of nodeIds) {
-        const color = TYPE_COLORS[metas[aid].type || ""] || "#6b7280";
-        lines.push(`    style ${nodeId(aid)} fill:${color},stroke:${color},color:#fff`);
-    }
-    if (focus) {
-        lines.push(`    style ${nodeId(focus)} stroke:#0f172a,stroke-width:4px`);
-    }
-    return lines.join("\n");
-}
-
-
-function closure(seed, adjacency) {
-    const seen = new Set(), stack = [seed];
-    while (stack.length) {
-        const cur = stack.pop();
-        for (const nxt of adjacency[cur] || []) {
-            if (!seen.has(nxt) && nxt !== seed) {
-                seen.add(nxt);
-                stack.push(nxt);
-            }
-        }
-    }
-    return seen;
-}
-
-
-function mermaidForAddon(addonId, metas, edges) {
-    const dependents = {};
-    for (const aid of Object.keys(metas)) dependents[aid] = [];
-    for (const [aid, deps] of Object.entries(edges)) {
-        for (const dep of deps) dependents[dep].push(aid);
-    }
-    const nodes = new Set([addonId, ...closure(addonId, edges), ...closure(addonId, dependents)]);
-    return mermaidBody([...nodes], edges, metas, addonId);
-}
-
-
-function mermaidBlock(source) {
-    return `<pre class="mermaid">\n${htmlEscape(source)}\n</pre>`;
-}
-
-
 function renderIndex(baseHtml, addons) {
     const typesPresent = [...new Set(addons.map((a) => a.meta.type).filter(Boolean))].sort();
-    const { metas, edges } = buildDepGraph(addons);
 
     const cards = [];
     for (const a of addons) {
@@ -1334,12 +1097,6 @@ function renderIndex(baseHtml, addons) {
       ${filterBtns.join(" ")}
     </div>
   </div>
-  <details class="dep-graph">
-    <summary>Dependency graph</summary>
-    <div class="dep-graph-scroll">
-      ${mermaidBlock(mermaidBody(Object.keys(metas), edges, metas))}
-    </div>
-  </details>
   <div class="grid">
 ${cards.join("\n")}
   </div>
@@ -1380,7 +1137,7 @@ ${cards.join("\n")}
 }
 
 
-function renderAddon(baseHtml, meta, readmeHtml, metas, edges) {
+function renderAddon(baseHtml, meta, readmeHtml) {
     const aid = meta.id;
     const name = meta.name || aid;
     const version = meta.latestVersion || "—";
@@ -1411,18 +1168,9 @@ function renderAddon(baseHtml, meta, readmeHtml, metas, edges) {
         actions += `\n      <a class="btn btn-ghost" href="${htmlEscape(hp)}" target="_blank">Source</a>`;
     }
 
-    let content = readmeHtml
+    const content = readmeHtml
         ? `<div class="readme">${readmeHtml}</div>`
         : '<p class="no-readme">No README available.</p>';
-
-    const hasEdge = Boolean((edges[aid] || []).length) || Object.values(edges).some((deps) => deps.includes(aid));
-    if (hasEdge) {
-        content +=
-            '<div class="dep-graph-section"><h2>Dependencies</h2>' +
-            '<div class="dep-graph-scroll">' +
-            mermaidBlock(mermaidForAddon(aid, metas, edges)) +
-            '</div></div>';
-    }
 
     const body = `<header>
   <div class="hdr">
@@ -1459,7 +1207,6 @@ function cmdGeneratePages(args) {
     fs.mkdirSync(docsDir, { recursive: true });
 
     const addons = loadAddons();
-    const { metas, edges } = buildDepGraph(addons);
 
     for (const a of addons) {
         const aid = a.meta.id;
@@ -1471,7 +1218,7 @@ function cmdGeneratePages(args) {
                 fs.copyFileSync(full, path.join(pageDir, f));
             }
         }
-        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml, metas, edges));
+        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml));
     }
 
     writeText(path.join(docsDir, "index.html"), renderIndex(baseHtml, addons));
@@ -1805,18 +1552,18 @@ commands:
   backfill-source-url                       Add manifestSourceUrl where missing
 `;
 
-function main() {
+async function main() {
     const argv = process.argv.slice(2);
     const command = argv[0];
     const args = parseArgs(argv.slice(1));
 
     switch (command) {
         case "validate":
-            cmdValidate(args);
+            await cmdValidate(args);
             break;
         case "tam-to-zip":
             args.manifest = args._[0];
-            cmdTamToZip(args);
+            await cmdTamToZip(args);
             break;
         case "zip-to-tam":
             if (!args._[0]) die("ERROR: input ZIP is required");
@@ -1847,4 +1594,4 @@ function main() {
     }
 }
 
-main();
+main().catch((e) => die(`ERROR: ${e.message}`));
