@@ -80,8 +80,10 @@ export async function getExcludeFilters(schemaNoteId, configNoteId) {
         .map(([id, f]) => ({ id, name: f.name || "", query: f.query }))
 }
 
-// Every note matching any enabled exclude filter's query, as a Set of noteIds.
-// A bad/unparseable query is skipped rather than thrown, so one broken filter
+// Every note matching any enabled exclude filter's query, as an array of
+// noteIds (runOnBackend results cross a JSON boundary, so a Set doesn't
+// survive the round-trip — callers build their own Set locally if needed). A
+// bad/unparseable query is skipped rather than thrown, so one broken filter
 // doesn't take down the rest.
 async function getExcludedNoteIds(filters) {
     return api.runOnBackend((filters) => {
@@ -91,7 +93,7 @@ async function getExcludedNoteIds(filters) {
             try { results = api.searchForNotes(f.query) } catch (e) { continue }
             for (const n of results) ids.add(n.noteId)
         }
-        return ids
+        return Array.from(ids)
     }, [filters])
 }
 
@@ -102,7 +104,8 @@ export async function getMissingTemplateNotes(schemaNoteId, configNoteId) {
     const filters = await getExcludeFilters(schemaNoteId, configNoteId)
     const excludedIds = await getExcludedNoteIds(filters)
 
-    return api.runOnBackend((excludedIds) => {
+    return api.runOnBackend((excludedIdList) => {
+        const excludedIds = new Set(excludedIdList)
         const PREVIEW_MAX = 240
         function previewOf(note) {
             if (note.type !== "text") return ""
@@ -138,7 +141,7 @@ export async function getMissingTemplateNotes(schemaNoteId, configNoteId) {
             })
         }
         return out
-    }, [Array.from(excludedIds)])
+    }, [excludedIds])
 }
 
 // Whether the active note should show the picker widget at all — true when it
@@ -147,5 +150,5 @@ export async function isExcludedFromPicker(schemaNoteId, configNoteId, noteId) {
     const filters = await getExcludeFilters(schemaNoteId, configNoteId)
     if (!filters.length) return false
     const excludedIds = await getExcludedNoteIds(filters)
-    return excludedIds.has(noteId)
+    return excludedIds.includes(noteId)
 }
