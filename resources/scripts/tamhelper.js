@@ -157,19 +157,16 @@ function uniqueName(base, used) {
 }
 
 
-// Local ids whose children[] parent chain roots at m.persistenceRoot (inclusive).
-// Empty set when no persistenceRoot is declared.
-// MUST stay in sync with persistentLocalIds() in lib-tam.js.
+// Local ids whose children[] parent chain roots at the reserved "persistence" parent keyword.
+// Empty set when nothing attaches there. MUST stay in sync with persistentLocalIds() in lib-tam.js.
 function persistentLocalIds(m) {
-    const rootId = m.persistenceRoot;
     const persistent = new Set();
-    if (!rootId) return persistent;
-    persistent.add(rootId);
     const childrenOf = {};
     for (const c of (m.children || []).filter((c) => c.child)) {
         (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child);
     }
-    const stack = [rootId];
+    const stack = [...(childrenOf["persistence"] || [])];
+    for (const id of stack) persistent.add(id);
     while (stack.length) {
         for (const child of childrenOf[stack.pop()] || []) {
             if (!persistent.has(child)) {
@@ -353,12 +350,6 @@ async function cmdValidate(args) {
             continue; // metadata-only addon
         }
 
-        const rootId = m.root;
-        if (!rootId) {
-            error(manifestFile, "manifest.root is required");
-            continue;
-        }
-
         const notes = m.notes;
         if (!Array.isArray(notes)) {
             error(manifestFile, "manifest.notes must be an array");
@@ -377,8 +368,17 @@ async function cmdValidate(args) {
             }
         }
 
-        if (!noteIds.has(rootId)) {
-            error(manifestFile, `manifest.root '${rootId}' not found in notes`);
+        // TAM itself bootstraps via a manual ZIP import, so its own manifest is the one
+        // exception that still declares a real root note. Every other addon's root is
+        // synthesized by TAM (ensureAddonAnchor) -- its manifest only ever references it via
+        // the reserved "root" parent keyword in children[], never as a notes[] entry.
+        const rootId = m.root;
+        if (rootId) {
+            if (!noteIds.has(rootId)) {
+                error(manifestFile, `manifest.root '${rootId}' not found in notes`);
+            }
+        } else if (!(m.children || []).some((c) => c.parent === "root")) {
+            error(manifestFile, "manifest.children must attach at least one note to the reserved \"root\" parent");
         }
 
         for (const field of ["settingsNote", "readmeNote", "persistenceRoot"]) {
@@ -594,6 +594,11 @@ function safeName(title) {
 }
 
 
+// Local id for the synthetic root entry `processManifest` builds when a manifest has no
+// declared `m.root` -- must match addonAnchorRootLocalId in lib-tam.js, since a ZIP-installed
+// note's #TAMFILEID has to line up with what TAM's own ensureAddonAnchor would create live.
+const SYNTHETIC_ROOT_LOCAL_ID = "__tamAddonRoot__";
+
 async function processManifest(fullManifest) {
     // Build ZIP entries for one manifest.
     // Returns { rootEntry, zipFiles, warnings, uuidMap }.
@@ -601,6 +606,15 @@ async function processManifest(fullManifest) {
 
     const notesById = {};
     for (const n of m.notes || []) notesById[n.id] = n;
+
+    // No declared m.root -- every addon but TAM itself. TAM synthesizes this note live
+    // (ensureAddonAnchor); mirror that here purely so the ZIP has a single top-level note to
+    // build around, titled after the addon, content-free, TAM's own icon.
+    const rootLid = m.root || SYNTHETIC_ROOT_LOCAL_ID;
+    if (!m.root) {
+        notesById[rootLid] = { id: rootLid, title: fullManifest.name || fullManifest.id, type: "text", mime: "text/html", sourceUrl: null };
+    }
+
     const uuidMap = {};
     for (const lid of Object.keys(notesById)) uuidMap[lid] = randChoices(ID_CHARS, 12);
 
@@ -611,12 +625,17 @@ async function processManifest(fullManifest) {
         const childLid = c.child;
         const isCloneRef = seenChildren.has(childLid);
         seenChildren.add(childLid);
-        (childrenMap[c.parent] ||= []).push([childLid, isCloneRef]);
+        // The reserved "root" parent keyword means "TAM's synthesized anchor" -- redirect it to
+        // the synthetic root entry's local id so buildEntry finds its children under the right key.
+        const parentLid = (!m.root && c.parent === "root") ? rootLid : c.parent;
+        (childrenMap[parentLid] ||= []).push([childLid, isCloneRef]);
     }
 
     const noteLabels = {}, noteRelations = {};
     for (const lbl of m.labels || []) (noteLabels[lbl.note] ||= []).push(lbl);
     for (const rel of m.relations || []) (noteRelations[rel.from] ||= []).push(rel);
+    // The synthetic root's own #iconClass -- TAM sets this uniformly on every anchor it owns.
+    if (!m.root) noteLabels[rootLid] = [{ note: rootLid, name: "iconClass", value: "bx bx-customize" }];
 
     const zipFiles = [], warnings = [];
     const usedBases = {};
@@ -740,7 +759,6 @@ async function processManifest(fullManifest) {
         return entry;
     }
 
-    const rootLid = m.root;
     const rootEntry = await buildEntry(rootLid, 10, "", []);
     if (!("dirFileName" in rootEntry)) {
         rootEntry.dirFileName = safeName(notesById[rootLid].title);
@@ -764,8 +782,8 @@ async function buildZip(manifestPath, outPath) {
     if (!m) {
         die("ERROR: no 'manifest' key -- metadata-only addons cannot be exported as a Trilium ZIP");
     }
-    if (!m.root) {
-        die("ERROR: manifest.root is required");
+    if (!m.root && !(m.children || []).some((c) => c.parent === "root")) {
+        die("ERROR: manifest.children must attach at least one note to the reserved \"root\" parent");
     }
 
     const { rootEntry, zipFiles, warnings } = await processManifest(fullManifest);
@@ -899,9 +917,16 @@ function cmdZipToTam(args) {
         const metaPrefix = (metaRoot && metaRoot !== ".") ? metaRoot + "/" : "";
 
         for (const [entry, localId, parentLocalId, isClone, dirPrefix] of walkEntries(filesArray, null, idMap)) {
+            // The ZIP's own top-level note becomes the reserved "root" parent keyword instead
+            // of a real notes[] entry -- TAM synthesizes this note itself for every addon but
+            // TAM (see lib-tam.js's ensureAddonAnchor). Rewrite its direct children's parent to
+            // "root" and drop the note itself (and any labels/relations declared on it).
+            const effectiveParentLocalId = parentLocalId === rootLocalId ? "root" : parentLocalId;
+            if (localId === rootLocalId) continue;
+
             if (isClone) {
-                if (parentLocalId) {
-                    children.push({ parent: parentLocalId, child: localId });
+                if (effectiveParentLocalId) {
+                    children.push({ parent: effectiveParentLocalId, child: localId });
                 }
                 continue;
             }
@@ -933,8 +958,8 @@ function cmdZipToTam(args) {
             if (noteType === "file") note.binary = true;
             notes.push(note);
 
-            if (parentLocalId) {
-                children.push({ parent: parentLocalId, child: localId });
+            if (effectiveParentLocalId) {
+                children.push({ parent: effectiveParentLocalId, child: localId });
             }
 
             for (const attr of entry.attributes || []) {
@@ -955,7 +980,6 @@ function cmdZipToTam(args) {
             latestVersion: "1.0.0", type: "widget", readme: "README.md",
             ...(manifestSourceUrl ? { manifestSourceUrl } : {}),
             manifest: {
-                root: rootLocalId,
                 notes, children, relations, labels,
             },
         };

@@ -47,6 +47,7 @@ async function ensureAddonAnchor(addonId, addonName, localId, parentRealId) {
         const { note } = api.createTextNote(parentRealId, addonName, "")
         note.setLabel(tamFileIdLabel, tamFileId)
         note.setLabel("addonId", addonId)
+        note.setLabel("iconClass", "bx bx-customize")
         return note.noteId
     }, [tamFileIdLabel, tamFileId, addonId, addonName, parentRealId])
 }
@@ -240,7 +241,6 @@ function stripManifestForStorage(m) {
         root: m.root,
         settingsNote: m.settingsNote,
         readmeNote: m.readmeNote,
-        persistenceRoot: m.persistenceRoot,
         allowExternalReferences: m.allowExternalReferences,
         children: m.children || []
     }
@@ -269,21 +269,20 @@ function normalizeManifest(manifestFetched) {
     }
 }
 
-// Local ids whose children[] parent chain roots at m.persistenceRoot (inclusive). Empty when
-// no persistenceRoot is declared. A "persistent" note is created once with its shipped default,
-// prompt-on-update thereafter, and never touched by uninstall/prune — all three implied by
-// placement alone (no per-note flags, no AddonData: relation).
-// MUST stay in sync with persistentLocalIds() in resources/scripts/tamhelper.js.
+// Local ids whose children[] parent chain roots at the reserved "persistence" parent keyword
+// (TAM's own synthesized persistence anchor — a manifest never declares this note itself, same
+// as "root"; see resolveNotes). Empty when nothing attaches there. A "persistent" note is
+// created once with its shipped default, prompt-on-update thereafter, and never touched by
+// uninstall/prune — all three implied by placement alone (no per-note flags, no AddonData:
+// relation). MUST stay in sync with persistentLocalIds() in resources/scripts/tamhelper.js.
 function persistentLocalIds(m) {
-    const rootId = m.persistenceRoot
     const persistent = new Set()
-    if (!rootId) return persistent
-    persistent.add(rootId)
     const childrenOf = {}
     for (const c of (m.children || []).filter(c => c.child)) {
         (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child)
     }
-    const stack = [rootId]
+    const stack = [...(childrenOf["persistence"] || [])]
+    for (const id of stack) persistent.add(id)
     while (stack.length) {
         for (const child of childrenOf[stack.pop()] || []) {
             if (!persistent.has(child)) {
@@ -310,6 +309,14 @@ async function resolveStoredNoteId(addonId, localId) {
         const note = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
         return (note && !note.isDeleted) ? note.noteId : null
     }, [tamFileIdLabel, `${addonId}/${localId}`])
+}
+
+// Resolves an addon's root note id live. Every addon except TAM itself has its root
+// synthesized by ensureAddonAnchor (addonAnchorRootLocalId), never declared in its own
+// manifest — storedManifest.root is only ever set for TAM's own record (its self-bootstrap
+// exception, see syncAddon), so falling back to the anchor id here handles both uniformly.
+async function resolveAddonRootNoteId(addonId, storedManifest) {
+    return await resolveStoredNoteId(addonId, storedManifest?.root ?? addonAnchorRootLocalId)
 }
 
 async function applyLabels(labels, noteMap) {
@@ -343,7 +350,7 @@ async function applyLabels(labels, noteMap) {
 // the structural or just the persistent notes — see the two passes in syncAddon — both drawn from
 // the same manifest, so a scoped note's primaryParent is always itself in scope.
 async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
-    const { rootExternallyParented = false, entryLocalId = m.root, scopeLocalIds = null } = options
+    const { rootExternallyParented = false, entryLocalId = null, scopeLocalIds = null } = options
     const { primaryParent } = buildParentMaps(m.children)
     // A persistent note (under persistenceRoot) is created once with its shipped default, then
     // never content-overwritten on later syncs — same content behavior as skipOnUpdate.
@@ -357,7 +364,14 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
         const noteDef = m.notes.find(n => n.id === localId)
         if (!noteDef) continue
 
-        const parentLocalId = localId === entryLocalId ? null : primaryParent[localId]
+        // The reserved "root"/"persistence" parent values (or, for TAM's own self-sync,
+        // entryLocalId) mean "attach directly under fallbackParentNoteId" — the addon's
+        // TAM-owned structural or persistence anchor, whichever this pass is resolving. Every
+        // other note resolves relative to whatever real note its declared parent resolved to.
+        const isEntry = entryLocalId
+            ? localId === entryLocalId
+            : primaryParent[localId] === "root" || primaryParent[localId] === "persistence"
+        const parentLocalId = isEntry ? null : primaryParent[localId]
         const parentRealId = parentLocalId ? noteMap[parentLocalId] : fallbackParentNoteId
         if (parentLocalId && !parentRealId) {
             console.error(`TAM: skipping note '${localId}' of ${addonId} — its parent '${parentLocalId}' failed to resolve`)
@@ -372,7 +386,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
         // it — an ancestor of the Addons tree, not a sibling under it. Never
         // touch its parent when found already existing (which, in practice,
         // is the only branch this ever hits for it — see syncAddon).
-        const skipParenting = localId === entryLocalId && rootExternallyParented
+        const skipParenting = isEntry && rootExternallyParented
 
         const absoluteSourceUrl = noteDef.sourceUrl || null
 
@@ -495,14 +509,18 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
 
 // Clones every resolved note into every parent its manifest currently declares, and detaches
 // it from parents tagged with this addon's own #TAMFILEID prefix that it no longer declares.
-async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId, rootExternallyParented, entryLocalId = m.root) {
+async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId, rootExternallyParented, entryLocalId = null) {
     const { primaryParent, extraParents } = buildParentMaps(m.children)
+    const isReservedAnchor = (pid) => pid === "root" || pid === "persistence"
+    const isEntry = (localId) => entryLocalId ? localId === entryLocalId : isReservedAnchor(primaryParent[localId])
 
     for (const [childLocalId, parentLocalIds] of Object.entries(extraParents)) {
         const childRealId = noteMap[childLocalId]
         if (!childRealId) continue
         for (const parentLocalId of parentLocalIds) {
-            const parentRealId = noteMap[parentLocalId]
+            // "root"/"persistence" as an extra (clone) parent also means the addon's
+            // TAM-owned anchor for whichever pass is currently resolving.
+            const parentRealId = isReservedAnchor(parentLocalId) ? fallbackParentNoteId : noteMap[parentLocalId]
             if (!parentRealId) continue
             await api.runOnBackend((sourceId, parentId) => {
                 api.ensureNoteIsPresentInParent(sourceId, parentId)
@@ -511,15 +529,18 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
     }
 
     for (const localId of Object.keys(noteMap)) {
-        if (localId === entryLocalId && rootExternallyParented) continue
+        if (isEntry(localId) && rootExternallyParented) continue
         const noteRealId = noteMap[localId]
         if (!noteRealId) continue
 
+        // "root"/"persistence" (the reserved anchor keywords) never appear in noteMap -- resolve
+        // them to fallbackParentNoteId directly instead of looking them up like a normal
+        // declared parent.
         const declaredParentLocalIds = [primaryParent[localId], ...(extraParents[localId] || [])].filter(Boolean)
         const desiredRealParents = declaredParentLocalIds
-            .map(pid => noteMap[pid])
+            .map(pid => isReservedAnchor(pid) ? fallbackParentNoteId : noteMap[pid])
             .filter(Boolean)
-        if (localId === entryLocalId && !rootExternallyParented && fallbackParentNoteId) {
+        if (isEntry(localId) && !rootExternallyParented && fallbackParentNoteId) {
             desiredRealParents.push(fallbackParentNoteId)
         }
         if (desiredRealParents.length === 0) continue
@@ -527,7 +548,7 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
         // A declared parent that simply wasn't resolved in this call (e.g. it lies
         // in the OTHER anchored pass — persistence vs. structural, see syncAddon) must never be
         // detached — only parents the manifest genuinely no longer declares.
-        const declaredParentTamIds = declaredParentLocalIds.map(pid => `${addonId}/${pid}`)
+        const declaredParentTamIds = declaredParentLocalIds.map(pid => isReservedAnchor(pid) ? null : `${addonId}/${pid}`).filter(Boolean)
 
         await api.runOnBackend((tamFileIdLabel, addonId, noteId, desiredRealParents, declaredParentTamIds) => {
             const note = api.getNote(noteId)
@@ -588,7 +609,6 @@ async function collectPendingPrompts(addonId, m) {
     const prompts = []
     for (const noteDef of (m.notes || [])) {
         if (!persistentIds.has(noteDef.id)) continue
-        if (noteDef.id === m.persistenceRoot) continue // the anchor holds no user content
 
         // The incoming default: inline content, else fetched fresh from sourceUrl.
         let newContent = noteDef.content ?? null
@@ -655,7 +675,7 @@ async function clearPendingPrompts(addonId) {
 // resolveNotes. Shared by the structural and persistence passes in syncAddon (existingNoteMap
 // merges both passes' real ids so a cross-anchor relation resolves against either).
 async function resolveManifest(m, addonId, parentRealId, options = {}) {
-    const { entryLocalId = m.root, scopeLocalIds = null, rootExternallyParented = false, existingNoteMap = null } = options
+    const { entryLocalId = null, scopeLocalIds = null, rootExternallyParented = false, existingNoteMap = null } = options
     const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
 
     const resolved = await resolveNotes(m, addonId, parentRealId, {
@@ -709,7 +729,11 @@ async function syncAddon(addonId, options = {}) {
     const manifest = await fetchManifest(fetchUrl)
     const m = normalizeManifest(manifest)
 
-    if (!m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
+    // Every other addon's root is synthesized by TAM itself (ensureAddonAnchor) — its manifest
+    // never declares one, only references it via the reserved "root" parent keyword in
+    // children[]. TAM's own manifest is the one exception: it bootstraps via a manual ZIP
+    // import, so nothing can synthesize its root for it, and it must keep declaring a real one.
+    if (isSelf && !m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
 
     // Snapshot persistent-note diffs (shipped default vs. user's live copy) before resolveNotes.
     const pendingPrompts = await collectPendingPrompts(addonId, m)
@@ -722,12 +746,13 @@ async function syncAddon(addonId, options = {}) {
 
     // The manifest resolves in two anchored passes. Structural notes go under this addon's own
     // TAM-owned root anchor (itself a child of the global "Addons" note), so every addon's tree
-    // reads as a distinct, named/tagged branch instead of a flat dump. Persistent notes (the
-    // persistenceRoot subtree) go under this addon's own TAM-owned persistence anchor (a child
-    // of the global "Addon Data" note) — stable, uninstall never touches it, so user data
-    // survives an uninstall without any copy or reparenting. Cross-anchor ~template/relation
-    // edges still resolve fine; both passes share one noteMap. TAM never lets an addon declare
-    // or reparent these anchors itself — only attach children beneath them.
+    // reads as a distinct, named/tagged branch instead of a flat dump. Persistent notes (whatever
+    // attaches under the reserved "persistence" parent keyword) go under this addon's own
+    // TAM-owned persistence anchor (a child of the global "Addon Data" note) — stable, uninstall
+    // never touches it, so user data survives an uninstall without any copy or reparenting.
+    // Cross-anchor ~template/relation edges still resolve fine; both passes share one noteMap.
+    // TAM never lets an addon declare or reparent either anchor itself — only attach children
+    // beneath them via the "root"/"persistence" reserved keywords.
     const persistentIds = persistentLocalIds(m)
     const structuralScope = persistentIds.size
         ? new Set(m.notes.map(n => n.id).filter(id => !persistentIds.has(id)))
@@ -745,18 +770,18 @@ async function syncAddon(addonId, options = {}) {
             ? await getPersistenceNoteId()
             : await ensureAddonAnchor(addonId, manifest.name, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
         await resolveManifest(m, addonId, persistenceAnchorId, {
-            entryLocalId: m.persistenceRoot,
             scopeLocalIds: persistentIds,
             existingNoteMap: noteMap
         })
     }
 
     await resolveManifest(m, addonId, addonRootAnchorId, {
+        entryLocalId: isSelf ? m.root : null,
         rootExternallyParented: isSelf,
         scopeLocalIds: structuralScope,
         existingNoteMap: noteMap
     })
-    if (!noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
+    if (isSelf && !noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
 
     await pruneRemovedNotes(m, addonId)
 
@@ -805,7 +830,7 @@ async function installByUrl(manifestSourceUrl, options = {}) {
 async function enableAddon(addonId, enabled) {
     if (!addonId.trim()) return
     let database = await loadDatabase()
-    const rootNoteId = await resolveStoredNoteId(addonId, database.installedAddons[addonId].manifest?.root)
+    const rootNoteId = await resolveAddonRootNoteId(addonId, database.installedAddons[addonId].manifest)
     if (!rootNoteId) return
     await api.runOnBackend((tamFileIdLabel, addonId, noteId, enabled, addonLabels) => {
         for (const id of api.getNote(noteId).getSubtreeNoteIds()) {
@@ -834,7 +859,7 @@ async function getAllAddons() {
     const lookups = []
     for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
         if (!addon.installedVersion || !addon.manifest) continue
-        lookups.push({ addonId, rootLocalId: addon.manifest.root, settingsLocalId: addon.manifest.settingsNote })
+        lookups.push({ addonId, rootLocalId: addon.manifest.root ?? addonAnchorRootLocalId, settingsLocalId: addon.manifest.settingsNote })
     }
     const resolved = await api.runOnBackend((tamFileIdLabel, lookups) => {
         const result = {}
@@ -919,7 +944,8 @@ async function validateDatabase() {
         const manifest = addon.manifest || {}
         const persistentIds = isInstalled ? [...persistentLocalIds(manifest)] : []
 
-        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, persistentIds, isInstalled) => {
+        const rootLocalId = manifest.root ?? addonAnchorRootLocalId
+        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, rootLocalId, persistentIds, isInstalled) => {
             const found = []
 
             function resolveLocal(localId) {
@@ -929,8 +955,8 @@ async function validateDatabase() {
             }
 
             if (isInstalled) {
-                if (!resolveLocal(manifest.root)) {
-                    found.push(`root note ('${manifest.root}') is missing`)
+                if (!resolveLocal(rootLocalId)) {
+                    found.push(`root note ('${rootLocalId}') is missing`)
                 }
                 if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
                     found.push(`settings note ('${manifest.settingsNote}') is missing`)
@@ -946,7 +972,7 @@ async function validateDatabase() {
             }
 
             return found
-        }, [tamFileIdLabel, addonId, manifest, persistentIds, isInstalled])
+        }, [tamFileIdLabel, addonId, manifest, rootLocalId, persistentIds, isInstalled])
 
         for (const message of backendIssues) {
             issues.push({ addonId, message })
@@ -1136,7 +1162,7 @@ async function findExternalReferences(addonId) {
     const addonRecord = (await loadDatabase()).installedAddons[addonId]
     if (addonRecord?.manifest?.allowExternalReferences) return []
 
-    const rootNoteId = await resolveStoredNoteId(addonId, addonRecord?.manifest?.root)
+    const rootNoteId = await resolveAddonRootNoteId(addonId, addonRecord?.manifest)
     if (!rootNoteId) return []
 
     return await api.runOnBackend((rootNoteId) => {

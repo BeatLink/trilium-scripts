@@ -5,16 +5,15 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/tamtheme@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.1.5",
+    "latestVersion": "0.1.6",
     "type": "theme",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
             {
-                "id": "root",
-                "title": "tamtheme@beatlink",
+                "id": "stylesheet",
+                "title": "tamtheme@beatlink.css",
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/tamtheme@beatlink.css"
@@ -31,18 +30,22 @@
         "children": [
             {
                 "parent": "root",
+                "child": "stylesheet"
+            },
+            {
+                "parent": "root",
                 "child": "readme"
             }
         ],
         "relations": [],
         "labels": [
             {
-                "note": "root",
+                "note": "stylesheet",
                 "name": "appThemeBase",
                 "value": "next"
             },
             {
-                "note": "root",
+                "note": "stylesheet",
                 "name": "appTheme",
                 "value": "TAMTheme"
             }

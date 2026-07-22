@@ -5,16 +5,15 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluenext@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.5",
+    "latestVersion": "0.0.6",
     "type": "theme",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "readme",
         "notes": [
             {
                 "id": "readme",
-                "title": "whitebluenext@beatlink",
+                "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/README.md",
@@ -30,7 +29,11 @@
         ],
         "children": [
             {
-                "parent": "readme",
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "root",
                 "child": "theme"
             }
         ],
