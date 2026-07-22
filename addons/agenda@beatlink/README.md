@@ -13,9 +13,12 @@ workflow, all sharing one configuration.
   area, priority, or any you add; item type is assigned via
   [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own widget, not a dimension
   here). On notes carrying the **`#agendaTaskWidget`** label
-  (inherited from actionable templates), it also shows start/due dates, duration, recurrence, and
-  quick actions (complete, start today/tomorrow, Zen, Hoist). Completing a task advances it to its
-  next recurrence, or archives it when the recurrence is exhausted.
+  (inherited from actionable templates), it also shows start/due dates, duration, recurrence, a
+  configurable **Reschedule** dropdown, and quick actions (complete, Zen, Hoist). Completing a task
+  advances it to its next recurrence, or archives it when the recurrence is exhausted. The Reschedule
+  dropdown's entries are configured on the Agenda Editor's **Settings › Reschedule Options** tab —
+  each is either a fixed number of days from now (ships with Today/Tomorrow) or the next occurrence
+  (from now) of a recurrence rule, in any order you choose.
 - **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
   note. While that note is open it runs the optional background loops (append due tasks, send due
   notifications).
@@ -107,7 +110,10 @@ per-field `category`, plus `extraPanels` for the non-schema Workflow Setup and O
   page embeds this same registry on its own **Dimensions** tab. Item type lives in
   template-picker@beatlink's own settings instead, not here.
 - **Settings** — the label-name vocabulary (grouped into **Start** / **Due** / **Task** sub-groups via
-  libsettings' `subgroup`) and the Workflow Setup tab (provision button).
+  libsettings' `subgroup`), the Workflow Setup tab (provision button), and Reschedule Options (the
+  Task pane's Reschedule dropdown entries — a custom panel, `rescheduleOptions.jsx`, since a
+  recurrence-mode entry needs the same rich picker the Task pane's own Recurrence section uses, not a
+  raw rrule text box).
 
 ### Config migrations
 

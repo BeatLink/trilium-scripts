@@ -168,6 +168,18 @@ function nextOccurrence(recurrenceString, startDate) {
     return { nextDate, recurrence }
 }
 
+// The next occurrence of a recurrence rule computed from now, for a
+// Reschedule Options entry (unlike `nextOccurrence`, which advances a task's
+// own recurrence from its current start date). Returns null when the rule
+// yields nothing after now (e.g. an already-exhausted count/until).
+function nextFromNow(recurrenceString) {
+    const options = libRRule.RRule.parseString(recurrenceString)
+    const now = dayjs().utc().toDate()
+    options.dtstart = now
+    const rule = new libRRule.RRule(options)
+    return rule.after(now, true)
+}
+
 function humanize(recurrenceString) {
     if (!recurrenceString) return ""
     try {
@@ -184,6 +196,7 @@ module.exports = {
     RRuleToObj,
     ObjToRRule,
     nextOccurrence,
+    nextFromNow,
     humanize,
     rrule: libRRule
 }

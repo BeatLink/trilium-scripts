@@ -16,7 +16,7 @@ import { FormToggleButton } from "FormToggleButton.jsx"
 import { DimensionPicker } from "DimensionPicker.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { complete, rescheduleByDays, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
+const { complete, rescheduleByOption, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
 const { publish } = require("libIpc.js")
 
 const durationOptions = [
@@ -161,18 +161,18 @@ function inputToTime(value) {
     return { hour: String(Number(hour)), minute: String(Number(minute)) }
 }
 
-function RecurrencePicker({ constants, onAfterChange }){
-    const { note } = useActiveNoteContext();
-    const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
-
+// Pure value/onChange recurrence editor (an rrule string in, an rrule string
+// out) so it can be reused both on a note's own recurrence label (via the
+// NoteRecurrencePicker adapter below) and on a plain config value (agenda's
+// Reschedule Options settings panel).
+export function RecurrencePicker({ recurrence, onChange }){
     const recurrenceObj = useMemo(
         () => RRuleToObj(recurrence),
         [recurrence]
     )
 
     function updateRecurrence(newRecurrence) {
-        setRecurrence(ObjToRRule(newRecurrence))
-        onAfterChange()
+        onChange(ObjToRRule(newRecurrence))
     }
 
     return (
@@ -377,18 +377,37 @@ function RecurrencePicker({ constants, onAfterChange }){
     )
 }
 
+// Adapter binding RecurrencePicker to a note's own recurrence label, for the
+// Task pane's own "Recurrence" section.
+function NoteRecurrencePicker({ constants, onAfterChange }){
+    const { note } = useActiveNoteContext();
+    const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
+
+    return (
+        <RecurrencePicker
+            recurrence={recurrence}
+            onChange={value => {
+                setRecurrence(value)
+                onAfterChange()
+            }}
+        />
+    )
+}
+
 function MainWidget(){
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
     const [agendaTaskWidget] = useNoteLabel(note, "agendaTaskWidget")
     const [ids, setIds] = useState(null)
+    const [rescheduleChoice, setRescheduleChoice] = useState("")
 
     useEffect(() => {
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
-            const { constants, dimensions } = settings
-            setIds({ constants, dimensions: dimensions.filter(d => d.picker) })
+            const { constants, dimensions, rescheduleOptions } = settings
+            setIds({ constants, dimensions: dimensions.filter(d => d.picker), rescheduleOptions })
+            if (rescheduleOptions.length > 0) setRescheduleChoice(rescheduleOptions[0].id)
         })()
     }, [])
 
@@ -408,18 +427,6 @@ function MainWidget(){
             icon: "bx bx-check",
             text: "Complete Task",
             onClick: async () => { await complete(noteId, ids.constants); await afterChange() }
-        },
-        {
-            key: "today",
-            icon: "bx bx-rocket",
-            text: "Start Today",
-            onClick: async () => { await rescheduleByDays(noteId, ids.constants, 0); await afterChange() }
-        },
-        {
-            key: "tomorrow",
-            icon: "bx bx-rocket",
-            text: "Start Tomorrow",
-            onClick: async () => { await rescheduleByDays(noteId, ids.constants, 1); await afterChange() }
         },
         {
             key: "zen",
@@ -461,7 +468,31 @@ function MainWidget(){
                 {isActionable && (
                     <div>
                         <label>Recurrence</label>
-                        <RecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
+                        <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
+                    </div>
+                )}
+                {isActionable && ids.rescheduleOptions.length > 0 && (
+                    <div>
+                        <label>Reschedule</label>
+                        <div className="reschedule-picker">
+                            <FormDropdownList
+                                values={ids.rescheduleOptions}
+                                currentValue={rescheduleChoice}
+                                onChange={setRescheduleChoice}
+                                keyProperty="id" titleProperty="name"
+                                class="dropdown-component form-control"
+                            />
+                            <Button
+                                icon="bx bx-rocket"
+                                text="Reschedule"
+                                onClick={async () => {
+                                    const option = ids.rescheduleOptions.find(o => o.id === rescheduleChoice)
+                                    if (!option) return
+                                    await rescheduleByOption(noteId, ids.constants, option)
+                                    await afterChange()
+                                }}
+                            />
+                        </div>
                     </div>
                 )}
                 {isActionable && (

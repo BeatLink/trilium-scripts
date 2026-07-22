@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.1.0",
+    "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -197,6 +197,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/profileEditor.jsx"
+            },
+            {
+                "id": "reschedule-options",
+                "title": "rescheduleOptions.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/rescheduleOptions.jsx"
             },
             {
                 "id": "profile-editor-css",
@@ -639,6 +646,22 @@
             {
                 "parent": "profile-editor",
                 "child": "libsettings-ui"
+            },
+            {
+                "parent": "profile-editor",
+                "child": "reschedule-options"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "task"
             },
             {
                 "parent": "my-day",

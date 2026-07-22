@@ -155,6 +155,24 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0) {
     await updateDependentAttributes(noteId, constants)
 }
 
+// Reschedules from a Reschedule Options entry: either a fixed number of days
+// from now, or the next occurrence (from now) of a recurrence rule. A
+// recurrence option that yields nothing (e.g. an exhausted count/until) is a
+// no-op.
+async function rescheduleByOption(noteId, constants, option) {
+    if (option.mode === "recurrence") {
+        const nextDate = libRecurrence.nextFromNow(option.recurrence)
+        if (!nextDate) return
+        const newStart = api.dayjs(nextDate).local().format("YYYY-MM-DDTHH:mm")
+        await api.runOnBackend((noteId, startDatetimeLabel, newStart) => {
+            api.getNote(noteId).setLabel(startDatetimeLabel, newStart)
+        }, [noteId, constants.START_DATETIME_LABEL, newStart])
+        await updateDependentAttributes(noteId, constants)
+        return
+    }
+    await rescheduleByDays(noteId, constants, option.days)
+}
+
 // Refreshes the display labels only when they are actually stale, to avoid
 // unnecessary backend writes.
 async function refreshDisplayLabels(noteId, constants) {
@@ -182,6 +200,7 @@ module.exports = {
     markDone,
     markUndone,
     rescheduleByDays,
+    rescheduleByOption,
     updateDependentAttributes,
     refreshDisplayLabels,
     // Re-exported from libRecurrence so consumers that already require this

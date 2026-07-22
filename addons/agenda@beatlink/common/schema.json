@@ -165,6 +165,28 @@
         "label": "Section State",
         "default": {}
     },
+    "rescheduleOptions": {
+        "type": "registry",
+        "hidden": true,
+        "label": "Reschedule Options",
+        "description": "The choices offered by the Task pane's Reschedule dropdown. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is dropdown order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
+        "itemSchema": {
+            "name": { "type": "string", "label": "Name", "default": "New Option" },
+            "mode": {
+                "type": "select", "label": "Mode", "default": "days",
+                "options": [
+                    { "value": "days", "label": "Days From Now" },
+                    { "value": "recurrence", "label": "Recurrence Rule" }
+                ]
+            },
+            "days": { "type": "number", "label": "Days From Now", "default": 0, "showWhen": { "mode": "days" } },
+            "recurrence": { "type": "string", "label": "Recurrence Rule", "default": "", "showWhen": { "mode": "recurrence" } }
+        },
+        "default": {
+            "today": { "name": "Today", "mode": "days", "days": 0 },
+            "tomorrow": { "name": "Tomorrow", "mode": "days", "days": 1 }
+        }
+    },
     "dimensions": {
         "type": "registry",
         "label": "Dimensions",
