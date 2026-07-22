@@ -63,16 +63,5 @@ export async function getAgendaSettings() {
     // time; dimensions.js owns the shape.
     const dimensions = normalizeDimensions(settings)
 
-    // The Task pane's Reschedule dropdown entries, in config order.
-    const rescheduleOptions = Object.entries(settings.rescheduleOptions || {})
-        .filter(([, opt]) => opt && opt.name)
-        .map(([id, opt]) => ({
-            id,
-            name: opt.name,
-            mode: opt.mode || "days",
-            days: opt.days ?? 0,
-            recurrence: opt.recurrence || ""
-        }))
-
-    return { constants, profileContext, myDay, organize, collect, dimensions, rescheduleOptions, schemaNoteId, configNoteId, icalNoteId }
+    return { constants, profileContext, myDay, organize, collect, dimensions, schemaNoteId, configNoteId, icalNoteId }
 }

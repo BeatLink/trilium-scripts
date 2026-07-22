@@ -2,6 +2,7 @@ import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 import { RescheduleOptionsPanel } from "rescheduleOptions.jsx"
+import { TaskLabelsPanel } from "taskLabelsPanel.jsx"
 
 const { provisionStructure } = require("organizeProvision.js")
 const { getDimensions } = require("dimensions.js")
@@ -264,6 +265,11 @@ export default function ProfileEditor() {
             category: "Settings",
             tab: "Reschedule Options",
             render: () => <RescheduleOptionsPanel />
+        },
+        {
+            category: "Settings",
+            tab: "Settings",
+            render: () => <TaskLabelsPanel />
         }
     ]
 

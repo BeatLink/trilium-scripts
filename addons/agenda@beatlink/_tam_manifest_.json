@@ -139,6 +139,41 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/libAgendaTask.js"
             },
             {
+                "id": "lib-task-settings",
+                "title": "agendaTaskSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/agendaTaskSettings.js"
+            },
+            {
+                "id": "task-schema",
+                "title": "taskSchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskSchema.json"
+            },
+            {
+                "id": "task-config",
+                "title": "taskConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskConfig.json"
+            },
+            {
+                "id": "task-settings",
+                "title": "Task Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "task-labels-panel",
+                "title": "taskLabelsPanel.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/taskLabelsPanel.jsx"
+            },
+            {
                 "id": "lib-recurrence",
                 "title": "libRecurrence.js",
                 "type": "code",
@@ -503,6 +538,18 @@
                 "child": "task"
             },
             {
+                "parent": "grp-task",
+                "child": "task-settings"
+            },
+            {
+                "parent": "grp-task",
+                "child": "task-schema"
+            },
+            {
+                "parent": "grp-task",
+                "child": "task-config"
+            },
+            {
                 "parent": "grp-organize",
                 "child": "organize-page-src"
             },
@@ -599,6 +646,10 @@
                 "child": "lib-recurrence"
             },
             {
+                "parent": "lib-task-settings",
+                "child": "libsettings-ui"
+            },
+            {
                 "parent": "lib-recurrence",
                 "child": "librrule-lib"
             },
@@ -651,8 +702,12 @@
                 "child": "reschedule-options"
             },
             {
+                "parent": "profile-editor",
+                "child": "task-labels-panel"
+            },
+            {
                 "parent": "reschedule-options",
-                "child": "agenda-settings"
+                "child": "lib-task-settings"
             },
             {
                 "parent": "reschedule-options",
@@ -661,6 +716,14 @@
             {
                 "parent": "reschedule-options",
                 "child": "task"
+            },
+            {
+                "parent": "task-labels-panel",
+                "child": "lib-task-settings"
+            },
+            {
+                "parent": "task-labels-panel",
+                "child": "libsettings-ui"
             },
             {
                 "parent": "my-day",
@@ -676,7 +739,7 @@
             },
             {
                 "parent": "task",
-                "child": "agenda-settings"
+                "child": "lib-task-settings"
             },
             {
                 "parent": "task",
@@ -764,6 +827,16 @@
                 "to": "ical"
             },
             {
+                "from": "task-settings",
+                "type": "configNote",
+                "to": "task-config"
+            },
+            {
+                "from": "task-settings",
+                "type": "schemaNote",
+                "to": "task-schema"
+            },
+            {
                 "from": "profile-editor-page",
                 "type": "renderNote",
                 "to": "profile-editor"
@@ -838,6 +911,11 @@
             {
                 "note": "settings",
                 "name": "agendaConfig",
+                "value": ""
+            },
+            {
+                "note": "task-settings",
+                "name": "agendaTaskConfig",
                 "value": ""
             },
             {
@@ -926,6 +1004,21 @@
                 "value": "bx bx-task"
             },
             {
+                "note": "task-schema",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-labels-panel",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
                 "note": "settings",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -952,6 +1045,11 @@
             },
             {
                 "note": "lib-task",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-task-settings",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

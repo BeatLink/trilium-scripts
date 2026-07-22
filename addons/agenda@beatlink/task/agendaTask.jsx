@@ -13,9 +13,9 @@ import {
 } from "trilium:preact";
 
 import { FormToggleButton } from "FormToggleButton.jsx"
-import { getAgendaSettings } from "agendaSettings.jsx"
 
 const { complete, rescheduleByOption, updateDependentAttributes, RRuleToObj, ObjToRRule } = require("libAgendaTask.js")
+const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 
 const durationOptions = [
     { key: "", name: "None"},
@@ -401,7 +401,7 @@ function MainWidget(){
 
     useEffect(() => {
         (async () => {
-            const settings = await getAgendaSettings()
+            const settings = await getAgendaTaskSettings()
             if (!settings) return
             const { constants, rescheduleOptions } = settings
             setIds({ constants, rescheduleOptions })

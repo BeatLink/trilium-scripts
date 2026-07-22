@@ -1,7 +1,8 @@
 import { useState, useEffect, Button, FormTextBox, FormDropdownList } from "trilium:preact"
-import { getAgendaSettings } from "agendaSettings.jsx"
 import { loadSettings, saveSettings } from "libSettingsUI.jsx"
 import { RecurrencePicker } from "agendaTask.jsx"
+
+const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 
 const modeOptions = [
     { key: "days", name: "Days From Now" },
@@ -20,7 +21,7 @@ export function RescheduleOptionsPanel() {
 
     useEffect(() => {
         (async () => {
-            const settings = await getAgendaSettings()
+            const settings = await getAgendaTaskSettings()
             if (!settings) { setIds(null); return }
             setIds({ schemaNoteId: settings.schemaNoteId, configNoteId: settings.configNoteId })
             const values = await loadSettings(settings.schemaNoteId, settings.configNoteId)
