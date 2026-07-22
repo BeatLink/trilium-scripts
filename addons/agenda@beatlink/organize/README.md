@@ -189,11 +189,12 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 
 `organizePage.jsx` imports `getAgendaSettings` (`agendaSettings.jsx`) and `DimensionsPanel`
 (`organizeDimensions.jsx`), and requires `organize.js` + `dimensions.js`. `organize.js` requires
-template-picker@beatlink's `templateRegistry.jsx` directly — agenda declares `template-picker@beatlink`
-as a manifest `dependencies` entry, and clones its `registry` export (via template-picker's `exports`
-map) as a direct child of both `organize-lib` (`organize.js`) and `organize-provision`
-(`organizeProvision.js`), since both `require()` it. This is a one-directional cross-addon read: agenda
-depends on template-picker, template-picker knows nothing about agenda. Workflow Setup is a tab folded
+`templateRegistry.jsx` directly — agenda's own manifest declares its own `registry` note (same
+`sourceUrl` as template-picker@beatlink's `templateRegistry.jsx`, so TAM's sourceUrl dedup clones
+it in rather than re-fetching if template-picker is already installed), wired as a direct child of
+both `organize-lib` (`organize.js`) and `organize-provision` (`organizeProvision.js`), since both
+`require()` it. This is a one-directional read: agenda's copy tracks template-picker's registry
+content, but template-picker knows nothing about agenda. Workflow Setup is a tab folded
 into the Agenda Editor (`profileEditor.jsx`), which requires `organizeProvision.js` (→ requires
 `organizeStructure.js` + `organize.js`, for `getBucketTemplates`) and `dimensions.js`. Per TAM's
 direct-child require rule, `dimensions` is a child of every note that requires it (`agenda-settings`,

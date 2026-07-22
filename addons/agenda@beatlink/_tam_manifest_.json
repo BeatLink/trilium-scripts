@@ -5,13 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.4.0",
+    "latestVersion": "3.4.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "profile-editor-page",
-        "dependencies": ["template-picker@beatlink"],
         "notes": [
             {
                 "id": "grp-common",
@@ -401,6 +400,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
+            },
+            {
+                "id": "registry",
+                "title": "templateRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templateRegistry.jsx"
             }
         ],
         "children": [
@@ -726,16 +732,18 @@
             },
             {
                 "parent": "organize-provision",
-                "addon": "template-picker@beatlink",
                 "child": "registry"
             },
             {
                 "parent": "organize-lib",
-                "addon": "template-picker@beatlink",
                 "child": "registry"
             },
             {
                 "parent": "organize-lib",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
                 "child": "libsettings-ui"
             }
         ],
