@@ -920,7 +920,7 @@ function cmdZipToTam(args) {
                 if (dataKey && dataKey in extracted) {
                     const destName = uniqueName(dataFile, usedFilenames);
                     fs.writeFileSync(path.join(outDir, destName), extracted[dataKey]);
-                    sourceUrl = destName;
+                    sourceUrl = manifestSourceUrl ? new URL(destName, manifestSourceUrl).href : destName;
                 }
             }
 
@@ -949,7 +949,6 @@ function cmdZipToTam(args) {
             }
         }
 
-        const manifestSourceUrl = detectManifestSourceUrl(outDir);
         const manifest = {
             id: "FILL_IN", name: "FILL_IN", description: "FILL_IN",
             author: "FILL_IN", homepage: "FILL_IN", license: "GPL-3.0-or-later",
