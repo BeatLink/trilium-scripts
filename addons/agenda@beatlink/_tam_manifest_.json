@@ -11,6 +11,7 @@
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "profile-editor-page",
+        "dependencies": ["template-picker@beatlink"],
         "notes": [
             {
                 "id": "grp-common",
@@ -791,6 +792,16 @@
             {
                 "parent": "organize-provision",
                 "child": "dimensions"
+            },
+            {
+                "parent": "organize-provision",
+                "addon": "template-picker@beatlink",
+                "child": "registry"
+            },
+            {
+                "parent": "organize-lib",
+                "addon": "template-picker@beatlink",
+                "child": "registry"
             }
         ],
         "relations": [

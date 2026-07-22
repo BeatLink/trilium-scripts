@@ -11,6 +11,9 @@
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
+        "exports": {
+            "registry": "registry"
+        },
         "notes": [
             {
                 "id": "launcher",
