@@ -371,17 +371,19 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
   "manuallyInstalled": true,
   "enabled": true,
   "meta": { "name": "...", "description": "...", "author": "...", "license": "...", "type": "...", "homepage": "..." },
-  "manifest": { "root": "...", "settingsNote": "...", "readmeNote": "...", "notes": [...], "children": [...], "relations": [...], "labels": [...], "dependencies": [...], "exports": {...} },
+  "manifest": { "root": "...", "settingsNote": "...", "readmeNote": "...", "persistenceRoot": "...", "allowExternalReferences": false, "children": [...] },
   "persistence": { "pendingPrompts": [...] }
 }
 ```
 
-`manifest` is the addon's own manifest structure — the *exact same shape* as `_tam_manifest_.json`'s
-`manifest` sub-object — minus per-note `sourceUrl`/`content` (see `stripManifestForStorage`). This is
-deliberately **not** "just re-fetch the manifest whenever you need it": a `manifestSourceUrl` only
-ever serves the *current* version, so once a newer one is published this is the only record of what's
-actually installed, and it means an upstream manifest change never silently affects an addon until
-it's actually synced to that new version.
+`manifest` is trimmed down to just the fields TAM still needs once the fetched manifest itself is
+gone (`root`/`settingsNote`/`readmeNote`/`persistenceRoot`/`allowExternalReferences`, plus `children[]`
+for walking `persistentLocalIds`) — see `stripManifestForStorage`. `notes[]`/`relations[]`/`labels[]`
+aren't duplicated here since nothing ever reads them back from storage; they only drive a live
+`resolveNotes` pass against a freshly fetched manifest. This is deliberately **not** "just re-fetch the
+manifest whenever you need it": a `manifestSourceUrl` only ever serves the *current* version, so once a
+newer one is published this is the only record of what's actually installed, and it means an upstream
+manifest change never silently affects an addon until it's actually synced to that new version.
 
 Only a handful of facts are genuinely irreducible and can't be derived from the manifest or the live
 note tree:

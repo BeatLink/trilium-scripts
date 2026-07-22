@@ -80,10 +80,11 @@ async function saveDatabase(database) {
 // =========================================================================
 
 const tamFileIdLabel = "TAMFILEID"
-// Carries a note's resolved absolute sourceUrl, so a shared libs/ file already
-// installed by one addon can be found and cloned by another instead of
-// re-fetched — see the dedup lookup in resolveNotes.
-const sourceUrlLabel = "sourceUrl"
+// Carries a note's resolved absolute sourceUrl (empty string if the manifest
+// declares none), so a shared libs/ file already installed by one addon can be
+// found and cloned by another instead of re-fetched — see the dedup lookup in
+// resolveNotes.
+const sourceUrlLabel = "TAMSOURCEURL"
 const TAM_ID = "trilium-addon-manager@beatlink"
 const addonLabels = [
     "widget",
@@ -229,26 +230,19 @@ function topologicalSort(noteIds, parentMap) {
     return result
 }
 
-// Snapshots the addon's manifest structure (minus sourceUrl/content) for storage —
-// manifestSourceUrl only ever serves the current version, so this is the only
-// record of what's actually installed once a newer one is published.
+// Snapshots the manifest fields TAM still needs offline once the fetched manifest
+// itself is gone — resolving root/settingsNote/readmeNote by local id, and walking
+// children[] for persistentLocalIds. notes[]/relations[]/labels[] are never read
+// back (they only ever drive a live resolveNotes pass against a freshly fetched
+// manifest), so they're not duplicated here.
 function stripManifestForStorage(m) {
     return {
         root: m.root,
         settingsNote: m.settingsNote,
         readmeNote: m.readmeNote,
-        notes: (m.notes || []).map(n => ({
-            id: n.id,
-            title: n.title,
-            type: n.type ?? "text",
-            mime: n.mime ?? "text/html",
-            ...(n.binary ? { binary: true } : {}),
-            ...(n.skipOnUpdate ? { skipOnUpdate: true } : {}),
-            ...(n.promptOnUpdate ? { promptOnUpdate: true } : {})
-        })),
-        children: m.children || [],
-        relations: m.relations || [],
-        labels: m.labels || []
+        persistenceRoot: m.persistenceRoot,
+        allowExternalReferences: m.allowExternalReferences,
+        children: m.children || []
     }
 }
 
@@ -457,6 +451,9 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
 
                     if (existing) {
                         if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
+                        if (existing.getLabelValue(sourceUrlLabel) !== (sourceUrl || "")) {
+                            existing.setLabel(sourceUrlLabel, sourceUrl || "")
+                        }
                         if (willWriteContent) {
                             if (existing.type !== noteType || existing.mime !== mime || existing.title !== title) {
                                 existing.type = noteType
@@ -478,7 +475,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     }
                     note.setContent(finalContent)
                     note.setLabel(tamFileIdLabel, tamFileId)
-                    if (sourceUrl) note.setLabel(sourceUrlLabel, sourceUrl)
+                    note.setLabel(sourceUrlLabel, sourceUrl || "")
                     return note.noteId
                 },
                 [tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, noteDef.title, effectiveType, effectiveMime, sourceUrlForBackend, explicitContent, isBinary,
