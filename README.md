@@ -51,7 +51,7 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 ## Development
 
 ```bash
-nix-shell        # enter dev shell
+nix-shell nix/   # enter dev shell
 
 validate         # validate addon structure
 ci               # validate then build every addon's ZIP

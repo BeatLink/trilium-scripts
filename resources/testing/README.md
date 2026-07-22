@@ -2,13 +2,13 @@
 
 A single-command way to boot a real Trilium instance, deploy TAM into it, and drive it with
 Playwright — no manual browser clicking, no locally-cloned Trilium checkout, no separate setup
-steps. Everything is fetched and built by Nix via this repo's [`flake.nix`](../../flake.nix)
+steps. Everything is fetched and built by Nix via this repo's [`flake.nix`](../../nix/flake.nix)
 (Trilium's own repo as a flake input).
 
 ## Run it
 
 ```bash
-nix develop     # once per shell session — builds trilium-server, sets $TRILIUM_SRC, installs deps
+nix develop ./nix     # once per shell session — builds trilium-server, sets $TRILIUM_SRC, installs deps
 run_tests       # the whole flow: seed + start + deploy TAM + run the Playwright suite + stop
 ```
 
@@ -140,9 +140,9 @@ trilium_harness stop
 
 - `../../playwright.config.js` — the thin Playwright entry point (points `globalSetup` at
   `testing.js`, sets reporter/timeout/browser opts).
-- `../../flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
+- `../../nix/flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
   `run_tests` and `trilium_harness` shell functions.
-- `../../shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
+- `../../nix/shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
 - `testing.js` — **the whole harness in one file**: all the primitives (seed / start / stop /
   prepare / http client / page wrapper / addon server / `installViaTam`), the `test`/`expect`
   fixtures, the `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI

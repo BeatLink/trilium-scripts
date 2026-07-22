@@ -8,7 +8,7 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    tamhelper()            { node resources/scripts/tamhelper.js "$@"; }
+    tamhelper()            { node "$(git rev-parse --show-toplevel)/resources/scripts/tamhelper.js" "$@"; }
     validate()             { tamhelper validate "$@"; }
     ci()                   { validate && tam_to_zip --all; }
     generate_pages()       { tamhelper generate-pages "$@"; }

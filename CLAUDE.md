@@ -87,7 +87,7 @@ repo (no build step).
 
 ## Commands
 
-Inside `nix-shell`:
+Inside `nix-shell nix/`:
 
 ```bash
 validate                       # lint all manifests — closest thing to a test suite; run after any manifest/source edit
