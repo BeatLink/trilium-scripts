@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluelegacy@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.0.3",
     "type": "theme",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluelegacy@beatlink/_tam_manifest_.json",
@@ -24,7 +24,8 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluelegacy@beatlink/README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluelegacy@beatlink/README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [

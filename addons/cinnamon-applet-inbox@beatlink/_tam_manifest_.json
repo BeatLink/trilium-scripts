@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.7.0",
+    "latestVersion": "1.7.1",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-inbox@beatlink/_tam_manifest_.json",
@@ -61,7 +61,8 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-inbox@beatlink/README.md"
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-inbox@beatlink/README.md",
+                "renderAsHTML": true
             },
             {
                 "id": "libsettings-backend",
