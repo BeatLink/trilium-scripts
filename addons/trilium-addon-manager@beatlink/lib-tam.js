@@ -570,7 +570,7 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
 // A persistent note (under persistenceRoot) is never pruned — its content is the user's,
 // so a manifest that drops it must not take the user's data with it.
 async function pruneRemovedNotes(m, addonId) {
-    const persistentIds = [...persistentLocalIds(m)]
+    const persistentIds = [...persistentLocalIds(m), addonAnchorRootLocalId, addonAnchorPersistenceLocalId]
     await api.runOnBackend((tamFileIdLabel, addonId, currentLocalIds, persistentIds) => {
         const currentSet = new Set(currentLocalIds)
         const persistentSet = new Set(persistentIds)
