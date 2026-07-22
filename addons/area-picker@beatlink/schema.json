@@ -1,80 +1,28 @@
 {
     "areas": {
-        "type": "list",
+        "type": "registry",
         "label": "Areas",
         "description": "The life areas shown in the Area picker dropdown, in display order.",
-        "default": [
-            {
-                "key": "career",
-                "title": "Career",
-                "color": "red"
-            },
-            {
-                "key": "finances",
-                "title": "Finances",
-                "color": "red"
-            },
-            {
-                "key": "legal",
-                "title": "Legal",
-                "color": "red"
-            },
-            {
-                "key": "home",
-                "title": "Home",
-                "color": "darkorange"
-            },
-            {
-                "key": "car",
-                "title": "Car",
-                "color": "darkorange"
-            },
-            {
-                "key": "tech",
-                "title": "Tech",
-                "color": "darkorange"
-            },
-            {
-                "key": "fitness",
-                "title": "Fitness",
-                "color": "gold"
-            },
-            {
-                "key": "grooming",
-                "title": "Grooming",
-                "color": "gold"
-            },
-            {
-                "key": "sexual",
-                "title": "Sexual",
-                "color": "gold"
-            },
-            {
-                "key": "social",
-                "title": "Social",
-                "color": "lime"
-            },
-            {
-                "key": "mental",
-                "title": "Mental",
-                "color": "lime"
-            },
-            {
-                "key": "identity",
-                "title": "Identity",
-                "color": "lime"
-            },
-            {
-                "key": "fun",
-                "title": "Fun",
-                "color": "magenta"
-            }
-        ],
+        "default": {
+            "career": { "key": "career", "title": "Career", "color": "red", "enabled": true },
+            "finances": { "key": "finances", "title": "Finances", "color": "red", "enabled": true },
+            "legal": { "key": "legal", "title": "Legal", "color": "red", "enabled": true },
+            "home": { "key": "home", "title": "Home", "color": "darkorange", "enabled": true },
+            "car": { "key": "car", "title": "Car", "color": "darkorange", "enabled": true },
+            "tech": { "key": "tech", "title": "Tech", "color": "darkorange", "enabled": true },
+            "fitness": { "key": "fitness", "title": "Fitness", "color": "gold", "enabled": true },
+            "grooming": { "key": "grooming", "title": "Grooming", "color": "gold", "enabled": true },
+            "sexual": { "key": "sexual", "title": "Sexual", "color": "gold", "enabled": true },
+            "social": { "key": "social", "title": "Social", "color": "lime", "enabled": true },
+            "mental": { "key": "mental", "title": "Mental", "color": "lime", "enabled": true },
+            "identity": { "key": "identity", "title": "Identity", "color": "lime", "enabled": true },
+            "fun": { "key": "fun", "title": "Fun", "color": "magenta", "enabled": true }
+        },
         "itemSchema": {
             "key": {
                 "type": "string",
                 "label": "Key",
-                "description": "Stable identifier stored on tagged notes as #area. Carries no ordering — display order is this list's order — so reordering areas never rewrites a note. Changing a key after notes are tagged orphans their #area label.",
+                "description": "Stable identifier stored on tagged notes as #area. Carries no ordering — display order is this registry's own key order — so reordering areas never rewrites a note. Changing a key after notes are tagged orphans their #area label.",
                 "default": ""
             },
             "title": {
@@ -86,6 +34,36 @@
                 "type": "color",
                 "label": "Color",
                 "default": "gray"
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "description": "Whether this area appears in the picker dropdown and in the Missing Areas triage page.",
+                "default": true
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Area picker widget and skipped by the Missing Areas triage list.",
+        "default": {},
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #area or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
             }
         }
     }
