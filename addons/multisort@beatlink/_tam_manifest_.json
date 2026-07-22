@@ -5,20 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/multisort@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.1",
+    "latestVersion": "1.2.2",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/multisort@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
-            {
-                "id": "root",
-                "title": "multisort@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "script",
                 "title": "multisort.js",

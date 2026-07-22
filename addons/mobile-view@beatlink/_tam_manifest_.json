@@ -5,20 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.5",
+    "latestVersion": "0.0.6",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
-            {
-                "id": "root",
-                "title": "mobile-view@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "mobileView",
                 "title": "MobileView.jsx",

@@ -5,17 +5,15 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.1",
+    "latestVersion": "1.4.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
-        "settingsNote": "root",
-        "persistenceRoot": "persist-root",
+        "settingsNote": "launcher",
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "budget@beatlink",
                 "type": "render",
                 "mime": "text/html",
@@ -48,13 +46,6 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/schema.json"
-            },
-            {
-                "id": "persist-root",
-                "title": "User Data",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
             },
             {
                 "id": "config",
@@ -117,34 +108,34 @@
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
                 "child": "widget"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "style"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "schema"
             },
             {
-                "parent": "root",
-                "child": "persist-root"
-            },
-            {
-                "parent": "persist-root",
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "settings"
             },
             {
-                "parent": "persist-root",
+                "parent": "persistence",
                 "child": "template"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             },
             {
@@ -198,12 +189,12 @@
                 "to": "settings"
             },
             {
-                "from": "root",
+                "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
             },
             {
-                "from": "root",
+                "from": "launcher",
                 "type": "templateNote",
                 "to": "template"
             },
@@ -226,11 +217,6 @@
             },
             {
                 "note": "template",
-                "name": "iconClass",
-                "value": "bx bx-wallet"
-            },
-            {
-                "note": "root",
                 "name": "iconClass",
                 "value": "bx bx-wallet"
             },

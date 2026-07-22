@@ -381,15 +381,16 @@ async function cmdValidate(args) {
             error(manifestFile, "manifest.children must attach at least one note to the reserved \"root\" parent");
         }
 
-        for (const field of ["settingsNote", "readmeNote", "persistenceRoot"]) {
+        for (const field of ["settingsNote", "readmeNote"]) {
             const localId = m[field];
             if (localId && !noteIds.has(localId)) {
                 error(manifestFile, `manifest.${field} '${localId}' not found in notes`);
             }
         }
 
-        // Local ids whose children[] parent chain roots at persistenceRoot -- these are
-        // "persistent": created once, prompt-on-update, and never touched by uninstall.
+        // Local ids whose children[] parent chain roots at the reserved "persistence" parent
+        // keyword -- these are "persistent": created once, prompt-on-update, never touched by
+        // uninstall.
         const persistentIds = persistentLocalIds(m);
 
         // settingsNote should point at a render note, not the raw code note
@@ -438,16 +439,17 @@ async function cmdValidate(args) {
             (m.children || []).filter((c) => c.child).map((c) => c.child)
         );
         for (const nid of noteIds) {
-            if (nid !== rootId && nid !== m.persistenceRoot && !localChildren.has(nid)) {
+            if (nid !== rootId && !localChildren.has(nid)) {
                 warn(manifestFile, `note '${nid}' is not attached under any parent in 'children' -- it will never be created`);
             }
         }
 
-        // skipOnUpdate/promptOnUpdate are implied by placement under persistenceRoot -- redundant there
+        // skipOnUpdate/promptOnUpdate are implied by placement under the reserved "persistence"
+        // parent -- redundant there
         for (const note of notes) {
             const nid = note.id || note.title || "?";
             if (persistentIds.has(nid) && (note.skipOnUpdate || note.promptOnUpdate)) {
-                warn(manifestFile, `note '${nid}' is under persistenceRoot, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
+                warn(manifestFile, `note '${nid}' is attached under the reserved "persistence" parent, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
             }
         }
 
@@ -472,10 +474,11 @@ async function cmdValidate(args) {
             }
         }
 
-        // children references
+        // children references. "root"/"persistence" are reserved parent keywords meaning
+        // "TAM's synthesized structural/persistence anchor" -- never real declared notes.
         for (const c of m.children || []) {
             const parent = c.parent, child = c.child;
-            if (parent && !noteIds.has(parent)) {
+            if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
                 error(manifestFile, `children: parent '${parent}' not found in notes`);
             }
             if (child && !noteIds.has(child)) {
@@ -598,6 +601,11 @@ function safeName(title) {
 // declared `m.root` -- must match addonAnchorRootLocalId in lib-tam.js, since a ZIP-installed
 // note's #TAMFILEID has to line up with what TAM's own ensureAddonAnchor would create live.
 const SYNTHETIC_ROOT_LOCAL_ID = "__tamAddonRoot__";
+// Same idea for whatever attaches under the reserved "persistence" parent keyword -- must match
+// addonAnchorPersistenceLocalId in lib-tam.js. Live sync parents this under the separate global
+// "Addon Data" anchor; a ZIP export is one tree, so it's nested under the synthetic root here
+// purely as an export approximation.
+const SYNTHETIC_PERSISTENCE_LOCAL_ID = "__tamAddonPersistenceRoot__";
 
 async function processManifest(fullManifest) {
     // Build ZIP entries for one manifest.
@@ -615,6 +623,12 @@ async function processManifest(fullManifest) {
         notesById[rootLid] = { id: rootLid, title: fullManifest.name || fullManifest.id, type: "text", mime: "text/html", sourceUrl: null };
     }
 
+    const hasPersistence = (m.children || []).some((c) => c.parent === "persistence");
+    const persistenceLid = SYNTHETIC_PERSISTENCE_LOCAL_ID;
+    if (hasPersistence) {
+        notesById[persistenceLid] = { id: persistenceLid, title: "Persistence", type: "text", mime: "text/html", sourceUrl: null };
+    }
+
     const uuidMap = {};
     for (const lid of Object.keys(notesById)) uuidMap[lid] = randChoices(ID_CHARS, 12);
 
@@ -625,17 +639,24 @@ async function processManifest(fullManifest) {
         const childLid = c.child;
         const isCloneRef = seenChildren.has(childLid);
         seenChildren.add(childLid);
-        // The reserved "root" parent keyword means "TAM's synthesized anchor" -- redirect it to
-        // the synthetic root entry's local id so buildEntry finds its children under the right key.
-        const parentLid = (!m.root && c.parent === "root") ? rootLid : c.parent;
+        // The reserved "root"/"persistence" parent keywords mean "TAM's synthesized anchor" --
+        // redirect to the matching synthetic entry's local id so buildEntry finds its children
+        // under the right key.
+        let parentLid = c.parent;
+        if (!m.root && c.parent === "root") parentLid = rootLid;
+        else if (c.parent === "persistence") parentLid = persistenceLid;
         (childrenMap[parentLid] ||= []).push([childLid, isCloneRef]);
+    }
+    if (hasPersistence) {
+        (childrenMap[rootLid] ||= []).push([persistenceLid, false]);
     }
 
     const noteLabels = {}, noteRelations = {};
     for (const lbl of m.labels || []) (noteLabels[lbl.note] ||= []).push(lbl);
     for (const rel of m.relations || []) (noteRelations[rel.from] ||= []).push(rel);
-    // The synthetic root's own #iconClass -- TAM sets this uniformly on every anchor it owns.
+    // The synthetic anchors' own #iconClass -- TAM sets this uniformly on every anchor it owns.
     if (!m.root) noteLabels[rootLid] = [{ note: rootLid, name: "iconClass", value: "bx bx-customize" }];
+    if (hasPersistence) noteLabels[persistenceLid] = [{ note: persistenceLid, name: "iconClass", value: "bx bx-customize" }];
 
     const zipFiles = [], warnings = [];
     const usedBases = {};

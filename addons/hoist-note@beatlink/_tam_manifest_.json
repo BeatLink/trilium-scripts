@@ -5,20 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "1.0.4",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/hoist-note@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
-            {
-                "id": "root",
-                "title": "hoist-note@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "setupButtons",
                 "title": "setupButtons.js",

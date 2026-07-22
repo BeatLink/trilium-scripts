@@ -5,16 +5,14 @@
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
-    "latestVersion": "0.8.1",
+    "latestVersion": "0.8.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
-        "persistenceRoot": "persist-root",
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "drawio@siriusxt",
                 "type": "text",
                 "mime": "text/html",
@@ -26,13 +24,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/trilium-drawio.js"
-            },
-            {
-                "id": "persist-root",
-                "title": "User Data",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
             },
             {
                 "id": "template",
@@ -53,24 +44,24 @@
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
                 "child": "widget"
             },
             {
-                "parent": "root",
-                "child": "persist-root"
-            },
-            {
-                "parent": "persist-root",
+                "parent": "persistence",
                 "child": "template"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             }
         ],
         "relations": [
             {
-                "from": "root",
+                "from": "launcher",
                 "type": "templateNote",
                 "to": "template"
             }

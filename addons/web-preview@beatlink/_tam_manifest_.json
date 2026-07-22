@@ -5,20 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.1",
+    "latestVersion": "1.0.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
-            {
-                "id": "root",
-                "title": "web-preview@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "readme",
                 "title": "README.md",

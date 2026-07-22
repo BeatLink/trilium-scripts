@@ -5,22 +5,13 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.3.1",
+    "latestVersion": "2.3.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "settingsNote": "profile-editor-page",
-        "persistenceRoot": "persist-root",
         "notes": [
-            {
-                "id": "root",
-                "title": "agenda@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "grp-common",
                 "title": "Common",
@@ -298,13 +289,6 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organize.css"
             },
             {
-                "id": "persist-root",
-                "title": "User Data",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
                 "id": "templates-root",
                 "title": "Templates",
                 "type": "text",
@@ -490,18 +474,14 @@
             },
             {
                 "parent": "root",
-                "child": "persist-root"
-            },
-            {
-                "parent": "root",
                 "child": "readme"
             },
             {
-                "parent": "persist-root",
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "persist-root",
+                "parent": "persistence",
                 "child": "templates-root"
             },
             {
@@ -932,11 +912,6 @@
                 "value": "libIcal.js"
             },
             {
-                "note": "root",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "grp-common",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -1125,11 +1100,6 @@
                 "note": "readme",
                 "name": "iconClass",
                 "value": "bx bx-task"
-            },
-            {
-                "note": "persist-root",
-                "name": "iconClass",
-                "value": "bx bx-data"
             },
             {
                 "note": "templates-root",
