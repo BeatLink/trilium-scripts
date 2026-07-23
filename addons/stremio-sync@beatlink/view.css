@@ -1,0 +1,39 @@
+.ss-view {
+    padding: 12px 16px;
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 14px;
+}
+
+.ss-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ss-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    color: var(--main-text-color);
+    cursor: pointer;
+}
+
+.ss-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.ss-status-ok {
+    color: var(--success-color, green);
+}
+
+.ss-status-error {
+    color: var(--error-color, red);
+}
+
+.ss-hint {
+    color: var(--muted-text-color, gray);
+}
