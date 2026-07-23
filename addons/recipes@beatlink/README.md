@@ -46,6 +46,17 @@ Open the addon's launcher note for the settings screen:
 - **Daily Targets** — a target value per tracked nutrient, compared against each day's diary
   totals. A target of `0` is treated as "no target" and shown without a comparison.
 
+## Import and export
+
+The tab bar's **Export JSON** downloads the whole database (foods, recipes, and diary) as a
+`.json` file, and **Import JSON** loads one back in. Import **merges**: every food, recipe, and
+diary entry in the file is added by id alongside whatever's already in the database, so importing
+the same file twice — or a partial export from another install — never duplicates entries or wipes
+existing data. A file that isn't valid database JSON reports an error and leaves the database
+untouched.
+
+The import format is the [storage format](#storage-format) below.
+
 ## Storage format
 
 The whole database is one JSON code note:
@@ -86,8 +97,6 @@ is always recomputed from the food or recipe it references.
 
 ## Limitations
 
-- No import/export UI yet — the database note's own content is the backup/migration path (copy its
-  JSON directly).
 - USDA lookup searches by name only; there's no barcode scanning.
 - A deleted food or recipe leaves any recipe ingredient or diary entry that referenced it showing
   as "(deleted)" rather than being cleaned up automatically.

@@ -15,7 +15,9 @@ const {
     dayTotals,
     targetKeyFor,
     todayKey,
-    shiftDateKey
+    shiftDateKey,
+    exportDatabase,
+    importDatabase
 } = require("libRecipes.js")
 const { searchFoods } = require("libUsda.js")
 
@@ -489,6 +491,55 @@ function RecipesWidget() {
         }))
     }, [persist])
 
+    // Exports the whole database (foods + recipes + diary) as one JSON file.
+    const onExport = useCallback(() => {
+        const blob = new Blob([exportDatabase(database)], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = "recipes-database.json"
+        link.click()
+        URL.revokeObjectURL(url)
+    }, [database])
+
+    // Merges an imported database into the current one: imported
+    // foods/recipes/diary entries are added by id alongside whatever already
+    // exists, so importing the same file twice is a no-op rather than
+    // duplicating entries, and existing data is never wiped.
+    const onImport = useCallback(() => {
+        const input = document.createElement("input")
+        input.type = "file"
+        input.accept = "application/json,.json"
+        input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+            let imported
+            try {
+                imported = importDatabase(await file.text())
+            } catch (e) {
+                api.showError(`Could not import: ${e.message}`)
+                return
+            }
+            persist(current => {
+                const diary = { ...current.diary }
+                for (const [date, entries] of Object.entries(imported.diary)) {
+                    const existingIds = new Set((diary[date] || []).map(e => e.id))
+                    const newEntries = entries.filter(e => !existingIds.has(e.id))
+                    diary[date] = [...(diary[date] || []), ...newEntries]
+                }
+                return {
+                    foods: { ...current.foods, ...imported.foods },
+                    recipes: { ...current.recipes, ...imported.recipes },
+                    diary
+                }
+            })
+            api.showMessage(
+                `Imported ${Object.keys(imported.foods).length} food(s) and ${Object.keys(imported.recipes).length} recipe(s).`
+            )
+        }
+        input.click()
+    }, [persist])
+
     if (!database || !settings) return <div className="recipes-widget">Loading...</div>
 
     return (
@@ -497,6 +548,9 @@ function RecipesWidget() {
                 <button className={tab === "diary" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("diary")}>Diary</button>
                 <button className={tab === "foods" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
                 <button className={tab === "recipes" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("recipes")}>Recipes</button>
+                <span className="recipes-tabs-spacer" />
+                <Button icon="bx-import" text="Import JSON" onClick={onImport} />
+                <Button icon="bx-export" text="Export JSON" onClick={onExport} />
             </div>
             {tab === "diary" && (
                 <DiaryTab

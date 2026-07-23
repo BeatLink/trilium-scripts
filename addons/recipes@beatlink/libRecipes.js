@@ -168,6 +168,33 @@ function shiftDateKey(dateKey, deltaDays) {
     return date.toISOString().slice(0, 10)
 }
 
+function exportDatabase(database) {
+    return serializeDatabase(database)
+}
+
+/*
+ * Import accepts the same document shape serializeDatabase writes: a plain
+ * object with optional foods/recipes/diary keys, each in the same shape
+ * parseDatabase produces. Ids are preserved rather than regenerated (unlike
+ * budget@beatlink's row import) since foods/recipes are referenced by id from
+ * recipes/diary entries within the same document -- regenerating them would
+ * require rewriting every reference. Throws on anything that isn't
+ * recognisably a database so the caller can report it rather than silently
+ * wiping existing data.
+ */
+function importDatabase(text) {
+    let parsed
+    try {
+        parsed = JSON.parse(String(text).trim())
+    } catch {
+        throw new Error("Not valid JSON.")
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Expected a JSON object with foods/recipes/diary.")
+    }
+    return parseDatabase(JSON.stringify(parsed))
+}
+
 module.exports = {
     NUTRIENTS,
     newId,
@@ -182,5 +209,7 @@ module.exports = {
     dayTotals,
     targetKeyFor,
     todayKey,
-    shiftDateKey
+    shiftDateKey,
+    exportDatabase,
+    importDatabase
 }

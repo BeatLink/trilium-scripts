@@ -4,9 +4,15 @@
 
 .recipes-tabs {
     display: flex;
+    align-items: center;
     gap: 4px;
     border-bottom: 2px solid var(--main-border-color);
     margin-bottom: 14px;
+    padding-bottom: 6px;
+}
+
+.recipes-tabs-spacer {
+    flex: 1;
 }
 
 .recipes-tab-btn {
