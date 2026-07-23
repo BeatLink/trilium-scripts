@@ -19,7 +19,8 @@ const {
     exportDatabase,
     importDatabase
 } = require("libRecipes.js")
-const { searchFoods } = require("libUsda.js")
+const { searchFoods: searchUsda } = require("libUsda.js")
+const { searchFoods: searchOpenFoodFacts } = require("libOpenFoodFacts.js")
 
 // ---------------------------------------------------------------------------
 // Shared nutrient input grid — used by both the Add/Edit Food form and the
@@ -58,11 +59,26 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
     }, [])
 
     const runSearch = useCallback(async () => {
-        if (!query.trim()) return
+        const trimmed = query.trim()
+        if (!trimmed) return
         setSearching(true)
         setError(null)
         try {
-            setResults(await searchFoods(usdaApiKey, query.trim()))
+            // Open Food Facts needs no key, so it always runs; USDA only runs
+            // if a key is configured. Each source's own failure is reported
+            // without blocking the other's results (Promise.allSettled), so
+            // e.g. a bad USDA key doesn't hide valid Open Food Facts hits.
+            const [offResult, usdaResult] = await Promise.allSettled([
+                searchOpenFoodFacts(trimmed),
+                usdaApiKey ? searchUsda(usdaApiKey, trimmed) : Promise.resolve([])
+            ])
+            const merged = [
+                ...(offResult.status === "fulfilled" ? offResult.value.map(r => ({ ...r, source: "Open Food Facts", key: `off-${r.code}` })) : []),
+                ...(usdaResult.status === "fulfilled" ? usdaResult.value.map(r => ({ ...r, source: "USDA", key: `usda-${r.fdcId}` })) : [])
+            ]
+            setResults(merged)
+            const failures = [offResult, usdaResult].filter(r => r.status === "rejected").map(r => r.reason?.message).filter(Boolean)
+            if (failures.length > 0) setError(failures.join(" "))
         } catch (e) {
             setError(e.message)
             setResults(null)
@@ -89,21 +105,20 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
             <div className="recipes-usda-search">
                 <input
                     type="text"
-                    placeholder={usdaApiKey ? "Search USDA FoodData Central..." : "Set a USDA API key in Settings to enable search"}
+                    placeholder={usdaApiKey ? "Search USDA and Open Food Facts..." : "Search Open Food Facts... (set a USDA API key in Settings to also search USDA)"}
                     value={query}
-                    disabled={!usdaApiKey}
                     onInput={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && runSearch()}
                 />
-                <Button text={searching ? "Searching..." : "Search"} disabled={!usdaApiKey || searching} onClick={runSearch} />
+                <Button text={searching ? "Searching..." : "Search"} disabled={searching} onClick={runSearch} />
             </div>
             {error && <div className="recipes-error">{error}</div>}
             {results && (
                 <ul className="recipes-usda-results">
                     {results.length === 0 && <li className="recipes-usda-empty">No results.</li>}
                     {results.map(result => (
-                        <li key={result.fdcId}>
-                            <span>{result.name}</span>
+                        <li key={result.key}>
+                            <span>{result.name} <span className="recipes-usda-source">{result.source}</span></span>
                             <Button text="Use" onClick={() => applyResult(result)} />
                         </li>
                     ))}

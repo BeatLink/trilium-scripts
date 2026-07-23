@@ -9,7 +9,8 @@ back up, inspect, or migrate.
 1. Install the addon and enable it.
 2. Open its launcher note (`recipes@beatlink`) to use the widget.
 3. Optionally, open the addon's settings screen to set daily nutrient targets and a USDA
-   FoodData Central API key for food lookup.
+   FoodData Central API key for food lookup (Open Food Facts lookup needs no key and works out of
+   the box).
 
 ## Foods
 
@@ -17,13 +18,21 @@ The **Foods** tab is your ingredient database. Each food has a name, a serving s
 "100 g" or "1 cup"), and nutrition facts *per that serving*: calories, protein, carbs, fat, fiber,
 sugar, saturated fat, sodium, and cholesterol.
 
-**Add Food** opens a form with a USDA search box at the top. Search pulls matching foods from
-[USDA FoodData Central](https://fdc.nal.usda.gov/) (Foundation, SR Legacy, and Branded datasets);
-picking a result prefills the serving size and nutrition fields, which you can still edit before
-saving. Search is disabled until an API key is set in Settings — get a free one at
-[fdc.nal.usda.gov/api-key-signup.html](https://fdc.nal.usda.gov/api-key-signup.html).
+**Add Food** opens a form with a search box at the top that queries two sources at once:
 
-Nutrition can always be entered manually instead, with or without an API key.
+- **[Open Food Facts](https://world.openfoodfacts.org/)** — a public, keyless database of mostly
+  branded/packaged foods. Works immediately, no setup.
+- **[USDA FoodData Central](https://fdc.nal.usda.gov/)** (Foundation, SR Legacy, and Branded
+  datasets) — needs a free API key set in Settings first; get one at
+  [fdc.nal.usda.gov/api-key-signup.html](https://fdc.nal.usda.gov/api-key-signup.html). Without a
+  key, only Open Food Facts results show.
+
+Results from both sources are merged into one list, each tagged with its source. Picking a result
+prefills the serving size and nutrition fields, which you can still edit before saving. If one
+source's request fails (e.g. an invalid USDA key), its results are just omitted rather than
+blocking the other source's results.
+
+Nutrition can always be entered manually instead, regardless of lookup availability.
 
 ## Recipes
 
@@ -42,7 +51,8 @@ shown against the daily targets configured in Settings, with any nutrient over t
 
 Open the addon's launcher note for the settings screen:
 
-- **USDA Lookup** — paste a USDA FoodData Central API key to enable food search.
+- **USDA Lookup** — paste a USDA FoodData Central API key to include USDA results in food search.
+  Open Food Facts results appear regardless of this setting.
 - **Daily Targets** — a target value per tracked nutrient, compared against each day's diary
   totals. A target of `0` is treated as "no target" and shown without a comparison.
 
@@ -97,6 +107,8 @@ is always recomputed from the food or recipe it references.
 
 ## Limitations
 
-- USDA lookup searches by name only; there's no barcode scanning.
+- Both lookup sources search by name only; there's no barcode scanning.
+- Open Food Facts is community-sourced and doesn't always report every nutrient (cholesterol in
+  particular is often missing); missing values default to 0 rather than being left blank.
 - A deleted food or recipe leaves any recipe ingredient or diary entry that referenced it showing
   as "(deleted)" rather than being cleaned up automatically.

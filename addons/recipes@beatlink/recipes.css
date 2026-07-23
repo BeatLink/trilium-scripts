@@ -178,6 +178,11 @@
     justify-content: center !important;
 }
 
+.recipes-usda-source {
+    color: var(--muted-text-color);
+    font-size: 0.85em;
+}
+
 .recipes-error {
     color: #c0392b;
     margin-bottom: 8px;

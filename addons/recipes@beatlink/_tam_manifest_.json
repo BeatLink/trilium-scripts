@@ -1,7 +1,7 @@
 {
     "id": "recipes@beatlink",
     "name": "Recipes",
-    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. All data is a single persisted JSON note.",
+    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. All data is a single persisted JSON note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/recipes@beatlink",
     "license": "GPL-3.0-or-later",
@@ -39,6 +39,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/libUsda.js"
+            },
+            {
+                "id": "off-lib",
+                "title": "libOpenFoodFacts.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/libOpenFoodFacts.js"
             },
             {
                 "id": "style",
@@ -152,6 +159,10 @@
             {
                 "parent": "widget",
                 "child": "usda-lib"
+            },
+            {
+                "parent": "widget",
+                "child": "off-lib"
             },
             {
                 "parent": "libsettings-ui",
