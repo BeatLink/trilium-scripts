@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.1",
+    "latestVersion": "1.5.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
@@ -106,6 +106,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "picker-registry",
+                "title": "pickerRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libpicker/pickerRegistry.jsx"
             },
             {
                 "id": "libsettings-style",
@@ -268,6 +275,18 @@
             },
             {
                 "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "widget",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "registry",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "picker-registry",
                 "child": "libsettings-ui"
             },
             {

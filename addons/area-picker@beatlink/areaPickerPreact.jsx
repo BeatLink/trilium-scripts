@@ -1,6 +1,7 @@
 import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
-import { getAreas, assignArea, isExcludedFromPicker } from "areaRegistry.jsx"
+import { getAreas, assignArea } from "areaRegistry.jsx"
+import { isExcludedFromPicker } from "pickerRegistry.jsx"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 
 const NONE_OPTION = { key: "none", title: "None" }

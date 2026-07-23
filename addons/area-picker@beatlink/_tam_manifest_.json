@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.0.0",
+    "latestVersion": "3.0.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/area-picker@beatlink/_tam_manifest_.json",
@@ -99,6 +99,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "picker-registry",
+                "title": "pickerRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libpicker/pickerRegistry.jsx"
             },
             {
                 "id": "libsettings-style",
@@ -205,6 +212,18 @@
             },
             {
                 "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "script",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "registry",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "picker-registry",
                 "child": "libsettings-ui"
             }
         ],
