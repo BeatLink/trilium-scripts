@@ -36,22 +36,7 @@ export async function getAgendaSettings() {
         configNoteId,
         profileIds: Object.keys(settings.profiles || {}),
         overviewNoteId: settings.overviewNoteId || "",
-        organizeNoteId: settings.organizeNoteId || "",
         activeProfileId: settings.activeProfileId || ""
-    }
-
-    const myDay = {
-        myDayNoteId: settings.myDayNoteId,
-        enableSounds: settings.enableSounds,
-        addTasksWhenDue: settings.addTasksWhenDue,
-        sendDueNotifications: settings.sendDueNotifications
-    }
-
-    const organize = {
-        morningTime: settings.morningTime,
-        noonTime: settings.noonTime,
-        eveningTime: settings.eveningTime,
-        nightTime: settings.nightTime
     }
 
     const collect = {
@@ -63,5 +48,5 @@ export async function getAgendaSettings() {
     // time; dimensions.js owns the shape.
     const dimensions = normalizeDimensions(settings)
 
-    return { constants, profileContext, myDay, organize, collect, dimensions, schemaNoteId, configNoteId, icalNoteId }
+    return { constants, profileContext, collect, dimensions, schemaNoteId, configNoteId, icalNoteId }
 }

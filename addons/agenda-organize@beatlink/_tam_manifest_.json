@@ -1,0 +1,510 @@
+{
+    "id": "agenda-organize@beatlink",
+    "name": "Agenda Organize",
+    "description": "The Organize workflow from agenda@beatlink, split out as its own addon: an opinionated GTD notebook scaffolder plus a triage UI. Workflow Setup provisions a notebook of Inbox / My Day / Agenda singletons and one note per Area (each with its Ideas / Goals / Routines / Projects / Future / Notes buckets) by find-or-create, adopting notes you already made by hand rather than duplicating them. The Organize page - shown on a note you pick in the Organize Editor - then walks the Inbox and Area subtrees and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times and a misfiled-notes queue that fixes notes sitting in the wrong bucket. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Both cross-addon reads degrade gracefully, so Organize's scaffolding and start-date triage still work on their own.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "organize-editor-page",
+        "notes": [
+            {
+                "id": "organize-page-src",
+                "title": "organizePage.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizePage.jsx"
+            },
+            {
+                "id": "organize-lib",
+                "title": "organize.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.js"
+            },
+            {
+                "id": "organize-structure",
+                "title": "organizeStructure.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeStructure.js"
+            },
+            {
+                "id": "organize-provision",
+                "title": "organizeProvision.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeProvision.js"
+            },
+            {
+                "id": "organize-dimensions",
+                "title": "organizeDimensions.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeDimensions.jsx"
+            },
+            {
+                "id": "organize-settings",
+                "title": "organizeSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeSettings.js"
+            },
+            {
+                "id": "organize-editor-page",
+                "title": "Organize Editor",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "organize-editor",
+                "title": "organizeEditor.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeEditor.jsx"
+            },
+            {
+                "id": "organize-schema",
+                "title": "organizeSchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeSchema.json"
+            },
+            {
+                "id": "organize-config",
+                "title": "organizeConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeConfig.json"
+            },
+            {
+                "id": "organize-settings-note",
+                "title": "Organize Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "organize-css",
+                "title": "organize.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.css"
+            },
+            {
+                "id": "templates-root",
+                "title": "Templates",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "tpl-area",
+                "title": "AreaCollection",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/areaCollection.html"
+            },
+            {
+                "id": "tpl-typecollection",
+                "title": "TypeCollection",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/typeCollection.html"
+            },
+            {
+                "id": "tpl-special",
+                "title": "Special",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/special.html"
+            },
+            {
+                "id": "dimensions",
+                "title": "dimensions.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/dimensions.js"
+            },
+            {
+                "id": "registry",
+                "title": "templateRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templateRegistry.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "organize-page-src"
+            },
+            {
+                "parent": "root",
+                "child": "organize-editor-page"
+            },
+            {
+                "parent": "root",
+                "child": "organize-settings-note"
+            },
+            {
+                "parent": "root",
+                "child": "organize-schema"
+            },
+            {
+                "parent": "root",
+                "child": "organize-css"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "organize-config"
+            },
+            {
+                "parent": "persistence",
+                "child": "templates-root"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-area"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-typecollection"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-special"
+            },
+            {
+                "parent": "organize-editor-page",
+                "child": "organize-editor"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "organize-dimensions"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "organize-provision"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "dimensions"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-dimensions"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-lib"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-structure"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "dimensions"
+            },
+            {
+                "parent": "organize-dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-dimensions",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-provision",
+                "child": "organize-structure"
+            },
+            {
+                "parent": "organize-provision",
+                "child": "organize-lib"
+            },
+            {
+                "parent": "organize-provision",
+                "child": "dimensions"
+            },
+            {
+                "parent": "organize-provision",
+                "child": "registry"
+            },
+            {
+                "parent": "organize-lib",
+                "child": "registry"
+            },
+            {
+                "parent": "organize-lib",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            }
+        ],
+        "relations": [
+            {
+                "from": "organize-editor-page",
+                "type": "renderNote",
+                "to": "organize-editor"
+            },
+            {
+                "from": "organize-settings-note",
+                "type": "configNote",
+                "to": "organize-config"
+            },
+            {
+                "from": "organize-settings-note",
+                "type": "schemaNote",
+                "to": "organize-schema"
+            },
+            {
+                "from": "templates-root",
+                "type": "template",
+                "to": "tpl-special"
+            }
+        ],
+        "labels": [
+            {
+                "note": "organize-settings-note",
+                "name": "agendaOrganizeConfig",
+                "value": ""
+            },
+            {
+                "note": "organize-page-src",
+                "name": "agendaOrganizeRender",
+                "value": ""
+            },
+            {
+                "note": "organize-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "organize-page-src",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-editor-page",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-editor",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-lib",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-structure",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-provision",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-dimensions",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-settings",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-settings-note",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-schema",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-config",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-css",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "templates-root",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "tpl-area",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-area",
+                "name": "iconClass",
+                "value": "bx bxs-circle"
+            },
+            {
+                "note": "tpl-area",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "tpl-area",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-area",
+                "name": "type",
+                "value": "areacollection"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "iconClass",
+                "value": "bx bx-folder"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "type",
+                "value": "typecollection"
+            },
+            {
+                "note": "tpl-special",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-special",
+                "name": "type",
+                "value": "special"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}

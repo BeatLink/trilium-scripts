@@ -1,0 +1,33 @@
+{
+    "myDayNoteId": {
+        "type": "note",
+        "label": "My Day Note",
+        "description": "The note that shows the My Day focus controls (timer, mark done). The My Day widget only appears while browsing this note.",
+        "default": "",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "enableSounds": {
+        "type": "boolean",
+        "label": "Enable Timer Sounds",
+        "default": true,
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "addTasksWhenDue": {
+        "type": "boolean",
+        "label": "Add Tasks When Due",
+        "description": "File tasks into the My Day note as their start time arrives. Requires agenda@beatlink, which supplies the task list.",
+        "default": false,
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "sendDueNotifications": {
+        "type": "boolean",
+        "label": "Send Due Notifications",
+        "description": "Send a desktop notification as each task's start time arrives. Requires agenda@beatlink, which supplies the task list.",
+        "default": true,
+        "category": "Execute",
+        "tab": "My Day"
+    }
+}

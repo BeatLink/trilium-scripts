@@ -1,6 +1,5 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
-import { getAgendaSettings } from "agendaSettings.jsx"
 import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const {
@@ -8,6 +7,7 @@ const {
     assignStartDate, assignTemplate, refileNote, deleteNote, mergeBucketInto
 } = require("organize.js")
 const { getDimensions, assignDimension } = require("dimensions.js")
+const { getTimeSettings } = require("organizeSettings.js")
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -338,26 +338,6 @@ function InvalidBucketsTable({ items, targets, onMerged, onDeleted }) {
     )
 }
 
-// Resolve the morning/noon/evening/night times from agenda's shared config
-// (discovered via #agendaConfig by getAgendaSettings), falling back to the
-// shipped defaults if the config can't be resolved (e.g. libsettings absent).
-async function loadTimeSettings() {
-    const DEFAULTS = { morning: "08:00", noon: "12:00", evening: "17:00", night: "20:00" }
-    try {
-        const settings = await getAgendaSettings()
-        const o = settings && settings.organize
-        if (!o) return DEFAULTS
-        return {
-            morning: o.morningTime || DEFAULTS.morning,
-            noon: o.noonTime || DEFAULTS.noon,
-            evening: o.eveningTime || DEFAULTS.evening,
-            night: o.nightTime || DEFAULTS.night
-        }
-    } catch (e) {
-        return DEFAULTS
-    }
-}
-
 // The Triage tab. Loads the candidate notes, the misfiled notes, and the
 // dimension vocabulary once, then renders one triage queue per triaged dimension
 // (plus the start-date queue and the misfiled queue). Mutations update the
@@ -388,7 +368,7 @@ function TriagePanel() {
             getOrganizeCandidates(dims.map(d => d.label), actionableTemplateIds),
             getMisfiledNotes(rootDim, templates),
             getInvalidBuckets(rootDim, templates),
-            loadTimeSettings()
+            getTimeSettings()
         ])
         setDimensions(dims)
         setBucketTemplates(templates)

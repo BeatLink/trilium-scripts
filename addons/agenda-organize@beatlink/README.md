@@ -1,11 +1,27 @@
-# Organize — design notes
+# Agenda Organize
 
-Design doc for the opinionated GTD Organize workflow that ships inside `agenda@beatlink` (the
-`organize/` module + the **Organize** render page and the **Workflow Setup** tab in the Agenda
-Editor). It bakes a specific notebook structure and triage flow on top of agenda's generic engine,
-driven by agenda's own open-ended **dimensions** vocabulary (area, priority, and any you add) plus
-[`template-picker@beatlink`](../../template-picker@beatlink/README.md)'s own registry for item type.
+The opinionated GTD Organize workflow, split out of `agenda@beatlink` into its own addon: the
+**Organize** render page, the **Workflow Setup** provisioner, and the **Organize Editor** settings
+page. It bakes a specific notebook structure and triage flow on top of agenda's generic engine,
+driven by the open-ended **dimensions** vocabulary (area, priority, and any you add) plus
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry for item type.
 It reuses agenda's mechanism (config, filters, colors, kanban, task widget) — it does not fork it.
+
+## Configuration and cross-addon reads
+
+This addon owns its own settings note (`organizeSchema.json` / `organizeConfig.json`) tagged
+**`#agendaOrganizeConfig`**: the **Organize Note** picker and the four quick-times. Everything is
+edited from the **Organize Editor** page.
+
+The **`dimensions`** registry deliberately stays in [`agenda@beatlink`](../agenda@beatlink/README.md)'s
+`#agendaConfig` and is read cross-addon (see `organizeSettings.js`). Agenda's Overview derives its
+prefix/color/grouping/filter variants from the same list these triage queues write to, so a local
+copy would silently drift out of sync — one registry, read from whoever owns it. The Dimensions tab
+renders an explanatory note when agenda isn't installed, and the scaffolding plus start-date triage
+still work without it.
+
+The **Inbox** is not read from config: `organize.js` finds it by the `#agendaOrganizeSpecial=inbox`
+label that this addon's own Workflow Setup provisions.
 
 ## 1. Purpose / workflow
 
@@ -25,8 +41,8 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 
 ## 2. Dimensions
 
-Agenda owns one open-ended **`dimensions`** registry in [`common/schema.json`](../common/schema.json),
-loaded by [`../common/dimensions.js`](../common/dimensions.js) → `getDimensions()`. A dimension is one
+Agenda owns one open-ended **`dimensions`** registry in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json),
+loaded by [`dimensions.js`](../agenda@beatlink/common/dimensions.js) → `getDimensions()`. A dimension is one
 note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
 priority ship as defaults, but the set is open-ended. Triage queues, sort ordinals, and the derived
 prefix/color/grouping/filter variants all enumerate the registered dimensions, so adding one needs no
@@ -34,13 +50,13 @@ code change. `key` is the stored value (stable and order-free, so reordering nev
 note); position IS the order.
 
 Item **type** is deliberately NOT one of these dimensions — it moved out entirely to
-[`template-picker@beatlink`](../../template-picker@beatlink/README.md)'s own registry. A note's type is
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry. A note's type is
 its `~template` relation, assigned by template-picker's own right-pane widget (or its Missing Templates
 page), never a `#type` label agenda writes. Organize reads that registry read-only, via
 `getBucketTemplates()` in [`organize.js`](organize.js) (discovered through template-picker's own
 `#templatePickerConfig` anchor, the same shape agenda uses for its own `#agendaConfig`) — for bucket
 scaffolding and the actionable-item set only. See
-[template-picker's README](../../template-picker@beatlink/README.md) for its own registry fields
+[template-picker's README](../template-picker@beatlink/README.md) for its own registry fields
 (Name, Template Note, Enabled, Color, Actionable, Bucket Icon).
 
 `assignDimension(noteId, dim, value)` is the single write path for agenda's own dimensions (used by
@@ -88,8 +104,9 @@ template a bucket holds is carried by the private identity label
 ## 3. The Organize page (`organizePage.jsx`)
 
 Two tabs: **Triage** (the one-at-a-time queues) and **Dimensions** (`DimensionsPanel` from
-[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits agenda's OWN
-`#agendaConfig` — a single-tab `SettingsForm` scoped `only="Dimensions"`. Editing a value's **Name** or
+[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits
+`agenda@beatlink`'s `#agendaConfig` cross-addon (see the note at the top of this file) — a single-tab
+`SettingsForm` scoped `only="Dimensions"`. Editing a value's **Name** or
 reordering the list is safe; editing its **Key** orphans every note carrying that value. Item type
 isn't here at all — it's edited on template-picker's own settings note.
 
@@ -130,7 +147,7 @@ place so the acted-on note leaves its queue. Sections:
 
 ## 4. Provisioning model — runtime find-or-create
 
-The notebook *structure* is provisioned by the **Workflow Setup** button (Agenda Editor → Settings ›
+The notebook *structure* is provisioned by the **Workflow Setup** button (Organize Editor → Organize ›
 Workflow Setup), not cloned in via the manifest, so it merges with notes the user already created by
 hand. `provisionStructure(dimensions)` (`organizeProvision.js`) reduces the Area dimension to a
 `{ slug, name, color }` list and pulls the bucket list straight from template-picker's own enabled
@@ -162,7 +179,7 @@ registry entries (`{ noteId, name, icon }`, via `getBucketTemplates()`), then ha
   `AREA_ALIASES` for folded areas — rewriting `#area` + `#color` when the value changes. Idempotent:
   an already-stable value resolves to itself, so re-running migrates nothing. Reordering areas no
   longer rewrites notes at all; display order comes from the value list's position (see
-  `getSortValueMaps` in [`../common/dimensions.js`](../common/dimensions.js)).
+  `getSortValueMaps` in [`dimensions.js`](../agenda@beatlink/common/dimensions.js)).
 - **Structural templates** are resolved live by title (`AreaCollection` for area roots,
   `TypeCollection` for the per-type buckets, `Special` for the three singletons), so provisioning
   degrades gracefully if a template note is missing — the note is still created and tagged, just
@@ -181,11 +198,11 @@ registry entries (`{ noteId, name, icon }`, via `getBucketTemplates()`), then ha
 
 Organize has **no shipped render page**. `organizePage.jsx` (`organize-page-src`, tagged
 `#agendaOrganizeRender`) is a plain code note; the render surface is an **external user-chosen note**.
-The **Organize Note** picker on the Agenda Editor's Settings tab persists `organizeNoteId` in the
+The **Organize Note** picker on the Organize Editor persists `organizeNoteId` in the
 shared config and, on change, reconciles the chosen note on the backend: sets its `type` to `render`,
 its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#iconClass` to
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
-`reconcileOrganizeNote` in [`../overview/profileEditor.jsx`](../overview/profileEditor.jsx).)
+`reconcileOrganizeNote` in [`organizeEditor.jsx`](organizeEditor.jsx).)
 
 `organizePage.jsx` imports `getAgendaSettings` (`agendaSettings.jsx`) and `DimensionsPanel`
 (`organizeDimensions.jsx`), and requires `organize.js` + `dimensions.js`. `organize.js` requires
@@ -195,7 +212,7 @@ it in rather than re-fetching if template-picker is already installed), wired as
 both `organize-lib` (`organize.js`) and `organize-provision` (`organizeProvision.js`), since both
 `require()` it. This is a one-directional read: agenda's copy tracks template-picker's registry
 content, but template-picker knows nothing about agenda. Workflow Setup is a tab folded
-into the Agenda Editor (`profileEditor.jsx`), which requires `organizeProvision.js` (→ requires
+into the Organize Editor (`organizeEditor.jsx`), which requires `organizeProvision.js` (→ requires
 `organizeStructure.js` + `organize.js`, for `getBucketTemplates`) and `dimensions.js`. Per TAM's
 direct-child require rule, `dimensions` is a child of every note that requires it (`agenda-settings`,
 `lib-config`, `organize-page-src`, `organize-dimensions`, `organize-provision`,

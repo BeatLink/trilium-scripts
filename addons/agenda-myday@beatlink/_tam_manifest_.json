@@ -1,0 +1,579 @@
+{
+    "id": "agenda-myday@beatlink",
+    "name": "Agenda My Day",
+    "description": "The My Day widget from agenda@beatlink, split out as its own addon: a note-detail focus panel that appears only while you're browsing your My Day note. It carries a countdown timer with selectable durations and start/select/end sounds, files tasks into the My Day note as their start time arrives, and sends a desktop notification as each task comes due. Owns its own settings note (myDaySchema.json/myDayConfig.json) tagged #agendaMyDayConfig - the My Day note, timer sounds, and the two due-task toggles - independent of agenda@beatlink's #agendaConfig. The two due-task loops resolve their task list from agenda's active profile and its start/due label vocabulary, so this addon clones in agenda's overview/query/config libraries and its settings reader; when agenda@beatlink isn't installed those loops stay off and the countdown timer still works on its own.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "myday-editor-page",
+        "notes": [
+            {
+                "id": "my-day",
+                "title": "myDayWidget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayWidget.jsx"
+            },
+            {
+                "id": "timer",
+                "title": "Timer.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/Timer.jsx"
+            },
+            {
+                "id": "my-day-css",
+                "title": "myDay.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDay.css"
+            },
+            {
+                "id": "myday-settings",
+                "title": "myDaySettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDaySettings.js"
+            },
+            {
+                "id": "myday-editor-page",
+                "title": "My Day Editor",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "myday-editor",
+                "title": "myDayEditor.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayEditor.jsx"
+            },
+            {
+                "id": "myday-schema",
+                "title": "myDaySchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDaySchema.json"
+            },
+            {
+                "id": "myday-config",
+                "title": "myDayConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayConfig.json"
+            },
+            {
+                "id": "myday-settings-note",
+                "title": "My Day Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "now-note",
+                "title": "My Day",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "wav-select",
+                "title": "timerSelect.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerSelect.wav",
+                "binary": true
+            },
+            {
+                "id": "wav-start",
+                "title": "timerStart.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerStart.wav",
+                "binary": true
+            },
+            {
+                "id": "wav-end",
+                "title": "timerEnd.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerEnd.wav",
+                "binary": true
+            },
+            {
+                "id": "agenda-settings",
+                "title": "agendaSettings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/agendaSettings.jsx"
+            },
+            {
+                "id": "dimensions",
+                "title": "dimensions.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/dimensions.js"
+            },
+            {
+                "id": "migrate",
+                "title": "migrate.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/migrate.js"
+            },
+            {
+                "id": "lib-overview",
+                "title": "libAgendaOverview.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaOverview.js"
+            },
+            {
+                "id": "lib-query",
+                "title": "libAgendaQuery.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaQuery.js"
+            },
+            {
+                "id": "lib-config",
+                "title": "libAgendaConfig.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaConfig.js"
+            },
+            {
+                "id": "lib-task",
+                "title": "libAgendaTask.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libAgendaTask.js"
+            },
+            {
+                "id": "lib-recurrence",
+                "title": "libRecurrence.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libRecurrence.js"
+            },
+            {
+                "id": "librrule-lib",
+                "title": "rrule.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
+            },
+            {
+                "id": "libmultisort-lib",
+                "title": "libMultisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libmultisort/libmultisort.js"
+            },
+            {
+                "id": "libnotification-lib",
+                "title": "libNotification.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
+            },
+            {
+                "id": "libcalendar-lib",
+                "title": "libCalendar.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendar/libCalendar.js"
+            },
+            {
+                "id": "ical-lib",
+                "title": "ical.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+            },
+            {
+                "id": "ical-resource",
+                "title": "ical.min.js (resource)",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "my-day"
+            },
+            {
+                "parent": "root",
+                "child": "my-day-css"
+            },
+            {
+                "parent": "root",
+                "child": "myday-editor-page"
+            },
+            {
+                "parent": "root",
+                "child": "myday-settings-note"
+            },
+            {
+                "parent": "root",
+                "child": "myday-schema"
+            },
+            {
+                "parent": "root",
+                "child": "now-note"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "myday-config"
+            },
+            {
+                "parent": "my-day",
+                "child": "timer"
+            },
+            {
+                "parent": "my-day",
+                "child": "myday-settings"
+            },
+            {
+                "parent": "my-day",
+                "child": "lib-overview"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-select"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-start"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-end"
+            },
+            {
+                "parent": "myday-editor-page",
+                "child": "myday-editor"
+            },
+            {
+                "parent": "myday-editor",
+                "child": "myday-settings"
+            },
+            {
+                "parent": "myday-editor",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "myday-settings",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "myday-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "dimensions"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "migrate"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "lib-query"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libnotification-lib"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libcalendar-lib"
+            },
+            {
+                "parent": "lib-query",
+                "child": "lib-task"
+            },
+            {
+                "parent": "lib-query",
+                "child": "lib-config"
+            },
+            {
+                "parent": "lib-query",
+                "child": "libmultisort-lib"
+            },
+            {
+                "parent": "lib-config",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-config",
+                "child": "dimensions"
+            },
+            {
+                "parent": "lib-task",
+                "child": "lib-recurrence"
+            },
+            {
+                "parent": "lib-recurrence",
+                "child": "librrule-lib"
+            },
+            {
+                "parent": "libcalendar-lib",
+                "child": "ical-lib"
+            },
+            {
+                "parent": "ical-lib",
+                "child": "ical-resource"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            }
+        ],
+        "relations": [
+            {
+                "from": "myday-editor-page",
+                "type": "renderNote",
+                "to": "myday-editor"
+            },
+            {
+                "from": "myday-settings-note",
+                "type": "configNote",
+                "to": "myday-config"
+            },
+            {
+                "from": "myday-settings-note",
+                "type": "schemaNote",
+                "to": "myday-schema"
+            },
+            {
+                "from": "my-day",
+                "type": "nowNote",
+                "to": "now-note"
+            }
+        ],
+        "labels": [
+            {
+                "note": "myday-settings-note",
+                "name": "agendaMyDayConfig",
+                "value": ""
+            },
+            {
+                "note": "my-day",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "my-day-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "wav-select",
+                "name": "customResourceProvider",
+                "value": "libtimerSelect.wav"
+            },
+            {
+                "note": "wav-start",
+                "name": "customResourceProvider",
+                "value": "libtimerStart.wav"
+            },
+            {
+                "note": "wav-end",
+                "name": "customResourceProvider",
+                "value": "libtimerEnd.wav"
+            },
+            {
+                "note": "ical-resource",
+                "name": "customResourceProvider",
+                "value": "libIcal.js"
+            },
+            {
+                "note": "my-day",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "my-day-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "timer",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-editor-page",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-editor",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-schema",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-settings-note",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "now-note",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "wav-select",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "wav-start",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "wav-end",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "agenda-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "migrate",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-query",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-task",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-recurrence",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}

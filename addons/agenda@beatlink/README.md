@@ -1,7 +1,7 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an Organize
-workflow, all sharing one configuration. The Task widget (start/due dates, duration, recurrence,
+A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets sharing one
+configuration. The Task widget (start/due dates, duration, recurrence,
 Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 — install it alongside this one for the full Task pane; this addon clones in its recurrence/reschedule
 logic and settings panels either way, so the Agenda Editor and Overview keep working whether or not it's
@@ -21,62 +21,44 @@ installed.
 
 ## Organize (GTD triage)
 
-An opinionated Collect → Organize workflow on top of the widgets above, driven by agenda's own
-open-ended **dimensions** (area and priority ship as defaults; add your own in the Dimensions tab) plus
-[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s registry for item type:
+The opinionated Collect → Organize workflow (notebook provisioning + the triage page) is now a
+separate addon, [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) — install it
+alongside this one for the full GTD flow.
 
-- **Workflow Setup** — a tab in the Agenda Editor's **Settings › Workflow Setup**: one button
-  provisions the notebook structure by find-or-create: **Inbox**, **My Day**, **Agenda**, and one note
-  per value of the root dimension (Area, each with a bucket per **enabled template** in
-  template-picker's registry below it). Every structural note is tagged
-  with its identity labels (**`#agendaOrganizeArea`** / **`#agendaOrganizeBucket`** /
-  **`#agendaOrganizeSpecial`** — this addon's analogue of TAM's `#TAMFILEID`, scoped to user notes) so
-  it can be resolved later; re-running adopts hand-made notes rather than duplicating, and re-keys
-  stale slugs after a reorder. See [organize/README.md](organize/README.md) for the taxonomy and
-  provisioning model.
-- **Organize** — a two-tab page: **Triage** (a one-at-a-time queue over every note under the Inbox /
-  Area subtrees, with one section per triaged dimension assigning its missing value — **`#area`** (+
-  `#color`), **`#priority`** (+ `#color`), or any dimension you add —
-  plus a **start date** section (`#startDateTime`/`#startDate`/`#startTime`), a **Misfiled Notes**
-  fixer for notes whose area/`~template` disagrees with where they're filed, and an **Invalid Buckets**
-  table listing scaffolded buckets whose area/template no longer maps to a current value,
-  each row offering **Merge** into a chosen valid bucket or **Delete**. Note without a `~template` at
-  all are surfaced by template-picker's own **Missing Templates** page, not here.) and
-  **Dimensions** (the vocabulary itself — see below). The Morning / Noon / Evening / Night quick-time
-  buttons use the times on the Agenda Editor's **Organize › Times** tab.
-
-  Organize has no dedicated page note of its own — you pick which note hosts it via the **Organize
-  Note** picker on the Agenda Editor's **Organize › Organize Note** tab. Selecting a note converts it into a render note
-  (`~renderNote` → the Organize code note, icon `bx-sort-down`); clearing or re-picking reverts the
-  previously-chosen note to a plain text note.
+It owns its own settings note (`#agendaOrganizeConfig`: the Organize-note picker and the quick-times)
+and its own **Organize Editor** page, so those tabs are no longer in the Agenda Editor. It reads the
+**`dimensions`** registry back out of this addon's `#agendaConfig`, because Overview's derived
+prefix/color/grouping/filter variants come from the same list Organize's triage queues write to — one
+registry, no drift. Editing that vocabulary still happens here, in the Agenda Editor's **Dimensions**
+tab (and is mirrored on Organize's own Dimensions tab).
 
 ## Templates
 
-Agenda's own **Templates** container note holds only the three structural templates the Organize
-workflow scaffolds with: **AreaCollection** (an area root), **TypeCollection** (a per-template bucket
-inside an area), and **Special** (the Inbox / My Day / Agenda singletons). The seven item templates —
-Ideas, Goal, Routine, Task, Future, Project, Note — ship with
-[`template-picker@beatlink`](../template-picker@beatlink/README.md) instead (a dependency of this
-addon), since assigning them is entirely its concern now. Each carries `#template` (so it is
-discoverable by Trilium and the Template Picker widget). Template content is yours to customize — every
-template lives under its owning addon's `persistenceRoot`, so a future update that changes a default
-prompts an Update Review rather than overwriting your edits.
+The three structural templates the Organize workflow scaffolds with — **AreaCollection** (an area
+root), **TypeCollection** (a per-template bucket inside an area), and **Special** (the Inbox / My Day /
+Agenda singletons) — moved to [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)
+along with the provisioner that creates them. The item templates — Ideas, Goal, Routine, Task, Future,
+Project, Note — ship with [`template-picker@beatlink`](../template-picker@beatlink/README.md) instead
+(a dependency of this addon), since assigning them is entirely its concern now. Each carries
+`#template` (so it is discoverable by Trilium and the Template Picker widget). Template content is
+yours to customize — every template lives under its owning addon's `persistenceRoot`, so a future
+update that changes a default prompts an Update Review rather than overwriting your edits.
 
 Item type is no longer an agenda dimension — it's owned entirely by
 [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry, and assigned via
-its own right-pane widget (a note's `~template` relation, not a `#type` label). Agenda reads that
-registry (via its **`#templatePickerConfig`** anchor) for two things only: which enabled entries get an
-Organize bucket, and which entries are marked **Actionable** — those items flow through the
-priority/start-date queues. There's nothing to configure on agenda's side; add/rename/reorder/enable
-templates in template-picker's own settings and Organize's buckets follow on the next **Workflow
-Setup** run.
+its own right-pane widget (a note's `~template` relation, not a `#type` label).
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads that registry (via its
+**`#templatePickerConfig`** anchor) for two things only: which enabled entries get an Organize bucket,
+and which entries are marked **Actionable** — those items flow through the priority/start-date queues.
+There's nothing to configure on agenda's side; add/rename/reorder/enable templates in
+template-picker's own settings and Organize's buckets follow on the next **Workflow Setup** run.
 
 Whether a note's Task editor shows at all (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 is installed) is the separate **`#agendaTaskWidget`** label, set as an inheritable label on the
 template note so notes created from it get it automatically.
 
 Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
-chosen value's colour onto `#color`. See [organize/README.md](organize/README.md#dimensions).
+chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-organize@beatlink/README.md#2-dimensions).
 
 ## Shared configuration
 
@@ -93,24 +75,24 @@ note, tagged **`#agendaTaskConfig`** — owned by [`agenda-task@beatlink`](../ag
 not this addon. The Agenda Editor's **Settings** tab still edits it (via panels that addon exports), so
 there's one editing surface even though the two configs are stored in different notes.
 
-The Agenda Editor groups its tabs under seven workflow categories — **Collect**, **Organize**,
-**Review**, **Display Elements**, **Execute**, **Dimensions**, **Settings** — using
+The Agenda Editor groups its tabs under six workflow categories — **Collect**, **Review**,
+**Display Elements**, **Execute**, **Dimensions**, **Settings** — using
 [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
-per-field `category`, plus `extraPanels` for the non-schema Workflow Setup and Organize-note tabs):
+per-field `category`, plus `extraPanels` for the non-schema panels):
 
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
-- **Organize** — Times and the Organize-note picker (which note hosts the Organize triage UI).
 - **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
   shows).
 - **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
   profile references by name. Split out of Review because they're a shared library, not per-profile
   config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
 - **Execute** — My Day.
-- **Dimensions** — the classification vocabulary registry (area, priority, any you add). The Organize
-  page embeds this same registry on its own **Dimensions** tab. Item type lives in
-  template-picker@beatlink's own settings instead, not here.
-- **Settings** — the Workflow Setup tab (provision button), plus two panels exported by
+- **Dimensions** — the classification vocabulary registry (area, priority, any you add). This addon
+  owns it; [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads and mirrors the
+  same registry on its own **Dimensions** tab. Item type lives in template-picker@beatlink's own
+  settings instead, not here.
+- **Settings** — two panels exported by
   [`agenda-task@beatlink`](../agenda-task@beatlink/README.md): the label-name vocabulary (grouped into
   **Start** / **Due** / **Task** sub-groups) and Reschedule Options (the Task pane's Reschedule dropdown
   entries — a custom panel since a recurrence-mode entry needs the same rich picker the Task pane's own
