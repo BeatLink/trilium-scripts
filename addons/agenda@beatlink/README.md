@@ -1,11 +1,13 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets sharing one
+A schema-driven, multi-profile task/agenda system for TriliumNext, in two widgets sharing one
 configuration. The Task widget (start/due dates, duration, recurrence,
 Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 — install it alongside this one for the full Task pane; this addon clones in its recurrence/reschedule
 logic and settings panels either way, so the Agenda Editor and Overview keep working whether or not it's
-installed.
+installed. The My Day focus panel is likewise its own addon,
+[`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md), and the GTD Organize workflow is
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md).
 
 ## Widgets
 
@@ -15,9 +17,9 @@ installed.
   Ships the **Agenda Editor** page that edits the whole configuration.
 - **Note Actions** — a right-pane widget shown on every note with two quick actions, Zen Mode and
   Hoist Note, independent of the Task widget's actionable-note gating.
-- **My Day** — a note-detail countdown timer that appears inline at the top of your designated My Day
-  note. While that note is open it runs the optional background loops (append due tasks, send due
-  notifications).
+My Day (the note-detail countdown timer, and the optional loops that append due tasks and send due
+notifications) moved to [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md). It clones this
+addon's overview/query libraries to resolve which tasks are due from the active profile.
 
 ## Organize (GTD triage)
 
@@ -75,8 +77,8 @@ note, tagged **`#agendaTaskConfig`** — owned by [`agenda-task@beatlink`](../ag
 not this addon. The Agenda Editor's **Settings** tab still edits it (via panels that addon exports), so
 there's one editing surface even though the two configs are stored in different notes.
 
-The Agenda Editor groups its tabs under six workflow categories — **Collect**, **Review**,
-**Display Elements**, **Execute**, **Dimensions**, **Settings** — using
+The Agenda Editor groups its tabs under five workflow categories — **Collect**, **Review**,
+**Display Elements**, **Dimensions**, **Settings** — using
 [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
 per-field `category`, plus `extraPanels` for the non-schema panels):
 
@@ -87,7 +89,6 @@ per-field `category`, plus `extraPanels` for the non-schema panels):
 - **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
   profile references by name. Split out of Review because they're a shared library, not per-profile
   config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
-- **Execute** — My Day.
 - **Dimensions** — the classification vocabulary registry (area, priority, any you add). This addon
   owns it; [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads and mirrors the
   same registry on its own **Dimensions** tab. Item type lives in template-picker@beatlink's own
