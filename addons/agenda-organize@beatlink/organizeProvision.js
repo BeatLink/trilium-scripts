@@ -88,8 +88,11 @@ async function migrateAreaSlugs(areaList) {
 //
 //   A. Two live buckets, same current key (e.g. two "Task" buckets both tagged
 //      area=home bucket=task). Neither is stale; the old code skipped both.
-//   B. A tagged bucket plus a hand-made same-titled sibling with no identity
-//      labels (provisioning adopted the tagged one, orphaning the twin).
+//   B. A tagged bucket plus a same-titled sibling with no identity labels
+//      (provisioning adopted the tagged one, orphaning the twin). Only a twin
+//      carrying a provisioning marker — the legacy identity label or a live
+//      bucket ~template — is a candidate; a title match alone is not enough to
+//      put a note on a delete path (see step 2).
 //   C. A bucket whose area folded via AREA_ALIASES and should resolve onto the
 //      surviving area (a bucket's own noteId-based identity never goes stale on
 //      its own — only its area half can).
@@ -107,10 +110,12 @@ async function migrateAreaSlugs(areaList) {
 //     isn't, dropping it would be data loss.
 //
 // A husk is deleted only after re-reading it and CONFIRMING it has no remaining
-// children and no remaining content; anything that survives the migration keeps
-// the husk (reported `deleted: false` + reason). Deleting a note the user may
-// have hand-made is the one irreversible step, so it happens only against a note
-// verified empty, never on assumption.
+// children, no remaining content, and no clones in other parents (deleteNote()
+// removes the note itself, so a cloned husk would vanish from wherever else the
+// user filed it). Anything that survives the migration keeps the husk (reported
+// `deleted: false` + reason). Deleting a note is the one irreversible step, so it
+// happens only against a note verified empty AND verified provisioned, never on
+// assumption — a title match is not evidence of ownership.
 //
 // A lone stale bucket (no other note at its live identity) is re-keyed in place
 // so provisionStructure adopts it -- reported `rekeyedInPlace: true`.
@@ -201,9 +206,25 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
             })
         }
 
-        // 2. Scenario B: pull in hand-made same-titled twins that carry NO bucket
-        //    label. For each known live bucket identity, look under the same area
-        //    root for untagged siblings sharing a group member's title.
+        // 2. Scenario B: pull in same-titled twins that carry NO bucket label —
+        //    a bucket provisioning created, then orphaned when the tagged one was
+        //    adopted instead. For each known live bucket identity, look under the
+        //    same area root for such siblings sharing a group member's title.
+        //
+        //    A title match alone is NOT sufficient evidence. These candidates are
+        //    the only notes here that carry no identity label of their own, so a
+        //    plain title match would sweep in any hand-made note that happens to
+        //    share a bucket's title ("Notes", "Inbox", "Reading") and delete it at
+        //    step 3. Require positive proof the note came from provisioning:
+        //    either the legacy identity label, or the bucket ~template that
+        //    provisionNode stamps on every bucket it creates. A user's own note
+        //    has neither.
+        function isProvisioned(n) {
+            if (n.getLabelValue(labels.legacy)) return true
+            const tpl = n.getRelationValue("template") || ""
+            return templateIds.has(tpl)
+        }
+
         for (const [liveKey, members] of Object.entries(groups)) {
             const target = liveIdentityByKey[liveKey]
             const root = areaRoots[target.area]
@@ -214,6 +235,13 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
                 if (known.has(child.noteId)) continue
                 if (child.getLabelValue(labels.bucket)) continue  // has its own identity
                 if (!titles.has(child.title)) continue
+                if (!isProvisioned(child)) {
+                    skipped.push({
+                        noteId: child.noteId, key: liveKey, title: child.title,
+                        reason: "untagged same-titled note with no provisioning marker; left alone"
+                    })
+                    continue
+                }
                 members.push({ note: child, wasStale: true, untagged: true })
             }
         }
@@ -300,6 +328,21 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
                     if (stuck.length > 0) {
                         keptReason = `${stuck.length} child note(s) did not move: ${stuck.join(", ")}`
                     }
+
+                    // A husk cloned into another parent is reachable from
+                    // somewhere the user put it deliberately. deleteNote() removes
+                    // the note itself, not just this branch, so it would vanish
+                    // from that other location too. Unclone it here and keep it.
+                    if (!keptReason) {
+                        const live = api.getNote(note.noteId)
+                        const otherParents = live
+                            ? live.getParentNotes().map(p => p.noteId).filter(id => id !== survivor.noteId)
+                            : []
+                        if (otherParents.length > 1) {
+                            keptReason = `note is cloned into ${otherParents.length} parents; left in place`
+                        }
+                    }
+
                     if (!keptReason && !contentStuck) {
                         note.deleteNote()
                         deleted = true
@@ -324,7 +367,8 @@ async function mergeStaleBuckets(areaList, templateList, dryRun) {
 
         return { merges, skipped }
     }, [areaList, templateList, AREA_ALIASES,
-        { area: AREA_LABEL, bucket: BUCKET_LABEL, special: SPECIAL_LABEL }, !!dryRun])
+        { area: AREA_LABEL, bucket: BUCKET_LABEL, special: SPECIAL_LABEL, legacy: LEGACY_LABEL },
+        !!dryRun])
 }
 
 // One-time migration off the single composite #workflowNote key onto the three
@@ -494,7 +538,11 @@ async function provisionNode(parentNoteId, node, templateId) {
 // template-picker@beatlink's own enabled registry entries
 // ({ noteId, name, icon }), one bucket per entry. Returns a flat result log
 // [{ key, title, created, adopted, noteId, depth }] for the Setup page to show.
-async function provisionStructure(dimensions) {
+async function provisionStructure(dimensions, options = {}) {
+    // Merging is the only step here that deletes notes. `previewMerge` reports
+    // what it would fold without writing, and provisions nothing else either —
+    // a walk against an unmerged tree would create duplicate buckets.
+    const previewMerge = !!options.previewMerge
     const rootDim = dimensions.find(d => d.scaffoldsAreas)
     const areaList = (rootDim ? rootDim.values : [])
         .map(v => ({ slug: v.key, name: v.name, color: v.color }))
@@ -507,6 +555,13 @@ async function provisionStructure(dimensions) {
         [AREA_TEMPLATE_TITLE]: await resolveTemplateId(AREA_TEMPLATE_TITLE),
         [TYPE_TEMPLATE_TITLE]: await resolveTemplateId(TYPE_TEMPLATE_TITLE),
         [SPECIAL_TEMPLATE_TITLE]: await resolveTemplateId(SPECIAL_TEMPLATE_TITLE)
+    }
+
+    // A preview touches nothing: report the merge plan and return before the
+    // label migration, which writes.
+    if (previewMerge) {
+        const plan = await mergeStaleBuckets(areaList, templateList, true)
+        return { results: [], migratedAreaCount: 0, merged: plan, labelMigration: null, previewOnly: true }
     }
 
     // Convert any pre-split tree onto the new identity labels FIRST. Until this

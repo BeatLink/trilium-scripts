@@ -186,6 +186,21 @@ registry entries (`{ noteId, name, icon }`, via `getBucketTemplates()`), then ha
   without a `~template` relation. The *item* templates that buckets are named after are
   template-picker's own registry entries, assigned directly on the items (via template-picker's
   widget), never on the buckets.
+- **Duplicate folding (`mergeStaleBuckets`)** runs before the walk and is the only step that deletes
+  notes. It groups every note claiming the same live `(area, bucket)` identity and folds all but one
+  survivor in. Two rules bound what it may delete:
+  - **Ownership.** A same-titled sibling carrying *no* identity label is only a fold candidate if it
+    also carries a provisioning marker — the legacy `#workflowNote` label, or a `~template` pointing
+    at a live bucket template. A bare title match is not evidence of ownership: without this, a
+    hand-made note sharing a bucket's title (`Notes`, `Inbox`, `Reading`) under an area root would be
+    swept in and deleted. Non-matching notes are reported in `skipped` and left alone.
+  - **Verified-empty, plus un-cloned.** A husk is deleted only once its children are confirmed
+    re-parented, its body confirmed migrated, and it is confirmed *not* cloned into another parent —
+    `deleteNote()` removes the note itself, so a cloned husk would disappear from wherever else it
+    was filed. Any of these failing keeps the husk with a `keptReason`.
+
+  `provisionStructure(dimensions, { previewMerge: true })` reports the fold plan without writing
+  anything at all (no label migration, no walk), so a run can be inspected before it deletes.
 - **Bucket drift:** disabling or deleting a template-picker entry orphans its bucket — re-running
   Setup no longer provisions anything for it (it's not enumerated any more), and the orphaned bucket
   surfaces in Organize's **Invalid Buckets** table for manual merge/delete, rather than being
