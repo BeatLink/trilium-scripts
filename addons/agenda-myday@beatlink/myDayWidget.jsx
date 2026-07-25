@@ -1,23 +1,48 @@
 import {
+    RightPanelWidget,
     defineWidget,
-    useActiveNoteContext,
-    useNoteProperty,
     useEffect,
     useState,
+    useTriliumEvent,
+    Button,
 } from "trilium:preact";
 
 import { startNote } from "trilium:api"
 
 import { Timer } from "Timer.jsx"
 
-const { sendNotificationForDueTasks, addDueTasksToAgendaNow } = require("libAgendaOverview.js")
-const { getMyDayContext } = require("myDaySettings.js")
+const {
+    sendNotificationForDueTasks,
+    addDueTasksToAgendaNow,
+    addTaskToAgendaNow
+} = require("libAgendaOverview.js")
+const { getMyDayContext, getSuggestedTasks } = require("myDaySettings.js")
+
+// One suggested task: its title, when it's scheduled, and a + that files it onto
+// the My Day note.
+function Suggestion({ task, onAdd }) {
+    const when = api.dayjs(task.datetime)
+    const isToday = when.isSame(api.dayjs(), "day")
+
+    return (
+        <div className="myDaySuggestion">
+            <Button
+                icon="bx bx-plus"
+                title="Add to My Day"
+                onClick={() => onAdd(task.noteId)}
+            />
+            <a className="myDaySuggestionTitle" href={`#root/${task.noteId}`}>{task.title}</a>
+            <span className="myDaySuggestionWhen">
+                {isToday ? when.format("HH:mm") : when.format("MMM D")}
+            </span>
+        </div>
+    )
+}
 
 function MyDay() {
-    const { note } = useActiveNoteContext();
-    const noteId = useNoteProperty(note, "noteId");
-
     const [ids, setIds] = useState(null)
+    const [buckets, setBuckets] = useState([])
+
     useEffect(() => {
         (async () => {
             const { myDay, hasAgenda, profileContext, constants } = await getMyDayContext()
@@ -27,43 +52,73 @@ function MyDay() {
     }, [])
 
     const myDayNoteId = ids?.myDay?.myDayNoteId || ids?.defaultNoteId
-    const isMyDay = myDayNoteId && noteId === myDayNoteId
+
+    // Suggestions come from agenda's active profile, so they stay empty when
+    // agenda@beatlink isn't installed.
+    async function refreshSuggestions() {
+        if (!ids?.hasAgenda) return
+        setBuckets(await getSuggestedTasks(ids.profileContext, ids.constants, myDayNoteId))
+    }
+
+    useEffect(() => { refreshSuggestions() }, [ids, myDayNoteId])
+
+    useTriliumEvent("agenda:tasksChanged", () => { refreshSuggestions() })
 
     useEffect(() => {
-        if (!isMyDay) return
-        // Both due-task loops resolve their task list from agenda's active
-        // profile, so they stay off when agenda@beatlink isn't installed.
-        if (ids.hasAgenda && ids.myDay.addTasksWhenDue) {
-            const interval = setInterval(
-                async () => { await addDueTasksToAgendaNow(ids.profileContext, ids.constants, myDayNoteId) },
-                30000
-            )
-            return () => clearInterval(interval);
-        }
-    }, [isMyDay, ids, myDayNoteId])
+        if (!ids?.hasAgenda || !ids.myDay.addTasksWhenDue) return
+        const interval = setInterval(
+            async () => {
+                await addDueTasksToAgendaNow(ids.profileContext, ids.constants, myDayNoteId)
+                await refreshSuggestions()
+            },
+            30000
+        )
+        return () => clearInterval(interval);
+    }, [ids, myDayNoteId])
 
     useEffect(() => {
-        if (!isMyDay) return
-        if (ids.hasAgenda && ids.myDay.sendDueNotifications) {
-            const interval = setInterval(
-                () => { sendNotificationForDueTasks(ids.profileContext, ids.constants) },
-                15000
-            )
-            return () => clearInterval(interval);
-        }
-    }, [isMyDay, ids])
+        if (!ids?.hasAgenda || !ids.myDay.sendDueNotifications) return
+        const interval = setInterval(
+            () => { sendNotificationForDueTasks(ids.profileContext, ids.constants) },
+            15000
+        )
+        return () => clearInterval(interval);
+    }, [ids])
 
-    if (!isMyDay) return null
+    if (!ids) return null
+
+    async function addToMyDay(taskNoteId) {
+        await addTaskToAgendaNow(myDayNoteId, taskNoteId, true)
+        await refreshSuggestions()
+    }
 
     return (
-        <div className="myDayControls">
-            <Timer initialEnableSounds={ids.myDay.enableSounds} />
-        </div>
+        <RightPanelWidget title="My Day">
+            <div className="myDayControls">
+                <Timer initialEnableSounds={ids.myDay.enableSounds} />
+            </div>
+            <div className="myDaySuggestions">
+                {!ids.hasAgenda && (
+                    <div className="myDayEmpty">Install agenda@beatlink for task suggestions.</div>
+                )}
+                {ids.hasAgenda && buckets.length === 0 && (
+                    <div className="myDayEmpty">Nothing to suggest.</div>
+                )}
+                {buckets.map(bucket => (
+                    <div key={bucket.id}>
+                        <label>{bucket.display}</label>
+                        {bucket.tasks.map(task => (
+                            <Suggestion key={task.noteId} task={task} onAdd={addToMyDay} />
+                        ))}
+                    </div>
+                ))}
+            </div>
+        </RightPanelWidget>
     )
 }
 
 export default defineWidget({
-    parent: "note-detail-pane",
-    position: 100,
+    parent: "right-pane",
+    position: 5,
     render: MyDay
 });

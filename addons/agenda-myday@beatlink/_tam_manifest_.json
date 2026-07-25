@@ -1,11 +1,11 @@
 {
     "id": "agenda-myday@beatlink",
     "name": "Agenda My Day",
-    "description": "The My Day widget from agenda@beatlink, split out as its own addon: a note-detail focus panel that appears only while you're browsing your My Day note. It carries a countdown timer with selectable durations and start/select/end sounds, files tasks into the My Day note as their start time arrives, and sends a desktop notification as each task comes due. Owns its own settings note (myDaySchema.json/myDayConfig.json) tagged #agendaMyDayConfig - the My Day note, timer sounds, and the two due-task toggles - independent of agenda@beatlink's #agendaConfig. The two due-task loops resolve their task list from agenda's active profile and its start/due label vocabulary, so this addon clones in agenda's overview/query/config libraries and its settings reader; when agenda@beatlink isn't installed those loops stay off and the countdown timer still works on its own.",
+    "description": "The My Day widget from agenda@beatlink, split out as its own addon: a right-pane panel, always visible, modelled on Microsoft To Do's My Day page. It lists recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto your My Day note; tasks already linked there drop off the list. It also carries a countdown timer with selectable durations and start/select/end sounds, optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. Owns its own settings note (myDaySchema.json/myDayConfig.json) tagged #agendaMyDayConfig - the My Day note, timer sounds, and the two due-task toggles - independent of agenda@beatlink's #agendaConfig. Suggestions and the due-task loops resolve their task list from agenda's active profile and its start/due label vocabulary, so this addon clones in agenda's overview/query/config libraries and its settings reader; when agenda@beatlink isn't installed suggestions and those loops stay off and the countdown timer still works on its own.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
@@ -284,6 +284,10 @@
             },
             {
                 "parent": "my-day",
+                "child": "lib-overview"
+            },
+            {
+                "parent": "myday-settings",
                 "child": "lib-overview"
             },
             {

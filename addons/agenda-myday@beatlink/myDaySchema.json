@@ -2,7 +2,7 @@
     "myDayNoteId": {
         "type": "note",
         "label": "My Day Note",
-        "description": "The note that shows the My Day focus controls (timer, mark done). The My Day widget only appears while browsing this note.",
+        "description": "The note that collects today's tasks. Adding a suggestion appends it here, and tasks already linked here stop being suggested.",
         "default": "",
         "category": "Execute",
         "tab": "My Day"
