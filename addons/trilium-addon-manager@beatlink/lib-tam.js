@@ -99,7 +99,7 @@ const addonLabels = [
 
 // Checks if a note's #TAMFILEID belongs to the specified addon.
 function isOwnTamFileId(note, addonId) {
-    const tamFileId = note.getLabelValue(tamFileIdLabel)
+    const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
     return tamFileId && tamFileId.startsWith(`${addonId}/`)
 }
 
@@ -277,7 +277,7 @@ async function applyLabels(labels, noteMap) {
         await api.runOnBackend((noteId, name, value, isInheritable) => {
             const note = api.getNote(noteId)
             const disabledName = `disabled:${name}`
-            const targetName = note.hasLabel(disabledName) ? disabledName : name
+            const targetName = note.hasOwnedLabel(disabledName) ? disabledName : name
             if (isInheritable) {
                 note.removeLabel(targetName)
                 note.addLabel(targetName, value, true)
@@ -374,7 +374,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     }
                     if (existing) {
                         if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
-                        if (existing.getLabelValue(sourceUrlLabel) !== (sourceUrl || "")) {
+                        if (existing.getOwnedLabelValue(sourceUrlLabel) !== (sourceUrl || "")) {
                             existing.setLabel(sourceUrlLabel, sourceUrl || "")
                         }
                         if (willWriteContent) {
@@ -448,7 +448,7 @@ async function reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId,
             for (const parentId of currentParentIds) {
                 if (desiredRealParents.includes(parentId)) continue
                 const parentNote = api.getNote(parentId)
-                const parentTamId = parentNote ? parentNote.getLabelValue(tamFileIdLabel) : null
+                const parentTamId = parentNote ? parentNote.getOwnedLabelValue(tamFileIdLabel) : null
                 if (parentTamId && parentTamId.startsWith(`${addonId}/`) && !declaredParentTamIds.includes(parentTamId)) {
                     api.ensureNoteIsAbsentFromParent(noteId, parentId)
                 }
@@ -466,7 +466,10 @@ async function pruneRemovedNotes(m, addonId) {
         const prefix = `${addonId}/`
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
-            const value = note.getLabelValue(tamFileIdLabel)
+            // Owned-only: getLabelValue() resolves inherited labels, so a note
+            // templated from a TAM template would report the template's id and
+            // be pruned along with it.
+            const value = note.getOwnedLabelValue(tamFileIdLabel)
             if (!value || !value.startsWith(prefix)) continue
             const localId = value.slice(prefix.length)
             if (exemptSet.has(localId)) continue
@@ -655,8 +658,8 @@ async function enableAddon(addonId, enabled) {
     await api.runOnBackend((tamFileIdLabel, addonId, noteId, enabled, addonLabels) => {
         for (const id of api.getNote(noteId).getSubtreeNoteIds()) {
             const note = api.getNote(id)
-            if (!note.getLabelValue(tamFileIdLabel)?.startsWith(`${addonId}/`)) continue
-            for (const attribute of note.getAttributes() || []) {
+            if (!note.getOwnedLabelValue(tamFileIdLabel)?.startsWith(`${addonId}/`)) continue
+            for (const attribute of note.getOwnedAttributes() || []) {
                 const isDisabledAttr = attribute.name.toLowerCase().includes("disabled:")
                 if (enabled ? !isDisabledAttr : !addonLabels.includes(attribute.name)) continue
                 const newName = enabled ? attribute.name.replace("disabled:", "") : `disabled:${attribute.name}`
@@ -733,7 +736,8 @@ async function validateDatabase() {
         const byValue = {}
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
-            const value = note.getLabelValue(tamFileIdLabel)
+            const value = note.getOwnedLabelValue(tamFileIdLabel)
+            if (!value) continue
             byValue[value] = byValue[value] || []
             byValue[value].push(note.noteId)
         }
@@ -835,7 +839,9 @@ async function sweepOrphanedNotes() {
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             if (note.getParentNotes().length > 0) continue
-            removed.push(note.getLabelValue(tamFileIdLabel))
+            const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
+            if (!tamFileId) continue
+            removed.push(tamFileId)
             note.deleteNote()
         }
         return removed
@@ -857,7 +863,7 @@ async function sweepInvalidAddonTreeNotes() {
             if (noteId === addonsRootId) continue
             const note = api.getNote(noteId)
             if (!note || note.isDeleted) continue
-            const tamFileId = note.getLabelValue(tamFileIdLabel)
+            const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
             const addonId = tamFileId ? tamFileId.split("/")[0] : null
             if (tamFileId && installedSet.has(addonId)) continue
             removed.push({ noteId: note.noteId, title: note.title, tamFileId })
@@ -875,14 +881,14 @@ async function detachAddonOwnedBranches(addonId, persistentIds = []) {
         const persistentSet = new Set(persistentIds)
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
-            const tamFileId = note.getLabelValue(tamFileIdLabel)
+            const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
             if (!tamFileId || !tamFileId.startsWith(prefix)) continue
             if (persistentSet.has(tamFileId.slice(prefix.length))) continue
             const parentsToDetach = []
             let keepsAnyParent = false
             for (const parentNote of note.getParentNotes()) {
                 const isAnchor = anchorIds.includes(parentNote.noteId)
-                const parentTamId = parentNote.getLabelValue(tamFileIdLabel)
+                const parentTamId = parentNote.getOwnedLabelValue(tamFileIdLabel)
                 const ownedByThisAddon = parentTamId && parentTamId.startsWith(prefix)
                 const ownedByAnotherAddon = parentTamId && !ownedByThisAddon && !isAnchor
                 if (ownedByAnotherAddon) {
