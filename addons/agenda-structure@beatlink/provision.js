@@ -1,9 +1,9 @@
 // === Trilium Code note ===
-// Title: organizeProvision.js
+// Title: provision.js
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by the Setup page).
 //
-// Provisions the opinionated notebook structure (organizeStructure.js) by
+// Provisions the opinionated notebook structure (structure.js) by
 // find-or-create, tagging each note with #workflowNote=<key> so the addon can
 // resolve it later — the same identity idea as TAM's #TAMFILEID, but scoped to
 // this addon and applied to notes the user may already have created by hand.
@@ -22,11 +22,24 @@ const {
     buildStructure,
     AREA_TEMPLATE_TITLE, TYPE_TEMPLATE_TITLE, SPECIAL_TEMPLATE_TITLE,
     AREA_COLLECTION_TYPE, TYPE_COLLECTION_TYPE, SPECIAL_TYPE
-} = require("organizeStructure.js")
-const { getBucketTemplates } = require("organize.js")
+} = require("structure.js")
+const { getTemplates } = require("templateRegistry.jsx")
+const { getConfigIds } = require("structureSettings.js")
+
+// template-picker@beatlink's enabled templates — the vocabulary for item TYPE,
+// one type root per entry. Read straight from template-picker's own registry
+// rather than through the Organize page: provisioning must not depend on the
+// triage addon. Returns [] when template-picker isn't discoverable, so a Setup
+// run degrades to "singletons and area roots only" rather than throwing.
+async function getBucketTemplates() {
+    const ids = await getConfigIds("templatePickerConfig")
+    if (!ids) return []
+    const all = await getTemplates(ids.schemaNoteId, ids.configNoteId)
+    return all.filter(t => t.enabled)
+}
 
 // Structural identity, one label per kind of top-level root (see
-// organizeStructure.js). An area root has AREA_LABEL, a type root has
+// structure.js). An area root has AREA_LABEL, a type root has
 // TYPE_LABEL, the Inbox / My Day / Agenda singletons have SPECIAL_LABEL. The
 // three are mutually exclusive.
 const AREA_LABEL = "agendaOrganizeArea"

@@ -126,10 +126,23 @@ function outboundHeaders(headers) {
     return { "User-Agent": USER_AGENT, ...(headers || {}) }
 }
 
+// TMDB and Trakt both return a JSON body explaining a failure
+// (TMDB: status_message, Trakt: error_description). Surfacing it turns an opaque
+// "Request failed (HTTP 404)" into something that names the actual cause.
 async function getJson(url, headers) {
     const res = await fetch(url, { headers: outboundHeaders(headers) })
-    if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`)
-    return res.json()
+    if (res.ok) return res.json()
+
+    let detail = ""
+    try {
+        const body = await res.json()
+        detail = body.status_message || body.error_description || body.error || ""
+    } catch (e) {
+        // Non-JSON error body; the status alone will have to do.
+    }
+    throw new Error(detail
+        ? `${detail} (HTTP ${res.status})`
+        : `Request failed (HTTP ${res.status})`)
 }
 
 async function postJson(url, body, headers) {

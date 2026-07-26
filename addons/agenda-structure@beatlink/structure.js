@@ -1,7 +1,7 @@
 // === Trilium Code note ===
-// Title: organizeStructure.js
+// Title: structure.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by organizeProvision.js / the Setup page).
+// Library only (CommonJS, require()'d by provision.js / the Setup page).
 //
 // The opinionated notebook layout this addon provisions. Fed by:
 //   - the AREA list — the values of agenda's own root dimension (scaffoldsAreas):
@@ -30,7 +30,7 @@
 // creates, moves or reconciles item branches.
 //
 // buildStructure(areaList, templateList) returns an array of nodes;
-// organizeProvision.js walks it, find-or-creating each note by title at its
+// provision.js walks it, find-or-creating each note by title at its
 // level and tagging it with its identity labels so the addon can resolve it
 // later (see README.md).
 //

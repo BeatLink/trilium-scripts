@@ -1,11 +1,11 @@
 {
     "id": "agenda-organize@beatlink",
     "name": "Agenda Organize",
-    "description": "The Organize workflow from agenda@beatlink, split out as its own addon: an opinionated GTD notebook scaffolder plus a triage UI. Workflow Setup provisions two PARALLEL top-level trees, each exactly one level deep - one note per Area and one note per enabled template - alongside the Inbox / My Day / Agenda singletons, by find-or-create, adopting notes you already made by hand rather than duplicating them. Neither tree nests the other: a filed item lives in both at once as a Trilium clone, one branch under the Area root matching its #area and one under the Type root matching its ~template. Setup provisions containers only and never creates, moves or deletes an item branch, so re-running it cannot disturb anything you have filed; the per-item cloning is the Organize page's job. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Both cross-addon reads degrade gracefully, so Organize's scaffolding and start-date triage still work on their own.",
+    "description": "The Organize triage UI from agenda@beatlink. As of 3.0.0 the notebook scaffolder has moved to agenda-structure@beatlink; this addon reads the structural identity labels that addon writes (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) and triages the items filed under those roots. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Every cross-addon read degrades gracefully: without agenda-structure the queues are simply empty until something provisions the roots.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.1",
+    "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/_tam_manifest_.json",
@@ -25,20 +25,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.js"
-            },
-            {
-                "id": "organize-structure",
-                "title": "organizeStructure.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeStructure.js"
-            },
-            {
-                "id": "organize-provision",
-                "title": "organizeProvision.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeProvision.js"
             },
             {
                 "id": "organize-dimensions",
@@ -95,34 +81,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.css"
-            },
-            {
-                "id": "templates-root",
-                "title": "Templates",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "tpl-area",
-                "title": "AreaCollection",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/areaCollection.html"
-            },
-            {
-                "id": "tpl-typecollection",
-                "title": "TypeCollection",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/typeCollection.html"
-            },
-            {
-                "id": "tpl-special",
-                "title": "Special",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/templates/special.html"
             },
             {
                 "id": "dimensions",
@@ -205,22 +163,6 @@
                 "child": "organize-config"
             },
             {
-                "parent": "persistence",
-                "child": "templates-root"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-area"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-typecollection"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-special"
-            },
-            {
                 "parent": "organize-editor-page",
                 "child": "organize-editor"
             },
@@ -234,10 +176,6 @@
             },
             {
                 "parent": "organize-editor",
-                "child": "organize-provision"
-            },
-            {
-                "parent": "organize-editor",
                 "child": "organize-settings"
             },
             {
@@ -254,10 +192,6 @@
             },
             {
                 "parent": "organize-page-src",
-                "child": "organize-structure"
-            },
-            {
-                "parent": "organize-page-src",
                 "child": "organize-settings"
             },
             {
@@ -271,22 +205,6 @@
             {
                 "parent": "organize-dimensions",
                 "child": "organize-settings"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "organize-structure"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "organize-lib"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "dimensions"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "registry"
             },
             {
                 "parent": "organize-lib",
@@ -336,11 +254,6 @@
                 "from": "organize-settings-note",
                 "type": "schemaNote",
                 "to": "organize-schema"
-            },
-            {
-                "from": "templates-root",
-                "type": "template",
-                "to": "tpl-special"
             }
         ],
         "labels": [
@@ -376,16 +289,6 @@
             },
             {
                 "note": "organize-lib",
-                "name": "iconClass",
-                "value": "bx bx-sort-down"
-            },
-            {
-                "note": "organize-structure",
-                "name": "iconClass",
-                "value": "bx bx-sort-down"
-            },
-            {
-                "note": "organize-provision",
                 "name": "iconClass",
                 "value": "bx bx-sort-down"
             },
@@ -430,11 +333,6 @@
                 "value": "bx bx-sort-down"
             },
             {
-                "note": "templates-root",
-                "name": "iconClass",
-                "value": "bx bx-sort-down"
-            },
-            {
                 "note": "libsettings-style",
                 "name": "appCss",
                 "value": ""
@@ -443,61 +341,6 @@
                 "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
-            },
-            {
-                "note": "tpl-area",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-area",
-                "name": "iconClass",
-                "value": "bx bxs-circle"
-            },
-            {
-                "note": "tpl-area",
-                "name": "viewType",
-                "value": "list"
-            },
-            {
-                "note": "tpl-area",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-area",
-                "name": "type",
-                "value": "areacollection"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "iconClass",
-                "value": "bx bx-folder"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "viewType",
-                "value": "list"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "type",
-                "value": "typecollection"
-            },
-            {
-                "note": "tpl-special",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-special",
-                "name": "type",
-                "value": "special"
             }
         ],
         "readmeNote": "readme"
