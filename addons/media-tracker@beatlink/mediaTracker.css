@@ -26,6 +26,23 @@
     border-bottom-color: var(--main-text-color);
 }
 
+/* Pushed to the far end of the tab row: it navigates away rather than switching
+   tabs, so it shouldn't sit among the tabs it isn't peer to. */
+.mt-tab-right {
+    margin-left: auto;
+}
+
+.mt-settings-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.mt-settings-head h3 {
+    margin: 0;
+}
+
 .mt-btn {
     padding: 6px 12px;
     border: 1px solid var(--main-border-color);
@@ -77,12 +94,21 @@
 
 /* --- rows --- */
 
+/* A title and its expandable episode grid. The border lives on the item so an
+   expanded row and its grid read as one block instead of two. */
+.mt-item {
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.mt-item-open {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
+}
+
 .mt-row {
     display: flex;
     gap: 12px;
     align-items: flex-start;
     padding: 10px 0;
-    border-bottom: 1px solid var(--main-border-color);
 }
 
 .mt-poster {
@@ -173,11 +199,10 @@
 
 /* --- episodes --- */
 
+/* Indented to sit under the row's poster, so it reads as belonging to that row.
+   No border of its own: .mt-item provides it. */
 .mt-episodes {
-    border: 1px solid var(--main-border-color);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 12px;
+    padding: 0 0 12px 58px;
 }
 
 .mt-episodes-head {

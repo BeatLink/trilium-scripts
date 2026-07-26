@@ -1,4 +1,5 @@
 import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { activateNote } from "trilium:api"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 // The icon stamped on the note that hosts the tracker UI.
@@ -129,6 +130,7 @@ export default function MediaTrackerSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
     const [libraryRootNoteId, setLibraryRootNoteId] = useState("")
+    const [backNoteId, setBackNoteId] = useState("")
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
@@ -139,6 +141,22 @@ export default function MediaTrackerSettings() {
             setConfigNoteId(target.noteId)
             const values = await loadSettings(schema, target.noteId)
             setLibraryRootNoteId(values.libraryRootNoteId || "")
+
+            // Prefer the note the user actually came from (recorded by the
+            // tracker's Settings button), then the library root, then the
+            // launcher -- so Back works however this page was reached.
+            let returnTo = ""
+            try {
+                returnTo = sessionStorage.getItem("mediaTracker:returnTo") || ""
+            } catch (e) {
+                // sessionStorage unavailable; fall through to the relations.
+            }
+            setBackNoteId(
+                returnTo
+                || values.libraryRootNoteId
+                || await api.currentNote.getRelationValue("trackerPageNote")
+                || ""
+            )
             setReady(true)
         })()
     }, [])
@@ -164,7 +182,13 @@ export default function MediaTrackerSettings() {
 
     return (
         <div class="mt-settings">
-            <h3>Media Tracker</h3>
+            <div class="mt-settings-head">
+                <button class="mt-btn" disabled={!backNoteId} title="Back to the tracker"
+                    onClick={() => activateNote(backNoteId)}>
+                    &lsaquo; Back
+                </button>
+                <h3>Media Tracker</h3>
+            </div>
             <p class="mt-hint">
                 A TMDB key powers search, posters, and episode lists. Trakt and Stremio are
                 optional one-way import sources: they are read, never written to.

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "trilium:preact"
+import { activateNote } from "trilium:api"
 import { loadSettings } from "libSettingsUI.jsx"
 
 /*
@@ -53,7 +54,7 @@ function countEpisodes(seasons) {
 
 // --- library ----------------------------------------------------------------
 
-function TitleRow({ title, onChanged, onOpenEpisodes }) {
+function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
     const [busy, setBusy] = useState(false)
 
     const update = async (fn) => {
@@ -65,51 +66,63 @@ function TitleRow({ title, onChanged, onOpenEpisodes }) {
     const total = Number(title.totalEpisodes) || 0
 
     return (
-        <div class="mt-row">
-            {title.poster
-                ? <img class="mt-poster" src={title.poster} alt="" loading="lazy" />
-                : <div class="mt-poster mt-poster-empty" />}
-            <div class="mt-row-main">
-                <div class="mt-row-title">{title.title}</div>
-                <div class="mt-row-meta">
-                    {title.year && <span>{title.year}</span>}
-                    <span class="mt-badge">{title.mediaType === "show" ? "TV" : "Movie"}</span>
-                    {title.mediaType === "show" && total > 0 && (
-                        <span class="mt-progress">{watched}/{total} episodes</span>
+        <div class={`mt-item ${expanded ? "mt-item-open" : ""}`}>
+            <div class="mt-row">
+                {title.poster
+                    ? <img class="mt-poster" src={title.poster} alt="" loading="lazy" />
+                    : <div class="mt-poster mt-poster-empty" />}
+                <div class="mt-row-main">
+                    <div class="mt-row-title">{title.title}</div>
+                    <div class="mt-row-meta">
+                        {title.year && <span>{title.year}</span>}
+                        <span class="mt-badge">{title.mediaType === "show" ? "TV" : "Movie"}</span>
+                        {title.mediaType === "show" && total > 0 && (
+                            <span class="mt-progress">{watched}/{total} episodes</span>
+                        )}
+                    </div>
+                </div>
+                <div class="mt-row-actions">
+                    <select
+                        class="mt-select"
+                        disabled={busy}
+                        value={title.status || "planned"}
+                        onChange={e => update(() =>
+                            callBackend("setStatus", { key: title.key, status: e.target.value }))}
+                    >
+                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                        ))}
+                    </select>
+                    <input
+                        class="mt-rating"
+                        type="number" min="0" max="10" step="1"
+                        placeholder="-"
+                        disabled={busy}
+                        value={title.rating ?? ""}
+                        onChange={e => update(() =>
+                            callBackend("setRating", { key: title.key, rating: e.target.value }))}
+                    />
+                    {title.mediaType === "show" && (
+                        <button class="mt-btn" disabled={busy}
+                            aria-expanded={expanded ? "true" : "false"}
+                            onClick={() => onToggleEpisodes(title)}>
+                            {expanded ? "Episodes ▴" : "Episodes ▾"}
+                        </button>
                     )}
+                    <button class="mt-btn" disabled={busy} title="Remove from library"
+                        onClick={() => update(() => callBackend("removeTitle", { key: title.key }))}>
+                        &times;
+                    </button>
                 </div>
             </div>
-            <div class="mt-row-actions">
-                <select
-                    class="mt-select"
-                    disabled={busy}
-                    value={title.status || "planned"}
-                    onChange={e => update(() =>
-                        callBackend("setStatus", { key: title.key, status: e.target.value }))}
-                >
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                    ))}
-                </select>
-                <input
-                    class="mt-rating"
-                    type="number" min="0" max="10" step="1"
-                    placeholder="-"
-                    disabled={busy}
-                    value={title.rating ?? ""}
-                    onChange={e => update(() =>
-                        callBackend("setRating", { key: title.key, rating: e.target.value }))}
+
+            {expanded && (
+                <EpisodePanel
+                    title={title}
+                    onClose={() => onToggleEpisodes(title)}
+                    onChanged={onChanged}
                 />
-                {title.mediaType === "show" && (
-                    <button class="mt-btn" disabled={busy} onClick={() => onOpenEpisodes(title)}>
-                        Episodes
-                    </button>
-                )}
-                <button class="mt-btn" disabled={busy} title="Remove from library"
-                    onClick={() => update(() => callBackend("removeTitle", { key: title.key }))}>
-                    &times;
-                </button>
-            </div>
+            )}
         </div>
     )
 }
@@ -156,10 +169,15 @@ function EpisodePanel({ title, onClose, onChanged }) {
 
     return (
         <div class="mt-episodes">
-            <div class="mt-episodes-head">
-                <strong>{title.title}</strong>
-                <button class="mt-btn" onClick={onClose}>Close</button>
-            </div>
+            {/* No title here: the row this expands from is directly above. */}
+            {details && (
+                <div class="mt-episodes-head">
+                    <span class="mt-hint">
+                        {countEpisodes(seasons)} of {details.totalEpisodes} episodes watched
+                    </span>
+                    <button class="mt-btn" onClick={onClose}>Collapse</button>
+                </div>
+            )}
             {error && <p class="mt-error">{error}</p>}
             {!details && !error && <p class="mt-hint">Loading episodes...</p>}
             {details && Object.entries(details.seasonCounts).map(([season, count]) => (
@@ -192,7 +210,9 @@ function LibraryTab({ libraryRootNoteId }) {
     const [filter, setFilter] = useState("all")
     const [typeFilter, setTypeFilter] = useState("all")
     const [query, setQuery] = useState("")
-    const [episodesFor, setEpisodesFor] = useState(null)
+    // Key of the row whose episode grid is expanded, or null. One at a time, so
+    // opening a show collapses whichever was open.
+    const [expandedKey, setExpandedKey] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
@@ -268,14 +288,6 @@ function LibraryTab({ libraryRootNoteId }) {
                 })}
             </div>
 
-            {episodesFor && (
-                <EpisodePanel
-                    title={titles.find(t => t.key === episodesFor.key) || episodesFor}
-                    onClose={() => setEpisodesFor(null)}
-                    onChanged={reload}
-                />
-            )}
-
             {error && <p class="mt-error">{error}</p>}
             {loading && <p class="mt-hint">Loading...</p>}
             {!loading && !error && shown.length === 0 && (
@@ -286,7 +298,13 @@ function LibraryTab({ libraryRootNoteId }) {
                 </p>
             )}
             {shown.map(title => (
-                <TitleRow key={title.key} title={title} onChanged={reload} onOpenEpisodes={setEpisodesFor} />
+                <TitleRow
+                    key={title.key}
+                    title={title}
+                    onChanged={reload}
+                    expanded={expandedKey === title.key}
+                    onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
+                />
             ))}
         </div>
     )
@@ -489,6 +507,7 @@ export default function MediaTracker() {
     const [settings, setSettings] = useState(null)
     const [tab, setTab] = useState("library")
     const [reloadKey, setReloadKey] = useState(0)
+    const [settingsPageNoteId, setSettingsPageNoteId] = useState("")
 
     const readSettings = async () => {
         const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
@@ -501,7 +520,29 @@ export default function MediaTracker() {
 
     useEffect(() => { reloadSettings() }, [reloadSettings])
 
+    // The Settings render page, resolved once. Activating the settings *code*
+    // note would open its source instead of the rendered form, so this points at
+    // the render note wrapping it.
+    useEffect(() => {
+        (async () => {
+            setSettingsPageNoteId(await api.currentNote.getRelationValue("settingsPageNote") || "")
+        })()
+    }, [])
+
     const refresh = useCallback(async () => setReloadKey(k => k + 1), [])
+
+    // Where "Back" on the settings page returns to. The widget renders from both
+    // the launcher and the library root, and `api.currentNote` is the code note
+    // in either case (not the note being viewed), so the target is recorded here
+    // rather than inferred over there.
+    const openSettings = () => {
+        try {
+            sessionStorage.setItem("mediaTracker:returnTo", settings.libraryRootNoteId || "")
+        } catch (e) {
+            // sessionStorage can be unavailable; Back falls back to the launcher.
+        }
+        activateNote(settingsPageNoteId)
+    }
 
     if (!settings) return <div class="mt-view">Loading...</div>
 
@@ -512,6 +553,10 @@ export default function MediaTracker() {
                     <button key={key} class={`mt-tab ${tab === key ? "mt-tab-on" : ""}`}
                         onClick={() => setTab(key)}>{label}</button>
                 ))}
+                <button class="mt-tab mt-tab-right" title="Open settings"
+                    disabled={!settingsPageNoteId} onClick={openSettings}>
+                    Settings
+                </button>
             </div>
 
             {tab === "library" && (

@@ -41,6 +41,10 @@ rather than a mixed page filtered down. Switching the chip re-runs the current s
 
 **Import** is the one-way Trakt and Stremio import described below.
 
+A **Settings** button at the end of the tab row opens the settings page, and a **Back** button there
+returns you to the tracker — to the library root you came from, or the addon's launcher note if no
+library root is set yet.
+
 ## How titles are stored
 
 Every tracked title lives in **one JSON note** titled `Database`, created automatically as a direct
