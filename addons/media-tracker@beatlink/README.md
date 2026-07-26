@@ -269,9 +269,13 @@ library, newest first. Each row is marked:
   marked watched; for a movie, the title is marked watched)
 - **!** — not in Trilium yet
 
-Rows marked ✓ get a **Delete from Trakt** button that removes **that single watch** from Trakt after a
-confirmation naming exactly what will go. Rows marked **!** cannot be deleted — the button is disabled
-*and* the backend refuses, so an unsaved watch can't be lost even by a crafted request.
+Rows marked **!** get an **Import** button that records just that one watch in Trilium — an episode is
+merged into its show's existing progress, never replacing it — after which the row flips to ✓ and can
+be deleted. This means you can work straight down the list without leaving the view.
+
+Rows marked ✓ get a **Delete from Trakt** button that removes **that single watch** from Trakt. Rows
+marked **!** cannot be deleted — the button is disabled *and* the backend refuses, so an unsaved watch
+can't be lost even by a crafted request.
 
 Deletion targets Trakt's own **history id**, which is the correct way to remove one play: removing by
 title + timestamp is ambiguous, because Trakt does not guarantee that pair is unique, and could clear

@@ -910,6 +910,11 @@ async function compareTrakt(settings) {
             mediaType: "movie",
             title: movie.title || "Untitled",
             year: movie.year || "",
+            // Ids travel with the row so a single entry can be imported from here
+            // without re-fetching the whole history.
+            tmdbId: movie.ids?.tmdb ? String(movie.ids.tmdb) : "",
+            imdbId: movie.ids?.imdb || "",
+            traktId: movie.ids?.trakt ? String(movie.ids.trakt) : "",
             watchedAt: entry.watched_at || "",
             label: movie.title || "Untitled",
             inTrilium: !!key,
@@ -938,6 +943,9 @@ async function compareTrakt(settings) {
             year: show.year || "",
             season: ep.season,
             episode: ep.number,
+            tmdbId: show.ids?.tmdb ? String(show.ids.tmdb) : "",
+            imdbId: show.ids?.imdb || "",
+            traktId: show.ids?.trakt ? String(show.ids.trakt) : "",
             watchedAt: entry.watched_at || "",
             label: `${show.title || "Untitled"} ${ep.season}x${String(ep.number).padStart(2, "0")}`
                 + (ep.title ? ` · ${ep.title}` : ""),
@@ -954,6 +962,40 @@ async function compareTrakt(settings) {
         captured: rows.filter(r => r.captured).length,
         missing: rows.filter(r => !r.captured).length
     }
+}
+
+// Imports ONE watch from the comparison view, so a row marked "not in Trilium"
+// can be captured without re-running the whole Trakt import. Goes through the
+// same additive applyImport, so it merges rather than replaces: an episode is
+// added to the show's progress, and an existing rating or status is preserved.
+async function importOneWatch(settings, row) {
+    const mediaType = row.mediaType === "episode" ? "show" : "movie"
+    const item = {
+        mediaType,
+        title: row.title,
+        year: row.year,
+        tmdbId: row.tmdbId,
+        imdbId: row.imdbId,
+        traktId: row.traktId,
+        lastWatched: row.watchedAt
+    }
+
+    if (mediaType === "show") {
+        const season = Number(row.season)
+        const episode = Number(row.episode)
+        if (!Number.isFinite(season) || !Number.isFinite(episode)) {
+            throw new Error("That history entry has no season/episode number.")
+        }
+        item.episodes = { [season]: new Set([episode]) }
+    } else {
+        item.status = "watched"
+    }
+
+    // Force importMarksWatched for this one call: the user explicitly asked to
+    // capture this watch, so the setting that suppresses status changes during a
+    // bulk import shouldn't silently make this a no-op.
+    const result = await applyImport({ ...settings, importMarksWatched: true }, [item])
+    return { ...result, captured: true }
 }
 
 // Removes ONE history entry from Trakt, by its history id.
@@ -1287,6 +1329,15 @@ async function handle() {
                 return sendJson(200, await archiveTrakt(settings))
             case "compareTrakt":
                 return sendJson(200, await compareTrakt(settings))
+            case "importOneWatch": {
+                let row
+                try {
+                    row = JSON.parse(query.row || "{}")
+                } catch (e) {
+                    throw new Error("Malformed history row")
+                }
+                return sendJson(200, await importOneWatch(settings, row))
+            }
             case "deleteTraktHistory":
                 return sendJson(200, await deleteTraktHistory(settings, query.historyId, query.captured))
             case "stremioLogin":

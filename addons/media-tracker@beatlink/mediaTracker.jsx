@@ -1114,16 +1114,33 @@ function ImportTab({ settings, reloadSettings, onImported }) {
         setStatus({ ok: `${r.total} Trakt watches: ${r.captured} already in Trilium, ${r.missing} not yet.` })
     })
 
-    // Deletes one Trakt history entry. Permanent, so it confirms first and names
-    // exactly what will go.
-    const deleteOne = async (row) => {
-        const ok = confirm(
-            `Permanently delete this watch from Trakt?\n\n`
-            + `${row.label}\nWatched ${String(row.watchedAt).slice(0, 10)}\n\n`
-            + `It stays in Trilium. This cannot be undone on Trakt.`
-        )
-        if (!ok) return
+    // Captures one watch that isn't in Trilium yet, so a row can be imported and
+    // then deleted without leaving the comparison view.
+    const importOne = async (row) => {
+        setBusy(true)
+        try {
+            await callBackend("importOneWatch", { row: JSON.stringify(row) })
+            // Mark the row captured in place; its Delete button becomes available.
+            setComparison(prev => prev && {
+                ...prev,
+                rows: prev.rows.map(r =>
+                    r.historyId === row.historyId ? { ...r, captured: true, inTrilium: true } : r
+                ),
+                captured: prev.captured + 1,
+                missing: prev.missing - 1
+            })
+            setStatus({ ok: `Imported ${row.label}` })
+            await onImported()
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
 
+    // Deletes one Trakt history entry. Permanent on Trakt's side, but the watch
+    // is already in Trilium (the backend refuses otherwise).
+    const deleteOne = async (row) => {
         setBusy(true)
         try {
             await callBackend("deleteTraktHistory", {
@@ -1266,6 +1283,14 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                                     </span>
                                     <span class="mt-compare-label">{row.label}</span>
                                     <span class="mt-hint">{String(row.watchedAt).slice(0, 10)}</span>
+                                    {!row.captured && (
+                                        <button class="mt-btn mt-compare-delete"
+                                            disabled={busy}
+                                            title="Record this watch in Trilium"
+                                            onClick={() => importOne(row)}>
+                                            Import
+                                        </button>
+                                    )}
                                     <button class="mt-btn mt-compare-delete"
                                         disabled={busy || !row.captured}
                                         title={row.captured
