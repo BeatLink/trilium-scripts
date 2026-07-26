@@ -132,11 +132,38 @@ async function complete(noteId, constants) {
             note.setLabel(constants.RECURRENCE_LABEL, recurrence)
         }, [noteId, nextOccurrence.recurrence, nextStartDatetime, constants])
         await markUndone(noteId)
+        // The task lives on at its next occurrence, so it only leaves today if
+        // that occurrence isn't today.
+        await clearMyDayFlagIfNotToday(noteId, constants)
     } else {
         await markDone(noteId)
+        // Done and archived. It keeps its start date, so the "still today"
+        // check would wrongly hold the flag - clear it outright.
+        await clearMyDayFlag(noteId)
     }
 
     await updateDependentAttributes(noteId, constants)
+}
+
+// Removes #agendaMyDay, the label agenda-myday@beatlink uses to track which
+// tasks are on the My Day note. Called when a task stops belonging to today.
+// A plain label write: agenda-task does not depend on agenda-myday, and this is
+// harmless when that addon isn't installed.
+async function clearMyDayFlag(noteId) {
+    await api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId)
+        if (note) note.removeLabel("agendaMyDay")
+    }, [noteId])
+}
+
+// Clears the My Day flag unless the task's new start date is still today - a
+// task pushed to "later today" stays on today's page.
+async function clearMyDayFlagIfNotToday(noteId, constants) {
+    const note = await api.getNote(noteId)
+    if (!note) return
+    const startDatetime = note.getLabelValue(constants.START_DATETIME_LABEL)
+    if (startDatetime && api.dayjs(startDatetime).isSame(api.dayjs(), "day")) return
+    await clearMyDayFlag(noteId)
 }
 
 async function rescheduleByDays(noteId, constants, daysToAdd = 0) {
@@ -152,6 +179,7 @@ async function rescheduleByDays(noteId, constants, daysToAdd = 0) {
             .format("YYYY-MM-DDTHH:mm")
         note.setLabel(startDatetimeLabel, newStart)
     }, [noteId, daysToAdd, constants.START_DATETIME_LABEL])
+    await clearMyDayFlagIfNotToday(noteId, constants)
     await updateDependentAttributes(noteId, constants)
 }
 
@@ -167,6 +195,7 @@ async function rescheduleByOption(noteId, constants, option) {
         await api.runOnBackend((noteId, startDatetimeLabel, newStart) => {
             api.getNote(noteId).setLabel(startDatetimeLabel, newStart)
         }, [noteId, constants.START_DATETIME_LABEL, newStart])
+        await clearMyDayFlagIfNotToday(noteId, constants)
         await updateDependentAttributes(noteId, constants)
         return
     }
@@ -203,6 +232,8 @@ module.exports = {
     rescheduleByOption,
     updateDependentAttributes,
     refreshDisplayLabels,
+    clearMyDayFlag,
+    clearMyDayFlagIfNotToday,
     // Re-exported from libRecurrence so consumers that already require this
     // module (e.g. the Task widget) reach the recurrence helpers through a
     // single require path instead of bundling libRecurrence a second time.

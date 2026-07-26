@@ -110,6 +110,9 @@ async function getSuggestedTasks(settings, myDayNoteId) {
 
     const byBucket = Object.fromEntries(BUCKETS.map(bucket => [bucket.id, []]))
     for (const task of tasks) {
+        // #agendaMyDay is the record of what is already on my day; the content
+        // check stays as a fallback for links added by hand.
+        if (task.hasLabel("agendaMyDay")) continue
         if (myDayContent.includes(`#root/${task.noteId}`)) continue
 
         const datetime = task.getLabelValue(settings.startLabel)
@@ -130,10 +133,19 @@ async function getSuggestedTasks(settings, myDayNoteId) {
 
 // Files a link to the task onto the My Day note, skipping notes already there.
 // `addToTop` prepends instead of appending.
+//
+// The task is tagged #agendaMyDay, which is what marks it as "on my day" - the
+// note content is just the visible rendering of that. agenda-task@beatlink
+// removes the label when a task is completed or rescheduled, and pruneMyDayNote()
+// then drops any linked note that has lost it.
 async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = false) {
     await api.runOnBackend((myDayNoteId, taskNoteId, renderAsTodo, addToTop) => {
         const taskNote = api.getNote(taskNoteId)
         const taskLink = `<a class="reference-link" href="#root/${taskNoteId}">${taskNote.title}</a>`
+
+        // Set before the content check: a task already linked on the note still
+        // needs the label, otherwise the next prune would strip it right back out.
+        taskNote.setLabel("agendaMyDay")
 
         const myDayNote = api.getNote(myDayNoteId)
         const myDayContent = myDayNote.getContent()
@@ -160,6 +172,11 @@ async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = 
 async function removeTaskFromMyDay(myDayNoteId, taskNoteId) {
     if (!myDayNoteId) return
     await api.runOnBackend((myDayNoteId, taskNoteId) => {
+        // Clear the label first, and unconditionally: the note content and the
+        // label have to end up consistent even when only one of them was set.
+        const taskNote = api.getNote(taskNoteId)
+        if (taskNote) taskNote.removeLabel("agendaMyDay")
+
         const myDayNote = api.getNote(myDayNoteId)
         const before = myDayNote.getContent()
         if (!before.includes(`#root/${taskNoteId}`)) return
@@ -177,16 +194,16 @@ async function removeTaskFromMyDay(myDayNoteId, taskNoteId) {
     }, [myDayNoteId, taskNoteId])
 }
 
-// Drops any task linked on the My Day note that no longer belongs there,
-// because its start/due date moved off today - which is what completing a task
-// does, since `complete()` either advances a recurring task to its next
-// occurrence or archives a one-off. Tasks the search no longer returns at all
-// (archived, done) are pruned too.
+// Drops any linked task that has lost its #agendaMyDay label. The label is the
+// record of "this is on my day"; the note content is just its rendering, so a
+// link whose task is no longer tagged is stale and comes out.
 //
-// Only notes this addon could have filed are considered: anything linked on the
-// My Day note that the task search doesn't match is left alone, so hand-written
-// links and notes are never touched.
-async function pruneMyDayNote(settings, myDayNoteId) {
+// agenda-task@beatlink removes the label when a task is completed or its dates
+// change, which is what makes completed and rescheduled tasks disappear here.
+//
+// A linked note that never had the label is left alone: hand-written links and
+// plain notes on the My Day page are not this addon's to remove.
+async function pruneMyDayNote(myDayNoteId) {
     if (!myDayNoteId) return
     const myDayNote = await api.getNote(myDayNoteId)
     if (!myDayNote) return
@@ -195,29 +212,18 @@ async function pruneMyDayNote(settings, myDayNoteId) {
     const linkedIds = [...content.matchAll(/href="#root\/([a-zA-Z0-9_]+)"/g)].map(m => m[1])
     if (!linkedIds.length) return
 
-    // Notes the search still returns, split by whether they are dated today.
-    const dated = new Map()
-    for (const task of await getTaskNotes(settings)) {
-        const datetime = task.getLabelValue(settings.startLabel)
-            || task.getLabelValue(settings.dueLabel)
-        dated.set(task.noteId, bucketFor(datetime) === "today")
+    // Checked per note rather than via a #agendaMyDay search: completing a task
+    // archives it, and archived notes are excluded from search results, so a
+    // search would report every completed task as untagged whether or not it
+    // ever carried the label.
+    const stale = []
+    for (const noteId of new Set(linkedIds)) {
+        const note = await api.getNote(noteId)
+        if (note && !note.hasLabel("agendaMyDay")) stale.push(noteId)
     }
 
-    for (const noteId of new Set(linkedIds)) {
-        if (dated.has(noteId)) {
-            // Still a live task: keep it only while it is dated today.
-            if (!dated.get(noteId)) await removeTaskFromMyDay(myDayNoteId, noteId)
-            continue
-        }
-
-        // The search no longer returns it. Completing a one-off task archives
-        // it, and archived notes drop out of search - so a note that still
-        // carries a date label was ours and is done. Anything else (a
-        // hand-written link, an undated note) is left alone.
-        const note = await api.getNote(noteId)
-        const wasTask = note && (note.getLabelValue(settings.startLabel)
-            || note.getLabelValue(settings.dueLabel))
-        if (wasTask) await removeTaskFromMyDay(myDayNoteId, noteId)
+    for (const noteId of stale) {
+        await removeTaskFromMyDay(myDayNoteId, noteId)
     }
 }
 

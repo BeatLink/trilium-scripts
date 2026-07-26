@@ -13,7 +13,12 @@ import {
 
 import { RecurrencePicker } from "recurrencePicker.jsx"
 
-const { complete, rescheduleByOption, updateDependentAttributes } = require("libAgendaTask.js")
+const {
+    complete,
+    rescheduleByOption,
+    updateDependentAttributes,
+    clearMyDayFlagIfNotToday
+} = require("libAgendaTask.js")
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 
 const durationOptions = [
@@ -46,6 +51,9 @@ function DatesDurationPicker({ constants, onAfterChange }) {
 
     async function afterChange() {
         await updateDependentAttributes(noteId, constants)
+        // Editing the dates by hand can move a task off today just as
+        // rescheduling does, so the My Day flag is re-evaluated here too.
+        await clearMyDayFlagIfNotToday(noteId, constants)
         await onAfterChange()
     }
 

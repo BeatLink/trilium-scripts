@@ -72,7 +72,7 @@ function MyDay() {
     useEffect(() => {
         if (!isVisible) return
         (async () => {
-            await pruneMyDayNote(ids.myDay, myDayNoteId)
+            await pruneMyDayNote(myDayNoteId)
             await refreshSuggestions()
         })()
     }, [ids, myDayNoteId, isVisible])
@@ -82,7 +82,7 @@ function MyDay() {
     // ran when it had nothing to do.
     useTriliumEvent("agenda:tasksChanged", async () => {
         if (!ids) return
-        await pruneMyDayNote(ids.myDay, myDayNoteId)
+        await pruneMyDayNote(myDayNoteId)
         if (isVisible) await refreshSuggestions()
     })
 
