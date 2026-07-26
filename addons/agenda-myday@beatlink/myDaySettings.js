@@ -83,12 +83,19 @@ const BUCKETS = [
 
 // Which bucket a datetime falls into, or null when it is unset or further out
 // than a week (undated and far-future tasks are not suggested).
+//
+// Buckets are calendar-day based, not clock based: anything dated today is
+// "Today" even if its time has already passed. Keying "overdue" off the current
+// instant instead would drop this morning's tasks into Earlier, and would put
+// every date-only value (which parses as midnight) there the moment the day
+// started - leaving Today empty most of the time.
 function bucketFor(datetime) {
     if (!datetime) return null
     const moment = api.dayjs(datetime)
-    if (moment.isBefore(api.dayjs())) return "overdue"
-    if (moment.isBefore(api.dayjs().endOf("day"))) return "today"
-    if (moment.isBefore(api.dayjs().startOf("day").add(7, "day"))) return "soon"
+    const startOfToday = api.dayjs().startOf("day")
+    if (moment.isBefore(startOfToday)) return "overdue"
+    if (moment.isBefore(startOfToday.add(1, "day"))) return "today"
+    if (moment.isBefore(startOfToday.add(7, "day"))) return "soon"
     return null
 }
 
