@@ -6,12 +6,12 @@ import { loadSettings } from "libSettingsUI.jsx"
  *
  * Three tabs:
  *   Library  - the tracked titles, with status/rating controls
- *   Add      - TMDB search, adds a title note
+ *   Add      - TMDB search, adds a title to the database
  *   Import   - one-way import from Trakt and Stremio
  *
- * The library list is rendered here for the inline controls, but the notes it
- * shows are ordinary Trilium notes: the library root is a board collection view,
- * so the same data is browsable without this widget at all.
+ * Every title lives in one JSON note ("Database") under the library root. The
+ * backend owns all reads and writes of that document; this widget never parses
+ * or writes it directly, so there is exactly one writer per operation.
  */
 
 const ENDPOINT = "custom/mediaTracker"
@@ -70,7 +70,7 @@ function TitleRow({ title, onChanged, onOpenEpisodes }) {
                 ? <img class="mt-poster" src={title.poster} alt="" loading="lazy" />
                 : <div class="mt-poster mt-poster-empty" />}
             <div class="mt-row-main">
-                <a class="mt-row-title" href={`#root/${title.noteId}`}>{title.title}</a>
+                <div class="mt-row-title">{title.title}</div>
                 <div class="mt-row-meta">
                     {title.year && <span>{title.year}</span>}
                     <span class="mt-badge">{title.mediaType === "show" ? "TV" : "Movie"}</span>
@@ -83,9 +83,9 @@ function TitleRow({ title, onChanged, onOpenEpisodes }) {
                 <select
                     class="mt-select"
                     disabled={busy}
-                    value={title.watchStatus || "planned"}
+                    value={title.status || "planned"}
                     onChange={e => update(() =>
-                        callBackend("setStatus", { noteId: title.noteId, status: e.target.value }))}
+                        callBackend("setStatus", { key: title.key, status: e.target.value }))}
                 >
                     {Object.entries(STATUS_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>
@@ -96,15 +96,19 @@ function TitleRow({ title, onChanged, onOpenEpisodes }) {
                     type="number" min="0" max="10" step="1"
                     placeholder="-"
                     disabled={busy}
-                    value={title.rating || ""}
+                    value={title.rating ?? ""}
                     onChange={e => update(() =>
-                        callBackend("setRating", { noteId: title.noteId, rating: e.target.value }))}
+                        callBackend("setRating", { key: title.key, rating: e.target.value }))}
                 />
                 {title.mediaType === "show" && (
                     <button class="mt-btn" disabled={busy} onClick={() => onOpenEpisodes(title)}>
                         Episodes
                     </button>
                 )}
+                <button class="mt-btn" disabled={busy} title="Remove from library"
+                    onClick={() => update(() => callBackend("removeTitle", { key: title.key }))}>
+                    &times;
+                </button>
             </div>
         </div>
     )
@@ -125,13 +129,13 @@ function EpisodePanel({ title, onClose, onChanged }) {
                 setError(e.message)
             }
         })()
-    }, [title.noteId])
+    }, [title.key])
 
     const toggle = async (season, episode, watched) => {
         setBusy(true)
         try {
             const result = await callBackend("setEpisode", {
-                noteId: title.noteId, season, episode, watched: String(watched)
+                key: title.key, season, episode, watched: String(watched)
             })
             setWatchedEpisodes(result.watchedEpisodes)
             await onChanged()
@@ -182,28 +186,19 @@ function LibraryTab({ libraryRootNoteId }) {
     const [filter, setFilter] = useState("all")
     const [episodesFor, setEpisodesFor] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     const reload = useCallback(async () => {
         if (!libraryRootNoteId) { setTitles([]); setLoading(false); return }
-        const notes = await api.searchForNotes("#mediaTitle")
-        const rows = []
-        for (const note of notes) {
-            rows.push({
-                noteId: note.noteId,
-                title: note.title,
-                mediaType: note.getLabelValue("mediaType") || "movie",
-                watchStatus: note.getLabelValue("watchStatus") || "planned",
-                rating: note.getLabelValue("rating") || "",
-                year: note.getLabelValue("year") || "",
-                poster: note.getLabelValue("poster") || "",
-                tmdbId: note.getLabelValue("tmdbId") || "",
-                watchedEpisodes: note.getLabelValue("watchedEpisodes") || "",
-                totalEpisodes: note.getLabelValue("totalEpisodes") || ""
-            })
+        try {
+            const { titles } = await callBackend("listTitles")
+            setTitles(titles)
+            setError(null)
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setLoading(false)
         }
-        rows.sort((a, b) => a.title.localeCompare(b.title))
-        setTitles(rows)
-        setLoading(false)
     }, [libraryRootNoteId])
 
     useEffect(() => { reload() }, [reload])
@@ -213,14 +208,14 @@ function LibraryTab({ libraryRootNoteId }) {
             <div class="mt-empty">
                 <p>No library root set.</p>
                 <p class="mt-hint">
-                    Pick a note as <strong>Library Root</strong> in Settings. Every tracked title is
-                    created under it.
+                    Pick a note on the <strong>Library Root</strong> tab in Settings. Every tracked
+                    title is created under it, and that note becomes this tracker.
                 </p>
             </div>
         )
     }
 
-    const shown = filter === "all" ? titles : titles.filter(t => t.watchStatus === filter)
+    const shown = filter === "all" ? titles : titles.filter(t => t.status === filter)
 
     return (
         <div>
@@ -228,7 +223,7 @@ function LibraryTab({ libraryRootNoteId }) {
                 <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
                     onClick={() => setFilter("all")}>All ({titles.length})</button>
                 {Object.entries(STATUS_LABELS).map(([value, label]) => {
-                    const count = titles.filter(t => t.watchStatus === value).length
+                    const count = titles.filter(t => t.status === value).length
                     return (
                         <button key={value} class={`mt-chip ${filter === value ? "mt-chip-on" : ""}`}
                             onClick={() => setFilter(value)}>{label} ({count})</button>
@@ -238,16 +233,17 @@ function LibraryTab({ libraryRootNoteId }) {
 
             {episodesFor && (
                 <EpisodePanel
-                    title={titles.find(t => t.noteId === episodesFor.noteId) || episodesFor}
+                    title={titles.find(t => t.key === episodesFor.key) || episodesFor}
                     onClose={() => setEpisodesFor(null)}
                     onChanged={reload}
                 />
             )}
 
+            {error && <p class="mt-error">{error}</p>}
             {loading && <p class="mt-hint">Loading...</p>}
-            {!loading && shown.length === 0 && <p class="mt-hint">Nothing here yet.</p>}
+            {!loading && !error && shown.length === 0 && <p class="mt-hint">Nothing here yet.</p>}
             {shown.map(title => (
-                <TitleRow key={title.noteId} title={title} onChanged={reload} onOpenEpisodes={setEpisodesFor} />
+                <TitleRow key={title.key} title={title} onChanged={reload} onOpenEpisodes={setEpisodesFor} />
             ))}
         </div>
     )

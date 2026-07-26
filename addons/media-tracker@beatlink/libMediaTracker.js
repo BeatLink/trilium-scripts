@@ -1,27 +1,40 @@
 /*
- * media-tracker@beatlink shared data model.
+ * media-tracker@beatlink data model.
  *
- * A tracked title is a real Trilium note under the configured library root:
+ * Every tracked title lives in ONE JSON document, stored in a code note titled
+ * "Database" that is a direct child of the configured Library Root. Keeping the
+ * database under the root (rather than in the addon's own persistence tree)
+ * means the data travels with the library: move or export the root and the
+ * titles come along.
  *
- *   #mediaTitle              marker, present on every tracked note
- *   #mediaType=movie|show
- *   #watchStatus=planned|watching|watched|dropped
- *   #rating=0..10            user's own rating (never overwritten by import unless enabled)
- *   #year, #runtime, #genres
- *   #tmdbId, #imdbId, #traktId   identity, used to match an imported item to an existing note
- *   #poster                  full https image URL
- *   #lastWatched             ISO date
- *   #watchedEpisodes         compact season/episode encoding (shows only), see below
- *   #totalEpisodes           aired episode count from TMDB, for progress
+ *   {
+ *     "titles": {
+ *       "<key>": {
+ *         id, tmdbId, imdbId, traktId,
+ *         mediaType: "movie" | "show",
+ *         title, year, overview, poster, genres, runtime,
+ *         status: "planned" | "watching" | "watched" | "dropped",
+ *         rating: 0..10 | null,
+ *         lastWatched: "YYYY-MM-DD" | "",
+ *         watchedEpisodes: "s01e01-e10,s02e01",   // shows only
+ *         totalEpisodes: number,
+ *         addedAt: "YYYY-MM-DD"
+ *       }
+ *     }
+ *   }
  *
- * Episode progress lives in ONE label on the show note rather than one note per
- * episode: a 10-season show would otherwise add ~250 notes to the tree and slow
- * every search. Encoding is a comma-separated list of per-season runs:
+ * `key` is the title's stable id (see titleKey): TMDB id when known, else the
+ * IMDb id, else the Trakt id, else a generated local id. Keying by identity is
+ * what makes repeated imports from different sources converge on one entry
+ * instead of duplicating.
+ *
+ * Episode progress is a compact run-collapsed string rather than an array, so a
+ * fully-watched ten-season show stays a short value:
  *
  *   s01e01-e10,s02e01,s02e03-e05
  *
- * parseEpisodes -> { [season]: Set(episodeNumbers) }, formatEpisodes is its inverse
- * and always emits canonical (sorted, run-collapsed) output.
+ * parseEpisodes -> { [season]: Set(episodeNumbers) }, formatEpisodes is its
+ * inverse and always emits canonical (sorted, run-collapsed) output.
  */
 
 const STATUSES = ["planned", "watching", "watched", "dropped"]
@@ -100,8 +113,8 @@ function withEpisode(seasons, season, episode, watched) {
     return next
 }
 
-// Merge imported progress into existing progress. Import is one-way and additive:
-// an episode already marked watched locally is never un-watched by an import.
+// Import is one-way and additive: an episode already marked watched locally is
+// never un-watched by an import.
 function mergeEpisodes(existing, incoming) {
     const merged = {}
     for (const [season, set] of Object.entries(existing)) merged[season] = new Set(set)
@@ -112,8 +125,7 @@ function mergeEpisodes(existing, incoming) {
     return merged
 }
 
-// First aired episode not yet watched, given TMDB's season/episode counts.
-// `seasonCounts` is { [seasonNumber]: airedEpisodeCount }.
+// First aired episode not yet watched, given TMDB's per-season counts.
 function nextUnwatched(seasons, seasonCounts) {
     const numbers = Object.keys(seasonCounts || {}).map(Number).sort((a, b) => a - b)
     for (const season of numbers) {
@@ -127,31 +139,99 @@ function nextUnwatched(seasons, seasonCounts) {
 
 // --- status -----------------------------------------------------------------
 
-// Status implied by episode progress, used when importing a show.
 function statusFromProgress(watchedCount, totalEpisodes) {
     if (!totalEpisodes) return watchedCount > 0 ? "watching" : "planned"
     if (watchedCount === 0) return "planned"
     return watchedCount >= totalEpisodes ? "watched" : "watching"
 }
 
-// --- identity ---------------------------------------------------------------
+// --- document ---------------------------------------------------------------
 
-// Ordered strongest-first: tmdb is the primary key since TMDB is the metadata
-// source, imdb is the cross-source bridge (Stremio uses imdb ids), trakt last.
-const ID_LABELS = ["tmdbId", "imdbId", "traktId"]
+function emptyDocument() {
+    return { titles: {} }
+}
 
-function identityOf(item) {
-    return {
+// Tolerates a blank note, malformed JSON, or a document missing `titles`, so a
+// hand-edited database can never hard-fail the widget.
+function parseDocument(raw) {
+    if (!raw || !String(raw).trim()) return emptyDocument()
+    let parsed
+    try {
+        parsed = JSON.parse(raw)
+    } catch (e) {
+        return emptyDocument()
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return emptyDocument()
+    const titles = parsed.titles
+    if (!titles || typeof titles !== "object" || Array.isArray(titles)) return emptyDocument()
+    return { ...parsed, titles }
+}
+
+function serializeDocument(doc) {
+    return JSON.stringify(doc, null, 4)
+}
+
+// Identity, strongest first: tmdb is primary (TMDB is the metadata source),
+// imdb bridges sources (Stremio uses imdb ids), trakt last.
+function titleKey(item) {
+    if (item?.tmdbId) return `tmdb:${item.tmdbId}`
+    if (item?.imdbId) return `imdb:${item.imdbId}`
+    if (item?.traktId) return `trakt:${item.traktId}`
+    return ""
+}
+
+// An entry already in the document that refers to the same title, matched on any
+// shared id rather than only the key -- a title first imported from Stremio is
+// keyed by imdb, and must still be found when Trakt later supplies its tmdb id.
+function findTitle(doc, item) {
+    const key = titleKey(item)
+    if (key && doc.titles[key]) return key
+
+    const wanted = {
         tmdbId: item?.tmdbId ? String(item.tmdbId) : "",
         imdbId: item?.imdbId ? String(item.imdbId) : "",
         traktId: item?.traktId ? String(item.traktId) : ""
     }
+    for (const [existingKey, entry] of Object.entries(doc.titles)) {
+        if (wanted.tmdbId && String(entry.tmdbId || "") === wanted.tmdbId) return existingKey
+        if (wanted.imdbId && String(entry.imdbId || "") === wanted.imdbId) return existingKey
+        if (wanted.traktId && String(entry.traktId || "") === wanted.traktId) return existingKey
+    }
+    return ""
+}
+
+function normalizeTitle(entry) {
+    const rating = Number(entry?.rating)
+    return {
+        tmdbId: entry?.tmdbId ? String(entry.tmdbId) : "",
+        imdbId: entry?.imdbId ? String(entry.imdbId) : "",
+        traktId: entry?.traktId ? String(entry.traktId) : "",
+        mediaType: entry?.mediaType === "show" ? "show" : "movie",
+        title: typeof entry?.title === "string" ? entry.title : "",
+        year: entry?.year ? String(entry.year) : "",
+        overview: typeof entry?.overview === "string" ? entry.overview : "",
+        poster: typeof entry?.poster === "string" ? entry.poster : "",
+        genres: typeof entry?.genres === "string" ? entry.genres : "",
+        runtime: Number.isFinite(Number(entry?.runtime)) ? Number(entry.runtime) : 0,
+        status: STATUSES.includes(entry?.status) ? entry.status : "planned",
+        rating: Number.isFinite(rating) && rating > 0 ? rating : null,
+        lastWatched: typeof entry?.lastWatched === "string" ? entry.lastWatched : "",
+        watchedEpisodes: typeof entry?.watchedEpisodes === "string" ? entry.watchedEpisodes : "",
+        totalEpisodes: Number.isFinite(Number(entry?.totalEpisodes)) ? Number(entry.totalEpisodes) : 0,
+        addedAt: typeof entry?.addedAt === "string" ? entry.addedAt : ""
+    }
+}
+
+// Every title in the document, normalized and key-stamped, sorted by title.
+function listTitles(doc) {
+    return Object.entries(doc.titles)
+        .map(([key, entry]) => ({ key, ...normalizeTitle(entry) }))
+        .sort((a, b) => a.title.localeCompare(b.title))
 }
 
 module.exports = {
     STATUSES,
     IMAGE_BASE,
-    ID_LABELS,
     posterUrl,
     parseEpisodes,
     formatEpisodes,
@@ -161,5 +241,11 @@ module.exports = {
     mergeEpisodes,
     nextUnwatched,
     statusFromProgress,
-    identityOf
+    emptyDocument,
+    parseDocument,
+    serializeDocument,
+    titleKey,
+    findTitle,
+    normalizeTitle,
+    listTitles
 }

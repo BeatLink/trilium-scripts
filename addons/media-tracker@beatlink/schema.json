@@ -1,8 +1,9 @@
 {
     "libraryRootNoteId": {
         "type": "note",
+        "hidden": true,
         "label": "Library Root",
-        "description": "Required. Parent note every movie/show note is created under. Create a note for your library, then pick it here.",
+        "description": "Required. The note that hosts your library: its Database child note holds every tracked title. Selecting it converts that note into a render note showing the tracker; clearing it reverts the previously-chosen note to a text note.",
         "default": "",
         "tab": "Library"
     },
@@ -22,7 +23,7 @@
     "posterSize": {
         "type": "select",
         "label": "Poster Size",
-        "description": "TMDB image width used for poster URLs stored on each title note.",
+        "description": "TMDB image width used for poster URLs stored with each title.",
         "default": "w342",
         "options": [
             { "value": "w185", "label": "Small (w185)" },

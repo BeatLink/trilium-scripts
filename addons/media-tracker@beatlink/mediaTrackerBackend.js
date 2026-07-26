@@ -3,17 +3,25 @@
  *
  * One HTTP endpoint (custom/mediaTracker) routed by ?action=:
  *
+ *   listTitles       read the whole library out of the database note
  *   search           TMDB multi search (movies + shows)
  *   details          TMDB details for one title, incl. per-season episode counts
- *   addTitle         create/update a title note from a TMDB id
- *   setStatus        set #watchStatus on a title note
- *   setRating        set #rating on a title note
- *   setEpisode       mark one episode watched/unwatched on a show note
+ *   addTitle         add a title to the database from a TMDB id
+ *   removeTitle      drop a title from the database
+ *   setStatus        set watch status
+ *   setRating        set rating
+ *   setEpisode       mark one episode watched/unwatched
  *   traktAuthStart   begin Trakt device authorization
  *   traktAuthPoll    poll for the user approving it
  *   importTrakt      one-way import of Trakt watched movies + shows
  *   stremioLogin     exchange Stremio email/password for an auth key
  *   importStremio    one-way import of the Stremio library
+ *
+ * Storage: every title lives in ONE JSON note titled "Database", a direct child
+ * of the configured Library Root (find-or-create, see resolveDatabaseNote).
+ * Imports read the document once, apply every change in memory, and write once
+ * at the end -- a 400-title Trakt import is a single note write, and a partial
+ * failure can't leave the document half-updated.
  *
  * Import is strictly one-way (external -> Trilium). Nothing here ever writes to
  * Trakt or Stremio, so no write scopes are used and no local edit can be pushed
@@ -32,6 +40,8 @@ const tracker = require("libMediaTracker.js")
 const TMDB_API = "https://api.themoviedb.org/3"
 const TRAKT_API = "https://api.trakt.tv"
 const STREMIO_API = "https://api.strem.io/api"
+
+const DATABASE_TITLE = "Database"
 
 // --- settings ---------------------------------------------------------------
 
@@ -54,6 +64,56 @@ function persistFields(fields) {
     saveSettings(schemaNoteId, configNoteId, settings)
 }
 
+// --- database ---------------------------------------------------------------
+
+function requireLibraryRoot(settings) {
+    if (!settings.libraryRootNoteId) throw new Error("Set a Library Root in Settings first")
+    const note = api.getNote(settings.libraryRootNoteId)
+    if (!note || note.isDeleted) throw new Error("Library Root note not found")
+    return note
+}
+
+// The database note is a JSON code note titled "Database" directly under the
+// library root. Kept there rather than in the addon's persistence tree so the
+// data travels with the library: move or export the root and the titles follow.
+// Find-or-create, and tagged #mediaTrackerDatabase so a renamed note is still
+// found.
+function resolveDatabaseNote(settings) {
+    const root = requireLibraryRoot(settings)
+
+    const tagged = root.getChildNotes().find(n => !n.isDeleted && n.hasLabel("mediaTrackerDatabase"))
+    if (tagged) return tagged
+
+    const byTitle = root.getChildNotes().find(n => !n.isDeleted && n.title === DATABASE_TITLE)
+    if (byTitle) {
+        byTitle.setLabel("mediaTrackerDatabase")
+        return byTitle
+    }
+
+    const { note } = api.createNewNote({
+        parentNoteId: root.noteId,
+        title: DATABASE_TITLE,
+        type: "code",
+        mime: "application/json",
+        content: tracker.serializeDocument(tracker.emptyDocument())
+    })
+    note.setLabel("mediaTrackerDatabase")
+    note.setLabel("iconClass", "bx bx-data")
+    return note
+}
+
+function loadDocument(settings) {
+    return tracker.parseDocument(resolveDatabaseNote(settings).getContent())
+}
+
+function saveDocument(settings, doc) {
+    resolveDatabaseNote(settings).setContent(tracker.serializeDocument(doc))
+}
+
+function today() {
+    return new Date().toISOString().slice(0, 10)
+}
+
 // --- http helpers -----------------------------------------------------------
 
 async function getJson(url, headers) {
@@ -63,12 +123,11 @@ async function getJson(url, headers) {
 }
 
 async function postJson(url, body, headers) {
-    const res = await fetch(url, {
+    return fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(headers || {}) },
         body: JSON.stringify(body)
     })
-    return res
 }
 
 // --- TMDB -------------------------------------------------------------------
@@ -129,78 +188,88 @@ async function tmdbDetails(settings, mediaType, tmdbId) {
     return details
 }
 
-// --- title notes ------------------------------------------------------------
-
-function requireLibraryRoot(settings) {
-    if (!settings.libraryRootNoteId) throw new Error("Set a Library Root in Settings first")
-    const note = api.getNote(settings.libraryRootNoteId)
-    if (!note || note.isDeleted) throw new Error("Library Root note not found")
-    return note
-}
-
-// Find an existing title note by any known id, strongest first. This is what
-// makes repeated imports idempotent and lets two sources converge on one note.
-function findExistingTitle(rootNoteId, identity) {
-    for (const label of tracker.ID_LABELS) {
-        const value = identity[label]
-        if (!value) continue
-        const escaped = value.replace(/"/g, '\\"')
-        const matches = api.searchForNotes(`#mediaTitle #${label}="${escaped}"`)
-        const live = matches.find(n => !n.isDeleted && isUnder(n, rootNoteId))
-        if (live) return live
-    }
-    return null
-}
-
-function isUnder(note, rootNoteId) {
-    // A title note is a direct child of the library root by construction; check
-    // parents rather than walking the whole ancestor chain.
-    return note.getParentNotes().some(p => p.noteId === rootNoteId)
-}
-
-function setLabelIfValue(note, name, value) {
-    if (value === undefined || value === null || value === "") return
-    note.setLabel(name, String(value))
-}
-
-function createTitleNote(rootNote, details, settings) {
-    const { note } = api.createNewNote({
-        parentNoteId: rootNote.noteId,
-        title: details.title || "Untitled",
-        type: "text",
-        content: details.overview ? `<p>${escapeHtml(details.overview)}</p>` : ""
-    })
-    note.setLabel("mediaTitle")
-    note.setLabel("mediaType", details.mediaType)
-    note.setLabel("watchStatus", settings.defaultStatus || "planned")
-    note.setLabel("iconClass", details.mediaType === "show" ? "bx bx-tv" : "bx bx-film")
-    return note
-}
-
-function applyMetadata(note, details) {
-    setLabelIfValue(note, "tmdbId", details.tmdbId)
-    setLabelIfValue(note, "imdbId", details.imdbId)
-    setLabelIfValue(note, "traktId", details.traktId)
-    setLabelIfValue(note, "year", details.year)
-    setLabelIfValue(note, "poster", details.poster)
-    setLabelIfValue(note, "genres", details.genres)
-    if (details.runtime) note.setLabel("runtime", String(details.runtime))
-    if (details.totalEpisodes) note.setLabel("totalEpisodes", String(details.totalEpisodes))
-}
-
-function escapeHtml(s) {
-    return String(s ?? "").replace(/[&<>"']/g, c => (
-        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-    ))
-}
+// --- title mutations --------------------------------------------------------
 
 async function addTitle(settings, mediaType, tmdbId) {
-    const rootNote = requireLibraryRoot(settings)
     const details = await tmdbDetails(settings, mediaType, tmdbId)
-    const existing = findExistingTitle(rootNote.noteId, tracker.identityOf(details))
-    const note = existing || createTitleNote(rootNote, details, settings)
-    applyMetadata(note, details)
-    return { noteId: note.noteId, title: details.title, existed: !!existing }
+    const doc = loadDocument(settings)
+    const existingKey = tracker.findTitle(doc, details)
+
+    if (existingKey) {
+        // Refresh metadata but keep the user's own status/rating/progress.
+        const existing = doc.titles[existingKey]
+        doc.titles[existingKey] = {
+            ...existing,
+            tmdbId: details.tmdbId,
+            imdbId: details.imdbId || existing.imdbId || "",
+            title: details.title,
+            year: details.year,
+            overview: details.overview,
+            poster: details.poster,
+            genres: details.genres,
+            runtime: details.runtime,
+            totalEpisodes: details.totalEpisodes || existing.totalEpisodes || 0
+        }
+        saveDocument(settings, doc)
+        return { key: existingKey, title: details.title, existed: true }
+    }
+
+    const key = tracker.titleKey(details)
+    doc.titles[key] = tracker.normalizeTitle({
+        ...details,
+        status: settings.defaultStatus || "planned",
+        addedAt: today()
+    })
+    saveDocument(settings, doc)
+    return { key, title: details.title, existed: false }
+}
+
+function requireEntry(doc, key) {
+    const entry = doc.titles[key]
+    if (!entry) throw new Error("That title is not in the library")
+    return entry
+}
+
+function setStatus(settings, key, status) {
+    if (!tracker.STATUSES.includes(status)) throw new Error(`Unknown status: ${status}`)
+    const doc = loadDocument(settings)
+    const entry = requireEntry(doc, key)
+    entry.status = status
+    if (status === "watched") entry.lastWatched = today()
+    saveDocument(settings, doc)
+    return { ok: true }
+}
+
+function setRating(settings, key, rating) {
+    const value = Number(rating)
+    if (!Number.isFinite(value) || value < 0 || value > 10) throw new Error("Rating must be 0-10")
+    const doc = loadDocument(settings)
+    const entry = requireEntry(doc, key)
+    entry.rating = value > 0 ? value : null
+    saveDocument(settings, doc)
+    return { ok: true }
+}
+
+function setEpisode(settings, key, season, episode, watched) {
+    const doc = loadDocument(settings)
+    const entry = requireEntry(doc, key)
+
+    const current = tracker.parseEpisodes(entry.watchedEpisodes || "")
+    const next = tracker.withEpisode(current, Number(season), Number(episode), !!watched)
+    entry.watchedEpisodes = tracker.formatEpisodes(next)
+    entry.status = tracker.statusFromProgress(tracker.countEpisodes(next), Number(entry.totalEpisodes) || 0)
+    if (watched) entry.lastWatched = today()
+
+    saveDocument(settings, doc)
+    return { ok: true, watchedEpisodes: entry.watchedEpisodes, status: entry.status }
+}
+
+function removeTitle(settings, key) {
+    const doc = loadDocument(settings)
+    requireEntry(doc, key)
+    delete doc.titles[key]
+    saveDocument(settings, doc)
+    return { ok: true }
 }
 
 // --- Trakt ------------------------------------------------------------------
@@ -282,17 +351,15 @@ async function traktRefreshIfNeeded(settings) {
 async function importTrakt(settings) {
     if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
     const current = await traktRefreshIfNeeded(settings)
-    const rootNote = requireLibraryRoot(current)
 
     const movies = await getJson(`${TRAKT_API}/sync/watched/movies`, traktHeaders(current, true))
     const shows = await getJson(`${TRAKT_API}/sync/watched/shows`, traktHeaders(current, true))
 
-    let added = 0
-    let updated = 0
+    const items = []
 
     for (const entry of movies || []) {
         const movie = entry.movie || {}
-        const result = await upsertImported(current, rootNote, {
+        items.push({
             mediaType: "movie",
             title: movie.title,
             year: movie.year,
@@ -302,7 +369,6 @@ async function importTrakt(settings) {
             lastWatched: entry.last_watched_at,
             status: "watched"
         })
-        result.existed ? updated++ : added++
     }
 
     for (const entry of shows || []) {
@@ -316,7 +382,7 @@ async function importTrakt(settings) {
                 watched[season.number].add(episode.number)
             }
         }
-        const result = await upsertImported(current, rootNote, {
+        items.push({
             mediaType: "show",
             title: show.title,
             year: show.year,
@@ -326,10 +392,9 @@ async function importTrakt(settings) {
             lastWatched: entry.last_watched_at,
             episodes: watched
         })
-        result.existed ? updated++ : added++
     }
 
-    return { added, updated, total: added + updated }
+    return applyImport(current, items)
 }
 
 // --- Stremio ----------------------------------------------------------------
@@ -358,18 +423,16 @@ async function stremioLogin(settings) {
 
 async function importStremio(settings) {
     if (!settings.stremioAuthKey) throw new Error("Log in to Stremio first")
-    const rootNote = requireLibraryRoot(settings)
-    const items = await stremioPost("datastoreGet", {
+    const library = await stremioPost("datastoreGet", {
         authKey: settings.stremioAuthKey,
         collection: "libraryItem",
         ids: [],
         all: true
     })
 
-    let added = 0
-    let updated = 0
+    const items = []
 
-    for (const item of items || []) {
+    for (const item of library || []) {
         if (item.removed || item.type === "other") continue
         // Stremio ids are imdb ids, optionally suffixed ":season:episode".
         const imdbId = String(item._id || "").split(":")[0]
@@ -389,7 +452,7 @@ async function importStremio(settings) {
             }
         }
 
-        const result = await upsertImported(settings, rootNote, {
+        items.push({
             mediaType,
             title: item.name,
             imdbId,
@@ -397,94 +460,94 @@ async function importStremio(settings) {
             episodes: watched,
             status: mediaType === "movie" && item.state?.timesWatched > 0 ? "watched" : undefined
         })
-        result.existed ? updated++ : added++
     }
 
+    return applyImport(settings, items)
+}
+
+// --- shared import ----------------------------------------------------------
+
+// One-way and idempotent: matches each incoming item against the document by any
+// shared id, merges episode progress rather than replacing it, and never touches
+// a rating unless explicitly allowed. Reads the document once and writes once,
+// so a large import is a single note write and can't half-apply.
+async function applyImport(settings, items) {
+    const doc = loadDocument(settings)
+    let added = 0
+    let updated = 0
+
+    for (const item of items) {
+        const existingKey = tracker.findTitle(doc, item)
+
+        let details = {
+            tmdbId: item.tmdbId ? String(item.tmdbId) : "",
+            imdbId: item.imdbId ? String(item.imdbId) : "",
+            traktId: item.traktId ? String(item.traktId) : "",
+            mediaType: item.mediaType,
+            title: item.title || "Untitled",
+            year: item.year ? String(item.year) : ""
+        }
+
+        // Enrich from TMDB on first import only; an existing entry already has it.
+        if (!existingKey && settings.importFetchMetadata && settings.tmdbApiKey && item.tmdbId) {
+            try {
+                const fetched = await tmdbDetails(settings, item.mediaType, item.tmdbId)
+                details = {
+                    ...fetched,
+                    traktId: details.traktId,
+                    imdbId: fetched.imdbId || details.imdbId
+                }
+            } catch (e) {
+                // Metadata is a nice-to-have; never fail an import over it.
+            }
+        }
+
+        const key = existingKey || tracker.titleKey(details)
+        if (!key) continue
+
+        const previous = doc.titles[key] || {}
+
+        // A rating from the source is only taken when the user opted in;
+        // otherwise their own rating always wins.
+        const incomingRating = Number.isFinite(Number(item.rating)) ? Number(item.rating) : null
+        const rating = (settings.importOverwriteRatings && incomingRating !== null)
+            ? incomingRating
+            : (previous.rating ?? null)
+        const entry = tracker.normalizeTitle({
+            ...previous,
+            ...details,
+            // Preserve the user's own fields across a re-import.
+            status: previous.status,
+            rating,
+            watchedEpisodes: previous.watchedEpisodes,
+            totalEpisodes: details.totalEpisodes || previous.totalEpisodes || 0,
+            addedAt: previous.addedAt || today()
+        })
+
+        if (item.lastWatched) entry.lastWatched = String(item.lastWatched).slice(0, 10)
+
+        if (item.mediaType === "show" && item.episodes && Object.keys(item.episodes).length) {
+            const merged = tracker.mergeEpisodes(
+                tracker.parseEpisodes(entry.watchedEpisodes || ""),
+                item.episodes
+            )
+            entry.watchedEpisodes = tracker.formatEpisodes(merged)
+            if (settings.importMarksWatched) {
+                entry.status = tracker.statusFromProgress(
+                    tracker.countEpisodes(merged),
+                    Number(entry.totalEpisodes) || 0
+                )
+            }
+        } else if (item.status && settings.importMarksWatched) {
+            entry.status = item.status
+        }
+
+        doc.titles[key] = entry
+        existingKey ? updated++ : added++
+    }
+
+    saveDocument(settings, doc)
     return { added, updated, total: added + updated }
-}
-
-// --- shared import upsert ---------------------------------------------------
-
-// One-way: creates the note if missing, otherwise merges into it. Never removes
-// local episode progress and never touches a user's rating unless explicitly
-// allowed, so re-importing is always safe.
-async function upsertImported(settings, rootNote, item) {
-    const identity = tracker.identityOf(item)
-    const existing = findExistingTitle(rootNote.noteId, identity)
-
-    let details = {
-        ...identity,
-        mediaType: item.mediaType,
-        title: item.title || "Untitled",
-        year: item.year ? String(item.year) : ""
-    }
-
-    // Enrich from TMDB on first import only; an existing note already has it.
-    if (!existing && settings.importFetchMetadata && settings.tmdbApiKey && item.tmdbId) {
-        try {
-            const fetched = await tmdbDetails(settings, item.mediaType, item.tmdbId)
-            details = { ...fetched, traktId: identity.traktId, imdbId: fetched.imdbId || identity.imdbId }
-        } catch (e) {
-            // Metadata is a nice-to-have; never fail an import over it.
-        }
-    }
-
-    const note = existing || createTitleNote(rootNote, details, settings)
-    applyMetadata(note, details)
-
-    if (item.lastWatched) setLabelIfValue(note, "lastWatched", String(item.lastWatched).slice(0, 10))
-
-    if (item.mediaType === "show" && item.episodes && Object.keys(item.episodes).length) {
-        const current = tracker.parseEpisodes(note.getLabelValue("watchedEpisodes") || "")
-        const merged = tracker.mergeEpisodes(current, item.episodes)
-        note.setLabel("watchedEpisodes", tracker.formatEpisodes(merged))
-        if (settings.importMarksWatched) {
-            const total = Number(note.getLabelValue("totalEpisodes")) || 0
-            note.setLabel("watchStatus", tracker.statusFromProgress(tracker.countEpisodes(merged), total))
-        }
-    } else if (item.status && settings.importMarksWatched) {
-        note.setLabel("watchStatus", item.status)
-    }
-
-    return { existed: !!existing, noteId: note.noteId }
-}
-
-// --- title mutations --------------------------------------------------------
-
-function getTitleNote(noteId) {
-    const note = api.getNote(noteId)
-    if (!note || note.isDeleted) throw new Error("Title note not found")
-    if (!note.hasLabel("mediaTitle")) throw new Error("That note is not a tracked title")
-    return note
-}
-
-function setStatus(noteId, status) {
-    if (!tracker.STATUSES.includes(status)) throw new Error(`Unknown status: ${status}`)
-    const note = getTitleNote(noteId)
-    note.setLabel("watchStatus", status)
-    if (status === "watched") note.setLabel("lastWatched", new Date().toISOString().slice(0, 10))
-    return { ok: true }
-}
-
-function setRating(noteId, rating) {
-    const value = Number(rating)
-    if (!Number.isFinite(value) || value < 0 || value > 10) throw new Error("Rating must be 0-10")
-    const note = getTitleNote(noteId)
-    note.setLabel("rating", String(value))
-    return { ok: true }
-}
-
-function setEpisode(noteId, season, episode, watched) {
-    const note = getTitleNote(noteId)
-    const current = tracker.parseEpisodes(note.getLabelValue("watchedEpisodes") || "")
-    const next = tracker.withEpisode(current, Number(season), Number(episode), !!watched)
-    const encoded = tracker.formatEpisodes(next)
-    note.setLabel("watchedEpisodes", encoded)
-
-    const total = Number(note.getLabelValue("totalEpisodes")) || 0
-    note.setLabel("watchStatus", tracker.statusFromProgress(tracker.countEpisodes(next), total))
-    if (watched) note.setLabel("lastWatched", new Date().toISOString().slice(0, 10))
-    return { ok: true, watchedEpisodes: encoded }
 }
 
 // --- routing ----------------------------------------------------------------
@@ -501,18 +564,22 @@ async function handle() {
         const settings = getSettings()
 
         switch (action) {
+            case "listTitles":
+                return sendJson(200, { titles: tracker.listTitles(loadDocument(settings)) })
             case "search":
                 return sendJson(200, { results: await tmdbSearch(settings, query.query || "") })
             case "details":
                 return sendJson(200, await tmdbDetails(settings, query.mediaType, query.tmdbId))
             case "addTitle":
                 return sendJson(200, await addTitle(settings, query.mediaType, query.tmdbId))
+            case "removeTitle":
+                return sendJson(200, removeTitle(settings, query.key))
             case "setStatus":
-                return sendJson(200, setStatus(query.noteId, query.status))
+                return sendJson(200, setStatus(settings, query.key, query.status))
             case "setRating":
-                return sendJson(200, setRating(query.noteId, query.rating))
+                return sendJson(200, setRating(settings, query.key, query.rating))
             case "setEpisode":
-                return sendJson(200, setEpisode(query.noteId, query.season, query.episode, query.watched === "true"))
+                return sendJson(200, setEpisode(settings, query.key, query.season, query.episode, query.watched === "true"))
             case "traktAuthStart":
                 return sendJson(200, await traktAuthStart(settings))
             case "traktAuthPoll":
