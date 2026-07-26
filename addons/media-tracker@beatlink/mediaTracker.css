@@ -306,6 +306,146 @@
     flex: 1;
 }
 
+/* --- details page --- */
+
+.mt-details-nav {
+    margin-bottom: 12px;
+}
+
+.mt-details-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.mt-details-poster {
+    width: 140px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.mt-details-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.mt-details-title {
+    margin: 0 0 6px;
+}
+
+.mt-overview-full {
+    margin: 8px 0 0;
+    line-height: 1.5;
+}
+
+/* The row title doubles as the link into the details page, so it has to look
+   like text rather than a button. */
+.mt-row-title-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--main-text-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.mt-row-title-link:hover {
+    text-decoration: underline;
+}
+
+.mt-section {
+    margin-bottom: 16px;
+}
+
+.mt-section h4 {
+    margin: 0 0 8px;
+}
+
+.mt-cast {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.mt-cast-member {
+    width: 92px;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.mt-cast-photo {
+    width: 92px;
+    height: 138px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+
+.mt-cast-name {
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.mt-season-toggle {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    padding: 6px 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--main-text-color);
+    border-bottom: 1px solid var(--main-border-color);
+    cursor: pointer;
+}
+
+.mt-season-overview {
+    margin: 8px 0;
+}
+
+.mt-episode {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.mt-episode-on {
+    background: rgba(46, 160, 87, 0.08);
+}
+
+.mt-episode-check {
+    padding-top: 2px;
+}
+
+.mt-episode-still {
+    width: 100px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.mt-episode-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.mt-episode-title {
+    font-weight: 600;
+}
+
+.mt-episode-overview {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
 /* --- episodes --- */
 
 /* Indented to sit under the row's poster, so it reads as belonging to that row.

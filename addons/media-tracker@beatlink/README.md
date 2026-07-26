@@ -43,6 +43,19 @@ seasons started — and expanding it shows episodes watched and seasons *complet
 TMDB, backfills missing ids and episode counts, and recomputes every show's status from its episode
 progress. It never changes a rating and never un-watches an episode.
 
+### Details page
+
+Clicking a title's name opens a full details page: large poster, overview, genres, runtime, status,
+rating, collections, and a scrollable cast list with photos and character names.
+
+For shows, each season is a collapsible section listing every episode with its **own summary**, still
+image, air date, runtime, and TMDB rating — with a checkbox to mark it watched, so you can track
+progress while reading what each episode is. Season sections show their own watched count, and the
+header shows overall episode and season progress.
+
+Everything on this page is fetched from TMDB live rather than stored, so it needs a TMDB key and adds
+no weight to your database note.
+
 ### Collections
 
 Collections group titles into shared universes and work like **tags** — a title can belong to several

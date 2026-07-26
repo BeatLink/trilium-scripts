@@ -139,9 +139,176 @@ function groupByCollection(titles) {
     return untagged.length ? [...named, [UNTAGGED, untagged]] : named
 }
 
+// --- details page -----------------------------------------------------------
+
+function DetailsPage({ title, onBack, onChanged }) {
+    const [data, setData] = useState(null)
+    const [error, setError] = useState(null)
+    const [busy, setBusy] = useState(false)
+    const [watchedEpisodes, setWatchedEpisodes] = useState(title.watchedEpisodes || "")
+    const [openSeason, setOpenSeason] = useState(null)
+
+    useEffect(() => {
+        (async () => {
+            try {
+                setData(await callBackend("fullDetails", {
+                    mediaType: title.mediaType,
+                    tmdbId: title.tmdbId || "",
+                    imdbId: title.imdbId || "",
+                    key: title.key
+                }))
+            } catch (e) {
+                setError(e.message)
+            }
+        })()
+    }, [title.key])
+
+    const toggleEpisode = async (season, episode, watched) => {
+        setBusy(true)
+        try {
+            const result = await callBackend("setEpisode", {
+                key: title.key, season, episode, watched: String(watched),
+                totalEpisodes: String(data?.totalEpisodes || "")
+            })
+            setWatchedEpisodes(result.watchedEpisodes)
+            await onChanged()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const seasons = parseEpisodes(watchedEpisodes)
+    const watched = countEpisodes(seasons)
+
+    return (
+        <div class="mt-details">
+            <div class="mt-details-nav">
+                <button class="mt-btn" onClick={onBack}>&lsaquo; Back to library</button>
+            </div>
+
+            {error && <p class="mt-error">{error}</p>}
+            {!data && !error && <p class="mt-hint">Loading details...</p>}
+
+            {data && (
+                <>
+                    <div class="mt-details-head">
+                        {data.poster
+                            ? <img class="mt-details-poster" src={data.poster} alt="" />
+                            : <div class="mt-details-poster mt-poster-empty" />}
+                        <div class="mt-details-meta">
+                            <h2 class="mt-details-title">{data.title}</h2>
+                            <div class="mt-row-meta">
+                                {data.year && <span>{data.year}</span>}
+                                <span class="mt-badge">{data.mediaType === "show" ? "TV" : "Movie"}</span>
+                                {data.runtime > 0 && <span>{data.runtime} min</span>}
+                                {data.entry?.status && (
+                                    <span class={`mt-badge mt-status-${data.entry.status}`}>
+                                        {STATUS_LABELS[data.entry.status]}
+                                    </span>
+                                )}
+                                {data.entry?.rating != null && <span>★ {data.entry.rating}/10</span>}
+                            </div>
+                            {data.genres && <p class="mt-hint">{data.genres}</p>}
+                            {(data.entry?.collections || []).length > 0 && (
+                                <div class="mt-row-meta">
+                                    {data.entry.collections.map(name => (
+                                        <span class="mt-tag" key={name}>{name}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {data.mediaType === "show" && data.totalEpisodes > 0 && (
+                                <p class="mt-hint">
+                                    {watched} of {data.totalEpisodes} episodes watched
+                                    {" · "}
+                                    {countSeasonsComplete(seasons, data.seasonCounts)} of{" "}
+                                    {data.seasons.length} seasons complete
+                                </p>
+                            )}
+                            {data.overview && <p class="mt-overview-full">{data.overview}</p>}
+                        </div>
+                    </div>
+
+                    {data.cast.length > 0 && (
+                        <div class="mt-section">
+                            <h4>Cast</h4>
+                            <div class="mt-cast">
+                                {data.cast.map(person => (
+                                    <div class="mt-cast-member" key={`${person.name}-${person.character}`}>
+                                        {person.profile
+                                            ? <img class="mt-cast-photo" src={person.profile} alt="" loading="lazy" />
+                                            : <div class="mt-cast-photo mt-poster-empty" />}
+                                        <div class="mt-cast-name">{person.name}</div>
+                                        {person.character && (
+                                            <div class="mt-hint">{person.character}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {data.seasons.map(season => {
+                        const isOpen = openSeason === season.number
+                        const seasonWatched = seasons[season.number]?.size || 0
+                        return (
+                            <div class="mt-section" key={season.number}>
+                                <button class="mt-season-toggle"
+                                    aria-expanded={isOpen ? "true" : "false"}
+                                    onClick={() => setOpenSeason(isOpen ? null : season.number)}>
+                                    {isOpen ? "▾" : "▸"} {season.name}
+                                    <span class="mt-hint">
+                                        {" "}({seasonWatched}/{season.episodes.length} watched)
+                                    </span>
+                                </button>
+                                {season.overview && isOpen && (
+                                    <p class="mt-hint mt-season-overview">{season.overview}</p>
+                                )}
+                                {isOpen && season.episodes.map(ep => {
+                                    const isWatched = !!seasons[season.number]?.has(ep.number)
+                                    return (
+                                        <div class={`mt-episode ${isWatched ? "mt-episode-on" : ""}`}
+                                            key={ep.number}>
+                                            <label class="mt-episode-check">
+                                                <input type="checkbox" checked={isWatched} disabled={busy}
+                                                    onChange={() =>
+                                                        toggleEpisode(season.number, ep.number, !isWatched)} />
+                                            </label>
+                                            {ep.still
+                                                ? <img class="mt-episode-still" src={ep.still} alt="" loading="lazy" />
+                                                : <div class="mt-episode-still mt-poster-empty" />}
+                                            <div class="mt-episode-body">
+                                                <div class="mt-episode-title">
+                                                    {season.number}×{String(ep.number).padStart(2, "0")}
+                                                    {ep.name ? ` · ${ep.name}` : ""}
+                                                </div>
+                                                <div class="mt-row-meta">
+                                                    {ep.airDate && <span>{ep.airDate}</span>}
+                                                    {ep.runtime > 0 && <span>{ep.runtime} min</span>}
+                                                    {ep.rating != null && ep.rating > 0 && (
+                                                        <span>★ {ep.rating.toFixed(1)}</span>
+                                                    )}
+                                                </div>
+                                                {ep.overview
+                                                    ? <p class="mt-episode-overview">{ep.overview}</p>
+                                                    : <p class="mt-hint">No summary yet.</p>}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )
+                    })}
+                </>
+            )}
+        </div>
+    )
+}
+
 // --- library ----------------------------------------------------------------
 
-function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
+function TitleRow({ title, onChanged, expanded, onToggleEpisodes, onOpenDetails }) {
     const [busy, setBusy] = useState(false)
     const [editingTags, setEditingTags] = useState(false)
     const [tagDraft, setTagDraft] = useState("")
@@ -168,7 +335,10 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
                     ? <img class="mt-poster" src={title.poster} alt="" loading="lazy" />
                     : <div class="mt-poster mt-poster-empty" />}
                 <div class="mt-row-main">
-                    <div class="mt-row-title">{title.title}</div>
+                    <button class="mt-row-title mt-row-title-link"
+                        title="Open details" onClick={() => onOpenDetails(title)}>
+                        {title.title}
+                    </button>
                     <div class="mt-row-meta">
                         {title.year && <span>{title.year}</span>}
                         <span class="mt-badge">{title.mediaType === "show" ? "TV" : "Movie"}</span>
@@ -354,6 +524,8 @@ function LibraryTab({ libraryRootNoteId }) {
     const [refreshResult, setRefreshResult] = useState(null)
     const [collections, setCollections] = useState([])
     const [collectionFilter, setCollectionFilter] = useState("all")
+    // Key of the title whose details page is open, or null for the list.
+    const [detailsKey, setDetailsKey] = useState(null)
     const [sortKey, setSortKey] = useState("title")
     const [sortDesc, setSortDesc] = useState(false)
     const [grouped, setGrouped] = useState(false)
@@ -405,6 +577,19 @@ function LibraryTab({ libraryRootNoteId }) {
                     title is created under it, and that note becomes this tracker.
                 </p>
             </div>
+        )
+    }
+
+    // The details page replaces the list. Resolved from the live titles array so
+    // it reflects edits made while it's open.
+    const detailsTitle = detailsKey ? titles.find(t => t.key === detailsKey) : null
+    if (detailsTitle) {
+        return (
+            <DetailsPage
+                title={detailsTitle}
+                onBack={() => setDetailsKey(null)}
+                onChanged={reload}
+            />
         )
     }
 
@@ -526,6 +711,7 @@ function LibraryTab({ libraryRootNoteId }) {
                                 onChanged={reload}
                                 expanded={expandedKey === title.key}
                                 onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
+                                onOpenDetails={t => setDetailsKey(t.key)}
                             />
                         ))}
                     </div>
@@ -537,6 +723,7 @@ function LibraryTab({ libraryRootNoteId }) {
                         onChanged={reload}
                         expanded={expandedKey === title.key}
                         onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
+                        onOpenDetails={t => setDetailsKey(t.key)}
                     />
                 ))}
         </div>

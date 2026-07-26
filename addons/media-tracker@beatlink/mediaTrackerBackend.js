@@ -358,6 +358,70 @@ function removeTitle(settings, key) {
     return { ok: true }
 }
 
+// Full metadata for the details page: everything tmdbDetails returns, plus cast,
+// and for shows the per-season episode lists with their summaries.
+//
+// Episode field names come straight from TMDB's season response `episodes` array.
+// Every one is read defensively -- TMDB omits fields it has no data for (an
+// unaired episode has no still or runtime), so a missing value must render as
+// blank rather than "undefined".
+async function fullDetails(settings, mediaType, tmdbId, imdbId, key) {
+    const details = await resolveDetails(settings, mediaType, tmdbId, imdbId)
+    const apiKey = requireTmdbKey(settings)
+    const path = mediaType === "show" ? "tv" : "movie"
+
+    // Credits come from the same append_to_response the details call could carry,
+    // but it's fetched separately so a credits failure can't lose the metadata.
+    let cast = []
+    try {
+        const credits = await getJson(
+            `${TMDB_API}/${path}/${encodeURIComponent(details.tmdbId)}/credits?api_key=${encodeURIComponent(apiKey)}`
+        )
+        cast = (credits.cast || []).slice(0, 12).map(person => ({
+            name: person.name || "",
+            character: person.character || "",
+            profile: person.profile_path ? tracker.posterUrl(person.profile_path, "w185") : ""
+        }))
+    } catch (e) {
+        // Cast is decorative; never fail the page over it.
+    }
+
+    const seasons = []
+    if (mediaType === "show") {
+        for (const seasonNumber of Object.keys(details.seasonCounts).map(Number).sort((a, b) => a - b)) {
+            try {
+                const season = await getJson(
+                    `${TMDB_API}/tv/${encodeURIComponent(details.tmdbId)}/season/${seasonNumber}`
+                    + `?api_key=${encodeURIComponent(apiKey)}`
+                )
+                seasons.push({
+                    number: seasonNumber,
+                    name: season.name || `Season ${seasonNumber}`,
+                    overview: season.overview || "",
+                    poster: season.poster_path ? tracker.posterUrl(season.poster_path, settings.posterSize) : "",
+                    episodes: (season.episodes || []).map(ep => ({
+                        number: ep.episode_number,
+                        name: ep.name || "",
+                        overview: ep.overview || "",
+                        airDate: ep.air_date || "",
+                        runtime: ep.runtime || 0,
+                        rating: Number.isFinite(Number(ep.vote_average)) ? Number(ep.vote_average) : null,
+                        still: ep.still_path ? tracker.posterUrl(ep.still_path, "w185") : ""
+                    }))
+                })
+            } catch (e) {
+                // Skip a season TMDB can't serve rather than losing the whole page.
+            }
+        }
+    }
+
+    // The entry's own tracked state, so the page can show progress and status.
+    const doc = loadDocument(settings)
+    const entry = key && doc.titles[key] ? tracker.normalizeTitle(doc.titles[key]) : null
+
+    return { ...details, cast, seasons, entry }
+}
+
 // --- housekeeping -----------------------------------------------------------
 
 // Re-derives everything that can drift: refreshes metadata and posters from TMDB,
@@ -797,6 +861,10 @@ async function handle() {
             }
             case "setCollections":
                 return sendJson(200, setCollections(settings, query.key, query.collections))
+            case "fullDetails":
+                return sendJson(200, await fullDetails(
+                    settings, query.mediaType, query.tmdbId, query.imdbId, query.key
+                ))
             case "refreshLibrary":
                 return sendJson(200, await refreshLibrary(settings))
             case "search":
