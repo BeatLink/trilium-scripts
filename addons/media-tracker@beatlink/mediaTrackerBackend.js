@@ -116,10 +116,11 @@ function today() {
 
 // --- http helpers -----------------------------------------------------------
 
-// Trakt sits behind Cloudflare, which blocks requests with no User-Agent and
-// returns a plain-text 403 before the request ever reaches Trakt. Node's fetch
-// sends no User-Agent by default, so one is set on every outbound call here.
-const USER_AGENT = "media-tracker@beatlink (TriliumNext addon)"
+// Trakt requires a User-Agent on every call (docs.trakt.tv/docs/required-headers)
+// and Cloudflare returns a plain-text 403 when it's absent, before the request
+// ever reaches Trakt. Node's fetch sends none by default, so one is set on every
+// outbound call here. Format follows Trakt's documented AppName/Version.
+const USER_AGENT = "media-tracker-beatlink/1.0.0"
 
 function outboundHeaders(headers) {
     return { "User-Agent": USER_AGENT, ...(headers || {}) }

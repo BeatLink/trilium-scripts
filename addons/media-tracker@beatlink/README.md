@@ -121,6 +121,11 @@ If you get *"Trakt does not recognise this Client ID"*, the usual causes are pas
 Secret into the Client ID field, or pasting only part of the value. Surrounding whitespace is
 trimmed automatically, so a stray newline from copying is not the problem.
 
+A *403 Forbidden* means something different: the request was blocked before reaching Trakt. Trakt
+[requires a User-Agent header](https://docs.trakt.tv/docs/required-headers) on every call and
+Cloudflare rejects requests without one, so this addon always sends one. If you still see a 403,
+check whether a proxy sits between your Trilium server and `api.trakt.tv`.
+
 Trakt import brings in watched movies and full per-episode history for shows.
 
 ### Stremio
