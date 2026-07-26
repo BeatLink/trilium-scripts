@@ -717,6 +717,19 @@ function LibraryTab({ libraryRootNoteId }) {
                 })}
             </div>
 
+            <div class="mt-filters">
+                <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
+                    onClick={() => setFilter("all")}>All ({scoped.length})</button>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => {
+                    const count = scoped.filter(t => t.status === value).length
+                    return (
+                        <button key={value}
+                            class={`mt-chip ${filter === value ? `mt-chip-on mt-status-${value}` : ""}`}
+                            onClick={() => setFilter(value)}>{label} ({count})</button>
+                    )
+                })}
+            </div>
+
             <div class="mt-controls">
                 <label class="mt-control">
                     Sort
@@ -743,19 +756,6 @@ function LibraryTab({ libraryRootNoteId }) {
                     onClick={() => setGrouped(v => !v)}>
                     Group by collection
                 </button>
-            </div>
-
-            <div class="mt-filters">
-                <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
-                    onClick={() => setFilter("all")}>All ({scoped.length})</button>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => {
-                    const count = scoped.filter(t => t.status === value).length
-                    return (
-                        <button key={value}
-                            class={`mt-chip ${filter === value ? `mt-chip-on mt-status-${value}` : ""}`}
-                            onClick={() => setFilter(value)}>{label} ({count})</button>
-                    )
-                })}
             </div>
 
             {error && <p class="mt-error">{error}</p>}
@@ -815,8 +815,33 @@ function AddTab({ onAdded }) {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
 
+    // A pasted TMDB or IMDb link identifies one exact title, so it's added
+    // directly instead of being fed to search as text (which would find nothing).
+    const looksLikeLink = /themoviedb\.org\/(movie|tv)\/\d+|imdb\.com\/title\/tt\d+|^\s*tt\d{6,}\s*$/i
+        .test(query)
+
+    const addByLink = async () => {
+        setBusy(true); setStatus(null)
+        try {
+            const added = await callBackend("addFromLink", { url: query })
+            setStatus({
+                ok: added.existed
+                    ? `${added.title} is already tracked`
+                    : `Added ${added.title}`
+            })
+            setResults([])
+            setQuery("")
+            await onAdded()
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const search = async (type = searchType) => {
         if (!query.trim()) return
+        if (looksLikeLink) return addByLink()
         setBusy(true); setStatus(null)
         try {
             const { results } = await callBackend("search", { query, mediaType: type })
@@ -855,21 +880,29 @@ function AddTab({ onAdded }) {
             <div class="mt-search">
                 <input
                     class="mt-input"
-                    placeholder="Search movies and TV..."
+                    placeholder="Search, or paste a TMDB / IMDb link..."
                     value={query}
                     disabled={busy}
                     onInput={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && search()}
                 />
-                <button class="mt-btn mt-btn-primary" disabled={busy} onClick={() => search()}>Search</button>
+                <button class="mt-btn mt-btn-primary" disabled={busy} onClick={() => search()}>
+                    {looksLikeLink ? "Add" : "Search"}
+                </button>
             </div>
 
-            <div class="mt-filters">
-                {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => (
-                    <button key={value} class={`mt-chip ${searchType === value ? "mt-chip-on" : ""}`}
-                        disabled={busy} onClick={() => pickType(value)}>{label}</button>
-                ))}
-            </div>
+            {/* Type chips only scope a text search; a link already names its type. */}
+            {!looksLikeLink && (
+                <div class="mt-filters">
+                    {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => (
+                        <button key={value} class={`mt-chip ${searchType === value ? "mt-chip-on" : ""}`}
+                            disabled={busy} onClick={() => pickType(value)}>{label}</button>
+                    ))}
+                </div>
+            )}
+            {looksLikeLink && (
+                <p class="mt-hint">Link detected — this will add that exact title.</p>
+            )}
 
             {status?.ok && <p class="mt-ok">{status.ok}</p>}
             {status?.error && <p class="mt-error">{status.error}</p>}

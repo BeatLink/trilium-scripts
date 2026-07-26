@@ -95,6 +95,21 @@ list.
 multi-search, while Movies and TV use the dedicated endpoints, which return a full page of one kind
 rather than a mixed page filtered down. Switching the chip re-runs the current search immediately.
 
+You can also **paste a link instead of searching**. The button switches to **Add** and the title is
+added directly, no search step:
+
+```
+https://www.themoviedb.org/movie/693134
+https://www.themoviedb.org/movie/693134-dune-part-two
+https://www.themoviedb.org/tv/95396-severance/season/2
+https://www.imdb.com/title/tt15239678/
+tt15239678
+```
+
+A TMDB link names its own type in the path (`/movie/` or `/tv/`), so it resolves in one call. The
+`-slug` suffix TMDB appends, trailing paths like `/season/2`, and query strings are all ignored — only
+the numeric id matters. An IMDb link or bare `tt` id is resolved through TMDB's `/find` endpoint.
+
 **Import** is the one-way Trakt and Stremio import described below.
 
 A **Settings** button at the end of the tab row opens the settings page, and a **Back** button there

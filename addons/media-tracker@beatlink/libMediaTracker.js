@@ -263,6 +263,37 @@ function normalizeCollections(value) {
 // The bucket for titles carrying no collections at all.
 const UNTAGGED = "Untagged"
 
+// --- link parsing -----------------------------------------------------------
+
+// Recognises a pasted TMDB or IMDb link (or a bare id) and returns what to look
+// up: { mediaType, tmdbId } or { imdbId }, else null.
+//
+// Verified against live TMDB URLs: the canonical forms are /movie/{id} and
+// /tv/{id}, where {id} may carry a "-slug" suffix TMDB appends on redirect
+// (/movie/693134 -> /movie/693134-dune-part-two). Trailing paths (/season/2)
+// and query strings are ignored -- the leading numeric segment is the id and the
+// path segment before it gives the type, so no search is needed.
+function parseMediaLink(input) {
+    const text = String(input || "").trim()
+    if (!text) return null
+
+    // Bare IMDb id, or any imdb.com/title/ttNNNNN link.
+    const imdb = /(?:^|imdb\.com\/title\/)(tt\d{6,})/i.exec(text)
+    if (imdb) return { imdbId: imdb[1].toLowerCase() }
+
+    // TMDB link. Accepts http/https, with or without www, and any trailing
+    // path or query after the id.
+    const tmdb = /themoviedb\.org\/(movie|tv)\/(\d+)/i.exec(text)
+    if (tmdb) {
+        return {
+            mediaType: tmdb[1].toLowerCase() === "tv" ? "show" : "movie",
+            tmdbId: tmdb[2]
+        }
+    }
+
+    return null
+}
+
 // --- sorting ----------------------------------------------------------------
 
 const SORTS = [
@@ -384,6 +415,7 @@ module.exports = {
     findTitle,
     normalizeTitle,
     listTitles,
+    parseMediaLink,
     normalizeCollections,
     listCollections,
     groupByCollection,

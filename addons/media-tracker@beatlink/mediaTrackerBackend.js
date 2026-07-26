@@ -371,6 +371,27 @@ function setEpisodeRange(settings, key, rangesJson, watched, totalEpisodes) {
     return { ok: true, watchedEpisodes: entry.watchedEpisodes, status: entry.status }
 }
 
+// Add a title from a pasted TMDB or IMDb link (or a bare IMDb id).
+//
+// A TMDB link carries its type in the path (/movie/ vs /tv/), so it goes straight
+// to addTitle. An IMDb link doesn't say which it is, so /find is asked for both
+// and whichever answers wins -- an id only ever matches one of the two.
+async function addFromLink(settings, input) {
+    const parsed = tracker.parseMediaLink(input)
+    if (!parsed) {
+        throw new Error("Not a TMDB or IMDb link. Expected something like "
+            + "https://www.themoviedb.org/movie/693134 or https://www.imdb.com/title/tt15239678/")
+    }
+
+    if (parsed.tmdbId) return addTitle(settings, parsed.mediaType, parsed.tmdbId)
+
+    for (const mediaType of ["movie", "show"]) {
+        const tmdbId = await tmdbIdFromImdb(settings, parsed.imdbId, mediaType)
+        if (tmdbId) return addTitle(settings, mediaType, tmdbId)
+    }
+    throw new Error(`TMDB has no match for ${parsed.imdbId}.`)
+}
+
 // Collections are tags: the whole set is replaced at once, sent comma-separated.
 function setCollections(settings, key, raw) {
     const doc = loadDocument(settings)
@@ -908,6 +929,8 @@ async function handle() {
                 return sendJson(200, await detailsForKey(settings, query.mediaType, query.tmdbId, query.imdbId, query.key))
             case "addTitle":
                 return sendJson(200, await addTitle(settings, query.mediaType, query.tmdbId))
+            case "addFromLink":
+                return sendJson(200, await addFromLink(settings, query.url))
             case "removeTitle":
                 return sendJson(200, removeTitle(settings, query.key))
             case "setStatus":
