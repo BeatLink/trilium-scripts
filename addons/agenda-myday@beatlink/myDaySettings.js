@@ -1,11 +1,11 @@
 // Settings access and suggestion queries for agenda-myday@beatlink.
 //
-// This addon is self-contained: it owns its settings note (myDaySchema.json /
-// myDayConfig.json, tagged #agendaMyDayConfig) and resolves its own task list
-// from a plain Trilium search, so nothing here depends on agenda@beatlink's
-// code. Point `taskSearch` at whatever notes you want floated; the shipped
-// default matches agenda's task vocabulary, so the two interoperate through
-// shared label conventions rather than a code dependency.
+// This addon is self-contained: it owns its settings (myDaySchema.json /
+// myDayConfig.json, anchored on the #agendaMyDayConfig-tagged My Day Editor
+// page) and resolves its own task list from a plain Trilium search, so nothing
+// here depends on agenda@beatlink's code. Point `taskSearch` at whatever notes
+// you want floated; the shipped default matches agenda's task vocabulary, so
+// the two interoperate through shared label conventions, not a code dependency.
 
 const { loadSettings } = require("libSettingsUI.jsx")
 const notifications = require("libNotification.js")
@@ -15,12 +15,28 @@ const DEFAULTS = {
     enableSounds: true,
     addTasksWhenDue: false,
     sendDueNotifications: true,
-    taskSearch: '(#startDateTime != "" OR #dueDateTime != "") AND not(note.parents.relations.template.title=\'3. Task\')',
+    // Dated notes, minus any note that already sits under a dated one - only the
+    // outermost dated note in a subtree is worth floating.
+    //
+    // The ancestor test hangs off note.parents rather than note.ancestors:
+    // note.ancestors compiles to DescendantOfExp, whose getSubtree() INCLUDES
+    // the note itself, so `not(note.ancestors.labels.startDateTime != "")` would
+    // make every dated note exclude itself and return nothing. Stepping to
+    // parents first (ChildOfExp never includes self) and testing the parent and
+    // its own ancestors covers every depth above without self-matching.
+    taskSearch: '(#startDateTime != "" OR #dueDateTime != "") '
+        + 'AND not(note.parents.labels.startDateTime != "") '
+        + 'AND not(note.parents.labels.dueDateTime != "") '
+        + 'AND not(note.parents.ancestors.labels.startDateTime != "") '
+        + 'AND not(note.parents.ancestors.labels.dueDateTime != "")',
     startLabel: "startDateTime",
     dueLabel: "dueDateTime"
 }
 
-// My Day's own settings note ids, or null when it isn't discoverable.
+// My Day's own settings note ids, or null when it isn't discoverable. The
+// #agendaMyDayConfig label and the schemaNote/configNote relations all sit on
+// the My Day Editor page itself, so the editor is both the settings anchor and
+// the UI that edits it.
 async function getMyDayConfigIds() {
     const anchors = await api.searchForNotes("#agendaMyDayConfig")
     if (!anchors.length) return null

@@ -1,13 +1,13 @@
 import {
     RightPanelWidget,
     defineWidget,
+    useActiveNoteContext,
+    useNoteProperty,
     useEffect,
     useState,
     useTriliumEvent,
     Button,
 } from "trilium:preact";
-
-import { startNote } from "trilium:api"
 
 import { Timer } from "Timer.jsx"
 
@@ -43,16 +43,19 @@ function Suggestion({ task, onAdd }) {
 function MyDay() {
     const [ids, setIds] = useState(null)
     const [buckets, setBuckets] = useState([])
+    const { note } = useActiveNoteContext()
+    const activeNoteId = useNoteProperty(note, "noteId")
 
     useEffect(() => {
         (async () => {
-            const myDay = await getMyDaySettings()
-            const defaultNoteId = await startNote.getRelationValue("nowNote")
-            setIds({ myDay, defaultNoteId })
+            setIds({ myDay: await getMyDaySettings() })
         })()
     }, [])
 
-    const myDayNoteId = ids?.myDay?.myDayNoteId || ids?.defaultNoteId
+    // No bundled note ships with this addon: point the My Day Note setting at
+    // whichever note you want to collect today's tasks.
+    const myDayNoteId = ids?.myDay?.myDayNoteId
+    const isVisible = Boolean(myDayNoteId) && activeNoteId === myDayNoteId
 
     // Suggestions come from the configured task search, so they stay empty when
     // it matches nothing.
@@ -61,9 +64,11 @@ function MyDay() {
         setBuckets(await getSuggestedTasks(ids.myDay, myDayNoteId))
     }
 
-    useEffect(() => { refreshSuggestions() }, [ids, myDayNoteId])
+    // Only query while the panel is on screen; the auto-file loop below calls
+    // refreshSuggestions() directly, so its own refresh is unaffected.
+    useEffect(() => { if (isVisible) refreshSuggestions() }, [ids, myDayNoteId, isVisible])
 
-    useTriliumEvent("agenda:tasksChanged", () => { refreshSuggestions() })
+    useTriliumEvent("agenda:tasksChanged", () => { if (isVisible) refreshSuggestions() })
 
     useEffect(() => {
         if (!ids?.myDay.addTasksWhenDue) return
@@ -86,7 +91,10 @@ function MyDay() {
         return () => clearInterval(interval);
     }, [ids])
 
-    if (!ids) return null
+    // The panel only shows on the My Day note itself. The two setInterval loops
+    // above are deliberately left outside this gate: they are background
+    // automation, and would stop firing as soon as you navigated elsewhere.
+    if (!ids || !isVisible) return null
 
     async function addToMyDay(taskNoteId) {
         await addTaskToMyDay(myDayNoteId, taskNoteId, true)

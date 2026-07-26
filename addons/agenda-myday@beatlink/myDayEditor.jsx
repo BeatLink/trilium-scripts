@@ -17,10 +17,10 @@ export default function MyDayEditor() {
         <div className="profile-editor">
             <h2>My Day Editor</h2>
             <p>
-                Pick the note that shows the My Day focus controls, and choose whether the timer plays
-                sounds. Add Tasks When Due and Send Due Notifications poll agenda@beatlink's active
-                profile for tasks whose start time has arrived, so they need agenda installed; the
-                countdown timer works either way.
+                Set My Day Note to the note that collects today's tasks; the panel only appears while
+                that note is active, so nothing shows until it's set. Task Search decides which notes
+                can be suggested, and Add Tasks When Due / Send Due Notifications poll that same
+                search for tasks whose start time has arrived.
             </p>
             <SettingsForm
                 schemaNoteId={ids.schemaNoteId}

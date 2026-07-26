@@ -1,8 +1,8 @@
 # Agenda My Day
 
 The My Day focus panel, originally split out of [`agenda@beatlink`](../agenda@beatlink/README.md) and
-now fully standalone. It's a **right-pane widget**, visible on every note, modelled on Microsoft To
-Do's My Day page.
+now fully standalone. It's a **right-pane widget**, shown only while the **My Day note** is active,
+modelled on Microsoft To Do's My Day page.
 
 It carries:
 
@@ -11,6 +11,16 @@ It carries:
 - a **countdown timer** with selectable durations and start / select / end sounds;
 - an optional loop that **files tasks into the My Day note** as their start time arrives (every 30s);
 - an optional loop that **sends a desktop notification** as each task comes due (every 15s).
+
+## Visibility
+
+The panel renders **only when the active note is your My Day note** (the **My Day Note** setting).
+Everywhere else it returns `null`. No note ships with this addon, so **the panel stays hidden until
+you point that setting at a note of your own**.
+
+The two background loops — **Add Tasks When Due** and **Send Due Notifications** — are deliberately
+kept *outside* that gate, so they keep firing wherever you are in the tree. Only the suggestion query
+is skipped while the panel is off screen.
 
 ## Suggestions
 
@@ -24,12 +34,14 @@ when the auto-file loop runs, and whenever another agenda widget broadcasts `age
 
 ## Configuration
 
-This addon owns its own settings note (`myDaySchema.json` / `myDayConfig.json`) tagged
-**`#agendaMyDayConfig`**, edited from the **My Day Editor** page:
+Everything is edited from the **My Day Editor** page, which is also the settings anchor: it carries
+the **`#agendaMyDayConfig`** label plus the `~schemaNote` / `~configNote` relations the widget follows
+to find its configuration. `myDaySchema.json` sits under the editor; `myDayConfig.json` lives in the
+addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 
 | Setting | Effect |
 |---------|--------|
-| **My Day Note** | The note that collects today's tasks. Falls back to the addon's own bundled My Day note (via the `~nowNote` relation) when unset. |
+| **My Day Note** | The note that collects today's tasks. **Required** — the panel stays hidden until this is set. |
 | **Enable Timer Sounds** | Whether the timer plays its start / select / end sounds. |
 | **Add Tasks When Due** | Append each task to the My Day note as its start time arrives. |
 | **Send Due Notifications** | Send a desktop notification as each task's start time arrives. |
