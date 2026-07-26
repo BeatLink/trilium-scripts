@@ -407,6 +407,10 @@
     margin: 8px 0;
 }
 
+.mt-season-actions {
+    margin: 8px 0;
+}
+
 .mt-episode {
     display: flex;
     gap: 10px;

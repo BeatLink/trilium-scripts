@@ -179,8 +179,33 @@ function DetailsPage({ title, onBack, onChanged }) {
         }
     }
 
+    // One request for any number of episodes, so "watch all" on a long show is a
+    // single write rather than hundreds of round trips.
+    const setRange = async (ranges, watched) => {
+        setBusy(true)
+        try {
+            const result = await callBackend("setEpisodeRange", {
+                key: title.key,
+                ranges: JSON.stringify(ranges),
+                watched: String(watched),
+                totalEpisodes: String(data?.totalEpisodes || "")
+            })
+            setWatchedEpisodes(result.watchedEpisodes)
+            await onChanged()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const seasons = parseEpisodes(watchedEpisodes)
     const watched = countEpisodes(seasons)
+
+    // Every aired episode across every season, for the show-level actions.
+    const allRanges = (data?.seasons || [])
+        .filter(s => s.episodes.length > 0)
+        .map(s => ({ season: s.number, from: 1, to: s.episodes.length }))
 
     return (
         <div class="mt-details">
@@ -219,12 +244,28 @@ function DetailsPage({ title, onBack, onChanged }) {
                                 </div>
                             )}
                             {data.mediaType === "show" && data.totalEpisodes > 0 && (
-                                <p class="mt-hint">
-                                    {watched} of {data.totalEpisodes} episodes watched
-                                    {" · "}
-                                    {countSeasonsComplete(seasons, data.seasonCounts)} of{" "}
-                                    {data.seasons.length} seasons complete
-                                </p>
+                                <>
+                                    <p class="mt-hint">
+                                        {watched} of {data.totalEpisodes} episodes watched
+                                        {" · "}
+                                        {countSeasonsComplete(seasons, data.seasonCounts)} of{" "}
+                                        {data.seasons.length} seasons complete
+                                    </p>
+                                    <div class="mt-toolbar">
+                                        <button class="mt-btn" disabled={busy || !allRanges.length}
+                                            title="Mark every aired episode of every season watched"
+                                            onClick={() => setRange(allRanges, true)}>
+                                            Watch all episodes
+                                        </button>
+                                        {watched > 0 && (
+                                            <button class="mt-btn" disabled={busy}
+                                                title="Clear all episode progress for this show"
+                                                onClick={() => setRange(allRanges, false)}>
+                                                Unwatch all
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
                             )}
                             {data.overview && <p class="mt-overview-full">{data.overview}</p>}
                         </div>
@@ -252,6 +293,16 @@ function DetailsPage({ title, onBack, onChanged }) {
                     {data.seasons.map(season => {
                         const isOpen = openSeason === season.number
                         const seasonWatched = seasons[season.number]?.size || 0
+                        const lastEpisode = season.episodes.length
+                        const complete = lastEpisode > 0 && seasonWatched >= lastEpisode
+
+                        // "Rest of season" starts at the first unwatched episode, so
+                        // it fills forward from where you actually are rather than
+                        // re-marking what's already done.
+                        const firstUnwatched = season.episodes
+                            .map(ep => ep.number)
+                            .find(n => !seasons[season.number]?.has(n))
+
                         return (
                             <div class="mt-section" key={season.number}>
                                 <button class="mt-season-toggle"
@@ -259,9 +310,34 @@ function DetailsPage({ title, onBack, onChanged }) {
                                     onClick={() => setOpenSeason(isOpen ? null : season.number)}>
                                     {isOpen ? "▾" : "▸"} {season.name}
                                     <span class="mt-hint">
-                                        {" "}({seasonWatched}/{season.episodes.length} watched)
+                                        {" "}({seasonWatched}/{lastEpisode} watched)
                                     </span>
                                 </button>
+                                {isOpen && lastEpisode > 0 && (
+                                    <div class="mt-toolbar mt-season-actions">
+                                        {!complete && (
+                                            <button class="mt-btn" disabled={busy}
+                                                title={`Mark episodes ${firstUnwatched}-${lastEpisode} watched`}
+                                                onClick={() => setRange(
+                                                    [{ season: season.number, from: firstUnwatched, to: lastEpisode }],
+                                                    true
+                                                )}>
+                                                {seasonWatched > 0 ? "Watch rest of season" : "Watch whole season"}
+                                            </button>
+                                        )}
+                                        {seasonWatched > 0 && (
+                                            <button class="mt-btn" disabled={busy}
+                                                title="Clear this season's progress"
+                                                onClick={() => setRange(
+                                                    [{ season: season.number, from: 1, to: lastEpisode }],
+                                                    false
+                                                )}>
+                                                Unwatch season
+                                            </button>
+                                        )}
+                                        {complete && <span class="mt-hint">Season complete</span>}
+                                    </div>
+                                )}
                                 {season.overview && isOpen && (
                                     <p class="mt-hint mt-season-overview">{season.overview}</p>
                                 )}

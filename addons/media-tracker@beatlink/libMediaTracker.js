@@ -114,6 +114,23 @@ function withEpisode(seasons, season, episode, watched) {
     return next
 }
 
+// Add or remove a whole run of episodes at once, e.g. "the rest of season 2" or
+// "every episode of every season". `ranges` is [{ season, from, to }].
+// Applied to a copy, so the caller's map is untouched.
+function withEpisodeRanges(seasons, ranges, watched) {
+    let next = seasons
+    for (const range of ranges) {
+        const season = Number(range.season)
+        const from = Number(range.from)
+        const to = Number(range.to)
+        if (!Number.isFinite(season) || !Number.isFinite(from) || !Number.isFinite(to)) continue
+        for (let n = Math.min(from, to); n <= Math.max(from, to); n++) {
+            next = withEpisode(next, season, n, watched)
+        }
+    }
+    return next
+}
+
 // Import is one-way and additive: an episode already marked watched locally is
 // never un-watched by an import.
 function mergeEpisodes(existing, incoming) {
@@ -356,6 +373,7 @@ module.exports = {
     countEpisodes,
     hasEpisode,
     withEpisode,
+    withEpisodeRanges,
     mergeEpisodes,
     nextUnwatched,
     statusFromProgress,

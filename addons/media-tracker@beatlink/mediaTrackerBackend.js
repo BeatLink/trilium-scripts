@@ -341,6 +341,36 @@ function setEpisode(settings, key, season, episode, watched, totalEpisodes) {
     return { ok: true, watchedEpisodes: entry.watchedEpisodes, status: entry.status }
 }
 
+// Mark a run of episodes watched/unwatched in one operation. `ranges` arrives as
+// a JSON array of { season, from, to }. Doing this in one read/write rather than
+// one request per episode means "watch all" on a 250-episode show is a single
+// note write that can't half-apply.
+function setEpisodeRange(settings, key, rangesJson, watched, totalEpisodes) {
+    let ranges
+    try {
+        ranges = JSON.parse(rangesJson || "[]")
+    } catch (e) {
+        throw new Error("Malformed episode range")
+    }
+    if (!Array.isArray(ranges)) throw new Error("Malformed episode range")
+
+    const doc = loadDocument(settings)
+    const entry = requireEntry(doc, key)
+
+    const knownTotal = Number(totalEpisodes) || 0
+    if (knownTotal > 0) entry.totalEpisodes = knownTotal
+
+    const next = tracker.withEpisodeRanges(
+        tracker.parseEpisodes(entry.watchedEpisodes || ""), ranges, !!watched
+    )
+    entry.watchedEpisodes = tracker.formatEpisodes(next)
+    entry.status = tracker.statusFromProgress(tracker.countEpisodes(next), Number(entry.totalEpisodes) || 0)
+    if (watched) entry.lastWatched = today()
+
+    saveDocument(settings, doc)
+    return { ok: true, watchedEpisodes: entry.watchedEpisodes, status: entry.status }
+}
+
 // Collections are tags: the whole set is replaced at once, sent comma-separated.
 function setCollections(settings, key, raw) {
     const doc = loadDocument(settings)
@@ -859,6 +889,11 @@ async function handle() {
                     collections: tracker.listCollections(doc)
                 })
             }
+            case "setEpisodeRange":
+                return sendJson(200, setEpisodeRange(
+                    settings, query.key, query.ranges,
+                    query.watched === "true", query.totalEpisodes
+                ))
             case "setCollections":
                 return sendJson(200, setCollections(settings, query.key, query.collections))
             case "fullDetails":

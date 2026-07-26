@@ -53,6 +53,19 @@ image, air date, runtime, and TMDB rating — with a checkbox to mark it watched
 progress while reading what each episode is. Season sections show their own watched count, and the
 header shows overall episode and season progress.
 
+Bulk actions save clicking through a long show:
+
+- **Watch all episodes** / **Unwatch all** on the show header, covering every aired episode
+- **Watch rest of season** on each season, starting from the first *unwatched* episode so it fills
+  forward from where you are (it reads **Watch whole season** when nothing is watched yet)
+- **Unwatch season** to clear one season, and a "Season complete" note in place of the button when
+  there is nothing left to watch
+
+Each of these is a single request that applies the whole range in one write, so marking a 250-episode
+show watched is one note update rather than hundreds, and it cannot half-apply. Status updates
+automatically: all episodes watched becomes **Watched**, some becomes **Watching**, none becomes
+**Planned**.
+
 Everything on this page is fetched from TMDB live rather than stored, so it needs a TMDB key and adds
 no weight to your database note.
 
@@ -183,6 +196,10 @@ that point are marked watched.
 
 Repeated imports are safe and idempotent:
 
+- **Imports only ever add and update — they never delete.** A title in your library that the source
+  doesn't return is left completely untouched, so removing something from Trakt and re-importing
+  does not remove it here, hand-added titles always survive, and an empty or failed response cannot
+  wipe your library. The only thing that deletes a title is the **×** button.
 - Titles are matched on any shared id (TMDB, IMDb, or Trakt), so two sources converge on one entry
   instead of creating duplicates.
 - Episode progress is **merged**, never replaced — an episode you marked watched locally is never
