@@ -173,10 +173,24 @@ async function tmdbSearch(settings, query, mediaType) {
         `${TMDB_API}/${path}?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}`
     )
 
+    // Each result is marked with whether it's already tracked, so the UI can say
+    // so instead of offering an Add that turns out to be a no-op. Matched through
+    // findTitle (any shared id), not just the TMDB id, so a title imported from
+    // Stremio with only an IMDb id is still recognised.
+    // The library root may not be set yet -- searching before that is legitimate,
+    // so treat an unreadable document as "nothing tracked" rather than failing.
+    let doc = { titles: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
     return (json.results || [])
         .filter(r => scoped || r.media_type === "movie" || r.media_type === "tv")
         .map(r => ({
             tmdbId: String(r.id),
+            trackedKey: tracker.findTitle(doc, { tmdbId: String(r.id) }) || "",
             mediaType: scoped ? mediaType : (r.media_type === "tv" ? "show" : "movie"),
             title: r.title || r.name || "",
             year: (r.release_date || r.first_air_date || "").slice(0, 4),
@@ -403,6 +417,32 @@ async function addFromLink(settings, input) {
         if (tmdbId) return addTitle(settings, mediaType, tmdbId)
     }
     throw new Error(`TMDB has no match for ${parsed.imdbId}.`)
+}
+
+// Persist the Library view's filter/sort choices so they survive a reload.
+// Only the six known keys are accepted, so a stray query parameter can't write
+// arbitrary settings. The search box is deliberately not remembered: a filter
+// that silently hides most of the library on load reads as data loss.
+const VIEW_FIELDS = {
+    statusFilter: "viewStatusFilter",
+    typeFilter: "viewTypeFilter",
+    collectionFilter: "viewCollectionFilter",
+    sortKey: "viewSortKey",
+    sortDesc: "viewSortDesc",
+    grouped: "viewGrouped"
+}
+
+function saveViewState(query) {
+    const fields = {}
+    for (const [param, setting] of Object.entries(VIEW_FIELDS)) {
+        const value = query[param]
+        if (value === undefined) continue
+        fields[setting] = (setting === "viewSortDesc" || setting === "viewGrouped")
+            ? value === "true"
+            : String(value)
+    }
+    if (Object.keys(fields).length) persistFields(fields)
+    return { ok: true }
 }
 
 // Collections are tags: the whole set is replaced at once, sent comma-separated.
@@ -928,6 +968,8 @@ async function handle() {
                     settings, query.key, query.ranges,
                     query.watched === "true", query.totalEpisodes
                 ))
+            case "saveViewState":
+                return sendJson(200, saveViewState(query))
             case "setCollections":
                 return sendJson(200, setCollections(settings, query.key, query.collections))
             case "fullDetails":

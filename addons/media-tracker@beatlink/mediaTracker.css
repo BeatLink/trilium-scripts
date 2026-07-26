@@ -65,6 +65,17 @@
     font-weight: 600;
 }
 
+/* Shown in place of Add when a search result is already tracked. Not a button:
+   there is nothing to click, so it must not look actionable. Same green as the
+   "watched" status so the palette stays consistent. */
+.mt-added {
+    color: rgb(46, 160, 87);
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+    cursor: default;
+    white-space: nowrap;
+}
+
 .mt-toolbar {
     display: flex;
     gap: 8px;

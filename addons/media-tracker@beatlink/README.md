@@ -91,9 +91,22 @@ Sort by **A-Z**, **Recently watched**, **Release date**, **Rating**, **Recently 
 watched, no release year) always sort last in *both* directions, so an empty field never leads the
 list.
 
+### Remembered view
+
+Your status filter, type filter, collection filter, sort field, sort direction, and grouping toggle
+are all saved, so the Library opens the way you left it. They live in the addon's settings note as
+hidden fields — persisted, but not shown on the Settings page, since the widget manages them.
+
+The **search box is deliberately not remembered**: a text filter silently hiding most of your library
+on load reads as data loss rather than a convenience.
+
 **Add** searches TMDB. The same **All / Movies / TV** chips scope the search: All uses TMDB's
 multi-search, while Movies and TV use the dedicated endpoints, which return a full page of one kind
 rather than a mixed page filtered down. Switching the chip re-runs the current search immediately.
+
+Results you already track show a green **✓ Added** marker instead of an Add button, so you can see at
+a glance what is new. It is matched on any shared id rather than only the TMDB id, so a title
+imported from Stremio (which supplies only IMDb ids) is still recognised.
 
 You can also **paste a link instead of searching**. The button switches to **Add** and the title is
 added directly, no search step:

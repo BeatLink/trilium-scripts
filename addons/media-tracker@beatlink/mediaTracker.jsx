@@ -588,10 +588,14 @@ function EpisodePanel({ title, onChanged }) {
     )
 }
 
-function LibraryTab({ libraryRootNoteId }) {
+function LibraryTab({ libraryRootNoteId, settings }) {
     const [titles, setTitles] = useState([])
-    const [filter, setFilter] = useState("all")
-    const [typeFilter, setTypeFilter] = useState("all")
+    // Filter and sort choices are seeded from the saved view state, so the
+    // Library opens the way you left it. The search box is deliberately not
+    // remembered -- a filter that silently hides most of the library on load
+    // reads as data loss.
+    const [filter, setFilter] = useState(settings.viewStatusFilter || "all")
+    const [typeFilter, setTypeFilter] = useState(settings.viewTypeFilter || "all")
     const [query, setQuery] = useState("")
     // Key of the row whose episode grid is expanded, or null. One at a time, so
     // opening a show collapses whichever was open.
@@ -599,14 +603,20 @@ function LibraryTab({ libraryRootNoteId }) {
     const [refreshing, setRefreshing] = useState(false)
     const [refreshResult, setRefreshResult] = useState(null)
     const [collections, setCollections] = useState([])
-    const [collectionFilter, setCollectionFilter] = useState("all")
+    const [collectionFilter, setCollectionFilter] = useState(settings.viewCollectionFilter || "all")
     // Key of the title whose details page is open, or null for the list.
     const [detailsKey, setDetailsKey] = useState(null)
-    const [sortKey, setSortKey] = useState("title")
-    const [sortDesc, setSortDesc] = useState(false)
-    const [grouped, setGrouped] = useState(false)
+    const [sortKey, setSortKey] = useState(settings.viewSortKey || "title")
+    const [sortDesc, setSortDesc] = useState(!!settings.viewSortDesc)
+    const [grouped, setGrouped] = useState(!!settings.viewGrouped)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+
+    // Persist a changed control. Fire-and-forget: remembering a preference must
+    // never block the UI or surface an error over the list.
+    const rememberView = (fields) => {
+        callBackend("saveViewState", fields).catch(() => {})
+    }
 
     const reload = useCallback(async () => {
         if (!libraryRootNoteId) { setTitles([]); setLoading(false); return }
@@ -712,20 +722,20 @@ function LibraryTab({ libraryRootNoteId }) {
                         : titles.filter(t => t.mediaType === value).length
                     return (
                         <button key={value} class={`mt-chip ${typeFilter === value ? "mt-chip-on" : ""}`}
-                            onClick={() => setTypeFilter(value)}>{label} ({count})</button>
+                            onClick={() => { setTypeFilter(value); rememberView({ typeFilter: value }) }}>{label} ({count})</button>
                     )
                 })}
             </div>
 
             <div class="mt-filters">
                 <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
-                    onClick={() => setFilter("all")}>All ({scoped.length})</button>
+                    onClick={() => { setFilter("all"); rememberView({ statusFilter: "all" }) }}>All ({scoped.length})</button>
                 {Object.entries(STATUS_LABELS).map(([value, label]) => {
                     const count = scoped.filter(t => t.status === value).length
                     return (
                         <button key={value}
                             class={`mt-chip ${filter === value ? `mt-chip-on mt-status-${value}` : ""}`}
-                            onClick={() => setFilter(value)}>{label} ({count})</button>
+                            onClick={() => { setFilter(value); rememberView({ statusFilter: value }) }}>{label} ({count})</button>
                     )
                 })}
             </div>
@@ -734,18 +744,18 @@ function LibraryTab({ libraryRootNoteId }) {
                 <label class="mt-control">
                     Sort
                     <select class="mt-select" value={sortKey}
-                        onChange={e => setSortKey(e.target.value)}>
+                        onChange={e => { setSortKey(e.target.value); rememberView({ sortKey: e.target.value }) }}>
                         {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                     </select>
                 </label>
                 <button class="mt-btn" title={sortDesc ? "Descending" : "Ascending"}
-                    onClick={() => setSortDesc(v => !v)}>
+                    onClick={() => { const next = !sortDesc; setSortDesc(next); rememberView({ sortDesc: String(next) }) }}>
                     {sortDesc ? "↓" : "↑"}
                 </button>
                 <label class="mt-control">
                     Collection
                     <select class="mt-select" value={collectionFilter}
-                        onChange={e => setCollectionFilter(e.target.value)}>
+                        onChange={e => { setCollectionFilter(e.target.value); rememberView({ collectionFilter: e.target.value }) }}>
                         <option value="all">All</option>
                         {collections.map(name => <option key={name} value={name}>{name}</option>)}
                         <option value={UNTAGGED}>{UNTAGGED}</option>
@@ -753,7 +763,7 @@ function LibraryTab({ libraryRootNoteId }) {
                 </label>
                 <button class={`mt-chip ${grouped ? "mt-chip-on" : ""}`}
                     title="Group rows under their collections"
-                    onClick={() => setGrouped(v => !v)}>
+                    onClick={() => { const next = !grouped; setGrouped(next); rememberView({ grouped: String(next) }) }}>
                     Group by collection
                 </button>
             </div>
@@ -867,6 +877,13 @@ function AddTab({ onAdded }) {
         try {
             const added = await callBackend("addTitle", { mediaType: result.mediaType, tmdbId: result.tmdbId })
             setStatus({ ok: added.existed ? `${added.title} is already tracked` : `Added ${added.title}` })
+            // Flip this row to "Added" in place, so the state is visible without
+            // having to run the search again.
+            setResults(rows => rows.map(row =>
+                row.tmdbId === result.tmdbId && row.mediaType === result.mediaType
+                    ? { ...row, trackedKey: added.key || "added" }
+                    : row
+            ))
             await onAdded()
         } catch (e) {
             setStatus({ error: e.message })
@@ -921,7 +938,13 @@ function AddTab({ onAdded }) {
                         {result.overview && <p class="mt-overview">{result.overview}</p>}
                     </div>
                     <div class="mt-row-actions">
-                        <button class="mt-btn" disabled={busy} onClick={() => add(result)}>Add</button>
+                        {result.trackedKey ? (
+                            <span class="mt-btn mt-added" title="Already in your library">
+                                ✓ Added
+                            </span>
+                        ) : (
+                            <button class="mt-btn" disabled={busy} onClick={() => add(result)}>Add</button>
+                        )}
                     </div>
                 </div>
             ))}
@@ -1162,6 +1185,7 @@ export default function MediaTracker() {
                 <LibraryTab
                     key={reloadKey}
                     libraryRootNoteId={settings.libraryRootNoteId}
+                    settings={settings}
                 />
             )}
             {tab === "add" && <AddTab onAdded={refresh} />}

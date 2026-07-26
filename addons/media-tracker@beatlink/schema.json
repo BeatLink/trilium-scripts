@@ -7,6 +7,54 @@
         "default": "",
         "tab": "Library"
     },
+    "viewStatusFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Status Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewTypeFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Type Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewCollectionFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Collection Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewSortKey": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Sort",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "title",
+        "tab": "Library"
+    },
+    "viewSortDesc": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Sort Direction",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": false,
+        "tab": "Library"
+    },
+    "viewGrouped": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Grouping",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": false,
+        "tab": "Library"
+    },
     "defaultStatus": {
         "type": "select",
         "label": "Status For New Titles",
