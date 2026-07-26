@@ -12,9 +12,19 @@ Replaces [`stremio-sync@beatlink`](../stremio-sync@beatlink), which this addon a
 2. Open its Settings page and paste a **TMDB API key** (free, from
    [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)). This powers search,
    posters, and episode lists.
-3. Open the addon's launcher note and click **Create Library** on the Library tab. This makes a
-   "Movies & TV" note configured as a board grouped by watch status, and points the addon at it.
+3. Create a note to hold your library (anywhere in your tree), then set it as **Library Root** in
+   Settings. This is required — every tracked title is created as a child of it.
 4. Optionally set up Trakt and/or Stremio on the Import tab.
+
+To browse the library as a board, set these labels on your library root note:
+
+```
+#viewType=board
+#board:groupBy=watchStatus
+```
+
+A table sorted by `#rating` or a gallery of `#poster` images works the same way — these are ordinary
+Trilium collection views over ordinary notes, so the addon does not need to be involved.
 
 ## How titles are stored
 
@@ -33,8 +43,8 @@ Each movie or show is one note under your library root, carrying its state as la
 | `#totalEpisodes` | Aired episode count, for progress display |
 
 Because these are ordinary notes with ordinary labels, you can point any Trilium collection view at
-the library root — the default is a board grouped by `watchStatus`, but a table sorted by `#rating`
-or a gallery of `#poster` images works just as well, with no involvement from this addon.
+the library root — a board grouped by `watchStatus`, a table sorted by `#rating`, or a gallery of
+`#poster` images all work, with no involvement from this addon. See [Setup](#setup) for the labels.
 
 ## Episode tracking
 

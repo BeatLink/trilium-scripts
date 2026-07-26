@@ -2,7 +2,7 @@
     "libraryRootNoteId": {
         "type": "note",
         "label": "Library Root",
-        "description": "Parent note every movie/show note is created under. Leave blank and use Create Library on the widget to make one.",
+        "description": "Required. Parent note every movie/show note is created under. Create a note for your library, then pick it here.",
         "default": "",
         "tab": "Library"
     },

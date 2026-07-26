@@ -9,7 +9,6 @@
  *   setStatus        set #watchStatus on a title note
  *   setRating        set #rating on a title note
  *   setEpisode       mark one episode watched/unwatched on a show note
- *   createLibrary    create a library root note with the collection views set up
  *   traktAuthStart   begin Trakt device authorization
  *   traktAuthPoll    poll for the user approving it
  *   importTrakt      one-way import of Trakt watched movies + shows
@@ -133,7 +132,7 @@ async function tmdbDetails(settings, mediaType, tmdbId) {
 // --- title notes ------------------------------------------------------------
 
 function requireLibraryRoot(settings) {
-    if (!settings.libraryRootNoteId) throw new Error("Set a Library Root in Settings, or click Create Library")
+    if (!settings.libraryRootNoteId) throw new Error("Set a Library Root in Settings first")
     const note = api.getNote(settings.libraryRootNoteId)
     if (!note || note.isDeleted) throw new Error("Library Root note not found")
     return note
@@ -202,25 +201,6 @@ async function addTitle(settings, mediaType, tmdbId) {
     const note = existing || createTitleNote(rootNote, details, settings)
     applyMetadata(note, details)
     return { noteId: note.noteId, title: details.title, existed: !!existing }
-}
-
-// --- library provisioning ---------------------------------------------------
-
-// Creates the library root as a board grouped by watch status. Everything the
-// user browses is a built-in Trilium collection view over real notes, so no
-// custom rendering is needed for the library itself.
-function createLibrary(settings) {
-    const { note } = api.createNewNote({
-        parentNoteId: "root",
-        title: "Movies & TV",
-        type: "book",
-        content: ""
-    })
-    note.setLabel("viewType", "board")
-    note.setLabel("board:groupBy", "watchStatus")
-    note.setLabel("iconClass", "bx bx-movie-play")
-    persistFields({ libraryRootNoteId: note.noteId })
-    return { noteId: note.noteId }
 }
 
 // --- Trakt ------------------------------------------------------------------
@@ -533,8 +513,6 @@ async function handle() {
                 return sendJson(200, setRating(query.noteId, query.rating))
             case "setEpisode":
                 return sendJson(200, setEpisode(query.noteId, query.season, query.episode, query.watched === "true"))
-            case "createLibrary":
-                return sendJson(200, createLibrary(settings))
             case "traktAuthStart":
                 return sendJson(200, await traktAuthStart(settings))
             case "traktAuthPoll":

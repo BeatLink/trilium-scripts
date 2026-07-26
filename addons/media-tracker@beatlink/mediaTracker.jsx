@@ -177,7 +177,7 @@ function EpisodePanel({ title, onClose, onChanged }) {
     )
 }
 
-function LibraryTab({ libraryRootNoteId, onCreateLibrary }) {
+function LibraryTab({ libraryRootNoteId }) {
     const [titles, setTitles] = useState([])
     const [filter, setFilter] = useState("all")
     const [episodesFor, setEpisodesFor] = useState(null)
@@ -211,8 +211,11 @@ function LibraryTab({ libraryRootNoteId, onCreateLibrary }) {
     if (!libraryRootNoteId) {
         return (
             <div class="mt-empty">
-                <p>No library yet.</p>
-                <button class="mt-btn mt-btn-primary" onClick={onCreateLibrary}>Create Library</button>
+                <p>No library root set.</p>
+                <p class="mt-hint">
+                    Pick a note as <strong>Library Root</strong> in Settings. Every tracked title is
+                    created under it.
+                </p>
             </div>
         )
     }
@@ -444,11 +447,6 @@ export default function MediaTracker() {
 
     const refresh = useCallback(async () => setReloadKey(k => k + 1), [])
 
-    const createLibrary = async () => {
-        await callBackend("createLibrary")
-        await reloadSettings()
-    }
-
     if (!settings) return <div class="mt-view">Loading...</div>
 
     return (
@@ -464,7 +462,6 @@ export default function MediaTracker() {
                 <LibraryTab
                     key={reloadKey}
                     libraryRootNoteId={settings.libraryRootNoteId}
-                    onCreateLibrary={createLibrary}
                 />
             )}
             {tab === "add" && <AddTab onAdded={refresh} />}
