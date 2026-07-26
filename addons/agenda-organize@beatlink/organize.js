@@ -458,11 +458,26 @@ async function getInvalidBuckets(rootDim, bucketTemplates) {
         // Every structural bucket: carries the bucket label (area roots don't).
         const bucketNotes = api.searchForNotes(`#${labels.bucket}`)
 
+        // A bucket's identity is a template noteId. Trees provisioned under the
+        // older scheme still carry a title SLUG ("notes", "goals"), which matches
+        // no noteId and would mark every such bucket invalid at once — offering a
+        // Delete button for the user's entire structure. A slug that names a live
+        // template is stale, not invalid: resolve it so those buckets are treated
+        // as valid. Only a bucket resolving to neither is genuinely orphaned.
+        const templateIdByTitleSlug = {}
+        for (const t of bucketTemplates) {
+            const slug = String(t.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+            if (slug) templateIdByTitleSlug[slug] = t.noteId
+        }
+        const resolveBucket = (value) =>
+            bucketKeys.has(value) ? value : (templateIdByTitleSlug[value] || "")
+
         const invalid = []
         const targets = []
         for (const note of bucketNotes) {
             const area = note.getLabelValue(labels.area) || ""
-            const bucket = note.getLabelValue(labels.bucket) || ""
+            const rawBucket = note.getLabelValue(labels.bucket) || ""
+            const bucket = resolveBucket(rawBucket) || rawBucket
             const areaInvalid = !areaKeys.has(area)
             const bucketInvalid = !bucketKeys.has(bucket)
 
@@ -567,14 +582,52 @@ async function mergeBucketInto(fromNoteId, toNoteId) {
 
 // Delete a note outright (all its clones), used by the Organize queues' Delete
 // action to drop junk captured into the Inbox. deleteNote() is Trilium's own
-// cascade delete, the same call TAM uses to remove notes.
-async function deleteNote(noteId) {
-    return api.runOnBackend((noteId) => {
+// CASCADE delete: it takes the note's whole subtree, not just the note.
+//
+// Two structural refusals, because this is reached from one-click table actions
+// where the blast radius isn't visible:
+//   - a STRUCTURAL note (area root or bucket) is never junk; deleting one takes
+//     everything filed under it. Buckets are emptied via mergeBucketInto, which
+//     relocates children first and only deletes a verified-empty husk.
+//   - a note with descendants requires an explicit acknowledgement of the count,
+//     so a caller cannot cascade a subtree by accident.
+// Returns { deleted, refusedReason, descendantCount }.
+async function deleteNote(noteId, options = {}) {
+    return api.runOnBackend((noteId, labels, allowSubtree, allowStructural) => {
         const note = api.getNote(noteId)
-        if (!note) return false
+        if (!note) return { deleted: false, refusedReason: "note not found", descendantCount: 0 }
+
+        if (!allowStructural &&
+            (note.hasLabel(labels.area) || note.hasLabel(labels.bucket) || note.hasLabel(labels.special))) {
+            return {
+                deleted: false,
+                refusedReason: "refusing to delete a structural note (area root / bucket); merge it instead",
+                descendantCount: 0
+            }
+        }
+
+        let descendantCount = 0
+        const seen = {}
+        ;(function count(n) {
+            for (const child of n.getChildNotes()) {
+                if (seen[child.noteId]) continue
+                seen[child.noteId] = true
+                descendantCount++
+                count(child)
+            }
+        })(note)
+
+        if (descendantCount > 0 && !allowSubtree) {
+            return {
+                deleted: false,
+                refusedReason: `note has ${descendantCount} descendant(s); pass allowSubtree to delete them too`,
+                descendantCount
+            }
+        }
+
         note.deleteNote()
-        return true
-    }, [noteId])
+        return { deleted: true, refusedReason: "", descendantCount }
+    }, [noteId, LABELS, !!options.allowSubtree, !!options.allowStructural])
 }
 
 module.exports = {

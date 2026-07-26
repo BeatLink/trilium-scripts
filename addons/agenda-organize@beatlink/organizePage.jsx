@@ -250,12 +250,23 @@ function InvalidBucketRow({ item, targets, onMerged, onDeleted }) {
         })
     }
 
+    // Buckets are structural, so deleteNote() refuses them unless the subtree is
+    // explicitly acknowledged. A bucket with notes inside should be merged, not
+    // deleted — the confirm says so, and only an empty one deletes on one click.
     async function remove() {
-        const msg = item.childCount > 0
-            ? `Delete bucket "${item.title || "(untitled)"}" AND the ${item.childCount} note${item.childCount === 1 ? "" : "s"} inside it? This cannot be undone.`
-            : `Delete empty bucket "${item.title || "(untitled)"}"? This cannot be undone.`
-        if (!window.confirm(msg)) return
-        await run(async () => { await deleteNote(item.noteId); onDeleted(item.noteId) })
+        if (item.childCount > 0) {
+            window.alert(
+                `"${item.title || "(untitled)"}" still holds ${item.childCount} note${item.childCount === 1 ? "" : "s"}. ` +
+                `Merge it into a valid bucket first — that moves those notes across, ` +
+                `then removes the emptied bucket. Deleting here would take them with it.`)
+            return
+        }
+        if (!window.confirm(`Delete empty bucket "${item.title || "(untitled)"}"? This cannot be undone.`)) return
+        await run(async () => {
+            const r = await deleteNote(item.noteId, { allowSubtree: true, allowStructural: true })
+            if (r && r.deleted === false) throw new Error(r.refusedReason || "delete refused")
+            onDeleted(item.noteId)
+        })
     }
 
     return (
@@ -413,6 +424,25 @@ function TriagePanel() {
         setInvalidBuckets(bs => bs.filter(b => b.noteId !== noteId))
     }
 
+    // Queue Delete is for junk captured into the Inbox, so it deletes a leaf on
+    // one click but asks before cascading a subtree, and never silently drops a
+    // row the backend refused to delete.
+    async function removeQueueItem(item, dropRow) {
+        let r = await deleteNote(item.noteId)
+        if (r && r.deleted === false && r.descendantCount > 0) {
+            const ok = window.confirm(
+                `"${item.title || "(untitled)"}" has ${r.descendantCount} note${r.descendantCount === 1 ? "" : "s"} ` +
+                `inside it. Delete all of them? This cannot be undone.`)
+            if (!ok) return
+            r = await deleteNote(item.noteId, { allowSubtree: true })
+        }
+        if (r && r.deleted === false) {
+            window.alert(`Not deleted: ${r.refusedReason}`)
+            return
+        }
+        dropRow(item.noteId)
+    }
+
     // The dimensions that get a triage queue, in config order. A queue lists the
     // candidates with no value for that dimension; an actionableOnly dimension
     // restricts to actionable-typed items (and, being about scheduling-shaped
@@ -458,7 +488,7 @@ function TriagePanel() {
                             />
                         ))
                     }
-                    onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                    onDelete={async (item) => { await removeQueueItem(item, drop) }}
                     emptyMessage={`Nothing to organize — every note under your Inbox and Areas already has ${dim.name.toLowerCase()}.`}
                 />
             ))}
@@ -475,7 +505,7 @@ function TriagePanel() {
                         onAssigned={(noteId) => patch(noteId, { hasStartDate: true })}
                     />
                 )}
-                onDelete={async (item) => { await deleteNote(item.noteId); drop(item.noteId) }}
+                onDelete={async (item) => { await removeQueueItem(item, drop) }}
                 emptyMessage="Nothing to organize — every routine, task, project, and future item has a start date."
             />
 
@@ -544,7 +574,7 @@ function TriagePanel() {
                     }
                     return buttons
                 }}
-                onDelete={async (item) => { await deleteNote(item.noteId); dropMisfiled(item.noteId) }}
+                onDelete={async (item) => { await removeQueueItem(item, dropMisfiled) }}
                 emptyMessage="Nothing misfiled — every note's area and type match where it lives."
             />
 
