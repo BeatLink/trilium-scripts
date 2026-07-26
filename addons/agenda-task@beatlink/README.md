@@ -1,8 +1,11 @@
 # Agenda Task
 
 A right-pane widget for a note's start/due dates, duration, recurrence, and an Actions section with
-Complete Task and a Reschedule dropdown. Split out from `agenda@beatlink` (which still ships Overview,
-My Day, and Organize) so Task can be installed, updated, and configured independently.
+Complete Task and a row of reschedule buttons. Split out from `agenda@beatlink` (which still ships
+Overview, My Day, and Organize) so Task can be installed, updated, and configured independently.
+
+Each of the three sections — Dates and Duration, Recurrence, Actions — is a collapsible disclosure,
+open by default.
 
 ## How it works
 
@@ -12,14 +15,15 @@ datetime, duration, recurrence — via configurable label names, plus fires `age
 any change so `agenda@beatlink`'s Overview widget (if installed) re-files the note.
 
 Completing a task with a recurrence rolls its start date forward instead of leaving it done; the
-Reschedule dropdown offers a configurable set of quick date jumps (fixed days-from-now or a recurrence
-rule evaluated from now).
+reschedule buttons offer a configurable set of quick date jumps (fixed days-from-now or a recurrence
+rule evaluated from now). The stock set is Today, Tomorrow, Next Weekend (`FREQ=WEEKLY;BYDAY=SA`) and
+End of Month (`FREQ=MONTHLY;BYMONTHDAY=-1`).
 
 ## Configuration
 
 Task owns its own settings note (`schema.json`/`config.json`) tagged `#agendaTaskConfig`, independent
 of `agenda@beatlink`'s `#agendaConfig` — the label names it reads/writes (start/due date/time,
-duration, recurrence) and the Reschedule dropdown's option registry. This addon's own **Task Settings**
+duration, recurrence) and the reschedule buttons' option registry. This addon's own **Task Settings**
 page (TAM's "Addon Settings" button) edits it directly. If `agenda@beatlink` is also installed, its
 Agenda Editor embeds the same two panels (**Settings** and **Reschedule Options** tabs) instead, so
 there's one editing surface either way — both read/write the same `#agendaTaskConfig` note.

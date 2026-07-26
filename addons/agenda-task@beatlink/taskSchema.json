@@ -68,7 +68,7 @@
         "type": "registry",
         "hidden": true,
         "label": "Reschedule Options",
-        "description": "The choices offered by the Task pane's Reschedule dropdown. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is dropdown order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
+        "description": "The reschedule buttons offered by the Task pane's Actions section. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is button order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
         "itemSchema": {
             "name": { "type": "string", "label": "Name", "default": "New Option" },
             "mode": {
@@ -83,7 +83,9 @@
         },
         "default": {
             "today": { "name": "Today", "mode": "days", "days": 0 },
-            "tomorrow": { "name": "Tomorrow", "mode": "days", "days": 1 }
+            "tomorrow": { "name": "Tomorrow", "mode": "days", "days": 1 },
+            "next-weekend": { "name": "Next Weekend", "mode": "recurrence", "recurrence": "FREQ=WEEKLY;BYDAY=SA" },
+            "end-of-month": { "name": "End of Month", "mode": "recurrence", "recurrence": "FREQ=MONTHLY;BYMONTHDAY=-1" }
         }
     }
 }

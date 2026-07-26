@@ -79,9 +79,9 @@ export function RescheduleOptionsPanel() {
     return (
         <div className="reschedule-options-panel">
             <p className="organize-dimensions-blurb">
-                The choices offered by the Task pane's Reschedule dropdown. Each is either a fixed
-                number of days from now, or the next occurrence of a recurrence rule computed from now.
-                Order here is dropdown order.
+                The reschedule buttons offered by the Task pane's Actions section. Each is either a
+                fixed number of days from now, or the next occurrence of a recurrence rule computed
+                from now. Order here is button order.
             </p>
             <div className="lst-list">
                 {orderedIds.length === 0 && <p className="lst-list-empty">No entries yet.</p>}

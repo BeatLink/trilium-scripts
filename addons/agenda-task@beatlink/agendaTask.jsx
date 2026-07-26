@@ -120,7 +120,6 @@ function MainWidget(){
     const noteId = useNoteProperty(note, "noteId");
     const [agendaTaskWidget] = useNoteLabel(note, "agendaTaskWidget")
     const [ids, setIds] = useState(null)
-    const [rescheduleChoice, setRescheduleChoice] = useState("")
 
     useEffect(() => {
         (async () => {
@@ -128,7 +127,6 @@ function MainWidget(){
             if (!settings) return
             const { constants, rescheduleOptions } = settings
             setIds({ constants, rescheduleOptions })
-            if (rescheduleOptions.length > 0) setRescheduleChoice(rescheduleOptions[0].id)
         })()
     }, [])
 
@@ -154,46 +152,33 @@ function MainWidget(){
     return (
         <RightPanelWidget title="Task">
             <div className="agenda-widget">
-                {isActionable && (
+                <details open>
+                    <summary>Dates and Duration</summary>
+                    <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
+                </details>
+                <details open>
+                    <summary>Recurrence</summary>
+                    <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
+                </details>
+                <details open>
+                    <summary>Actions</summary>
                     <div>
-                        <label>Dates and Duration</label>
-                        <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
+                        {actions.map(({ key, icon, text, onClick }) => (
+                            <Button key={key} icon={icon} text={text} onClick={onClick} />
+                        ))}
+                        {ids.rescheduleOptions.map(option => (
+                            <Button
+                                key={option.id}
+                                icon="bx bx-calendar"
+                                text={option.name}
+                                onClick={async () => {
+                                    await rescheduleByOption(noteId, ids.constants, option)
+                                    await afterChange()
+                                }}
+                            />
+                        ))}
                     </div>
-                )}
-                {isActionable && (
-                    <div>
-                        <label>Recurrence</label>
-                        <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
-                    </div>
-                )}
-                {isActionable && (
-                    <div>
-                        <label>Actions</label>
-                        <div>
-                            {actions.map(({ key, icon, text, onClick }) => (
-                                <Button key={key} icon={icon} text={text} onClick={onClick} />
-                            ))}
-                        </div>
-                        {ids.rescheduleOptions.length > 0 && (
-                            <div className="reschedule-picker">
-                                <FormDropdownList
-                                    values={ids.rescheduleOptions}
-                                    currentValue={rescheduleChoice}
-                                    text="Reschedule"
-                                    onChange={async value => {
-                                        setRescheduleChoice(value)
-                                        const option = ids.rescheduleOptions.find(o => o.id === value)
-                                        if (!option) return
-                                        await rescheduleByOption(noteId, ids.constants, option)
-                                        await afterChange()
-                                    }}
-                                    keyProperty="id" titleProperty="name"
-                                    class="dropdown-component form-control"
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
+                </details>
             </div>
         </RightPanelWidget>
     )

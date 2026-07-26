@@ -4,8 +4,8 @@
 // Library only (CommonJS, require()'d by agendaTask.jsx and rescheduleOptions.jsx).
 //
 // Task's own settings note, tagged #agendaTaskConfig, separate from the rest
-// of agenda's #agendaConfig note: just the label constants and the Reschedule
-// dropdown's option registry, plus the raw note ids Task needs to save that
+// of agenda's #agendaConfig note: just the label constants and the reschedule
+// buttons' option registry, plus the raw note ids Task needs to save that
 // registry back. Everything else (profiles, My Day, Organize times,
 // dimensions, ...) lives in agendaSettings.jsx/#agendaConfig and is
 // deliberately out of reach here.
