@@ -91,6 +91,11 @@ The **Episodes** button on any show opens a season grid where you click individu
 toggle them. Watch status is recomputed automatically: no episodes is `planned`, some is `watching`,
 all aired episodes is `watched`.
 
+Episode lists come from TMDB. Imported shows often arrive with only an IMDb id — Stremio supplies
+nothing else, and a Trakt entry has no TMDB id if metadata enrichment was off or its fetch failed —
+so the TMDB id is resolved from the IMDb id via TMDB's `/find` endpoint and written back to the
+entry, making the lookup a one-time cost rather than something that repeats on every open.
+
 ## Import
 
 Import is strictly **one-way**: external services are read, and nothing is ever written back to

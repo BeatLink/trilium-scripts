@@ -123,8 +123,14 @@ function EpisodePanel({ title, onClose, onChanged }) {
     useEffect(() => {
         (async () => {
             try {
-                if (!title.tmdbId) throw new Error("This show has no TMDB id, so its episode list is unknown.")
-                setDetails(await callBackend("details", { mediaType: "show", tmdbId: title.tmdbId }))
+                // A TMDB id may be missing on an imported title; the backend
+                // resolves one from the IMDb id and stores it back.
+                setDetails(await callBackend("details", {
+                    mediaType: "show",
+                    tmdbId: title.tmdbId || "",
+                    imdbId: title.imdbId || "",
+                    key: title.key
+                }))
             } catch (e) {
                 setError(e.message)
             }

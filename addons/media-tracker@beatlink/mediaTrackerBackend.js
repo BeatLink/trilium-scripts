@@ -197,6 +197,58 @@ async function tmdbDetails(settings, mediaType, tmdbId) {
     return details
 }
 
+// Resolve a TMDB id from an IMDb id. Imported titles often have only an IMDb id
+// -- Stremio supplies nothing else, and a Trakt entry has none when metadata
+// enrichment was off or its fetch failed -- so without this their episode lists
+// are unreachable. TMDB's /find returns matches grouped by kind.
+async function tmdbIdFromImdb(settings, imdbId, mediaType) {
+    const key = requireTmdbKey(settings)
+    if (!imdbId) return ""
+
+    const json = await getJson(
+        `${TMDB_API}/find/${encodeURIComponent(imdbId)}?api_key=${encodeURIComponent(key)}&external_source=imdb_id`
+    )
+
+    const results = mediaType === "show" ? json.tv_results : json.movie_results
+    return results?.length ? String(results[0].id) : ""
+}
+
+// Details for one title, resolving a missing TMDB id from the IMDb id first.
+// Returns the resolved tmdbId so the caller can persist it and avoid the extra
+// lookup next time.
+async function resolveDetails(settings, mediaType, tmdbId, imdbId) {
+    let id = tmdbId
+    if (!id) {
+        id = await tmdbIdFromImdb(settings, imdbId, mediaType)
+        if (!id) {
+            throw new Error(imdbId
+                ? "TMDB has no match for this title's IMDb id, so its episode list is unavailable."
+                : "This title has no TMDB or IMDb id, so its episode list cannot be looked up.")
+        }
+    }
+    return tmdbDetails(settings, mediaType, id)
+}
+
+// Details for a library entry. When the TMDB id had to be resolved from the IMDb
+// id, it's written back to the entry so the lookup happens once rather than on
+// every open of the episode panel.
+async function detailsForKey(settings, mediaType, tmdbId, imdbId, key) {
+    const details = await resolveDetails(settings, mediaType, tmdbId, imdbId)
+
+    if (key && details.tmdbId && details.tmdbId !== tmdbId) {
+        const doc = loadDocument(settings)
+        const entry = doc.titles[key]
+        if (entry) {
+            entry.tmdbId = details.tmdbId
+            if (!entry.imdbId && details.imdbId) entry.imdbId = details.imdbId
+            if (details.totalEpisodes) entry.totalEpisodes = details.totalEpisodes
+            saveDocument(settings, doc)
+        }
+    }
+
+    return details
+}
+
 // --- title mutations --------------------------------------------------------
 
 async function addTitle(settings, mediaType, tmdbId) {
@@ -498,9 +550,15 @@ async function applyImport(settings, items) {
         }
 
         // Enrich from TMDB on first import only; an existing entry already has it.
-        if (!existingKey && settings.importFetchMetadata && settings.tmdbApiKey && item.tmdbId) {
+        // An item with only an IMDb id (every Stremio item, and Trakt entries
+        // whose TMDB id is absent) is resolved through /find first, so it still
+        // gets a poster, overview, and -- for shows -- an episode count.
+        if (!existingKey && settings.importFetchMetadata && settings.tmdbApiKey
+            && (item.tmdbId || item.imdbId)) {
             try {
-                const fetched = await tmdbDetails(settings, item.mediaType, item.tmdbId)
+                const fetched = await resolveDetails(
+                    settings, item.mediaType, item.tmdbId ? String(item.tmdbId) : "", details.imdbId
+                )
                 details = {
                     ...fetched,
                     traktId: details.traktId,
@@ -578,7 +636,7 @@ async function handle() {
             case "search":
                 return sendJson(200, { results: await tmdbSearch(settings, query.query || "", query.mediaType) })
             case "details":
-                return sendJson(200, await tmdbDetails(settings, query.mediaType, query.tmdbId))
+                return sendJson(200, await detailsForKey(settings, query.mediaType, query.tmdbId, query.imdbId, query.key))
             case "addTitle":
                 return sendJson(200, await addTitle(settings, query.mediaType, query.tmdbId))
             case "removeTitle":
