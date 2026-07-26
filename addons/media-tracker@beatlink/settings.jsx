@@ -1,7 +1,7 @@
 import { useState, useEffect } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 
-export default function StremioSyncSettings() {
+export default function MediaTrackerSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
 
@@ -16,11 +16,11 @@ export default function StremioSyncSettings() {
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
     return (
-        <div class="ss-settings">
-            <h3>Stremio Sync</h3>
-            <p class="ss-hint">
-                Enter your Stremio email and password, save, then open the addon's widget
-                and click <strong>Login</strong> to obtain an auth key.
+        <div class="mt-settings">
+            <h3>Media Tracker</h3>
+            <p class="mt-hint">
+                A TMDB key powers search, posters, and episode lists. Trakt and Stremio are
+                optional one-way import sources: they are read, never written to.
             </p>
             <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
         </div>

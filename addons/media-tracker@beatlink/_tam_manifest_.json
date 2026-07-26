@@ -1,0 +1,166 @@
+{
+    "id": "media-tracker@beatlink",
+    "name": "Media Tracker",
+    "description": "A movie and TV tracker for TriliumNext. Every tracked title is a real Trilium note under a library root, tagged with #mediaType, #watchStatus, #rating and identity labels (#tmdbId/#imdbId/#traktId), so your library is browsable through Trilium's own board, table, and gallery collection views without the widget. TMDB provides search, posters, and episode lists; Trakt and Stremio are one-way import sources, read but never written to. Per-episode progress for shows is stored in a single compact #watchedEpisodes label on the show note (s01e01-e10,s02e01) rather than one note per episode, so a ten-season show adds one note to your tree instead of hundreds. Imports are additive and idempotent: titles are matched by id across sources, episode progress is merged rather than replaced, and your own ratings are never overwritten unless you opt in. Absorbs and replaces stremio-sync@beatlink.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/media-tracker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-page",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "media-tracker@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "view",
+                "title": "mediaTracker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.jsx"
+            },
+            {
+                "id": "style",
+                "title": "mediaTracker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.css"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/config.json"
+            },
+            {
+                "id": "backend",
+                "title": "mediaTrackerBackend.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTrackerBackend.js"
+            },
+            {
+                "id": "lib-tracker",
+                "title": "libMediaTracker.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/libMediaTracker.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            { "parent": "root", "child": "launcher" },
+            { "parent": "launcher", "child": "view" },
+            { "parent": "view", "child": "style" },
+            { "parent": "view", "child": "libsettings-ui" },
+            { "parent": "launcher", "child": "settings-page" },
+            { "parent": "settings-page", "child": "settings" },
+            { "parent": "settings", "child": "libsettings-ui" },
+            { "parent": "launcher", "child": "schema" },
+            { "parent": "persistence", "child": "config" },
+            { "parent": "launcher", "child": "backend" },
+            { "parent": "backend", "child": "libsettings-backend" },
+            { "parent": "backend", "child": "lib-tracker" },
+            { "parent": "libsettings-ui", "child": "libsettings-style" },
+            { "parent": "libsettings-ui", "child": "colorpicker" },
+            { "parent": "colorpicker", "child": "colorpicker-css" },
+            { "parent": "launcher", "child": "readme" }
+        ],
+        "relations": [
+            { "from": "settings", "type": "configNote", "to": "config" },
+            { "from": "settings", "type": "schemaNote", "to": "schema" },
+            { "from": "view", "type": "schemaNote", "to": "schema" },
+            { "from": "view", "type": "settingsNote", "to": "settings" },
+            { "from": "backend", "type": "schemaNote", "to": "schema" },
+            { "from": "backend", "type": "settingsNote", "to": "settings" },
+            { "from": "launcher", "type": "renderNote", "to": "view" },
+            { "from": "settings-page", "type": "renderNote", "to": "settings" }
+        ],
+        "labels": [
+            { "note": "backend", "name": "customRequestHandler", "value": "mediaTracker" },
+            { "note": "style", "name": "appCss", "value": "" },
+            { "note": "libsettings-style", "name": "appCss", "value": "" },
+            { "note": "colorpicker-css", "name": "appCss", "value": "" },
+            { "note": "launcher", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "view", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "backend", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "lib-tracker", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "schema", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "config", "name": "iconClass", "value": "bx bx-movie-play" },
+            { "note": "settings-page", "name": "iconClass", "value": "bx bx-cog" },
+            { "note": "readme", "name": "iconClass", "value": "bx bx-movie-play" }
+        ],
+        "readmeNote": "readme"
+    }
+}

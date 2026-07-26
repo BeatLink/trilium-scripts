@@ -1,0 +1,122 @@
+{
+    "libraryRootNoteId": {
+        "type": "note",
+        "label": "Library Root",
+        "description": "Parent note every movie/show note is created under. Leave blank and use Create Library on the widget to make one.",
+        "default": "",
+        "tab": "Library"
+    },
+    "defaultStatus": {
+        "type": "select",
+        "label": "Status For New Titles",
+        "description": "Applied to a title added by hand from search. Imports set status from the source instead.",
+        "default": "planned",
+        "options": [
+            { "value": "planned", "label": "Planned" },
+            { "value": "watching", "label": "Watching" },
+            { "value": "watched", "label": "Watched" },
+            { "value": "dropped", "label": "Dropped" }
+        ],
+        "tab": "Library"
+    },
+    "posterSize": {
+        "type": "select",
+        "label": "Poster Size",
+        "description": "TMDB image width used for poster URLs stored on each title note.",
+        "default": "w342",
+        "options": [
+            { "value": "w185", "label": "Small (w185)" },
+            { "value": "w342", "label": "Medium (w342)" },
+            { "value": "w500", "label": "Large (w500)" }
+        ],
+        "tab": "Library"
+    },
+
+    "tmdbApiKey": {
+        "type": "string",
+        "label": "TMDB API Key",
+        "description": "Free v3 API key from https://www.themoviedb.org/settings/api. Required for search, posters, and episode lists.",
+        "default": "",
+        "tab": "TMDB"
+    },
+
+    "traktClientId": {
+        "type": "string",
+        "label": "Trakt Client ID",
+        "description": "Create an API app at https://trakt.tv/oauth/applications. Use urn:ietf:wg:oauth:2.0:oob as the redirect URI.",
+        "default": "",
+        "tab": "Trakt"
+    },
+    "traktClientSecret": {
+        "type": "string",
+        "label": "Trakt Client Secret",
+        "description": "Client secret from the same Trakt API app.",
+        "default": "",
+        "tab": "Trakt"
+    },
+    "traktAccessToken": {
+        "type": "string",
+        "label": "Access Token",
+        "description": "Filled in automatically after you authorize. Clear it to force re-authorization.",
+        "default": "",
+        "tab": "Trakt"
+    },
+    "traktRefreshToken": {
+        "type": "string",
+        "label": "Refresh Token",
+        "description": "Filled in automatically. Used to renew the access token without re-authorizing.",
+        "default": "",
+        "tab": "Trakt"
+    },
+    "traktTokenExpiresAt": {
+        "type": "number",
+        "label": "Token Expires At",
+        "description": "Unix seconds. Managed automatically.",
+        "default": 0,
+        "tab": "Trakt"
+    },
+
+    "stremioEmail": {
+        "type": "string",
+        "label": "Stremio Email",
+        "description": "Login email for your Stremio account.",
+        "default": "",
+        "tab": "Stremio"
+    },
+    "stremioPassword": {
+        "type": "string",
+        "label": "Stremio Password",
+        "description": "Only used to obtain an auth key. Cleared automatically once login succeeds.",
+        "default": "",
+        "tab": "Stremio"
+    },
+    "stremioAuthKey": {
+        "type": "string",
+        "label": "Stremio Auth Key",
+        "description": "Filled in automatically after a successful login. Clear it to force re-login.",
+        "default": "",
+        "tab": "Stremio"
+    },
+
+    "importMarksWatched": {
+        "type": "boolean",
+        "label": "Imports Set Watched Status",
+        "description": "An imported title with watch history is marked watched (movies) or watching (shows with unwatched episodes).",
+        "default": true,
+        "tab": "Import"
+    },
+    "importFetchMetadata": {
+        "type": "boolean",
+        "label": "Fetch TMDB Metadata On Import",
+        "description": "Look up each newly imported title on TMDB for poster, overview, runtime, and genres. Slower, and needs a TMDB key.",
+        "default": true,
+        "tab": "Import"
+    },
+    "importOverwriteRatings": {
+        "type": "boolean",
+        "label": "Let Imports Overwrite My Ratings",
+        "description": "Off by default so a re-import never clobbers a rating you set in Trilium. Import is one-way; nothing is ever written back to Trakt or Stremio.",
+        "default": false,
+        "tab": "Import"
+    }
+}
