@@ -321,9 +321,15 @@ function setRating(settings, key, rating) {
     return { ok: true }
 }
 
-function setEpisode(settings, key, season, episode, watched) {
+// `totalEpisodes` is what decides "all watched". It's only known once TMDB
+// details have been fetched, so the episode panel passes the count it is already
+// displaying; without it a fully-ticked show would stay "watching" forever.
+function setEpisode(settings, key, season, episode, watched, totalEpisodes) {
     const doc = loadDocument(settings)
     const entry = requireEntry(doc, key)
+
+    const knownTotal = Number(totalEpisodes) || 0
+    if (knownTotal > 0) entry.totalEpisodes = knownTotal
 
     const current = tracker.parseEpisodes(entry.watchedEpisodes || "")
     const next = tracker.withEpisode(current, Number(season), Number(episode), !!watched)
@@ -341,6 +347,72 @@ function removeTitle(settings, key) {
     delete doc.titles[key]
     saveDocument(settings, doc)
     return { ok: true }
+}
+
+// --- housekeeping -----------------------------------------------------------
+
+// Re-derives everything that can drift: refreshes metadata and posters from TMDB,
+// backfills missing ids and episode counts, and recomputes each show's status
+// from its episode progress. Reads the document once and writes once, like the
+// importers. Never changes a rating, and never un-watches an episode.
+async function refreshLibrary(settings) {
+    const doc = loadDocument(settings)
+    const entries = Object.entries(doc.titles)
+
+    let metadataUpdated = 0
+    let statusUpdated = 0
+    let failed = 0
+
+    for (const [key, raw] of entries) {
+        const entry = tracker.normalizeTitle(raw)
+
+        if (settings.tmdbApiKey) {
+            try {
+                const details = await resolveDetails(
+                    settings, entry.mediaType, entry.tmdbId, entry.imdbId
+                )
+                const before = JSON.stringify([
+                    entry.title, entry.poster, entry.overview, entry.genres,
+                    entry.runtime, entry.totalEpisodes, entry.tmdbId, entry.imdbId
+                ])
+
+                entry.tmdbId = details.tmdbId || entry.tmdbId
+                entry.imdbId = details.imdbId || entry.imdbId
+                entry.title = details.title || entry.title
+                entry.year = details.year || entry.year
+                entry.overview = details.overview || entry.overview
+                entry.poster = details.poster || entry.poster
+                entry.genres = details.genres || entry.genres
+                entry.runtime = details.runtime || entry.runtime
+                if (details.totalEpisodes) entry.totalEpisodes = details.totalEpisodes
+
+                const after = JSON.stringify([
+                    entry.title, entry.poster, entry.overview, entry.genres,
+                    entry.runtime, entry.totalEpisodes, entry.tmdbId, entry.imdbId
+                ])
+                if (before !== after) metadataUpdated++
+            } catch (e) {
+                // A title TMDB can't resolve shouldn't stop the sweep.
+                failed++
+            }
+        }
+
+        // Shows: status follows episode progress. Movies keep whatever the user
+        // set, since there is no progress to derive it from.
+        if (entry.mediaType === "show") {
+            const watchedCount = tracker.countEpisodes(tracker.parseEpisodes(entry.watchedEpisodes || ""))
+            const derived = tracker.statusFromProgress(watchedCount, Number(entry.totalEpisodes) || 0)
+            if (derived !== entry.status) {
+                entry.status = derived
+                statusUpdated++
+            }
+        }
+
+        doc.titles[key] = entry
+    }
+
+    saveDocument(settings, doc)
+    return { total: entries.length, metadataUpdated, statusUpdated, failed }
 }
 
 // --- Trakt ------------------------------------------------------------------
@@ -709,6 +781,8 @@ async function handle() {
         switch (action) {
             case "listTitles":
                 return sendJson(200, { titles: tracker.listTitles(loadDocument(settings)) })
+            case "refreshLibrary":
+                return sendJson(200, await refreshLibrary(settings))
             case "search":
                 return sendJson(200, { results: await tmdbSearch(settings, query.query || "", query.mediaType) })
             case "details":
@@ -722,7 +796,10 @@ async function handle() {
             case "setRating":
                 return sendJson(200, setRating(settings, query.key, query.rating))
             case "setEpisode":
-                return sendJson(200, setEpisode(settings, query.key, query.season, query.episode, query.watched === "true"))
+                return sendJson(200, setEpisode(
+                    settings, query.key, query.season, query.episode,
+                    query.watched === "true", query.totalEpisodes
+                ))
             case "traktAuthStart":
                 return sendJson(200, await traktAuthStart(settings))
             case "traktAuthPoll":

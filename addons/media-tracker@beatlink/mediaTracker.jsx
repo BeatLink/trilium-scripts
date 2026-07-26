@@ -52,6 +52,21 @@ function countEpisodes(seasons) {
     return Object.values(seasons).reduce((total, set) => total + set.size, 0)
 }
 
+// Seasons with at least one episode watched. This is all a collapsed row can
+// know, since deciding a season is *complete* needs its aired-episode count,
+// which only the expanded panel has fetched.
+function countSeasonsStarted(seasons) {
+    return Object.values(seasons).filter(set => set.size > 0).length
+}
+
+// Seasons where every aired episode is watched. Needs seasonCounts from TMDB.
+function countSeasonsComplete(seasons, seasonCounts) {
+    if (!seasonCounts) return 0
+    return Object.entries(seasonCounts).filter(([season, aired]) =>
+        aired > 0 && (seasons[season]?.size || 0) >= aired
+    ).length
+}
+
 // --- library ----------------------------------------------------------------
 
 function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
@@ -62,8 +77,10 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
         try { await fn(); await onChanged() } finally { setBusy(false) }
     }
 
-    const watched = countEpisodes(parseEpisodes(title.watchedEpisodes))
+    const seasons = parseEpisodes(title.watchedEpisodes)
+    const watched = countEpisodes(seasons)
     const total = Number(title.totalEpisodes) || 0
+    const seasonsStarted = countSeasonsStarted(seasons)
 
     return (
         <div class={`mt-item ${expanded ? "mt-item-open" : ""}`}>
@@ -76,14 +93,18 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
                     <div class="mt-row-meta">
                         {title.year && <span>{title.year}</span>}
                         <span class="mt-badge">{title.mediaType === "show" ? "TV" : "Movie"}</span>
-                        {title.mediaType === "show" && total > 0 && (
-                            <span class="mt-progress">{watched}/{total} episodes</span>
+                        {title.mediaType === "show" && watched > 0 && (
+                            <span class="mt-progress">
+                                {total > 0 ? `${watched}/${total} episodes` : `${watched} episodes`}
+                                {seasonsStarted > 0 &&
+                                    ` · ${seasonsStarted} season${seasonsStarted === 1 ? "" : "s"}`}
+                            </span>
                         )}
                     </div>
                 </div>
                 <div class="mt-row-actions">
                     <select
-                        class="mt-select"
+                        class={`mt-select mt-status-${title.status || "planned"}`}
                         disabled={busy}
                         value={title.status || "planned"}
                         onChange={e => update(() =>
@@ -93,15 +114,19 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
                             <option key={value} value={value}>{label}</option>
                         ))}
                     </select>
-                    <input
-                        class="mt-rating"
-                        type="number" min="0" max="10" step="1"
-                        placeholder="-"
-                        disabled={busy}
-                        value={title.rating ?? ""}
-                        onChange={e => update(() =>
-                            callBackend("setRating", { key: title.key, rating: e.target.value }))}
-                    />
+                    <label class="mt-rating-field" title="Your rating, 0-10. Leave blank for unrated.">
+                        <span class="mt-rating-star" aria-hidden="true">★</span>
+                        <input
+                            class="mt-rating"
+                            type="number" min="0" max="10" step="1"
+                            placeholder="–"
+                            aria-label="Rating out of 10"
+                            disabled={busy}
+                            value={title.rating ?? ""}
+                            onChange={e => update(() =>
+                                callBackend("setRating", { key: title.key, rating: e.target.value }))}
+                        />
+                    </label>
                     {title.mediaType === "show" && (
                         <button class="mt-btn" disabled={busy}
                             aria-expanded={expanded ? "true" : "false"}
@@ -117,17 +142,13 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
             </div>
 
             {expanded && (
-                <EpisodePanel
-                    title={title}
-                    onClose={() => onToggleEpisodes(title)}
-                    onChanged={onChanged}
-                />
+                <EpisodePanel title={title} onChanged={onChanged} />
             )}
         </div>
     )
 }
 
-function EpisodePanel({ title, onClose, onChanged }) {
+function EpisodePanel({ title, onChanged }) {
     const [details, setDetails] = useState(null)
     const [error, setError] = useState(null)
     const [busy, setBusy] = useState(false)
@@ -154,7 +175,10 @@ function EpisodePanel({ title, onClose, onChanged }) {
         setBusy(true)
         try {
             const result = await callBackend("setEpisode", {
-                key: title.key, season, episode, watched: String(watched)
+                key: title.key, season, episode, watched: String(watched),
+                // Sent so the backend can decide "all episodes watched" even for
+                // a title imported without TMDB metadata.
+                totalEpisodes: String(details?.totalEpisodes || "")
             })
             setWatchedEpisodes(result.watchedEpisodes)
             await onChanged()
@@ -170,12 +194,15 @@ function EpisodePanel({ title, onClose, onChanged }) {
     return (
         <div class="mt-episodes">
             {/* No title here: the row this expands from is directly above. */}
+            {/* No Collapse button: the row's Episodes toggle already collapses this. */}
             {details && (
                 <div class="mt-episodes-head">
                     <span class="mt-hint">
-                        {countEpisodes(seasons)} of {details.totalEpisodes} episodes watched
+                        {countEpisodes(seasons)} of {details.totalEpisodes} episodes
+                        {" · "}
+                        {countSeasonsComplete(seasons, details.seasonCounts)} of{" "}
+                        {Object.keys(details.seasonCounts || {}).length} seasons complete
                     </span>
-                    <button class="mt-btn" onClick={onClose}>Collapse</button>
                 </div>
             )}
             {error && <p class="mt-error">{error}</p>}
@@ -213,6 +240,8 @@ function LibraryTab({ libraryRootNoteId }) {
     // Key of the row whose episode grid is expanded, or null. One at a time, so
     // opening a show collapses whichever was open.
     const [expandedKey, setExpandedKey] = useState(null)
+    const [refreshing, setRefreshing] = useState(false)
+    const [refreshResult, setRefreshResult] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
@@ -230,6 +259,26 @@ function LibraryTab({ libraryRootNoteId }) {
     }, [libraryRootNoteId])
 
     useEffect(() => { reload() }, [reload])
+
+    // Housekeeping sweep: refresh metadata/posters and re-derive show statuses
+    // from episode progress, then reload the list.
+    const refresh = async () => {
+        setRefreshing(true)
+        setRefreshResult(null)
+        try {
+            const r = await callBackend("refreshLibrary")
+            const parts = [`${r.total} titles checked`]
+            if (r.metadataUpdated) parts.push(`${r.metadataUpdated} updated`)
+            if (r.statusUpdated) parts.push(`${r.statusUpdated} status fixed`)
+            if (r.failed) parts.push(`${r.failed} could not be looked up`)
+            setRefreshResult(parts.join(", "))
+            await reload()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setRefreshing(false)
+        }
+    }
 
     if (!libraryRootNoteId) {
         return (
@@ -262,7 +311,13 @@ function LibraryTab({ libraryRootNoteId }) {
                     value={query}
                     onInput={e => setQuery(e.target.value)}
                 />
+                <button class="mt-btn" disabled={refreshing}
+                    title="Refresh metadata and posters from TMDB, and recompute each show's status from its episode progress"
+                    onClick={refresh}>
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
             </div>
+            {refreshResult && <p class="mt-ok">{refreshResult}</p>}
 
             <div class="mt-filters">
                 {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => {
@@ -282,7 +337,8 @@ function LibraryTab({ libraryRootNoteId }) {
                 {Object.entries(STATUS_LABELS).map(([value, label]) => {
                     const count = scoped.filter(t => t.status === value).length
                     return (
-                        <button key={value} class={`mt-chip ${filter === value ? "mt-chip-on" : ""}`}
+                        <button key={value}
+                            class={`mt-chip ${filter === value ? `mt-chip-on mt-status-${value}` : ""}`}
                             onClick={() => setFilter(value)}>{label} ({count})</button>
                     )
                 })}
@@ -402,6 +458,54 @@ function AddTab({ onAdded }) {
 
 // --- import -----------------------------------------------------------------
 
+// navigator.clipboard is only available in a secure context, which a Trilium
+// server reached over plain HTTP is not, so fall back to the old execCommand
+// path rather than silently doing nothing.
+async function copyText(text) {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text)
+            return true
+        }
+    } catch (e) {
+        // Fall through to the textarea fallback.
+    }
+
+    try {
+        const field = document.createElement("textarea")
+        field.value = text
+        field.setAttribute("readonly", "")
+        field.style.position = "fixed"
+        field.style.opacity = "0"
+        document.body.appendChild(field)
+        field.select()
+        const copied = document.execCommand("copy")
+        document.body.removeChild(field)
+        return copied
+    } catch (e) {
+        return false
+    }
+}
+
+function CopyButton({ value, label = "Copy" }) {
+    const [copied, setCopied] = useState(false)
+
+    return (
+        <button
+            class="mt-btn"
+            title={`Copy ${value}`}
+            onClick={async () => {
+                if (await copyText(value)) {
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 1500)
+                }
+            }}
+        >
+            {copied ? "Copied" : label}
+        </button>
+    )
+}
+
 function ImportTab({ settings, reloadSettings, onImported }) {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
@@ -417,6 +521,17 @@ function ImportTab({ settings, reloadSettings, onImported }) {
     const startTraktAuth = () => run(async () => {
         const started = await callBackend("traktAuthStart")
         setDevice(started)
+
+        // Open the activation page straight away. Popup blockers only allow this
+        // because it descends from the Authorize click; if it's blocked anyway the
+        // link below stays available, so nothing is lost.
+        if (started.verificationUrl) {
+            try {
+                window.open(started.verificationUrl, "_blank", "noopener,noreferrer")
+            } catch (e) {
+                // Blocked or unavailable; the visible link covers it.
+            }
+        }
 
         let interval = (started.interval || 5) * 1000
         const deadline = Date.now() + (started.expiresIn || 600) * 1000
@@ -459,8 +574,19 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                 <h4>Trakt</h4>
                 {device ? (
                     <div class="mt-device">
-                        <p>Go to <strong>{device.verificationUrl}</strong> and enter this code:</p>
-                        <div class="mt-code">{device.userCode}</div>
+                        <p>
+                            A Trakt activation page should have opened. If it did not, go to{" "}
+                            <a class="mt-link" href={device.verificationUrl}
+                                target="_blank" rel="noopener noreferrer">
+                                {device.verificationUrl}
+                            </a>
+                            {" "}and enter this code:
+                        </p>
+                        <div class="mt-code-row">
+                            <code class="mt-code mt-selectable">{device.userCode}</code>
+                            <CopyButton value={device.userCode} label="Copy code" />
+                            <CopyButton value={device.verificationUrl} label="Copy link" />
+                        </div>
                         <p class="mt-hint">Waiting for you to approve it...</p>
                     </div>
                 ) : (

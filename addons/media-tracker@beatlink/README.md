@@ -32,8 +32,16 @@ The widget has three tabs.
 - **status** chips (Planned, Watching, Watched, Dropped)
 
 The status counts are scoped to the type and search filters above them, so a count always tells you
-how many rows clicking it would actually show. Each row has a status dropdown, a 0-10 rating box,
-an **Episodes** button for shows, and a **×** to remove the title.
+how many rows clicking it would actually show. Status is colour-coded throughout: grey for planned,
+blue for watching, green for watched, red for dropped.
+
+Each row has a status dropdown, a ★ rating box (0-10, blank for unrated), an **Episodes** toggle for
+shows, and a **×** to remove the title. A show's row shows its progress — episodes watched and
+seasons started — and expanding it shows episodes watched and seasons *completed*.
+
+**Refresh** runs a housekeeping sweep over the whole library: it re-fetches metadata and posters from
+TMDB, backfills missing ids and episode counts, and recomputes every show's status from its episode
+progress. It never changes a rating and never un-watches an episode.
 
 **Add** searches TMDB. The same **All / Movies / TV** chips scope the search: All uses TMDB's
 multi-search, while Movies and TV use the dedicated endpoints, which return a full page of one kind

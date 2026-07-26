@@ -3,6 +3,10 @@
     max-width: 900px;
     margin: 0 auto;
     font-size: 14px;
+    /* Some Trilium themes disable selection inside widgets; re-enable it so
+       titles, codes, and links can be copied by hand. */
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .mt-tabs {
@@ -181,6 +185,43 @@
     color: var(--main-text-color);
 }
 
+/* Status palette. Translucent fills rather than solid colours so they composite
+   over both the light and dark Trilium themes without hard-coding a background,
+   and the border carries the hue at higher contrast than the fill alone. */
+.mt-status-planned {
+    background: rgba(128, 128, 128, 0.16);
+    border-color: rgba(128, 128, 128, 0.55);
+}
+
+.mt-status-watching {
+    background: rgba(56, 132, 255, 0.16);
+    border-color: rgba(56, 132, 255, 0.6);
+}
+
+.mt-status-watched {
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+}
+
+.mt-status-dropped {
+    background: rgba(219, 72, 72, 0.16);
+    border-color: rgba(219, 72, 72, 0.6);
+}
+
+/* The rating input is otherwise an unlabelled number box sitting next to the
+   status dropdown, which reads as mystery UI. The star marks what it is. */
+.mt-rating-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+
+.mt-rating-star {
+    color: var(--muted-text-color, gray);
+    font-size: 13px;
+}
+
 .mt-rating {
     width: 52px;
 }
@@ -258,11 +299,36 @@
     margin: 0 0 8px;
 }
 
+.mt-code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
 .mt-code {
     font-family: monospace;
     font-size: 24px;
     letter-spacing: 3px;
-    padding: 8px 0;
+    padding: 4px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
+/* Widget text is not selectable by default in some Trilium themes, which makes
+   a code you are meant to copy by hand unusable. */
+.mt-selectable {
+    user-select: all;
+    -webkit-user-select: all;
+    cursor: text;
+}
+
+.mt-link {
+    color: var(--link-color, #4a9eff);
+    text-decoration: underline;
+    word-break: break-all;
 }
 
 /* --- states --- */
