@@ -341,6 +341,15 @@ function setEpisode(settings, key, season, episode, watched, totalEpisodes) {
     return { ok: true, watchedEpisodes: entry.watchedEpisodes, status: entry.status }
 }
 
+// Collections are tags: the whole set is replaced at once, sent comma-separated.
+function setCollections(settings, key, raw) {
+    const doc = loadDocument(settings)
+    const entry = requireEntry(doc, key)
+    entry.collections = tracker.normalizeCollections(String(raw || "").split(","))
+    saveDocument(settings, doc)
+    return { ok: true, collections: entry.collections }
+}
+
 function removeTitle(settings, key) {
     const doc = loadDocument(settings)
     requireEntry(doc, key)
@@ -779,8 +788,15 @@ async function handle() {
         const settings = getSettings()
 
         switch (action) {
-            case "listTitles":
-                return sendJson(200, { titles: tracker.listTitles(loadDocument(settings)) })
+            case "listTitles": {
+                const doc = loadDocument(settings)
+                return sendJson(200, {
+                    titles: tracker.listTitles(doc),
+                    collections: tracker.listCollections(doc)
+                })
+            }
+            case "setCollections":
+                return sendJson(200, setCollections(settings, query.key, query.collections))
             case "refreshLibrary":
                 return sendJson(200, await refreshLibrary(settings))
             case "search":

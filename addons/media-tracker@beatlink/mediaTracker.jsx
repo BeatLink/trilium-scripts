@@ -67,14 +67,93 @@ function countSeasonsComplete(seasons, seasonCounts) {
     ).length
 }
 
+// --- collections and sorting ------------------------------------------------
+// Mirrors of libMediaTracker.js: this file runs in the frontend and can't
+// require the backend module. Kept deliberately small; the backend owns the
+// authoritative versions used when writing.
+
+const UNTAGGED = "Untagged"
+
+const SORTS = [
+    { key: "title", label: "A-Z" },
+    { key: "lastWatched", label: "Recently watched" },
+    { key: "year", label: "Release date" },
+    { key: "rating", label: "Rating" },
+    { key: "addedAt", label: "Recently added" },
+    { key: "progress", label: "Progress" }
+]
+
+function compareMissingLast(a, b) {
+    const aMissing = a === "" || a === null || a === undefined
+    const bMissing = b === "" || b === null || b === undefined
+    if (aMissing && bMissing) return 0
+    if (aMissing) return 1
+    if (bMissing) return -1
+    return 0
+}
+
+function progressOf(title) {
+    const total = Number(title.totalEpisodes) || 0
+    if (!total) return null
+    return countEpisodes(parseEpisodes(title.watchedEpisodes || "")) / total
+}
+
+function sortTitles(titles, sortKey, descending) {
+    const direction = descending ? -1 : 1
+    const sorted = [...titles]
+    sorted.sort((x, y) => {
+        let a
+        let b
+        switch (sortKey) {
+            case "lastWatched": a = x.lastWatched; b = y.lastWatched; break
+            case "year": a = x.year; b = y.year; break
+            case "rating": a = x.rating; b = y.rating; break
+            case "addedAt": a = x.addedAt; b = y.addedAt; break
+            case "progress": a = progressOf(x); b = progressOf(y); break
+            default: a = x.title; b = y.title
+        }
+        const missing = compareMissingLast(a, b)
+        if (missing !== 0) return missing
+        const result = (typeof a === "number" && typeof b === "number")
+            ? a - b
+            : String(a).localeCompare(String(b))
+        return result !== 0 ? result * direction : x.title.localeCompare(y.title)
+    })
+    return sorted
+}
+
+// A title in several collections appears under each; those with none land in
+// one trailing Untagged bucket.
+function groupByCollection(titles) {
+    const groups = new Map()
+    const untagged = []
+    for (const title of titles) {
+        const names = title.collections || []
+        if (!names.length) { untagged.push(title); continue }
+        for (const name of names) {
+            if (!groups.has(name)) groups.set(name, [])
+            groups.get(name).push(title)
+        }
+    }
+    const named = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    return untagged.length ? [...named, [UNTAGGED, untagged]] : named
+}
+
 // --- library ----------------------------------------------------------------
 
 function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
     const [busy, setBusy] = useState(false)
+    const [editingTags, setEditingTags] = useState(false)
+    const [tagDraft, setTagDraft] = useState("")
 
     const update = async (fn) => {
         setBusy(true)
         try { await fn(); await onChanged() } finally { setBusy(false) }
+    }
+
+    const saveTags = async () => {
+        setEditingTags(false)
+        await update(() => callBackend("setCollections", { key: title.key, collections: tagDraft }))
     }
 
     const seasons = parseEpisodes(title.watchedEpisodes)
@@ -100,7 +179,38 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes }) {
                                     ` · ${seasonsStarted} season${seasonsStarted === 1 ? "" : "s"}`}
                             </span>
                         )}
+                        {(title.collections || []).map(name => (
+                            <span class="mt-tag" key={name}>{name}</span>
+                        ))}
                     </div>
+                    {editingTags ? (
+                        <div class="mt-tag-edit">
+                            <input
+                                class="mt-input"
+                                list="mt-collection-options"
+                                placeholder="Comma-separated, e.g. Marvel Cinematic Universe, Phase Four"
+                                value={tagDraft}
+                                autofocus
+                                disabled={busy}
+                                onInput={e => setTagDraft(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter") saveTags()
+                                    if (e.key === "Escape") setEditingTags(false)
+                                }}
+                            />
+                            <button class="mt-btn" disabled={busy} onClick={saveTags}>Save</button>
+                            <button class="mt-btn" disabled={busy}
+                                onClick={() => setEditingTags(false)}>Cancel</button>
+                        </div>
+                    ) : (
+                        <button class="mt-linkbtn" disabled={busy}
+                            onClick={() => {
+                                setTagDraft((title.collections || []).join(", "))
+                                setEditingTags(true)
+                            }}>
+                            {(title.collections || []).length ? "Edit collections" : "+ Add to collection"}
+                        </button>
+                    )}
                 </div>
                 <div class="mt-row-actions">
                     <select
@@ -242,14 +352,20 @@ function LibraryTab({ libraryRootNoteId }) {
     const [expandedKey, setExpandedKey] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
     const [refreshResult, setRefreshResult] = useState(null)
+    const [collections, setCollections] = useState([])
+    const [collectionFilter, setCollectionFilter] = useState("all")
+    const [sortKey, setSortKey] = useState("title")
+    const [sortDesc, setSortDesc] = useState(false)
+    const [grouped, setGrouped] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
     const reload = useCallback(async () => {
         if (!libraryRootNoteId) { setTitles([]); setLoading(false); return }
         try {
-            const { titles } = await callBackend("listTitles")
-            setTitles(titles)
+            const listed = await callBackend("listTitles")
+            setTitles(listed.titles)
+            setCollections(listed.collections || [])
             setError(null)
         } catch (e) {
             setError(e.message)
@@ -292,14 +408,23 @@ function LibraryTab({ libraryRootNoteId }) {
         )
     }
 
-    // Type and text narrow the set first; the status chips then count within
-    // that narrowed set, so the numbers always describe what a click would show.
+    // Type, text, and collection narrow the set first; the status chips then
+    // count within that narrowed set, so the numbers always describe what a
+    // click would show.
     const needle = query.trim().toLowerCase()
+    const matchesCollection = (t) => {
+        if (collectionFilter === "all") return true
+        if (collectionFilter === UNTAGGED) return !(t.collections || []).length
+        return (t.collections || []).includes(collectionFilter)
+    }
     const scoped = titles.filter(t =>
         (typeFilter === "all" || t.mediaType === typeFilter) &&
-        (!needle || t.title.toLowerCase().includes(needle))
+        (!needle || t.title.toLowerCase().includes(needle)) &&
+        matchesCollection(t)
     )
-    const shown = filter === "all" ? scoped : scoped.filter(t => t.status === filter)
+    const filtered = filter === "all" ? scoped : scoped.filter(t => t.status === filter)
+    const shown = sortTitles(filtered, sortKey, sortDesc)
+    const groups = grouped ? groupByCollection(shown) : null
 
     return (
         <div>
@@ -331,6 +456,34 @@ function LibraryTab({ libraryRootNoteId }) {
                 })}
             </div>
 
+            <div class="mt-controls">
+                <label class="mt-control">
+                    Sort
+                    <select class="mt-select" value={sortKey}
+                        onChange={e => setSortKey(e.target.value)}>
+                        {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    </select>
+                </label>
+                <button class="mt-btn" title={sortDesc ? "Descending" : "Ascending"}
+                    onClick={() => setSortDesc(v => !v)}>
+                    {sortDesc ? "↓" : "↑"}
+                </button>
+                <label class="mt-control">
+                    Collection
+                    <select class="mt-select" value={collectionFilter}
+                        onChange={e => setCollectionFilter(e.target.value)}>
+                        <option value="all">All</option>
+                        {collections.map(name => <option key={name} value={name}>{name}</option>)}
+                        <option value={UNTAGGED}>{UNTAGGED}</option>
+                    </select>
+                </label>
+                <button class={`mt-chip ${grouped ? "mt-chip-on" : ""}`}
+                    title="Group rows under their collections"
+                    onClick={() => setGrouped(v => !v)}>
+                    Group by collection
+                </button>
+            </div>
+
             <div class="mt-filters">
                 <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
                     onClick={() => setFilter("all")}>All ({scoped.length})</button>
@@ -353,15 +506,39 @@ function LibraryTab({ libraryRootNoteId }) {
                         : "No titles match these filters."}
                 </p>
             )}
-            {shown.map(title => (
-                <TitleRow
-                    key={title.key}
-                    title={title}
-                    onChanged={reload}
-                    expanded={expandedKey === title.key}
-                    onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
-                />
-            ))}
+            {/* Autocomplete source for every row's collection editor. */}
+            <datalist id="mt-collection-options">
+                {collections.map(name => <option key={name} value={name} />)}
+            </datalist>
+
+            {groups
+                ? groups.map(([name, rows]) => (
+                    <div class="mt-group" key={name}>
+                        <div class="mt-group-head">
+                            {name} <span class="mt-hint">({rows.length})</span>
+                        </div>
+                        {rows.map(title => (
+                            <TitleRow
+                                // Keyed by group too: a title in several collections
+                                // renders once per group, so the key must be unique.
+                                key={`${name}:${title.key}`}
+                                title={title}
+                                onChanged={reload}
+                                expanded={expandedKey === title.key}
+                                onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
+                            />
+                        ))}
+                    </div>
+                ))
+                : shown.map(title => (
+                    <TitleRow
+                        key={title.key}
+                        title={title}
+                        onChanged={reload}
+                        expanded={expandedKey === title.key}
+                        onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
+                    />
+                ))}
         </div>
     )
 }

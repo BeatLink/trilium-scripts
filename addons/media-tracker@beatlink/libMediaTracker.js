@@ -18,7 +18,8 @@
  *         lastWatched: "YYYY-MM-DD" | "",
  *         watchedEpisodes: "s01e01-e10,s02e01",   // shows only
  *         totalEpisodes: number,
- *         addedAt: "YYYY-MM-DD"
+ *         addedAt: "YYYY-MM-DD",
+ *         collections: ["Marvel Cinematic Universe", "Phase Four"]  // tags, set by hand
  *       }
  *     }
  *   }
@@ -218,8 +219,125 @@ function normalizeTitle(entry) {
         lastWatched: typeof entry?.lastWatched === "string" ? entry.lastWatched : "",
         watchedEpisodes: typeof entry?.watchedEpisodes === "string" ? entry.watchedEpisodes : "",
         totalEpisodes: Number.isFinite(Number(entry?.totalEpisodes)) ? Number(entry.totalEpisodes) : 0,
-        addedAt: typeof entry?.addedAt === "string" ? entry.addedAt : ""
+        addedAt: typeof entry?.addedAt === "string" ? entry.addedAt : "",
+        // Shared universes / franchises, set by hand. Tag-like: a title can be in
+        // several at once. TMDB can't supply these -- belongs_to_collection is
+        // movie-only and covers film series rather than universes (nothing joins
+        // the MCU's films to its shows), and TV has no equivalent field.
+        collections: normalizeCollections(entry?.collections ?? entry?.collection)
     }
+}
+
+// Accepts an array, a single string (the pre-tag shape, kept readable so an old
+// document still loads), or nothing. Trims, drops blanks, and dedupes
+// case-insensitively while keeping the first spelling seen.
+function normalizeCollections(value) {
+    const raw = Array.isArray(value) ? value : (typeof value === "string" ? [value] : [])
+    const seen = new Map()
+    for (const item of raw) {
+        const name = typeof item === "string" ? item.trim() : ""
+        if (!name) continue
+        const key = name.toLowerCase()
+        if (!seen.has(key)) seen.set(key, name)
+    }
+    return [...seen.values()]
+}
+
+// The bucket for titles carrying no collections at all.
+const UNTAGGED = "Untagged"
+
+// --- sorting ----------------------------------------------------------------
+
+const SORTS = [
+    { key: "title", label: "A-Z" },
+    { key: "lastWatched", label: "Recently watched" },
+    { key: "year", label: "Release date" },
+    { key: "rating", label: "Rating" },
+    { key: "addedAt", label: "Recently added" },
+    { key: "progress", label: "Progress" }
+]
+
+// Missing values always sort last regardless of direction -- an unrated or
+// never-watched title shouldn't lead a descending list just because "" < "2024".
+function compareMissingLast(a, b) {
+    const aMissing = a === "" || a === null || a === undefined
+    const bMissing = b === "" || b === null || b === undefined
+    if (aMissing && bMissing) return 0
+    if (aMissing) return 1
+    if (bMissing) return -1
+    return 0
+}
+
+function progressOf(title) {
+    const total = Number(title.totalEpisodes) || 0
+    if (!total) return null
+    return countEpisodes(parseEpisodes(title.watchedEpisodes || "")) / total
+}
+
+function sortTitles(titles, sortKey, descending) {
+    const direction = descending ? -1 : 1
+    const sorted = [...titles]
+
+    sorted.sort((x, y) => {
+        let a
+        let b
+        switch (sortKey) {
+            case "lastWatched": a = x.lastWatched; b = y.lastWatched; break
+            case "year": a = x.year; b = y.year; break
+            case "rating": a = x.rating; b = y.rating; break
+            case "addedAt": a = x.addedAt; b = y.addedAt; break
+            case "progress": a = progressOf(x); b = progressOf(y); break
+            default: a = x.title; b = y.title
+        }
+
+        const missing = compareMissingLast(a, b)
+        if (missing !== 0) return missing
+
+        let result
+        if (typeof a === "number" && typeof b === "number") result = a - b
+        else result = String(a).localeCompare(String(b))
+
+        // Ties fall back to title so ordering is stable and predictable.
+        return result !== 0 ? result * direction : x.title.localeCompare(y.title)
+    })
+
+    return sorted
+}
+
+// Distinct collection names in use, sorted, for autocomplete and filtering.
+function listCollections(doc) {
+    const seen = new Map()
+    for (const entry of Object.values(doc.titles)) {
+        for (const name of normalizeCollections(entry?.collections ?? entry?.collection)) {
+            const key = name.toLowerCase()
+            if (!seen.has(key)) seen.set(key, name)
+        }
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b))
+}
+
+// Group titles by collection, preserving the incoming sort within each group.
+// A title in several collections appears under each of them -- that's the point
+// of tags -- so groups intentionally overlap. Titles with none land in Untagged,
+// which sorts last because it's the leftovers, not a collection.
+function groupByCollection(titles) {
+    const groups = new Map()
+    const untagged = []
+
+    for (const title of titles) {
+        const names = normalizeCollections(title.collections)
+        if (!names.length) {
+            untagged.push(title)
+            continue
+        }
+        for (const name of names) {
+            if (!groups.has(name)) groups.set(name, [])
+            groups.get(name).push(title)
+        }
+    }
+
+    const named = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    return untagged.length ? [...named, [UNTAGGED, untagged]] : named
 }
 
 // Every title in the document, normalized and key-stamped, sorted by title.
@@ -247,5 +365,11 @@ module.exports = {
     titleKey,
     findTitle,
     normalizeTitle,
-    listTitles
+    listTitles,
+    normalizeCollections,
+    listCollections,
+    groupByCollection,
+    UNTAGGED,
+    SORTS,
+    sortTitles
 }

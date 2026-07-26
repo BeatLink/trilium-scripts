@@ -96,6 +96,74 @@
     border-color: var(--main-text-color);
 }
 
+/* --- controls --- */
+
+.mt-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.mt-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    margin: 0;
+}
+
+/* --- collections --- */
+
+.mt-tag {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.18);
+    border: 1px solid var(--main-border-color);
+    font-size: 11px;
+}
+
+.mt-tag-edit {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.mt-tag-edit .mt-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* A text-weight action that shouldn't compete with the row's real buttons. */
+.mt-linkbtn {
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted-text-color, gray);
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mt-linkbtn:hover {
+    color: var(--main-text-color);
+}
+
+.mt-group {
+    margin-bottom: 14px;
+}
+
+.mt-group-head {
+    font-weight: 600;
+    padding: 6px 0 4px;
+    border-bottom: 2px solid var(--main-border-color);
+    margin-bottom: 4px;
+}
+
 /* --- rows --- */
 
 /* A title and its expandable episode grid. The border lives on the item so an

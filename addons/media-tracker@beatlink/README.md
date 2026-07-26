@@ -43,6 +43,28 @@ seasons started — and expanding it shows episodes watched and seasons *complet
 TMDB, backfills missing ids and episode counts, and recomputes every show's status from its episode
 progress. It never changes a rating and never un-watches an episode.
 
+### Collections
+
+Collections group titles into shared universes and work like **tags** — a title can belong to several
+at once. Use **+ Add to collection** on any row and type comma-separated names, with autocomplete
+from collections you already use.
+
+This is deliberately manual. TMDB cannot supply it: `belongs_to_collection` exists only on movies and
+covers narrow film series rather than universes (nothing there joins the MCU's films to its shows),
+and TV has no equivalent field at all. So *Game of Thrones* + *House of the Dragon*, or the MCU's
+films and series together, only group correctly when you say so.
+
+The toolbar offers a **Collection** filter (including an **Untagged** option for titles with none) and
+a **Group by collection** toggle that renders rows under collection headers. A title in several
+collections appears under each — groups overlap by design.
+
+### Sorting
+
+Sort by **A-Z**, **Recently watched**, **Release date**, **Rating**, **Recently added**, or
+**Progress**, with an arrow button to flip direction. Titles missing the sort value (unrated, never
+watched, no release year) always sort last in *both* directions, so an empty field never leads the
+list.
+
 **Add** searches TMDB. The same **All / Movies / TV** chips scope the search: All uses TMDB's
 multi-search, while Movies and TV use the dedicated endpoints, which return a full page of one kind
 rather than a mixed page filtered down. Switching the chip re-runs the current search immediately.
