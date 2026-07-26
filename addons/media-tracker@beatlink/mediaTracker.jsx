@@ -384,19 +384,45 @@ function DetailsPage({ title, onBack, onChanged }) {
 
 // --- library ----------------------------------------------------------------
 
-function TitleRow({ title, onChanged, expanded, onToggleEpisodes, onOpenDetails }) {
+function TitleRow({
+    title, onChanged, expanded, onToggleEpisodes, onOpenDetails, allCollections = []
+}) {
     const [busy, setBusy] = useState(false)
     const [editingTags, setEditingTags] = useState(false)
-    const [tagDraft, setTagDraft] = useState("")
+    // Local copy of this title's collections while the picker is open, so the
+    // checkboxes respond instantly rather than waiting for a round trip.
+    const [selected, setSelected] = useState(title.collections || [])
+    const [newTag, setNewTag] = useState("")
 
     const update = async (fn) => {
         setBusy(true)
         try { await fn(); await onChanged() } finally { setBusy(false) }
     }
 
-    const saveTags = async () => {
-        setEditingTags(false)
-        await update(() => callBackend("setCollections", { key: title.key, collections: tagDraft }))
+    // Each change saves immediately: with checkboxes there is no natural "submit",
+    // and a picker holding unsaved state is easy to close and lose.
+    const persist = async (names) => {
+        setSelected(names)
+        await update(() => callBackend("setCollections", {
+            key: title.key, collections: names.join(",")
+        }))
+    }
+
+    const toggleCollection = (name) => {
+        persist(selected.includes(name)
+            ? selected.filter(n => n !== name)
+            : [...selected, name])
+    }
+
+    const addNewCollection = () => {
+        const name = newTag.trim()
+        if (!name) return
+        setNewTag("")
+        // Case-insensitive match so "mcu" doesn't create a twin of "MCU".
+        const existing = allCollections.find(n => n.toLowerCase() === name.toLowerCase())
+        const chosen = existing || name
+        if (selected.some(n => n.toLowerCase() === chosen.toLowerCase())) return
+        persist([...selected, chosen])
     }
 
     const seasons = parseEpisodes(title.watchedEpisodes)
@@ -430,28 +456,52 @@ function TitleRow({ title, onChanged, expanded, onToggleEpisodes, onOpenDetails 
                         ))}
                     </div>
                     {editingTags ? (
-                        <div class="mt-tag-edit">
-                            <input
-                                class="mt-input"
-                                list="mt-collection-options"
-                                placeholder="Comma-separated, e.g. Marvel Cinematic Universe, Phase Four"
-                                value={tagDraft}
-                                autofocus
-                                disabled={busy}
-                                onInput={e => setTagDraft(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === "Enter") saveTags()
-                                    if (e.key === "Escape") setEditingTags(false)
-                                }}
-                            />
-                            <button class="mt-btn" disabled={busy} onClick={saveTags}>Save</button>
-                            <button class="mt-btn" disabled={busy}
-                                onClick={() => setEditingTags(false)}>Cancel</button>
+                        <div class="mt-tag-picker">
+                            {/* Every known collection is listed with its current
+                                membership, so nothing has to be typed or recalled.
+                                Checkboxes rather than a <select> because a title can
+                                be in several collections at once. */}
+                            {allCollections.length > 0 ? (
+                                <div class="mt-tag-list">
+                                    {allCollections.map(name => (
+                                        <label class="mt-tag-option" key={name}>
+                                            <input
+                                                type="checkbox"
+                                                disabled={busy}
+                                                checked={selected.includes(name)}
+                                                onChange={() => toggleCollection(name)}
+                                            />
+                                            {name}
+                                        </label>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p class="mt-hint">No collections yet — create the first one below.</p>
+                            )}
+                            <div class="mt-tag-edit">
+                                <input
+                                    class="mt-input"
+                                    placeholder="New collection, e.g. Marvel Cinematic Universe"
+                                    value={newTag}
+                                    autofocus
+                                    disabled={busy}
+                                    onInput={e => setNewTag(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter") addNewCollection()
+                                        if (e.key === "Escape") setEditingTags(false)
+                                    }}
+                                />
+                                <button class="mt-btn" disabled={busy || !newTag.trim()}
+                                    onClick={addNewCollection}>Add</button>
+                                <button class="mt-btn" disabled={busy}
+                                    onClick={() => setEditingTags(false)}>Done</button>
+                            </div>
                         </div>
                     ) : (
                         <button class="mt-linkbtn" disabled={busy}
                             onClick={() => {
-                                setTagDraft((title.collections || []).join(", "))
+                                setSelected(title.collections || [])
+                                setNewTag("")
                                 setEditingTags(true)
                             }}>
                             {(title.collections || []).length ? "Edit collections" : "+ Add to collection"}
@@ -777,11 +827,6 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                         : "No titles match these filters."}
                 </p>
             )}
-            {/* Autocomplete source for every row's collection editor. */}
-            <datalist id="mt-collection-options">
-                {collections.map(name => <option key={name} value={name} />)}
-            </datalist>
-
             {groups
                 ? groups.map(([name, rows]) => (
                     <div class="mt-group" key={name}>
@@ -798,6 +843,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                                 expanded={expandedKey === title.key}
                                 onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
                                 onOpenDetails={t => setDetailsKey(t.key)}
+                                allCollections={collections}
                             />
                         ))}
                     </div>
@@ -810,6 +856,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                         expanded={expandedKey === title.key}
                         onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
                         onOpenDetails={t => setDetailsKey(t.key)}
+                        allCollections={collections}
                     />
                 ))}
         </div>

@@ -72,8 +72,11 @@ no weight to your database note.
 ### Collections
 
 Collections group titles into shared universes and work like **tags** — a title can belong to several
-at once. Use **+ Add to collection** on any row and type comma-separated names, with autocomplete
-from collections you already use.
+at once. **+ Add to collection** on any row opens a picker listing every collection you have with its
+current membership checked, so nothing has to be typed or remembered. A field underneath creates a new
+one; typing a name that already exists (in any casing) reuses it rather than making a near-duplicate.
+
+Each tick saves immediately — there is no separate save step to forget.
 
 This is deliberately manual. TMDB cannot supply it: `belongs_to_collection` exists only on movies and
 covers narrow film series rather than universes (nothing there joins the MCU's films to its shows),

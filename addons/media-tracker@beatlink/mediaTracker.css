@@ -136,6 +136,35 @@
     font-size: 11px;
 }
 
+/* The collection picker: every known collection listed with its membership,
+   plus a field to create a new one. */
+.mt-tag-picker {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
+}
+
+.mt-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    /* Long collection lists scroll rather than pushing the row apart. */
+    max-height: 132px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+
+.mt-tag-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    margin: 0;
+    cursor: pointer;
+}
+
 .mt-tag-edit {
     display: flex;
     gap: 6px;
