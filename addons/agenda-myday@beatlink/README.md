@@ -32,6 +32,24 @@ A task drops off the list once it's in your day: adding it appends a reference l
 note, and any task already linked there is filtered out. The list refreshes when you add something,
 when the auto-file loop runs, and whenever another agenda widget broadcasts `agenda:tasksChanged`.
 
+## Pruning
+
+When a task's start/due date moves off today, its link is **removed from the My Day note**. That's
+what completing a task does: `complete()` either advances a recurring task to its next occurrence or
+archives a one-off, and either way it no longer belongs on today's page.
+
+This runs on the `agenda:tasksChanged` event (broadcast by `agenda-task@beatlink` when you complete
+or reschedule) and again whenever the panel becomes visible, which catches changes made while it
+wasn't mounted. The prune is **not** gated on visibility, since tasks are usually completed from
+their own note rather than from My Day.
+
+Only entries this addon could have filed are touched: a linked note is removed if the task search
+still returns it but it isn't dated today, or if it has dropped out of search while still carrying a
+date label (an archived, completed task). **Hand-written links and undated notes are left alone.**
+Removal strips the whole entry - the enclosing `<li>` or `<p>` - never just the `<a>`, so no orphan
+checkboxes remain, and only the containing `<li>` goes so neighbouring tasks in a merged todo list
+survive.
+
 ## Configuration
 
 Everything is edited from the **My Day Editor** page, which is also the settings anchor: it carries

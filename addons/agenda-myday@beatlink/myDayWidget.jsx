@@ -16,7 +16,8 @@ const {
     getSuggestedTasks,
     addTaskToMyDay,
     addDueTasksToMyDay,
-    sendNotificationForDueTasks
+    sendNotificationForDueTasks,
+    pruneMyDayNote
 } = require("myDaySettings.js")
 
 // One suggested task: its title, when it's scheduled, and a + that files it onto
@@ -65,10 +66,25 @@ function MyDay() {
     }
 
     // Only query while the panel is on screen; the auto-file loop below calls
-    // refreshSuggestions() directly, so its own refresh is unaffected.
-    useEffect(() => { if (isVisible) refreshSuggestions() }, [ids, myDayNoteId, isVisible])
+    // refreshSuggestions() directly, so its own refresh is unaffected. Pruning
+    // runs first so a task completed while the panel was unmounted (no event
+    // reached us) is cleared on the way in.
+    useEffect(() => {
+        if (!isVisible) return
+        (async () => {
+            await pruneMyDayNote(ids.myDay, myDayNoteId)
+            await refreshSuggestions()
+        })()
+    }, [ids, myDayNoteId, isVisible])
 
-    useTriliumEvent("agenda:tasksChanged", () => { if (isVisible) refreshSuggestions() })
+    // Deliberately ungated: a task is usually completed from its own note, not
+    // from the My Day note, so gating the prune on isVisible would mean it only
+    // ran when it had nothing to do.
+    useTriliumEvent("agenda:tasksChanged", async () => {
+        if (!ids) return
+        await pruneMyDayNote(ids.myDay, myDayNoteId)
+        if (isVisible) await refreshSuggestions()
+    })
 
     useEffect(() => {
         if (!ids?.myDay.addTasksWhenDue) return

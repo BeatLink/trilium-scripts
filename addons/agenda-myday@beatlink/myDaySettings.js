@@ -150,6 +150,77 @@ async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = 
     }, [myDayNoteId, taskNoteId, renderAsTodo, addToTop])
 }
 
+// Removes a task's entry from the My Day note, including its wrapper: the
+// enclosing <li> when it was filed as a todo item, or the enclosing <p>
+// otherwise. Stripping just the <a> would leave an orphan checkbox behind.
+//
+// Only the containing <li> is removed, never the whole <ul> - the editor merges
+// consecutive todo items into a single list, so dropping the <ul> would take
+// unrelated tasks with it. An emptied <ul> is cleaned up afterwards.
+async function removeTaskFromMyDay(myDayNoteId, taskNoteId) {
+    if (!myDayNoteId) return
+    await api.runOnBackend((myDayNoteId, taskNoteId) => {
+        const myDayNote = api.getNote(myDayNoteId)
+        const before = myDayNote.getContent()
+        if (!before.includes(`#root/${taskNoteId}`)) return
+
+        const linkPattern = `<a[^>]*href="#root/${taskNoteId}"[^>]*>.*?</a>`
+        const after = before
+            .replace(new RegExp(`<li\\b[^>]*>(?:(?!</li>).)*?${linkPattern}(?:(?!</li>).)*?</li>`, "gs"), "")
+            .replace(new RegExp(`<p\\b[^>]*>(?:(?!</p>).)*?${linkPattern}(?:(?!</p>).)*?</p>`, "gs"), "")
+            .replace(new RegExp(linkPattern, "gs"), "")
+            .replace(/<ul class="todo-list">\s*<\/ul>/g, "")
+
+        if (after === before) return
+        myDayNote.setContent(after)
+        myDayNote.save()
+    }, [myDayNoteId, taskNoteId])
+}
+
+// Drops any task linked on the My Day note that no longer belongs there,
+// because its start/due date moved off today - which is what completing a task
+// does, since `complete()` either advances a recurring task to its next
+// occurrence or archives a one-off. Tasks the search no longer returns at all
+// (archived, done) are pruned too.
+//
+// Only notes this addon could have filed are considered: anything linked on the
+// My Day note that the task search doesn't match is left alone, so hand-written
+// links and notes are never touched.
+async function pruneMyDayNote(settings, myDayNoteId) {
+    if (!myDayNoteId) return
+    const myDayNote = await api.getNote(myDayNoteId)
+    if (!myDayNote) return
+    const content = await myDayNote.getContent()
+
+    const linkedIds = [...content.matchAll(/href="#root\/([a-zA-Z0-9_]+)"/g)].map(m => m[1])
+    if (!linkedIds.length) return
+
+    // Notes the search still returns, split by whether they are dated today.
+    const dated = new Map()
+    for (const task of await getTaskNotes(settings)) {
+        const datetime = task.getLabelValue(settings.startLabel)
+            || task.getLabelValue(settings.dueLabel)
+        dated.set(task.noteId, bucketFor(datetime) === "today")
+    }
+
+    for (const noteId of new Set(linkedIds)) {
+        if (dated.has(noteId)) {
+            // Still a live task: keep it only while it is dated today.
+            if (!dated.get(noteId)) await removeTaskFromMyDay(myDayNoteId, noteId)
+            continue
+        }
+
+        // The search no longer returns it. Completing a one-off task archives
+        // it, and archived notes drop out of search - so a note that still
+        // carries a date label was ours and is done. Anything else (a
+        // hand-written link, an undated note) is left alone.
+        const note = await api.getNote(noteId)
+        const wasTask = note && (note.getLabelValue(settings.startLabel)
+            || note.getLabelValue(settings.dueLabel))
+        if (wasTask) await removeTaskFromMyDay(myDayNoteId, noteId)
+    }
+}
+
 // Files every task whose start time is this minute onto the My Day note.
 async function addDueTasksToMyDay(settings, myDayNoteId) {
     if (!myDayNoteId) return
@@ -176,6 +247,8 @@ module.exports = {
     getMyDaySettings,
     getSuggestedTasks,
     addTaskToMyDay,
+    removeTaskFromMyDay,
+    pruneMyDayNote,
     addDueTasksToMyDay,
     sendNotificationForDueTasks,
     DEFAULTS
