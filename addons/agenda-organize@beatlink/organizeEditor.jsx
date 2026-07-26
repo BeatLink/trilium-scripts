@@ -104,7 +104,6 @@ function WorkflowSetup() {
 
     const results = outcome ? outcome.results : null
     const migratedAreaCount = outcome ? outcome.migratedAreaCount : 0
-    const merges = outcome && outcome.merged ? outcome.merged.merges : []
     const labelMigration = outcome ? outcome.labelMigration : null
     const created = results ? results.filter(r => r.created).length : 0
     const adopted = results ? results.filter(r => r.adopted).length : 0
@@ -114,13 +113,15 @@ function WorkflowSetup() {
         <div className="workflow-setup">
             <p className="workflow-setup-blurb">
                 Provision the notebook structure: <strong>Inbox</strong>, <strong>My Day</strong>,
-                <strong> Agenda</strong>, and one note per Area (from the dimension that scaffolds
-                areas, each with Ideas / Goals / Routines / Projects / Future / Notes below it). Notes
-                are matched by title at the right level — an existing match is adopted (tagged
-                <code>#agendaOrganizeArea</code> / <code>#agendaOrganizeBucket</code>) rather than
-                duplicated, and anything missing is created.
-                Also re-keys any notes left on an old area slug after an area reorder. Safe to run more
-                than once.
+                <strong> Agenda</strong>, one top-level note per Area (from the dimension that
+                scaffolds areas) and one top-level note per enabled template. Both sets are one
+                level deep — an item is filed in two places at once, its Area and its Type, as a
+                clone. Notes are matched by title at the top level — an existing match is adopted
+                (tagged <code>#agendaOrganizeArea</code> / <code>#agendaOrganizeType</code>) rather
+                than duplicated, and anything missing is created.
+                Only containers are provisioned here; filing items into them is the Organize page's
+                job. Also re-keys any notes left on an old area slug after an area reorder. Safe to
+                run more than once.
             </p>
 
             <button
@@ -147,21 +148,6 @@ function WorkflowSetup() {
                         {labelMigration && labelMigration.unparsed.length > 0 &&
                             ` ${labelMigration.unparsed.length} legacy key${labelMigration.unparsed.length === 1 ? "" : "s"} could not be parsed and were left as-is.`}
                     </div>
-                    {merges.length > 0 && (
-                        <ul className="workflow-setup-log">
-                            {merges.map(m => (
-                                <li key={m.fromNoteId}>
-                                    <span className="workflow-setup-tag workflow-setup-tag-adopted">merged</span>
-                                    {m.rekeyedInPlace
-                                        ? ` Re-keyed "${m.fromTitle}" to ${m.toKey}.`
-                                        : ` Folded "${m.fromTitle}" into "${m.toTitle}"` +
-                                          ` (${m.movedCount} note${m.movedCount === 1 ? "" : "s"}` +
-                                          `${m.movedContent ? " + content" : ""} moved)` +
-                                          (m.deleted ? " and removed the empty bucket." : ` — kept: ${m.keptReason}.`)}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
                     <ul className="workflow-setup-log">
                         {results.map(r => (
                             <li key={r.key} style={{ marginLeft: `${r.depth * 16}px` }}>

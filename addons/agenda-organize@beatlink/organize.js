@@ -10,7 +10,8 @@
 //   - getOrganizeCandidates(): every note under the Inbox or an Area subtree, with
 //     its per-dimension assigned value + suggested value (nearest ancestor's),
 //     plus its tree path, content preview, start-date flag and subtask flag.
-//   - getMisfiledNotes(): notes whose area/bucket disagrees with where they're filed.
+//   - getMisfiledNotes(): notes whose own area/template disagrees with the
+//     top-level root they're filed under, on that root's axis.
 //   - deleteNote / refileNote: the per-note mutations. Dimension writes live in
 //     dimensions.assignDimension, shared with the Task pane.
 //
@@ -23,10 +24,15 @@
 // actionable-item set all key on that registry's templateNoteId now, never on a
 // string slug.
 //
-// Scope note: only notes UNDER the Inbox and the Area roots are surfaced. The
-// structural notes themselves (anything carrying #agendaOrganizeArea or
-// #agendaOrganizeSpecial — the areas, the buckets, Inbox/My Day/Agenda) are
-// excluded; they're containers, not items.
+// Structure: two PARALLEL top-level trees, each one level deep — one root per
+// area, one root per template — with a filed item cloned into both (its area
+// root and its type root). See organizeStructure.js.
+//
+// Scope note: only notes UNDER the Inbox, the Area roots and the Type roots are
+// surfaced, de-duped by noteId since a filed item is reachable from two roots.
+// The structural notes themselves (anything carrying #agendaOrganizeArea,
+// #agendaOrganizeType or #agendaOrganizeSpecial) are excluded; they're
+// containers, not items.
 //
 // One backend round-trip collects the candidate list once (runOnBackend closures
 // are isolated and can't share helpers), and the frontend filters it into each
@@ -35,11 +41,16 @@
 const { getTemplates } = require("templateRegistry.jsx")
 const { loadSettings } = require("libSettingsUI.jsx")
 
-// Structural identity labels (written by organizeProvision.js). An area root has
-// `area` only; a bucket has `area` + `bucket`; the Inbox / My Day / Agenda
-// singletons have `special`.
+// Structural identity labels (written by organizeProvision.js), one per kind of
+// top-level root and mutually exclusive: an area root has `area`, a type root
+// has `type`, the Inbox / My Day / Agenda singletons have `special`.
+//
+// `bucket` marked a per-area type bucket under the old nested shape. Nothing
+// writes it any more; it is still read so a legacy bucket (which also carries
+// `area`) is not mistaken for an area root.
 const LABELS = {
     area: "agendaOrganizeArea",
+    type: "agendaOrganizeType",
     bucket: "agendaOrganizeBucket",
     special: "agendaOrganizeSpecial"
 }
@@ -88,20 +99,23 @@ async function getBucketTemplates() {
 async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
     return api.runOnBackend((labels, dimensionLabels, actionableTemplateIds) => {
         const actionableSet = new Set(actionableTemplateIds)
-        // Scope roots: the Inbox note + every Area root. An area root carries
-        // the area label and NO bucket label; a bucket carries both and is NOT a
-        // scope root (its contents are still reached by descending from the area
-        // root).
+        // Scope roots: the Inbox note + every Area root + every Type root. An
+        // area root carries the area label and NO bucket label (a legacy nested
+        // bucket carries both, and is reached by descending anyway). A note
+        // filed in both trees is a clone reachable from two roots, so the walk
+        // dedupes by noteId and each item is collected once.
         const areaTagged = api.searchForNotes(`#${labels.area}`)
+        const typeTagged = api.searchForNotes(`#${labels.type}`)
         const specialTagged = api.searchForNotes(`#${labels.special}`)
         const rootNotes = areaTagged
             .filter(n => !n.getLabelValue(labels.bucket))
+            .concat(typeTagged)
             .concat(specialTagged.filter(n => n.getLabelValue(labels.special) === "inbox"))
 
         // Any note carrying a structural identity label is scaffolding — never a
         // triage item.
         const structuralIds = new Set(
-            areaTagged.concat(specialTagged).map(n => n.noteId))
+            areaTagged.concat(typeTagged).concat(specialTagged).map(n => n.noteId))
 
         // Ancestor breadcrumb: walk primary parents up to (but excluding) root.
         function pathOf(note) {
@@ -206,48 +220,59 @@ async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
     }, [LABELS, dimensionLabels, actionableTemplateIds])
 }
 
-// Find notes whose area or bucket disagrees with where they're filed. The tree
-// has two scaffolding axes: an Area root per value of the area dimension, and a
-// bucket per enabled template-picker entry inside each. A note under
-// "Home > Task" implies #area=home and ~template=<Task's noteId>; it's misfiled
-// if its own #<rootLabel> differs from the ancestor Area, or its own ~template
-// differs from the ancestor bucket's. Only notes inside an Area subtree are
-// checked (Inbox notes aren't filed yet).
+// Find notes filed under a root that disagrees with the note's own labels. The
+// tree has two PARALLEL top-level axes: an Area root per value of the area
+// dimension, and a Type root per enabled template-picker entry. Neither nests
+// the other, and a fully-filed item is cloned into exactly one of each.
+//
+// A note is checked once per structural parent it sits under, and the axis of
+// that parent decides what is compared:
+//   - under an Area root: its own #<rootLabel> must match that root's area
+//   - under a Type root:  its own ~template must match that root's template
+// A note filed under only one of the two axes is not "misfiled" — it's
+// incompletely filed, which the per-dimension queues already cover; flagging it
+// here would double-report every note the user hasn't finished triaging.
+//
+// Only notes under a structural root are checked (Inbox notes aren't filed yet).
+// Descendants are walked too, inheriting the root they hang under, so a subtask
+// filed beneath a misfiled parent is reported only once the parent is fixed.
 //
 // `rootDim` is the area-scaffolding dimension ({ label, values: [{ key, name,
 // color }] }). `bucketTemplates` is template-picker's registry
 // ([{ noteId, name, color, ... }], as returned by getBucketTemplates). Returns
 // per note:
-//   { noteId, title, path, preview,
+//   { noteId, title, path, preview, currentParentId,
 //     areaMisfiled, typeMisfiled,
 //     branchArea, branchBucket, noteArea, noteTemplateTitle,
 //     fixes: { moveTargetNoteId, moveTargetLabel, updateAreaTo, updateAreaColor,
 //              updateTemplateTo, updateTemplateToTitle } }
-// `branchBucket` is the ancestor bucket's ~template noteId. `updateTemplateTo` is
-// that noteId (not a slug) so the frontend sets ~template directly.
+// `branchArea` is the containing Area root's area key; `branchBucket` is the
+// containing Type root's template noteId. `updateTemplateTo` is that noteId (not
+// a slug) so the frontend sets ~template directly. `currentParentId` is the
+// branch the note was found under — the one a move removes it from, leaving its
+// clone on the other axis alone.
 async function getMisfiledNotes(rootDim, bucketTemplates) {
     return api.runOnBackend((labels, rootDim, bucketTemplates) => {
         const rootLabel = rootDim.label
         const areaTagged = api.searchForNotes(`#${labels.area}`)
+        const typeTagged = api.searchForNotes(`#${labels.type}`)
         const specialTagged = api.searchForNotes(`#${labels.special}`)
         const structuralIds = new Set(
-            areaTagged.concat(specialTagged).map(n => n.noteId))
+            areaTagged.concat(typeTagged).concat(specialTagged).map(n => n.noteId))
 
-        // Index structural notes by "<areaKey>" / "<areaKey> <bucketNoteId>" so
-        // we can resolve "the Task bucket under the Home area" -> a real noteId.
-        const idKey = (areaKey, bucketId) => bucketId ? `${areaKey} ${bucketId}` : areaKey
-        const byKey = {}
-        for (const n of areaTagged) {
-            byKey[idKey(n.getLabelValue(labels.area), n.getLabelValue(labels.bucket))] = n
-        }
-
-        // Area roots carry the area label and no bucket label.
+        // Area roots carry the area label and no bucket label (a legacy nested
+        // bucket carries both). Each axis is indexed by its identity value so a
+        // note's own labels resolve straight to the root it belongs under.
         const areaRootNotes = areaTagged.filter(n => !n.getLabelValue(labels.bucket))
+        const areaRootByKey = {}
+        for (const n of areaRootNotes) areaRootByKey[n.getLabelValue(labels.area)] = n
+        const typeRootById = {}
+        for (const n of typeTagged) typeRootById[n.getLabelValue(labels.type)] = n
 
         const colorByKey = {}
         for (const v of rootDim.values) colorByKey[v.key] = v.color || ""
 
-        // bucket ~template noteId -> display name (for the "Set type to …" button).
+        // template noteId -> display name (for the "Set type to …" button).
         const bucketNameByKey = {}
         for (const t of bucketTemplates) bucketNameByKey[t.noteId] = t.name
 
@@ -274,105 +299,82 @@ async function getMisfiledNotes(rootDim, bucketTemplates) {
             return text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX) + "…" : text
         }
 
-        // Nearest ancestor Area's root value, and nearest ancestor bucket's
-        // ~template noteId — both read straight off the structural identity
-        // labels (#agendaOrganizeArea / #agendaOrganizeBucket) that scaffolding
-        // carries, so no key parsing is involved.
-        function branchContext(note) {
-            let branchArea = ""
-            let branchBucket = ""
-            let cur = note.getParentNotes()[0]
-            while (cur && cur.noteId !== "root") {
-                if (!branchBucket) {
-                    const b = cur.getLabelValue(labels.bucket)
-                    if (b) branchBucket = b
-                }
-                if (!branchArea) {
-                    const a = cur.getLabelValue(labels.area)
-                    if (a) branchArea = a
-                }
-                cur = cur.getParentNotes()[0]
-            }
-            return { branchArea, branchBucket }
-        }
-
-        const seen = new Set()
         const out = []
 
-        function visit(note) {
-            for (const child of note.getChildNotes()) {
+        // Walk one axis. `axis` is "area" or "type"; `rootValue` is the root's
+        // identity value, fixed for the whole subtree beneath it. `seen` is
+        // per-axis: the same note legitimately appears under both a Area root and
+        // a Type root, and each visit checks a different label.
+        function walkAxis(parent, axis, rootValue, seen) {
+            for (const child of parent.getChildNotes()) {
                 if (seen.has(child.noteId)) continue
                 seen.add(child.noteId)
-                let flagged = false
-                if (!structuralIds.has(child.noteId)) {
-                    const { branchArea, branchBucket } = branchContext(child)
-                    const noteArea = child.getLabelValue(rootLabel) || ""
-                    const noteBucket = child.getRelationValue("template") || ""
-                    const noteTemplateTitle = noteBucket ? (bucketNameByKey[noteBucket] || "") : ""
+                if (structuralIds.has(child.noteId)) continue
 
-                    const areaMisfiled = !!noteArea && !!branchArea && noteArea !== branchArea
-                    // A note with no ~template is never type-misfiled (we don't
-                    // know where it belongs).
-                    const typeMisfiled = !!noteBucket && !!branchBucket && noteBucket !== branchBucket
+                const noteArea = child.getLabelValue(rootLabel) || ""
+                const noteTemplate = child.getRelationValue("template") || ""
 
-                    if (areaMisfiled || typeMisfiled) {
-                        flagged = true
-                        // Move target: the note's correct Area (by its own root
-                        // value) and, if it has a ~template, that bucket under
-                        // that area. Best-effort — fall back to the area root, or
-                        // the current area when the note's own value is unknown.
-                        let moveTargetNoteId = ""
-                        let moveTargetLabel = ""
-                        const destAreaKey = noteArea || branchArea
-                        const destBucketKey = noteBucket || branchBucket
-                        if (destAreaKey) {
-                            const target = (destBucketKey && byKey[idKey(destAreaKey, destBucketKey)])
-                                || byKey[idKey(destAreaKey, "")]
-                            if (target) {
-                                moveTargetNoteId = target.noteId
-                                moveTargetLabel = pathOf(target) + (pathOf(target) ? " › " : "") + target.title
-                            }
+                // Compare only the axis this branch represents. A note with no
+                // value on that axis is unclassified, not misfiled — we don't
+                // know where it belongs.
+                const areaMisfiled = axis === "area" && !!noteArea && noteArea !== rootValue
+                const typeMisfiled = axis === "type" && !!noteTemplate && noteTemplate !== rootValue
+
+                if (areaMisfiled || typeMisfiled) {
+                    // Move target: the root on THIS axis matching the note's own
+                    // label — the branch it should have been filed under. The
+                    // note's clone on the other axis is untouched.
+                    const target = areaMisfiled
+                        ? areaRootByKey[noteArea]
+                        : typeRootById[noteTemplate]
+                    const targetPath = target ? pathOf(target) : ""
+
+                    out.push({
+                        noteId: child.noteId,
+                        title: child.title,
+                        path: pathOf(child),
+                        preview: previewOf(child),
+                        // The branch this note was found under — what a move
+                        // removes it from.
+                        currentParentId: parent.noteId,
+                        areaMisfiled,
+                        typeMisfiled,
+                        branchArea: axis === "area" ? rootValue : "",
+                        branchBucket: axis === "type" ? rootValue : "",
+                        noteArea,
+                        noteTemplateTitle: noteTemplate ? (bucketNameByKey[noteTemplate] || "") : "",
+                        fixes: {
+                            moveTargetNoteId: target ? target.noteId : "",
+                            moveTargetLabel: target
+                                ? targetPath + (targetPath ? " › " : "") + target.title
+                                : "",
+                            // The other fix direction: keep the note where it is
+                            // and adopt the root's own value instead.
+                            updateAreaTo: areaMisfiled ? rootValue : "",
+                            updateAreaColor: areaMisfiled ? (colorByKey[rootValue] || "") : "",
+                            updateTemplateTo: typeMisfiled ? rootValue : "",
+                            updateTemplateToTitle: typeMisfiled ? (bucketNameByKey[rootValue] || "") : ""
                         }
-
-                        // "Set type" fix: adopt the branch bucket's own ~template.
-                        const canonicalTitle = branchBucket ? (bucketNameByKey[branchBucket] || "") : ""
-
-                        // The branch this note is filed under (its parent in this
-                        // subtree walk) — what a move removes it from.
-                        const currentParentId = note.noteId
-
-                        out.push({
-                            noteId: child.noteId,
-                            title: child.title,
-                            path: pathOf(child),
-                            preview: previewOf(child),
-                            currentParentId,
-                            areaMisfiled,
-                            typeMisfiled,
-                            branchArea,
-                            branchBucket,
-                            noteArea,
-                            noteTemplateTitle,
-                            fixes: {
-                                moveTargetNoteId,
-                                moveTargetLabel,
-                                updateAreaTo: areaMisfiled ? branchArea : "",
-                                updateAreaColor: areaMisfiled ? (colorByKey[branchArea] || "") : "",
-                                updateTemplateTo: typeMisfiled && branchBucket ? branchBucket : "",
-                                updateTemplateToTitle: typeMisfiled && branchBucket ? canonicalTitle : ""
-                            }
-                        })
-                    }
+                    })
+                    // A misfiled note's descendants inherit its wrong branch, so
+                    // they'd all be flagged for a problem this one move fixes.
+                    // Report the topmost offender only; the subtree is re-checked
+                    // on the next load, after the move.
+                    continue
                 }
-                // A misfiled note's descendants inherit its (wrong) branch context,
-                // so they'd all be flagged for a problem that moving this one note
-                // fixes. Report the topmost offender only; the subtree is re-checked
-                // on the next load, after the move.
-                if (!flagged) visit(child)
+
+                walkAxis(child, axis, rootValue, seen)
             }
         }
 
-        for (const root of areaRootNotes) visit(root)
+        const areaSeen = new Set()
+        for (const root of areaRootNotes) {
+            walkAxis(root, "area", root.getLabelValue(labels.area), areaSeen)
+        }
+        const typeSeen = new Set()
+        for (const root of typeTagged) {
+            walkAxis(root, "type", root.getLabelValue(labels.type), typeSeen)
+        }
         return out
     }, [LABELS, rootDim, bucketTemplates])
 }
@@ -421,12 +423,21 @@ async function assignTemplate(noteId, templateNoteId) {
     }, [noteId, templateNoteId])
 }
 
-// Find INVALID buckets: structural bucket notes whose identity no longer maps to
-// a current vocabulary. A bucket carries #agendaOrganizeArea=<areaSlug> plus
-// #agendaOrganizeBucket=<templateNoteId>; it's invalid when its area slug is not
-// a current area-dimension value OR its bucket noteId is not a current enabled
-// template-picker entry — the orphan left behind when the user deletes/disables
-// an Area value or a template, or deletes the template note itself.
+// Find INVALID roots: structural container notes whose identity no longer maps
+// to a current vocabulary — the orphan left behind when the user deletes or
+// disables an Area value or a template, or deletes a template note outright.
+// Both top-level axes are checked:
+//   - an Area root (#agendaOrganizeArea=<areaSlug>) is invalid when its slug is
+//     not a current area-dimension value;
+//   - a Type root (#agendaOrganizeType=<templateNoteId>) is invalid when its
+//     noteId is not a current enabled template-picker entry.
+// Legacy nested buckets (carrying #agendaOrganizeBucket alongside an area label)
+// are reported too, on the area half only — the flat structure never recreates
+// them, so merging one away is exactly the cleanup the user wants.
+//
+// A root is only ever compared against its OWN axis: an Area root has no
+// template and a Type root has no area, so neither is judged on a value it was
+// never meant to carry.
 //
 // `rootDim` is the area-scaffolding dimension ({ label, values: [{ key, name }] }).
 // `bucketTemplates` is template-picker's registry ([{ noteId, name, ... }]).
@@ -434,14 +445,12 @@ async function assignTemplate(noteId, templateNoteId) {
 //   { invalid: [{ noteId, title, path, area, bucket, childCount,
 //                 areaInvalid, bucketInvalid, reason }],
 //     targets: [{ noteId, label }] }
-// where `targets` is every VALID bucket (a merge destination), labelled by its
-// tree path so the user can tell "Home › Tasks" from "Career › Tasks".
+// where `targets` is every VALID root (a merge destination), labelled by its
+// tree path.
 async function getInvalidBuckets(rootDim, bucketTemplates) {
     return api.runOnBackend((labels, rootDim, bucketTemplates) => {
         const areaKeys = new Set(rootDim.values.map(v => v.key))
         const bucketKeys = new Set(bucketTemplates.map(t => t.noteId))
-        const areaNameByKey = {}
-        for (const v of rootDim.values) areaNameByKey[v.key] = v.name
         const bucketNameByKey = {}
         for (const t of bucketTemplates) bucketNameByKey[t.noteId] = t.name
 
@@ -455,15 +464,12 @@ async function getInvalidBuckets(rootDim, bucketTemplates) {
             return parts.join(" › ")
         }
 
-        // Every structural bucket: carries the bucket label (area roots don't).
-        const bucketNotes = api.searchForNotes(`#${labels.bucket}`)
-
-        // A bucket's identity is a template noteId. Trees provisioned under the
-        // older scheme still carry a title SLUG ("notes", "goals"), which matches
-        // no noteId and would mark every such bucket invalid at once — offering a
+        // A type identity is a template noteId. Trees provisioned under the older
+        // scheme still carry a title SLUG ("notes", "goals"), which matches no
+        // noteId and would mark every such root invalid at once — offering a
         // Delete button for the user's entire structure. A slug that names a live
-        // template is stale, not invalid: resolve it so those buckets are treated
-        // as valid. Only a bucket resolving to neither is genuinely orphaned.
+        // template is stale, not invalid: resolve it so those roots are treated as
+        // valid. Only one resolving to neither is genuinely orphaned.
         const templateIdByTitleSlug = {}
         for (const t of bucketTemplates) {
             const slug = String(t.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -474,23 +480,16 @@ async function getInvalidBuckets(rootDim, bucketTemplates) {
 
         const invalid = []
         const targets = []
-        for (const note of bucketNotes) {
-            const area = note.getLabelValue(labels.area) || ""
-            const rawBucket = note.getLabelValue(labels.bucket) || ""
-            const bucket = resolveBucket(rawBucket) || rawBucket
-            const areaInvalid = !areaKeys.has(area)
-            const bucketInvalid = !bucketKeys.has(bucket)
 
+        function record(note, area, bucket, areaInvalid, bucketInvalid) {
             if (!areaInvalid && !bucketInvalid) {
-                // A valid bucket — offer it as a merge destination.
                 const path = pathOf(note)
                 targets.push({
                     noteId: note.noteId,
                     label: (path ? path + " › " : "") + note.title
                 })
-                continue
+                return
             }
-
             const reasons = []
             if (areaInvalid) reasons.push(`area "${area || "(none)"}" is not a current area`)
             if (bucketInvalid) reasons.push(`type "${bucketNameByKey[bucket] || bucket || "(none)"}" is not a current template`)
@@ -506,16 +505,31 @@ async function getInvalidBuckets(rootDim, bucketTemplates) {
                 reason: reasons.join("; ")
             })
         }
+
+        // Area roots and legacy nested buckets both carry the area label; both
+        // are judged on their area slug alone.
+        for (const note of api.searchForNotes(`#${labels.area}`)) {
+            const area = note.getLabelValue(labels.area) || ""
+            record(note, area, "", !areaKeys.has(area), false)
+        }
+
+        // Type roots are judged on their template noteId alone.
+        for (const note of api.searchForNotes(`#${labels.type}`)) {
+            const raw = note.getLabelValue(labels.type) || ""
+            const bucket = resolveBucket(raw) || raw
+            record(note, "", bucket, false, !bucketKeys.has(bucket))
+        }
+
         return { invalid, targets }
     }, [LABELS, rootDim, bucketTemplates])
 }
 
-// Merge one bucket into another: move every child of `fromNoteId` into
-// `toNoteId`, append the source's own body under a heading (buckets are usually
+// Merge one structural root into another: move every child of `fromNoteId` into
+// `toNoteId`, append the source's own body under a heading (roots are usually
 // empty, but losing content would be data loss), then delete the emptied source
-// — but ONLY after confirming it has no remaining children and no content, the
-// same verified-empty discipline mergeStaleBuckets uses (deleting a note the user
-// may have filled is the one irreversible step). Returns
+// — but ONLY after confirming it has no remaining children and no content
+// (deleting a note the user may have filled is the one irreversible step).
+// Returns
 //   { moved, movedContent, deleted, keptReason }.
 async function mergeBucketInto(fromNoteId, toNoteId) {
     return api.runOnBackend((fromNoteId, toNoteId) => {
@@ -586,9 +600,10 @@ async function mergeBucketInto(fromNoteId, toNoteId) {
 //
 // Two structural refusals, because this is reached from one-click table actions
 // where the blast radius isn't visible:
-//   - a STRUCTURAL note (area root or bucket) is never junk; deleting one takes
-//     everything filed under it. Buckets are emptied via mergeBucketInto, which
-//     relocates children first and only deletes a verified-empty husk.
+//   - a STRUCTURAL note (an area root, a type root, a singleton, or a legacy
+//     bucket) is never junk; deleting one takes everything filed under it. They
+//     are emptied via mergeBucketInto, which relocates children first and only
+//     deletes a verified-empty husk.
 //   - a note with descendants requires an explicit acknowledgement of the count,
 //     so a caller cannot cascade a subtree by accident.
 // Returns { deleted, refusedReason, descendantCount }.
@@ -598,10 +613,11 @@ async function deleteNote(noteId, options = {}) {
         if (!note) return { deleted: false, refusedReason: "note not found", descendantCount: 0 }
 
         if (!allowStructural &&
-            (note.hasLabel(labels.area) || note.hasLabel(labels.bucket) || note.hasLabel(labels.special))) {
+            (note.hasLabel(labels.area) || note.hasLabel(labels.type) ||
+             note.hasLabel(labels.bucket) || note.hasLabel(labels.special))) {
             return {
                 deleted: false,
-                refusedReason: "refusing to delete a structural note (area root / bucket); merge it instead",
+                refusedReason: "refusing to delete a structural note (area root / type root); merge it instead",
                 descendantCount: 0
             }
         }
