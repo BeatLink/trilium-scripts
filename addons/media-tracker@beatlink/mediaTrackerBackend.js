@@ -335,20 +335,58 @@ function removeTitle(settings, key) {
 
 // --- Trakt ------------------------------------------------------------------
 
+// Credentials are trimmed at every use: a client id pasted from Trakt's site
+// often carries a trailing space or newline, and Trakt reports that as
+// "client not found" -- indistinguishable from a genuinely wrong id.
+function traktClientId(settings) {
+    return String(settings.traktClientId || "").trim()
+}
+
+function traktClientSecret(settings) {
+    return String(settings.traktClientSecret || "").trim()
+}
+
+// Trakt returns a specific error_description ("client not found",
+// "client_id is required", ...). Surface it instead of only the status code,
+// and add the likely cause for the ambiguous ones.
+async function traktError(res, clientId) {
+    let detail = ""
+    try {
+        const body = await res.json()
+        detail = body.error_description || body.error || ""
+    } catch (e) {
+        // Non-JSON body; fall back to the status alone.
+    }
+
+    if (res.status === 401 && detail === "client not found") {
+        return "Trakt does not recognise this Client ID. Check it against your app at "
+            + "trakt.tv/oauth/applications -- copy the Client ID, not the Client Secret, "
+            + `and make sure the whole value was pasted (currently ${clientId.length} characters).`
+    }
+    if (res.status === 403) {
+        return "Trakt refused the request (HTTP 403). The API app may be suspended or deleted."
+    }
+    return detail
+        ? `Trakt rejected the request: ${detail} (HTTP ${res.status})`
+        : `Trakt rejected the request (HTTP ${res.status})`
+}
+
 function traktHeaders(settings, withAuth) {
     const headers = {
         "Content-Type": "application/json",
         "trakt-api-version": "2",
-        "trakt-api-key": settings.traktClientId
+        "trakt-api-key": traktClientId(settings)
     }
     if (withAuth) headers["Authorization"] = `Bearer ${settings.traktAccessToken}`
     return headers
 }
 
 async function traktAuthStart(settings) {
-    if (!settings.traktClientId) throw new Error("Set a Trakt Client ID in Settings first")
-    const res = await postJson(`${TRAKT_API}/oauth/device/code`, { client_id: settings.traktClientId })
-    if (!res.ok) throw new Error(`Trakt rejected the client ID (HTTP ${res.status})`)
+    const clientId = traktClientId(settings)
+    if (!clientId) throw new Error("Set a Trakt Client ID in Settings first")
+
+    const res = await postJson(`${TRAKT_API}/oauth/device/code`, { client_id: clientId })
+    if (!res.ok) throw new Error(await traktError(res, clientId))
     const json = await res.json()
     return {
         deviceCode: json.device_code,
@@ -362,11 +400,11 @@ async function traktAuthStart(settings) {
 // Polled by the frontend. Status codes are Trakt's documented device-flow
 // semantics, so each maps to a distinct UI state rather than a generic error.
 async function traktAuthPoll(settings, deviceCode) {
-    if (!settings.traktClientSecret) throw new Error("Set a Trakt Client Secret in Settings first")
+    if (!traktClientSecret(settings)) throw new Error("Set a Trakt Client Secret in Settings first")
     const res = await postJson(`${TRAKT_API}/oauth/device/token`, {
         code: deviceCode,
-        client_id: settings.traktClientId,
-        client_secret: settings.traktClientSecret
+        client_id: traktClientId(settings),
+        client_secret: traktClientSecret(settings)
     })
 
     if (res.status === 200) {
@@ -394,8 +432,8 @@ async function traktRefreshIfNeeded(settings) {
     if (!settings.traktRefreshToken || expiresAt === 0 || now < expiresAt - 300) return settings
     const res = await postJson(`${TRAKT_API}/oauth/token`, {
         refresh_token: settings.traktRefreshToken,
-        client_id: settings.traktClientId,
-        client_secret: settings.traktClientSecret,
+        client_id: traktClientId(settings),
+        client_secret: traktClientSecret(settings),
         grant_type: "refresh_token"
     })
     if (!res.ok) throw new Error("Trakt session expired and could not be renewed. Authorize again.")

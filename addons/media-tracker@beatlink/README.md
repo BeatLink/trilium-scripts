@@ -108,9 +108,18 @@ them. No write scopes are requested, so no local edit can be pushed upstream by 
 ### Trakt
 
 Authorization uses Trakt's device flow: click **Authorize**, and the widget shows a code plus a URL.
-Enter the code there in your browser and the widget picks up the approval automatically. You need a
-Trakt API app ([trakt.tv/oauth/applications](https://trakt.tv/oauth/applications)) for the client ID
-and secret. Tokens refresh automatically.
+Enter the code there in your browser and the widget picks up the approval automatically. Tokens
+refresh automatically.
+
+First create a Trakt API app at [trakt.tv/oauth/applications](https://trakt.tv/oauth/applications),
+then copy two values from it into Settings:
+
+- **Client ID** — the app's public identifier
+- **Client Secret** — the separate secret value from the same app
+
+If you get *"Trakt does not recognise this Client ID"*, the usual causes are pasting the Client
+Secret into the Client ID field, or pasting only part of the value. Surrounding whitespace is
+trimmed automatically, so a stray newline from copying is not the problem.
 
 Trakt import brings in watched movies and full per-episode history for shows.
 
