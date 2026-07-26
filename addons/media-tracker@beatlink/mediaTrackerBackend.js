@@ -380,9 +380,10 @@ async function traktError(res, clientId) {
             + `and make sure the whole value was pasted (currently ${clientId.length} characters).`
     }
     if (res.status === 403) {
-        return "A proxy or network filter blocked the request to Trakt (HTTP 403) -- Trakt's "
-            + "device-code endpoint itself answers 400/401, never 403. Check whether this "
-            + "Trilium server can reach api.trakt.tv directly."
+        return "Trakt returned 403 Forbidden. On the device-code endpoint this means the "
+            + "request was blocked before reaching Trakt -- most often a missing User-Agent "
+            + "header (Cloudflare rejects those), or a proxy between this server and "
+            + "api.trakt.tv."
     }
     return detail
         ? `Trakt rejected the request: ${detail} (HTTP ${res.status})`
@@ -469,8 +470,26 @@ async function importTrakt(settings) {
     if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
     const current = await traktRefreshIfNeeded(settings)
 
-    const movies = await getJson(`${TRAKT_API}/sync/watched/movies`, traktHeaders(current, true))
-    const shows = await getJson(`${TRAKT_API}/sync/watched/shows`, traktHeaders(current, true))
+    // Verified live: Trakt's API endpoints answer 403 (plain-text "Forbidden")
+    // when trakt-api-key isn't a real client id, and 401 when the access token is
+    // bad -- so the two failures need different advice.
+    const fetchTrakt = async (path) => {
+        try {
+            return await getJson(`${TRAKT_API}${path}`, traktHeaders(current, true))
+        } catch (e) {
+            if (String(e.message).includes("403")) {
+                throw new Error("Trakt rejected the Client ID (HTTP 403). Check it in Settings "
+                    + "against your app at trakt.tv/oauth/applications.")
+            }
+            if (String(e.message).includes("401")) {
+                throw new Error("Trakt authorization expired (HTTP 401). Authorize again.")
+            }
+            throw e
+        }
+    }
+
+    const movies = await fetchTrakt("/sync/watched/movies")
+    const shows = await fetchTrakt("/sync/watched/shows")
 
     const items = []
 
