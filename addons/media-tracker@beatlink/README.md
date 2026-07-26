@@ -21,6 +21,26 @@ at the tracker widget and given a movie icon, so opening it in your tree shows t
 Choosing a different note reverts the old one back to a plain text note, and clearing the setting
 reverts it without selecting a replacement.
 
+## Using it
+
+The widget has three tabs.
+
+**Library** shows everything you track, with three stacked filters that compose:
+
+- a **search box** that narrows by title as you type (case-insensitive substring)
+- **All / Movies / TV** chips
+- **status** chips (Planned, Watching, Watched, Dropped)
+
+The status counts are scoped to the type and search filters above them, so a count always tells you
+how many rows clicking it would actually show. Each row has a status dropdown, a 0-10 rating box,
+an **Episodes** button for shows, and a **×** to remove the title.
+
+**Add** searches TMDB. The same **All / Movies / TV** chips scope the search: All uses TMDB's
+multi-search, while Movies and TV use the dedicated endpoints, which return a full page of one kind
+rather than a mixed page filtered down. Switching the chip re-runs the current search immediately.
+
+**Import** is the one-way Trakt and Stremio import described below.
+
 ## How titles are stored
 
 Every tracked title lives in **one JSON note** titled `Database`, created automatically as a direct

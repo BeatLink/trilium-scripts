@@ -137,15 +137,24 @@ function requireTmdbKey(settings) {
     return settings.tmdbApiKey
 }
 
-async function tmdbSearch(settings, query) {
+// `mediaType` scopes the search: "movie" and "show" use TMDB's dedicated
+// search/movie and search/tv endpoints (a full page of one kind), anything else
+// uses search/multi and keeps both. The dedicated endpoints don't return a
+// media_type field, so it's stamped on from what was asked for.
+async function tmdbSearch(settings, query, mediaType) {
     const key = requireTmdbKey(settings)
-    const url = `${TMDB_API}/search/multi?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}`
-    const json = await getJson(url)
+    const scoped = mediaType === "movie" || mediaType === "show"
+    const path = scoped ? (mediaType === "show" ? "search/tv" : "search/movie") : "search/multi"
+
+    const json = await getJson(
+        `${TMDB_API}/${path}?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}`
+    )
+
     return (json.results || [])
-        .filter(r => r.media_type === "movie" || r.media_type === "tv")
+        .filter(r => scoped || r.media_type === "movie" || r.media_type === "tv")
         .map(r => ({
             tmdbId: String(r.id),
-            mediaType: r.media_type === "tv" ? "show" : "movie",
+            mediaType: scoped ? mediaType : (r.media_type === "tv" ? "show" : "movie"),
             title: r.title || r.name || "",
             year: (r.release_date || r.first_air_date || "").slice(0, 4),
             overview: r.overview || "",
@@ -567,7 +576,7 @@ async function handle() {
             case "listTitles":
                 return sendJson(200, { titles: tracker.listTitles(loadDocument(settings)) })
             case "search":
-                return sendJson(200, { results: await tmdbSearch(settings, query.query || "") })
+                return sendJson(200, { results: await tmdbSearch(settings, query.query || "", query.mediaType) })
             case "details":
                 return sendJson(200, await tmdbDetails(settings, query.mediaType, query.tmdbId))
             case "addTitle":

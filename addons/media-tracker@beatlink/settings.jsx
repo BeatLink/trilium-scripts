@@ -11,8 +11,12 @@ const LIBRARY_ICON = "bx bx-movie-play"
 // Runs on the backend — the closure may reference only `api`.
 async function reconcileLibraryNote(noteId, previousNoteId, icon) {
     return api.runOnBackend((noteId, previousNoteId, icon) => {
+        // The widget note carries #mediaTrackerRender. An install predating that
+        // label won't have it until the addon is updated in TAM, so fall back to
+        // the note's title rather than silently leaving the root unwired.
         const srcResults = api.searchForNotes("#mediaTrackerRender")
-        const srcId = srcResults.length ? srcResults[0].noteId : ""
+        const found = srcResults[0] || api.searchForNotes('note.title = "mediaTracker.jsx"')[0]
+        const srcId = found ? found.noteId : ""
 
         if (previousNoteId && previousNoteId !== noteId) {
             const prev = api.getNote(previousNoteId)
@@ -26,19 +30,31 @@ async function reconcileLibraryNote(noteId, previousNoteId, icon) {
             }
         }
 
-        if (noteId && srcId) {
-            const note = api.getNote(noteId)
-            if (note) {
-                if (note.type !== "render") {
-                    note.type = "render"
-                    note.save()
-                }
-                if (note.getRelationValue("renderNote") !== srcId) note.setRelation("renderNote", srcId)
-                if (note.getLabelValue("iconClass") !== icon) note.setLabel("iconClass", icon)
-            }
-        }
+        if (!noteId) return { ok: true, cleared: true }
+        if (!srcId) return { ok: false, reason: "no-render-source" }
 
-        return srcId
+        const note = api.getNote(noteId)
+        if (!note || note.isDeleted) return { ok: false, reason: "note-not-found" }
+
+        if (note.type !== "render") {
+            note.type = "render"
+            note.save()
+        }
+        // TAM renames activation attributes to `disabled:<name>` while an addon
+        // is disabled, and ~renderNote is one of them. Clear that stale copy so
+        // the note doesn't end up carrying both spellings.
+        if (note.getRelationValue("disabled:renderNote")) note.removeRelation("disabled:renderNote")
+        if (note.getRelationValue("renderNote") !== srcId) note.setRelation("renderNote", srcId)
+        if (note.getLabelValue("iconClass") !== icon) note.setLabel("iconClass", icon)
+
+        // Report what the note actually looks like now, so the UI can confirm
+        // the wiring landed instead of assuming it did.
+        return {
+            ok: note.type === "render" && note.getRelationValue("renderNote") === srcId,
+            type: note.type,
+            renderNote: note.getRelationValue("renderNote"),
+            srcId
+        }
     }, [noteId, previousNoteId, icon])
 }
 
@@ -48,20 +64,42 @@ async function reconcileLibraryNote(noteId, previousNoteId, icon) {
 function LibraryRootPicker({ schemaNoteId, configNoteId, initialNoteId }) {
     const [noteId, setNoteId] = useState(initialNoteId || "")
     const [busy, setBusy] = useState(false)
+    const [status, setStatus] = useState(null)
 
-    async function onPick(newNoteId) {
-        if (busy || newNoteId === noteId) return
+    function describe(result) {
+        if (!result) return { error: "Wiring did not run." }
+        if (result.cleared) return { ok: "Cleared. The previous note was reverted to a text note." }
+        if (result.reason === "no-render-source") {
+            return {
+                error: "Could not find the tracker widget note. Make sure media-tracker is enabled " +
+                    "in TAM, then apply again."
+            }
+        }
+        if (result.reason === "note-not-found") return { error: "That note no longer exists." }
+        if (!result.ok) return { error: `Wiring failed (type is "${result.type}").` }
+        return { ok: "Wired. Open the note to see the tracker." }
+    }
+
+    async function wire(targetNoteId, previous) {
         setBusy(true)
-        const previous = noteId
-        setNoteId(newNoteId || "")
+        setStatus(null)
         try {
             const values = await loadSettings(schemaNoteId, configNoteId)
-            values.libraryRootNoteId = newNoteId || ""
+            values.libraryRootNoteId = targetNoteId || ""
             await saveSettings(schemaNoteId, configNoteId, values)
-            await reconcileLibraryNote(newNoteId || "", previous, LIBRARY_ICON)
+            setStatus(describe(await reconcileLibraryNote(targetNoteId || "", previous, LIBRARY_ICON)))
+        } catch (e) {
+            setStatus({ error: String(e && e.message ? e.message : e) })
         } finally {
             setBusy(false)
         }
+    }
+
+    async function onPick(newNoteId) {
+        if (busy || newNoteId === noteId) return
+        const previous = noteId
+        setNoteId(newNoteId || "")
+        await wire(newNoteId, previous)
     }
 
     return (
@@ -74,6 +112,15 @@ function LibraryRootPicker({ schemaNoteId, configNoteId, initialNoteId }) {
                 Every tracked title is created as a child of this note, and the note itself becomes
                 the tracker UI. Clearing it reverts the previously-chosen note back to a text note.
             </p>
+            {/* Re-runs the wiring on the note already selected. Needed because
+                picking the same note again is a no-op, so a root that was set
+                while the addon was disabled (or before it wired roots at all)
+                would otherwise have no way to get fixed. */}
+            <button class="mt-btn" disabled={busy || !noteId} onClick={() => wire(noteId, "")}>
+                Apply render wiring
+            </button>
+            {status?.ok && <p class="mt-ok">{status.ok}</p>}
+            {status?.error && <p class="mt-error">{status.error}</p>}
         </div>
     )
 }

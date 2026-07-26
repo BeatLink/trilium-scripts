@@ -184,6 +184,8 @@ function EpisodePanel({ title, onClose, onChanged }) {
 function LibraryTab({ libraryRootNoteId }) {
     const [titles, setTitles] = useState([])
     const [filter, setFilter] = useState("all")
+    const [typeFilter, setTypeFilter] = useState("all")
+    const [query, setQuery] = useState("")
     const [episodesFor, setEpisodesFor] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -215,15 +217,44 @@ function LibraryTab({ libraryRootNoteId }) {
         )
     }
 
-    const shown = filter === "all" ? titles : titles.filter(t => t.status === filter)
+    // Type and text narrow the set first; the status chips then count within
+    // that narrowed set, so the numbers always describe what a click would show.
+    const needle = query.trim().toLowerCase()
+    const scoped = titles.filter(t =>
+        (typeFilter === "all" || t.mediaType === typeFilter) &&
+        (!needle || t.title.toLowerCase().includes(needle))
+    )
+    const shown = filter === "all" ? scoped : scoped.filter(t => t.status === filter)
 
     return (
         <div>
+            <div class="mt-search">
+                <input
+                    class="mt-input"
+                    type="search"
+                    placeholder="Filter library by title..."
+                    value={query}
+                    onInput={e => setQuery(e.target.value)}
+                />
+            </div>
+
+            <div class="mt-filters">
+                {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => {
+                    const count = value === "all"
+                        ? titles.length
+                        : titles.filter(t => t.mediaType === value).length
+                    return (
+                        <button key={value} class={`mt-chip ${typeFilter === value ? "mt-chip-on" : ""}`}
+                            onClick={() => setTypeFilter(value)}>{label} ({count})</button>
+                    )
+                })}
+            </div>
+
             <div class="mt-filters">
                 <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
-                    onClick={() => setFilter("all")}>All ({titles.length})</button>
+                    onClick={() => setFilter("all")}>All ({scoped.length})</button>
                 {Object.entries(STATUS_LABELS).map(([value, label]) => {
-                    const count = titles.filter(t => t.status === value).length
+                    const count = scoped.filter(t => t.status === value).length
                     return (
                         <button key={value} class={`mt-chip ${filter === value ? "mt-chip-on" : ""}`}
                             onClick={() => setFilter(value)}>{label} ({count})</button>
@@ -241,7 +272,13 @@ function LibraryTab({ libraryRootNoteId }) {
 
             {error && <p class="mt-error">{error}</p>}
             {loading && <p class="mt-hint">Loading...</p>}
-            {!loading && !error && shown.length === 0 && <p class="mt-hint">Nothing here yet.</p>}
+            {!loading && !error && shown.length === 0 && (
+                <p class="mt-hint">
+                    {titles.length === 0
+                        ? "Nothing here yet. Use the Add tab to search for something."
+                        : "No titles match these filters."}
+                </p>
+            )}
             {shown.map(title => (
                 <TitleRow key={title.key} title={title} onChanged={reload} onOpenEpisodes={setEpisodesFor} />
             ))}
@@ -253,15 +290,16 @@ function LibraryTab({ libraryRootNoteId }) {
 
 function AddTab({ onAdded }) {
     const [query, setQuery] = useState("")
+    const [searchType, setSearchType] = useState("all")
     const [results, setResults] = useState([])
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
 
-    const search = async () => {
+    const search = async (type = searchType) => {
         if (!query.trim()) return
         setBusy(true); setStatus(null)
         try {
-            const { results } = await callBackend("search", { query })
+            const { results } = await callBackend("search", { query, mediaType: type })
             setResults(results)
             if (results.length === 0) setStatus({ hint: "No matches." })
         } catch (e) {
@@ -269,6 +307,14 @@ function AddTab({ onAdded }) {
         } finally {
             setBusy(false)
         }
+    }
+
+    // Switching type re-runs the search immediately, so the chips act as a live
+    // filter rather than a setting you have to remember to apply.
+    const pickType = (type) => {
+        if (type === searchType) return
+        setSearchType(type)
+        if (query.trim()) search(type)
     }
 
     const add = async (result) => {
@@ -295,8 +341,16 @@ function AddTab({ onAdded }) {
                     onInput={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && search()}
                 />
-                <button class="mt-btn mt-btn-primary" disabled={busy} onClick={search}>Search</button>
+                <button class="mt-btn mt-btn-primary" disabled={busy} onClick={() => search()}>Search</button>
             </div>
+
+            <div class="mt-filters">
+                {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => (
+                    <button key={value} class={`mt-chip ${searchType === value ? "mt-chip-on" : ""}`}
+                        disabled={busy} onClick={() => pickType(value)}>{label}</button>
+                ))}
+            </div>
+
             {status?.ok && <p class="mt-ok">{status.ok}</p>}
             {status?.error && <p class="mt-error">{status.error}</p>}
             {status?.hint && <p class="mt-hint">{status.hint}</p>}
