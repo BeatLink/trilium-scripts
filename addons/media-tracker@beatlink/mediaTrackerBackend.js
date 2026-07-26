@@ -116,8 +116,17 @@ function today() {
 
 // --- http helpers -----------------------------------------------------------
 
+// Trakt sits behind Cloudflare, which blocks requests with no User-Agent and
+// returns a plain-text 403 before the request ever reaches Trakt. Node's fetch
+// sends no User-Agent by default, so one is set on every outbound call here.
+const USER_AGENT = "media-tracker@beatlink (TriliumNext addon)"
+
+function outboundHeaders(headers) {
+    return { "User-Agent": USER_AGENT, ...(headers || {}) }
+}
+
 async function getJson(url, headers) {
-    const res = await fetch(url, { headers: headers || {} })
+    const res = await fetch(url, { headers: outboundHeaders(headers) })
     if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`)
     return res.json()
 }
@@ -125,7 +134,7 @@ async function getJson(url, headers) {
 async function postJson(url, body, headers) {
     return fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(headers || {}) },
+        headers: outboundHeaders({ "Content-Type": "application/json", ...(headers || {}) }),
         body: JSON.stringify(body)
     })
 }
@@ -346,16 +355,23 @@ function traktClientSecret(settings) {
     return String(settings.traktClientSecret || "").trim()
 }
 
-// Trakt returns a specific error_description ("client not found",
-// "client_id is required", ...). Surface it instead of only the status code,
-// and add the likely cause for the ambiguous ones.
+// Trakt returns a JSON error_description on this endpoint ("client not found",
+// "client_id is required"). Surface it verbatim rather than inventing a cause.
+//
+// Verified against the live endpoint: a bad or missing client id yields 401 or
+// 400 with a JSON body -- never 403. A 403 with a plain-text "Forbidden" body is
+// what Trakt's *authenticated* API returns, so seeing one here means the request
+// never reached the device-code endpoint as sent (a proxy, firewall, or blocked
+// server-side fetch). Say that instead of blaming the Trakt app.
 async function traktError(res, clientId) {
+    const raw = await res.text().catch(() => "")
     let detail = ""
     try {
-        const body = await res.json()
+        const body = JSON.parse(raw)
         detail = body.error_description || body.error || ""
     } catch (e) {
-        // Non-JSON body; fall back to the status alone.
+        // Plain-text body (e.g. "Forbidden"); keep it as the detail.
+        detail = raw.trim().slice(0, 200)
     }
 
     if (res.status === 401 && detail === "client not found") {
@@ -364,7 +380,9 @@ async function traktError(res, clientId) {
             + `and make sure the whole value was pasted (currently ${clientId.length} characters).`
     }
     if (res.status === 403) {
-        return "Trakt refused the request (HTTP 403). The API app may be suspended or deleted."
+        return "A proxy or network filter blocked the request to Trakt (HTTP 403) -- Trakt's "
+            + "device-code endpoint itself answers 400/401, never 403. Check whether this "
+            + "Trilium server can reach api.trakt.tv directly."
     }
     return detail
         ? `Trakt rejected the request: ${detail} (HTTP ${res.status})`
