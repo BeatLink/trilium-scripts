@@ -140,6 +140,32 @@ export being referenced), the same "look it up by TAMFILEID, then clone or creat
 - **Never inheritable.** `#TAMFILEID` is set with a plain `setLabel`/`note.setLabel` call (no
   `isInheritable` flag) — it identifies exactly one note, and must never propagate to its children,
   which would make every descendant falsely match the same lookup.
+- **Always read it with the *owned* accessors.** ⚠️ Writing the label non-inheritably is **not**
+  enough to stop it propagating. Trilium's `~template` relation is a second, independent inheritance
+  path: an instance inherits **all** of its template's labels regardless of `isInheritable`. So if a
+  TAM-owned note is itself a `#template` (TAM ships several: `tpl-area`, `tpl-note`, `tpl-task`, …),
+  then **every user note templated from it reports that template's `#TAMFILEID` as its own**.
+
+  Consequently `note.getLabelValue("TAMFILEID")` and `note.hasLabel(...)` resolve inherited values
+  and will claim ownership of user notes TAM never created. Every ownership check must use
+  `getOwnedLabelValue` / `hasOwnedLabel` / `getOwnedAttributes` instead. Note that
+  `api.getNotesWithLabel("TAMFILEID")` *also* returns template instances — the scan is only safe
+  once each hit is re-checked with an owned accessor:
+
+  ```js
+  for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+      if (note.isDeleted) continue
+      const value = note.getOwnedLabelValue(tamFileIdLabel)  // NOT getLabelValue
+      if (!value) continue                                   // inherited-only: not ours
+      // ...
+  }
+  ```
+
+  This matters most in the prune/sweep paths, where the value gates a `note.deleteNote()` — itself a
+  **cascade** that takes the note's entire subtree. Getting this wrong deletes user data at scale: a
+  single manifest change that drops a template's local id will otherwise delete every note templated
+  from it. This is not hypothetical — it is the cause of the mass-deletion regression fixed in
+  6.3.1.
 - **Nothing about note identity is cached in the Database at all** — not `rootNoteId`, not
   `settingsNoteId`. Instead, each installed addon's Database record stores its own **manifest
   structure** (see [The Database Record](#the-database-record) below) — `rootNoteId` is derived on
@@ -627,6 +653,13 @@ the anchor holding those notes survives alongside them — and leaves all of it 
 root anchor is not protected, so it (and everything under it) is torn down along with the rest of the
 structural tree; the persistence anchor and its subtree remain under Addon Data, and a later reinstall of
 the same addonId re-adopts each note by its `#TAMFILEID`, user data intact.
+
+⚠️ The persistent-id set protects notes TAM *owns*. It does nothing for **user notes templated from a
+TAM-owned template**, which are not TAM notes at all but inherit the template's `#TAMFILEID` and are
+therefore invisible to this protection. That is a read-side concern: the sweeps must resolve ownership
+with the owned accessors, per
+[Note Identity: `#TAMFILEID`](#note-identity-tamfileid). A sweep that reads the inherited value will
+delete those user notes and their whole subtrees regardless of what the persistent set contains.
 
 ---
 
