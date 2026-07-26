@@ -12,11 +12,12 @@ import { startNote } from "trilium:api"
 import { Timer } from "Timer.jsx"
 
 const {
-    sendNotificationForDueTasks,
-    addDueTasksToAgendaNow,
-    addTaskToAgendaNow
-} = require("libAgendaOverview.js")
-const { getMyDayContext, getSuggestedTasks } = require("myDaySettings.js")
+    getMyDaySettings,
+    getSuggestedTasks,
+    addTaskToMyDay,
+    addDueTasksToMyDay,
+    sendNotificationForDueTasks
+} = require("myDaySettings.js")
 
 // One suggested task: its title, when it's scheduled, and a + that files it onto
 // the My Day note.
@@ -45,19 +46,19 @@ function MyDay() {
 
     useEffect(() => {
         (async () => {
-            const { myDay, hasAgenda, profileContext, constants } = await getMyDayContext()
+            const myDay = await getMyDaySettings()
             const defaultNoteId = await startNote.getRelationValue("nowNote")
-            setIds({ constants, profileContext, myDay, hasAgenda, defaultNoteId })
+            setIds({ myDay, defaultNoteId })
         })()
     }, [])
 
     const myDayNoteId = ids?.myDay?.myDayNoteId || ids?.defaultNoteId
 
-    // Suggestions come from agenda's active profile, so they stay empty when
-    // agenda@beatlink isn't installed.
+    // Suggestions come from the configured task search, so they stay empty when
+    // it matches nothing.
     async function refreshSuggestions() {
-        if (!ids?.hasAgenda) return
-        setBuckets(await getSuggestedTasks(ids.profileContext, ids.constants, myDayNoteId))
+        if (!ids) return
+        setBuckets(await getSuggestedTasks(ids.myDay, myDayNoteId))
     }
 
     useEffect(() => { refreshSuggestions() }, [ids, myDayNoteId])
@@ -65,10 +66,10 @@ function MyDay() {
     useTriliumEvent("agenda:tasksChanged", () => { refreshSuggestions() })
 
     useEffect(() => {
-        if (!ids?.hasAgenda || !ids.myDay.addTasksWhenDue) return
+        if (!ids?.myDay.addTasksWhenDue) return
         const interval = setInterval(
             async () => {
-                await addDueTasksToAgendaNow(ids.profileContext, ids.constants, myDayNoteId)
+                await addDueTasksToMyDay(ids.myDay, myDayNoteId)
                 await refreshSuggestions()
             },
             30000
@@ -77,9 +78,9 @@ function MyDay() {
     }, [ids, myDayNoteId])
 
     useEffect(() => {
-        if (!ids?.hasAgenda || !ids.myDay.sendDueNotifications) return
+        if (!ids?.myDay.sendDueNotifications) return
         const interval = setInterval(
-            () => { sendNotificationForDueTasks(ids.profileContext, ids.constants) },
+            () => { sendNotificationForDueTasks(ids.myDay) },
             15000
         )
         return () => clearInterval(interval);
@@ -88,7 +89,7 @@ function MyDay() {
     if (!ids) return null
 
     async function addToMyDay(taskNoteId) {
-        await addTaskToAgendaNow(myDayNoteId, taskNoteId, true)
+        await addTaskToMyDay(myDayNoteId, taskNoteId, true)
         await refreshSuggestions()
     }
 
@@ -98,10 +99,7 @@ function MyDay() {
                 <Timer initialEnableSounds={ids.myDay.enableSounds} />
             </div>
             <div className="myDaySuggestions">
-                {!ids.hasAgenda && (
-                    <div className="myDayEmpty">Install agenda@beatlink for task suggestions.</div>
-                )}
-                {ids.hasAgenda && buckets.length === 0 && (
+                {buckets.length === 0 && (
                     <div className="myDayEmpty">Nothing to suggest.</div>
                 )}
                 {buckets.map(bucket => (

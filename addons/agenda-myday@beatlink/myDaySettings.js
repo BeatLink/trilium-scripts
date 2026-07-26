@@ -1,30 +1,23 @@
 // Settings access and suggestion queries for agenda-myday@beatlink.
 //
-// My Day owns its own settings note (myDaySchema.json / myDayConfig.json) tagged
-// #agendaMyDayConfig: which note shows the controls, and the three behaviour
-// toggles (timer sounds, add-tasks-when-due, due notifications).
-//
-// It still reads agenda@beatlink's #agendaConfig for two things it cannot own:
-//
-//   profileContext - the active profile / searches / filters that getTaskList()
-//                    resolves "which tasks exist" from. This is agenda's query
-//                    engine, not a value that could be copied here.
-//   constants      - the start/due label-name vocabulary, so "due now" keys on
-//                    the same labels the Task widget writes.
-//
-// Both come from getAgendaSettings() (cloned in from agenda@beatlink). When
-// agenda isn't installed that returns null, and getMyDayContext() reports
-// hasAgenda: false — the countdown timer still works, but the due-task filing and
-// notification loops stay off, since there is no task list to poll.
+// This addon is self-contained: it owns its settings note (myDaySchema.json /
+// myDayConfig.json, tagged #agendaMyDayConfig) and resolves its own task list
+// from a plain Trilium search, so nothing here depends on agenda@beatlink's
+// code. Point `taskSearch` at whatever notes you want floated; the shipped
+// default matches agenda's task vocabulary, so the two interoperate through
+// shared label conventions rather than a code dependency.
 
-const { getAgendaSettings } = require("agendaSettings.jsx")
 const { loadSettings } = require("libSettingsUI.jsx")
+const notifications = require("libNotification.js")
 
 const DEFAULTS = {
     myDayNoteId: "",
     enableSounds: true,
     addTasksWhenDue: false,
-    sendDueNotifications: true
+    sendDueNotifications: true,
+    taskSearch: '(#startDateTime != "" OR #dueDateTime != "") AND not(note.parents.relations.template.title=\'3. Task\')',
+    startLabel: "startDateTime",
+    dueLabel: "dueDateTime"
 }
 
 // My Day's own settings note ids, or null when it isn't discoverable.
@@ -38,7 +31,7 @@ async function getMyDayConfigIds() {
     return { schemaNoteId, configNoteId }
 }
 
-// My Day's own settings, falling back to the shipped defaults when the settings
+// My Day's settings, falling back to the shipped defaults when the settings
 // note can't be resolved.
 async function getMyDaySettings() {
     const ids = await getMyDayConfigIds()
@@ -49,26 +42,17 @@ async function getMyDaySettings() {
         myDayNoteId: values.myDayNoteId || "",
         enableSounds: values.enableSounds ?? DEFAULTS.enableSounds,
         addTasksWhenDue: values.addTasksWhenDue ?? DEFAULTS.addTasksWhenDue,
-        sendDueNotifications: values.sendDueNotifications ?? DEFAULTS.sendDueNotifications
+        sendDueNotifications: values.sendDueNotifications ?? DEFAULTS.sendDueNotifications,
+        taskSearch: values.taskSearch || DEFAULTS.taskSearch,
+        startLabel: values.startLabel || DEFAULTS.startLabel,
+        dueLabel: values.dueLabel || DEFAULTS.dueLabel
     }
 }
 
-// Everything the widget needs in one round-trip: My Day's own settings plus the
-// agenda profile context / label constants the due-task loops run against.
-// `hasAgenda` is false when agenda@beatlink isn't installed — callers must skip
-// the polling loops in that case.
-async function getMyDayContext() {
-    const [myDay, agenda] = await Promise.all([
-        getMyDaySettings(),
-        getAgendaSettings()
-    ])
-
-    return {
-        myDay,
-        hasAgenda: !!agenda,
-        profileContext: agenda ? agenda.profileContext : null,
-        constants: agenda ? agenda.constants : null
-    }
+// The candidate notes for suggestions and the due-task loops, as note objects.
+async function getTaskNotes(settings) {
+    if (!settings.taskSearch) return []
+    return await api.searchForNotes(settings.taskSearch)
 }
 
 // The suggestion buckets, in the order the panel renders them. Each one keys on
@@ -90,26 +74,24 @@ function bucketFor(datetime) {
     return null
 }
 
-// Tasks from agenda's active profile that are worth adding to today, grouped
+// Tasks matching the configured search that are worth adding to today, grouped
 // into BUCKETS. Anything already linked on the My Day note is dropped, so a
 // suggestion disappears once it is added.
-async function getSuggestedTasks(profileContext, constants, myDayNoteId) {
-    const { getTaskList } = require("libAgendaOverview.js")
-    const taskIds = await getTaskList(profileContext)
+async function getSuggestedTasks(settings, myDayNoteId) {
+    const tasks = await getTaskNotes(settings)
 
     const myDayNote = myDayNoteId ? await api.getNote(myDayNoteId) : null
     const myDayContent = myDayNote ? await myDayNote.getContent() : ""
 
     const byBucket = Object.fromEntries(BUCKETS.map(bucket => [bucket.id, []]))
-    for (const taskId of taskIds) {
-        if (myDayContent.includes(`#root/${taskId}`)) continue
+    for (const task of tasks) {
+        if (myDayContent.includes(`#root/${task.noteId}`)) continue
 
-        const task = await api.getNote(taskId)
-        const datetime = task.getLabelValue(constants.START_DATETIME_LABEL)
-            || task.getLabelValue(constants.DUE_DATETIME_LABEL)
+        const datetime = task.getLabelValue(settings.startLabel)
+            || task.getLabelValue(settings.dueLabel)
 
         const bucketId = bucketFor(datetime)
-        if (bucketId) byBucket[bucketId].push({ noteId: taskId, title: task.title, datetime })
+        if (bucketId) byBucket[bucketId].push({ noteId: task.noteId, title: task.title, datetime })
     }
 
     for (const tasks of Object.values(byBucket)) {
@@ -121,10 +103,54 @@ async function getSuggestedTasks(profileContext, constants, myDayNoteId) {
         .filter(bucket => bucket.tasks.length > 0)
 }
 
+// Appends a link to the task onto the My Day note, skipping notes already there.
+async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo) {
+    await api.runOnBackend((myDayNoteId, taskNoteId, renderAsTodo) => {
+        const taskNote = api.getNote(taskNoteId)
+        const taskLink = `<a class="reference-link" href="#root/${taskNoteId}">${taskNote.title}</a>`
+
+        const myDayNote = api.getNote(myDayNoteId)
+        const myDayContent = myDayNote.getContent()
+        if (myDayContent.includes(taskLink)) return
+
+        const todoListItem =
+            `<ul class="todo-list"><li data-list-item-id="${api.randomString(32)}">` +
+            `<label class="todo-list__label"><input type="checkbox" disabled="disabled">` +
+            `<span class="todo-list__label__description">${taskLink}</span></label></li></ul>`
+        const entry = renderAsTodo ? todoListItem : `<p>${taskLink}</p>`
+
+        myDayNote.setContent(myDayContent.concat(entry))
+        myDayNote.save()
+    }, [myDayNoteId, taskNoteId, renderAsTodo])
+}
+
+// Files every task whose start time is this minute onto the My Day note.
+async function addDueTasksToMyDay(settings, myDayNoteId) {
+    if (!myDayNoteId) return
+    for (const task of await getTaskNotes(settings)) {
+        const startDatetime = task.getLabelValue(settings.startLabel)
+        if (startDatetime && api.dayjs().isSame(startDatetime, "minute")) {
+            await addTaskToMyDay(myDayNoteId, task.noteId, true)
+        }
+    }
+}
+
+// Sends a desktop notification for every task whose start time is this minute.
+async function sendNotificationForDueTasks(settings) {
+    for (const task of await getTaskNotes(settings)) {
+        const startDatetime = task.getLabelValue(settings.startLabel)
+        if (startDatetime && api.dayjs().isSame(startDatetime, "minute")) {
+            notifications.sendNotification(task.title, "", task.noteId)
+        }
+    }
+}
+
 module.exports = {
     getMyDayConfigIds,
     getMyDaySettings,
-    getMyDayContext,
     getSuggestedTasks,
+    addTaskToMyDay,
+    addDueTasksToMyDay,
+    sendNotificationForDueTasks,
     DEFAULTS
 }

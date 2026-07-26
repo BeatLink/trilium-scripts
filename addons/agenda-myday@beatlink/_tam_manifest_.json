@@ -1,11 +1,11 @@
 {
     "id": "agenda-myday@beatlink",
     "name": "Agenda My Day",
-    "description": "The My Day widget from agenda@beatlink, split out as its own addon: a right-pane panel, always visible, modelled on Microsoft To Do's My Day page. It lists recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto your My Day note; tasks already linked there drop off the list. It also carries a countdown timer with selectable durations and start/select/end sounds, optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. Owns its own settings note (myDaySchema.json/myDayConfig.json) tagged #agendaMyDayConfig - the My Day note, timer sounds, and the two due-task toggles - independent of agenda@beatlink's #agendaConfig. Suggestions and the due-task loops resolve their task list from agenda's active profile and its start/due label vocabulary, so this addon clones in agenda's overview/query/config libraries and its settings reader; when agenda@beatlink isn't installed suggestions and those loops stay off and the countdown timer still works on its own.",
+    "description": "A right-pane panel, always visible, modelled on Microsoft To Do's My Day page. It lists recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto your My Day note; tasks already linked there drop off the list. It also carries a countdown timer with selectable durations and start/select/end sounds, optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "7.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
@@ -107,102 +107,11 @@
                 "binary": true
             },
             {
-                "id": "agenda-settings",
-                "title": "agendaSettings.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/agendaSettings.jsx"
-            },
-            {
-                "id": "dimensions",
-                "title": "dimensions.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/dimensions.js"
-            },
-            {
-                "id": "migrate",
-                "title": "migrate.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/migrate.js"
-            },
-            {
-                "id": "lib-overview",
-                "title": "libAgendaOverview.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaOverview.js"
-            },
-            {
-                "id": "lib-query",
-                "title": "libAgendaQuery.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaQuery.js"
-            },
-            {
-                "id": "lib-config",
-                "title": "libAgendaConfig.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaConfig.js"
-            },
-            {
-                "id": "lib-task",
-                "title": "libAgendaTask.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libAgendaTask.js"
-            },
-            {
-                "id": "lib-recurrence",
-                "title": "libRecurrence.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libRecurrence.js"
-            },
-            {
-                "id": "librrule-lib",
-                "title": "rrule.min.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
-            },
-            {
-                "id": "libmultisort-lib",
-                "title": "libMultisort.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libmultisort/libmultisort.js"
-            },
-            {
                 "id": "libnotification-lib",
                 "title": "libNotification.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
-            },
-            {
-                "id": "libcalendar-lib",
-                "title": "libCalendar.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendar/libCalendar.js"
-            },
-            {
-                "id": "ical-lib",
-                "title": "ical.min.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
-            },
-            {
-                "id": "ical-resource",
-                "title": "ical.min.js (resource)",
-                "type": "code",
-                "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
             },
             {
                 "id": "readme",
@@ -239,6 +148,13 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "libnotification-lib",
+                "title": "libNotification.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
             }
         ],
         "children": [
@@ -283,14 +199,6 @@
                 "child": "myday-settings"
             },
             {
-                "parent": "my-day",
-                "child": "lib-overview"
-            },
-            {
-                "parent": "myday-settings",
-                "child": "lib-overview"
-            },
-            {
                 "parent": "timer",
                 "child": "wav-select"
             },
@@ -316,75 +224,7 @@
             },
             {
                 "parent": "myday-settings",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "myday-settings",
                 "child": "libsettings-ui"
-            },
-            {
-                "parent": "agenda-settings",
-                "child": "dimensions"
-            },
-            {
-                "parent": "agenda-settings",
-                "child": "migrate"
-            },
-            {
-                "parent": "agenda-settings",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "dimensions",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "lib-query"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "libnotification-lib"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "libcalendar-lib"
-            },
-            {
-                "parent": "lib-query",
-                "child": "lib-task"
-            },
-            {
-                "parent": "lib-query",
-                "child": "lib-config"
-            },
-            {
-                "parent": "lib-query",
-                "child": "libmultisort-lib"
-            },
-            {
-                "parent": "lib-config",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "lib-config",
-                "child": "dimensions"
-            },
-            {
-                "parent": "lib-task",
-                "child": "lib-recurrence"
-            },
-            {
-                "parent": "lib-recurrence",
-                "child": "librrule-lib"
-            },
-            {
-                "parent": "libcalendar-lib",
-                "child": "ical-lib"
-            },
-            {
-                "parent": "ical-lib",
-                "child": "ical-resource"
             },
             {
                 "parent": "libsettings-ui",
@@ -397,6 +237,10 @@
             {
                 "parent": "colorpicker",
                 "child": "colorpicker-css"
+            },
+            {
+                "parent": "myday-settings",
+                "child": "libnotification-lib"
             }
         ],
         "relations": [
@@ -461,11 +305,6 @@
                 "note": "wav-end",
                 "name": "customResourceProvider",
                 "value": "libtimerEnd.wav"
-            },
-            {
-                "note": "ical-resource",
-                "name": "customResourceProvider",
-                "value": "libIcal.js"
             },
             {
                 "note": "my-day",
@@ -533,47 +372,12 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "agenda-settings",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "dimensions",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "migrate",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-overview",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-query",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-config",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-recurrence",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "libnotification-lib",
                 "name": "iconClass",
                 "value": "bx bx-task"
             }

@@ -1,7 +1,8 @@
 # Agenda My Day
 
-The My Day focus panel, split out of [`agenda@beatlink`](../agenda@beatlink/README.md) into its own
-addon. It's a **right-pane widget**, visible on every note, modelled on Microsoft To Do's My Day page.
+The My Day focus panel, originally split out of [`agenda@beatlink`](../agenda@beatlink/README.md) and
+now fully standalone. It's a **right-pane widget**, visible on every note, modelled on Microsoft To
+Do's My Day page.
 
 It carries:
 
@@ -13,9 +14,9 @@ It carries:
 
 ## Suggestions
 
-Candidates are the active agenda profile's tasks, bucketed by **start datetime**, falling back to
-**due datetime** when no start is set. Tasks with neither date, and tasks scheduled more than a week
-out, are not suggested.
+Candidates are the notes matched by the **Task Search** setting, bucketed by **start datetime**,
+falling back to **due datetime** when no start is set. Tasks with neither date, and tasks scheduled
+more than a week out, are not suggested.
 
 A task drops off the list once it's in your day: adding it appends a reference link to the My Day
 note, and any task already linked there is filtered out. The list refreshes when you add something,
@@ -32,22 +33,22 @@ This addon owns its own settings note (`myDaySchema.json` / `myDayConfig.json`) 
 | **Enable Timer Sounds** | Whether the timer plays its start / select / end sounds. |
 | **Add Tasks When Due** | Append each task to the My Day note as its start time arrives. |
 | **Send Due Notifications** | Send a desktop notification as each task's start time arrives. |
+| **Task Search** | The Trilium search deciding which notes can be suggested. Default: `(#startDateTime != "" OR #dueDateTime != "") AND not(note.parents.relations.template.title='3. Task')` |
+| **Start Datetime Label** | Note label holding a task's start datetime, without the `#`. Default `startDateTime`. |
+| **Due Datetime Label** | Note label holding a task's due datetime, without the `#`. Default `dueDateTime`. |
 
 ## Relationship to agenda@beatlink
 
-Suggestions and the two due-task loops all answer "which tasks exist, and when are they scheduled?" —
-and that question is agenda's to answer, not this addon's. All three call `getTaskList(profileContext)`,
-which resolves the **active profile's** searches, filters and sorts, and all three read the
-**start/due label vocabulary** (`constants`) so dates key on the same labels the Task widget writes.
+**None, in code.** This addon is standalone: it requires nothing from `agenda@beatlink` and works
+with it uninstalled. "Which tasks exist, and when are they scheduled?" is answered by the **Task
+Search** setting plus the two label-name settings, all owned here.
 
-So unlike a fully standalone split, this addon clones agenda's query engine in by `sourceUrl` —
-`agendaSettings.jsx`, `libAgendaOverview.js`, `libAgendaQuery.js`, `libAgendaConfig.js`,
-`dimensions.js`, plus `libmultisort` / `libnotification` / `libcalendar` and `agenda-task`'s
-`libAgendaTask.js`. This is the same pattern `agenda@beatlink` uses to clone `agenda-task@beatlink`'s
-panels.
+The defaults are chosen to match agenda's task vocabulary — `#startDateTime` / `#dueDateTime`, minus
+subtasks — so if you run both, My Day suggests exactly the notes agenda manages. That coupling is a
+**shared label convention**, not a code dependency: point Task Search at anything you like and My Day
+follows, no agenda involved. It also still refreshes on the `agenda:tasksChanged` event when some
+other addon broadcasts one, which is a no-op if nothing does.
 
-`getMyDayContext()` in [`myDaySettings.js`](myDaySettings.js) merges this addon's own settings with
-agenda's profile context in one round-trip and reports **`hasAgenda`**. When agenda isn't installed
-that's `false`, and [`myDayWidget.jsx`](myDayWidget.jsx) skips the suggestion query and both polling
-loops — there's no task list to poll. **The countdown timer still works**, so the panel remains useful
-on its own; only the suggestions and due-task automation need agenda.
+What this trades away versus the old clone-in approach: My Day no longer follows agenda's **active
+profile**, and no longer uses agenda's filter groups or recurrence-aware date rules. Plain date
+windows are expressible in Trilium search (`TODAY+7`); recurrence expansion is not.

@@ -17,7 +17,7 @@
     "addTasksWhenDue": {
         "type": "boolean",
         "label": "Add Tasks When Due",
-        "description": "File tasks into the My Day note as their start time arrives. Requires agenda@beatlink, which supplies the task list.",
+        "description": "File tasks into the My Day note as their start time arrives.",
         "default": false,
         "category": "Execute",
         "tab": "My Day"
@@ -25,8 +25,32 @@
     "sendDueNotifications": {
         "type": "boolean",
         "label": "Send Due Notifications",
-        "description": "Send a desktop notification as each task's start time arrives. Requires agenda@beatlink, which supplies the task list.",
+        "description": "Send a desktop notification as each task's start time arrives.",
         "default": true,
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "taskSearch": {
+        "type": "string",
+        "label": "Task Search",
+        "description": "The Trilium search that decides which notes can be suggested. The default matches any note with a start or due datetime, excluding subtasks. Notes are then bucketed into Earlier, Today and Next 7 Days by their start datetime, falling back to due.",
+        "default": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "startLabel": {
+        "type": "string",
+        "label": "Start Datetime Label",
+        "description": "The note label holding a task's start datetime, without the leading #.",
+        "default": "startDateTime",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "dueLabel": {
+        "type": "string",
+        "label": "Due Datetime Label",
+        "description": "The note label holding a task's due datetime, without the leading #. Used when no start datetime is set.",
+        "default": "dueDateTime",
         "category": "Execute",
         "tab": "My Day"
     }
