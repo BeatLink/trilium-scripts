@@ -80,6 +80,18 @@ body .myDaySuggestion {
     align-items: center;
     gap: 0.375rem;
 
+    button.icon-action {
+        flex: 0 0 auto;
+        width: 1.25rem;
+        height: 1.25rem;
+        padding: 0;
+        margin: 0;
+
+        &:before {
+            font-size: 0.9rem !important;
+        }
+    }
+
     .myDaySuggestionTitle {
         flex: 1 1 auto;
         overflow: hidden;
@@ -99,11 +111,11 @@ body .myDayEmpty {
     opacity: 0.7;
 }
 
-.flash-accent {
-    animation: blinker-accent 2s ease-in-out infinite;
+body .myDayControls .flash-accent {
+    animation: myDay-blink-accent 2s ease-in-out infinite;
 }
 
-@keyframes blinker-accent {
+@keyframes myDay-blink-accent {
     25% {
         background-color: var(--accent);
     }
@@ -117,11 +129,11 @@ body .myDayEmpty {
     }
 }
 
-.flash-red {
-    animation: blinker-red 0.75s ease-in-out infinite;
+body .myDayControls .flash-red {
+    animation: myDay-blink-red 0.75s ease-in-out infinite;
 }
 
-@keyframes blinker-red {
+@keyframes myDay-blink-red {
     50% {
         background-color: red;
     }

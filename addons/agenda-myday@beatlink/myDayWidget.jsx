@@ -97,7 +97,7 @@ function MyDay() {
     if (!ids || !isVisible) return null
 
     async function addToMyDay(taskNoteId) {
-        await addTaskToMyDay(myDayNoteId, taskNoteId, true)
+        await addTaskToMyDay(myDayNoteId, taskNoteId, true, ids.myDay.addToTop)
         await refreshSuggestions()
     }
 

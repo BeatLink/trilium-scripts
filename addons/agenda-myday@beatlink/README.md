@@ -45,6 +45,7 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 | **Enable Timer Sounds** | Whether the timer plays its start / select / end sounds. |
 | **Add Tasks When Due** | Append each task to the My Day note as its start time arrives. |
 | **Send Due Notifications** | Send a desktop notification as each task's start time arrives. |
+| **Add Tasks To Top** | Insert new tasks at the top of the My Day note instead of the bottom. Applies to both the `+` button and the auto-file loop. |
 | **Task Search** | The Trilium search deciding which notes can be suggested. Default: `(#startDateTime != "" OR #dueDateTime != "") AND not(note.parents.relations.template.title='3. Task')` |
 | **Start Datetime Label** | Note label holding a task's start datetime, without the `#`. Default `startDateTime`. |
 | **Due Datetime Label** | Note label holding a task's due datetime, without the `#`. Default `dueDateTime`. |

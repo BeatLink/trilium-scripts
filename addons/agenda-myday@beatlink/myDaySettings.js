@@ -15,6 +15,7 @@ const DEFAULTS = {
     enableSounds: true,
     addTasksWhenDue: false,
     sendDueNotifications: true,
+    addToTop: false,
     // Dated notes, minus any note that already sits under a dated one - only the
     // outermost dated note in a subtree is worth floating.
     //
@@ -59,6 +60,7 @@ async function getMyDaySettings() {
         enableSounds: values.enableSounds ?? DEFAULTS.enableSounds,
         addTasksWhenDue: values.addTasksWhenDue ?? DEFAULTS.addTasksWhenDue,
         sendDueNotifications: values.sendDueNotifications ?? DEFAULTS.sendDueNotifications,
+        addToTop: values.addToTop ?? DEFAULTS.addToTop,
         taskSearch: values.taskSearch || DEFAULTS.taskSearch,
         startLabel: values.startLabel || DEFAULTS.startLabel,
         dueLabel: values.dueLabel || DEFAULTS.dueLabel
@@ -119,9 +121,10 @@ async function getSuggestedTasks(settings, myDayNoteId) {
         .filter(bucket => bucket.tasks.length > 0)
 }
 
-// Appends a link to the task onto the My Day note, skipping notes already there.
-async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo) {
-    await api.runOnBackend((myDayNoteId, taskNoteId, renderAsTodo) => {
+// Files a link to the task onto the My Day note, skipping notes already there.
+// `addToTop` prepends instead of appending.
+async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = false) {
+    await api.runOnBackend((myDayNoteId, taskNoteId, renderAsTodo, addToTop) => {
         const taskNote = api.getNote(taskNoteId)
         const taskLink = `<a class="reference-link" href="#root/${taskNoteId}">${taskNote.title}</a>`
 
@@ -135,9 +138,9 @@ async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo) {
             `<span class="todo-list__label__description">${taskLink}</span></label></li></ul>`
         const entry = renderAsTodo ? todoListItem : `<p>${taskLink}</p>`
 
-        myDayNote.setContent(myDayContent.concat(entry))
+        myDayNote.setContent(addToTop ? entry.concat(myDayContent) : myDayContent.concat(entry))
         myDayNote.save()
-    }, [myDayNoteId, taskNoteId, renderAsTodo])
+    }, [myDayNoteId, taskNoteId, renderAsTodo, addToTop])
 }
 
 // Files every task whose start time is this minute onto the My Day note.
@@ -146,7 +149,7 @@ async function addDueTasksToMyDay(settings, myDayNoteId) {
     for (const task of await getTaskNotes(settings)) {
         const startDatetime = task.getLabelValue(settings.startLabel)
         if (startDatetime && api.dayjs().isSame(startDatetime, "minute")) {
-            await addTaskToMyDay(myDayNoteId, task.noteId, true)
+            await addTaskToMyDay(myDayNoteId, task.noteId, true, settings.addToTop)
         }
     }
 }

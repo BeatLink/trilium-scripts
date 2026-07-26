@@ -30,6 +30,14 @@
         "category": "Execute",
         "tab": "My Day"
     },
+    "addToTop": {
+        "type": "boolean",
+        "label": "Add Tasks To Top",
+        "description": "Insert newly added tasks at the top of the My Day note instead of appending them to the bottom. Applies both to the + button and to tasks filed automatically when due.",
+        "default": false,
+        "category": "Execute",
+        "tab": "My Day"
+    },
     "taskSearch": {
         "type": "string",
         "label": "Task Search",
