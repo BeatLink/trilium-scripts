@@ -530,6 +530,30 @@
     margin: 8px 0;
 }
 
+.mt-archive {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--main-border-color);
+}
+
+.mt-archive h5 {
+    margin: 0 0 6px;
+}
+
+.mt-archive-table {
+    font-size: 12px;
+    border-collapse: collapse;
+}
+
+.mt-archive-table td {
+    padding: 1px 12px 1px 0;
+}
+
+.mt-archive-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .mt-code {
     font-family: monospace;
     font-size: 24px;

@@ -220,6 +220,41 @@ password is discarded once an auth key is obtained.
 Stremio only records your *current position* per show rather than a full history, so episodes up to
 that point are marked watched.
 
+### Migrating off Trakt
+
+**Archive everything** on the Import tab is for leaving Trakt. Regular **Import from Trakt** only
+reads `/sync/watched`, which is *aggregate* state — it has no individual watch timestamps, no ratings,
+no watchlist, and no collection. Deleting your Trakt data after only that import loses all of it.
+
+Archive fetches every sync endpoint, following pagination to the last page:
+
+| Endpoint | What it holds |
+|---|---|
+| `/sync/watched/{movies,shows}` | Aggregate watched state and play counts |
+| `/sync/history/{movies,episodes}` | **Every individual watch, with its `watched_at` timestamp** |
+| `/sync/ratings/{movies,shows,seasons,episodes}` | Your ratings |
+| `/sync/watchlist/{movies,shows}` | What you planned to watch |
+| `/sync/collection/{movies,shows}` | What you own |
+
+Trakt's **raw, unmodified responses** are saved to a `Trakt Archive` JSON note beside your library's
+`Database` note. That is the important part: even if the mapping into the library misses a field, the
+original data is still there to re-derive from later.
+
+On top of that, watch data is imported into your library as usual, and Trakt ratings are applied to
+matching titles (existing ratings are kept unless you enable **Let Imports Overwrite My Ratings**).
+
+Suggested order:
+
+1. Click **Archive everything** and wait for it to finish.
+2. Check the per-endpoint counts it reports against what Trakt shows you. If any endpoint says
+   **failed**, fix that first — the report says explicitly not to delete yet.
+3. Open the `Trakt Archive` note and confirm it looks complete.
+4. Back up your Trilium data.
+5. Only then remove your data on Trakt's own site.
+
+**This addon never writes to or deletes from Trakt.** It requests no write scopes at all, so deletion
+has to happen on Trakt's site — which also means a mistake here cannot damage your Trakt account.
+
 ### Import safety
 
 Repeated imports are safe and idempotent:

@@ -716,6 +716,159 @@ async function traktRefreshIfNeeded(settings) {
     return { ...settings, ...fields }
 }
 
+// Trakt pages large collections and reports the total in X-Pagination-Page-Count
+// (verified against jellyfin-plugin-trakt's GetFromTraktWithPaging). /sync/history
+// in particular can run to thousands of entries, so every page is walked rather
+// than silently keeping only the first.
+async function traktPaged(settings, path, onProgress) {
+    const all = []
+    let page = 1
+    let pageCount = 1
+
+    do {
+        const url = `${TRAKT_API}${path}${path.includes("?") ? "&" : "?"}page=${page}&limit=100`
+        const res = await fetch(url, { headers: outboundHeaders(traktHeaders(settings, true)) })
+        if (!res.ok) {
+            if (res.status === 403) {
+                throw new Error("Trakt rejected the Client ID (HTTP 403). Check it in Settings.")
+            }
+            if (res.status === 401) throw new Error("Trakt authorization expired. Authorize again.")
+            throw new Error(`Trakt request failed (HTTP ${res.status}) for ${path}`)
+        }
+
+        const batch = await res.json()
+        if (Array.isArray(batch)) all.push(...batch)
+
+        const header = res.headers.get("x-pagination-page-count")
+        pageCount = Number(header) || 1
+        if (onProgress) onProgress(path, page, pageCount, all.length)
+        page++
+        // Hard stop so a misreported header can't spin forever.
+    } while (page <= pageCount && page <= 500)
+
+    return all
+}
+
+// Pulls everything Trakt holds and stores it verbatim in an "Archive" note beside
+// the library Database, then maps the watch data into the library as usual.
+//
+// The raw copy is the point: /sync/watched (what the normal import uses) is only
+// aggregate state, so ratings, watchlist, collection, and every individual
+// watched_at timestamp would be lost. Keeping Trakt's untouched responses means
+// nothing is destroyed by a mapping gap, which matters if the account is then
+// deleted.
+async function archiveTrakt(settings) {
+    if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
+    const current = await traktRefreshIfNeeded(settings)
+
+    const sources = {
+        watchedMovies: "/sync/watched/movies",
+        watchedShows: "/sync/watched/shows",
+        historyMovies: "/sync/history/movies",
+        historyEpisodes: "/sync/history/episodes",
+        ratingsMovies: "/sync/ratings/movies",
+        ratingsShows: "/sync/ratings/shows",
+        ratingsSeasons: "/sync/ratings/seasons",
+        ratingsEpisodes: "/sync/ratings/episodes",
+        watchlistMovies: "/sync/watchlist/movies",
+        watchlistShows: "/sync/watchlist/shows",
+        collectionMovies: "/sync/collection/movies",
+        collectionShows: "/sync/collection/shows"
+    }
+
+    const archive = { fetchedAt: new Date().toISOString(), counts: {}, data: {} }
+    const failures = []
+
+    for (const [name, path] of Object.entries(sources)) {
+        try {
+            const rows = await traktPaged(current, path)
+            archive.data[name] = rows
+            archive.counts[name] = rows.length
+        } catch (e) {
+            // Record the failure instead of aborting: a partial archive plus an
+            // explicit list of what's missing is far more useful than nothing,
+            // and it tells the user exactly what is not safe to delete yet.
+            failures.push(`${name}: ${e.message}`)
+            archive.counts[name] = null
+        }
+    }
+    archive.failures = failures
+
+    writeArchiveNote(settings, archive)
+
+    // Map the watch data into the library using the same additive importer.
+    const imported = await importTraktFrom(
+        current, archive.data.watchedMovies || [], archive.data.watchedShows || []
+    )
+
+    // Ratings are the one curated field the library itself can hold.
+    const ratingsApplied = applyTraktRatings(current, [
+        ...(archive.data.ratingsMovies || []),
+        ...(archive.data.ratingsShows || [])
+    ])
+
+    return { ...imported, counts: archive.counts, failures, ratingsApplied }
+}
+
+// The archive lives beside the Database note, under the library root, so it
+// travels with the library and is visible in the tree.
+function writeArchiveNote(settings, archive) {
+    const root = requireLibraryRoot(settings)
+    const title = "Trakt Archive"
+
+    let note = root.getChildNotes().find(n => !n.isDeleted && n.hasLabel("mediaTrackerTraktArchive"))
+    if (!note) {
+        note = root.getChildNotes().find(n => !n.isDeleted && n.title === title)
+        if (note) note.setLabel("mediaTrackerTraktArchive")
+    }
+
+    if (!note) {
+        const created = api.createNewNote({
+            parentNoteId: root.noteId,
+            title,
+            type: "code",
+            mime: "application/json",
+            content: JSON.stringify(archive, null, 2)
+        })
+        created.note.setLabel("mediaTrackerTraktArchive")
+        created.note.setLabel("iconClass", "bx bx-archive")
+        return created.note
+    }
+
+    note.setContent(JSON.stringify(archive, null, 2))
+    return note
+}
+
+// Trakt ratings are 1-10, the same scale the library uses, so they map directly.
+// Only applied where the entry has no rating yet, unless the user opted into
+// letting imports overwrite.
+function applyTraktRatings(settings, rated) {
+    const doc = loadDocument(settings)
+    let applied = 0
+
+    for (const row of rated) {
+        const subject = row.movie || row.show
+        if (!subject) continue
+        const rating = Number(row.rating)
+        if (!Number.isFinite(rating) || rating <= 0) continue
+
+        const key = tracker.findTitle(doc, {
+            tmdbId: subject.ids?.tmdb,
+            imdbId: subject.ids?.imdb,
+            traktId: subject.ids?.trakt
+        })
+        if (!key) continue
+
+        const entry = doc.titles[key]
+        if (entry.rating != null && !settings.importOverwriteRatings) continue
+        entry.rating = rating
+        applied++
+    }
+
+    if (applied) saveDocument(settings, doc)
+    return applied
+}
+
 async function importTrakt(settings) {
     if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
     const current = await traktRefreshIfNeeded(settings)
@@ -741,6 +894,12 @@ async function importTrakt(settings) {
     const movies = await fetchTrakt("/sync/watched/movies")
     const shows = await fetchTrakt("/sync/watched/shows")
 
+    return importTraktFrom(current, movies, shows)
+}
+
+// Maps Trakt's /sync/watched payloads into the library. Split out so the archive
+// flow reuses exactly the same mapping instead of a second copy that could drift.
+async function importTraktFrom(current, movies, shows) {
     const items = []
 
     for (const entry of movies || []) {
@@ -1003,6 +1162,8 @@ async function handle() {
                 return sendJson(200, await traktAuthPoll(settings, query.deviceCode))
             case "importTrakt":
                 return sendJson(200, await importTrakt(settings))
+            case "archiveTrakt":
+                return sendJson(200, await archiveTrakt(settings))
             case "stremioLogin":
                 return sendJson(200, await stremioLogin(settings))
             case "importStremio":

@@ -1006,6 +1006,7 @@ function ImportTab({ settings, reloadSettings, onImported }) {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
     const [device, setDevice] = useState(null)
+    const [archiveResult, setArchiveResult] = useState(null)
 
     const run = async (fn) => {
         setBusy(true); setStatus(null)
@@ -1059,6 +1060,17 @@ function ImportTab({ settings, reloadSettings, onImported }) {
         await reloadSettings()
     })
 
+    // Full archive, for migrating off Trakt. Reports per-endpoint counts so you
+    // can verify everything landed before deleting anything on Trakt's side.
+    const archive = () => run(async () => {
+        const r = await callBackend("archiveTrakt")
+        setArchiveResult(r)
+        setStatus({
+            ok: `Archived. ${r.added} added, ${r.updated} updated, ${r.ratingsApplied} ratings applied.`
+        })
+        await onImported()
+    })
+
     return (
         <div class="mt-import">
             <p class="mt-hint">
@@ -1095,6 +1107,52 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                             onClick={() => importFrom("importTrakt", "Trakt")}>
                             Import from Trakt
                         </button>
+                        <button class="mt-btn"
+                            disabled={busy || !settings.traktAccessToken}
+                            title="Fetch everything Trakt holds, store the raw responses, and import watch data"
+                            onClick={archive}>
+                            Archive everything
+                        </button>
+                    </div>
+                )}
+
+                {archiveResult && (
+                    <div class="mt-archive">
+                        <h5>Archived from Trakt</h5>
+                        <table class="mt-archive-table">
+                            <tbody>
+                                {Object.entries(archiveResult.counts).map(([name, count]) => (
+                                    <tr key={name}>
+                                        <td>{name}</td>
+                                        <td class={count === null ? "mt-error" : ""}>
+                                            {count === null ? "failed" : count}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {archiveResult.failures?.length > 0 ? (
+                            <>
+                                <p class="mt-error">
+                                    Some endpoints failed — do not delete anything on Trakt yet:
+                                </p>
+                                <ul>
+                                    {archiveResult.failures.map(f => (
+                                        <li class="mt-hint" key={f}>{f}</li>
+                                    ))}
+                                </ul>
+                            </>
+                        ) : (
+                            <p class="mt-ok">
+                                Every endpoint succeeded. The raw responses are saved in the
+                                <strong> Trakt Archive </strong> note under your library root.
+                            </p>
+                        )}
+                        <p class="mt-hint">
+                            Check those counts against Trakt before removing anything there. This
+                            addon never writes to or deletes from Trakt — deleting is done on Trakt's
+                            own site.
+                        </p>
                     </div>
                 )}
             </div>
