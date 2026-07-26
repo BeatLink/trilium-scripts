@@ -189,8 +189,13 @@ entry, making the lookup a one-time cost rather than something that repeats on e
 
 ## Import
 
-Import is strictly **one-way**: external services are read, and nothing is ever written back to
-them. No write scopes are requested, so no local edit can be pushed upstream by accident.
+Import is **one-way and additive**: external services are read, and your local edits are never pushed
+upstream. Imports only add and update — a title removed from Trakt or Stremio upstream is left
+untouched in Trilium, so an external change can never quietly delete your data.
+
+The single exception is the deliberate per-entry **Delete from Trakt** action described under
+[Comparing and clearing Trakt history](#comparing-and-clearing-trakt-history), used when migrating off
+Trakt. Nothing is ever written to Stremio.
 
 ### Trakt
 
@@ -255,8 +260,28 @@ Suggested order:
 4. Back up your Trilium data.
 5. Only then remove your data on Trakt's own site.
 
-**This addon never writes to or deletes from Trakt.** It requests no write scopes at all, so deletion
-has to happen on Trakt's site — which also means a mistake here cannot damage your Trakt account.
+### Comparing and clearing Trakt history
+
+**Compare with Trakt** fetches your full Trakt watch history and shows it against your Trilium
+library, newest first. Each row is marked:
+
+- **✓** — that exact watch is recorded in Trilium (for an episode, that specific season/episode is
+  marked watched; for a movie, the title is marked watched)
+- **!** — not in Trilium yet
+
+Rows marked ✓ get a **Delete from Trakt** button that removes **that single watch** from Trakt after a
+confirmation naming exactly what will go. Rows marked **!** cannot be deleted — the button is disabled
+*and* the backend refuses, so an unsaved watch can't be lost even by a crafted request.
+
+Deletion targets Trakt's own **history id**, which is the correct way to remove one play: removing by
+title + timestamp is ambiguous, because Trakt does not guarantee that pair is unique, and could clear
+more plays than intended. There is no bulk delete, by design.
+
+**Trakt history removal is permanent — there is no undo on Trakt's side.** Archive first, verify the
+counts, back up Trilium, then delete. The watch remains in Trilium either way.
+
+This is the only place the addon writes to an external service; everything else is read-only, and
+Stremio is never written to at all.
 
 ### Import safety
 

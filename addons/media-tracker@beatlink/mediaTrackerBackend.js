@@ -23,9 +23,15 @@
  * at the end -- a 400-title Trakt import is a single note write, and a partial
  * failure can't leave the document half-updated.
  *
- * Import is strictly one-way (external -> Trilium). Nothing here ever writes to
- * Trakt or Stremio, so no write scopes are used and no local edit can be pushed
- * upstream by accident.
+ * Imports are additive: they only ever add and update titles, never remove them.
+ * A title dropped from Trakt or Stremio upstream is left untouched here, so an
+ * external change can't quietly delete your Trilium data. Nothing is written to
+ * Stremio at all.
+ *
+ * deleteTraktHistory is the one call that writes to an external service, added
+ * for migrating off Trakt. It removes a single Trakt history entry by its history
+ * id, refuses unless that watch is already captured in Trilium, and has no bulk
+ * equivalent. Trakt history removal is permanent -- there is no undo there.
  *
  * API contracts verified against live endpoints plus known-good clients:
  *   Trakt device OAuth  - PyTrakt (trakt/core.py); status codes 400 pending /
@@ -869,6 +875,121 @@ function applyTraktRatings(settings, rated) {
     return applied
 }
 
+// --- Trakt reconciliation (migration only) ----------------------------------
+//
+// The one place this addon writes to Trakt. Everything else is strictly read-only;
+// see the header. Deletion is deliberately narrow: one history entry per call,
+// addressed by its own history id, with no bulk endpoint.
+//
+// Verified: POST /sync/history/remove accepts {"ids": [historyId]}, which removes
+// exactly that play. Trakt's own issue tracker (trakt/trakt-api#248) states the
+// history id exists precisely "so a user doesn't remove all plays" -- removing by
+// item + watched_at is ambiguous, because Trakt does not guarantee that pair is
+// unique. Always address by id.
+
+// Side-by-side comparison of Trakt's watch history against the Trilium library.
+// Read-only. Each row reports whether Trilium already has that watch, so nothing
+// is deleted from Trakt that hasn't landed here first.
+async function compareTrakt(settings) {
+    if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
+    const current = await traktRefreshIfNeeded(settings)
+    const doc = loadDocument(settings)
+
+    const movies = await traktPaged(current, "/sync/history/movies")
+    const episodes = await traktPaged(current, "/sync/history/episodes")
+
+    const rows = []
+
+    for (const entry of movies) {
+        const movie = entry.movie || {}
+        const key = tracker.findTitle(doc, {
+            tmdbId: movie.ids?.tmdb, imdbId: movie.ids?.imdb, traktId: movie.ids?.trakt
+        })
+        rows.push({
+            historyId: entry.id,
+            mediaType: "movie",
+            title: movie.title || "Untitled",
+            year: movie.year || "",
+            watchedAt: entry.watched_at || "",
+            label: movie.title || "Untitled",
+            inTrilium: !!key,
+            // A movie counts as captured when it's tracked and marked watched.
+            captured: !!key && doc.titles[key]?.status === "watched"
+        })
+    }
+
+    for (const entry of episodes) {
+        const show = entry.show || {}
+        const ep = entry.episode || {}
+        const key = tracker.findTitle(doc, {
+            tmdbId: show.ids?.tmdb, imdbId: show.ids?.imdb, traktId: show.ids?.trakt
+        })
+        // An episode counts as captured when that exact season/episode is marked
+        // watched in the library, not merely when the show is present.
+        let captured = false
+        if (key) {
+            const watched = tracker.parseEpisodes(doc.titles[key].watchedEpisodes || "")
+            captured = tracker.hasEpisode(watched, Number(ep.season), Number(ep.number))
+        }
+        rows.push({
+            historyId: entry.id,
+            mediaType: "episode",
+            title: show.title || "Untitled",
+            year: show.year || "",
+            season: ep.season,
+            episode: ep.number,
+            watchedAt: entry.watched_at || "",
+            label: `${show.title || "Untitled"} ${ep.season}x${String(ep.number).padStart(2, "0")}`
+                + (ep.title ? ` · ${ep.title}` : ""),
+            inTrilium: !!key,
+            captured
+        })
+    }
+
+    rows.sort((a, b) => String(b.watchedAt).localeCompare(String(a.watchedAt)))
+
+    return {
+        rows,
+        total: rows.length,
+        captured: rows.filter(r => r.captured).length,
+        missing: rows.filter(r => !r.captured).length
+    }
+}
+
+// Removes ONE history entry from Trakt, by its history id.
+//
+// This permanently deletes data on Trakt; there is no undo. Guarded so it can
+// only ever affect a single entry, and refuses outright unless that watch is
+// already captured in Trilium.
+async function deleteTraktHistory(settings, historyId, captured) {
+    if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
+    const id = Number(historyId)
+    if (!Number.isFinite(id) || id <= 0) throw new Error("A valid history id is required")
+
+    // Enforced here, not just hidden in the UI: a disabled button is a hint, but
+    // this is the thing that actually prevents deleting an unsaved watch.
+    if (captured !== "true") {
+        throw new Error("That watch is not recorded in Trilium yet. Import it first — "
+            + "deleting it from Trakt now would lose it permanently.")
+    }
+
+    const current = await traktRefreshIfNeeded(settings)
+    const res = await postJson(
+        `${TRAKT_API}/sync/history/remove`,
+        { ids: [id] },
+        traktHeaders(current, true)
+    )
+
+    if (!res.ok) throw new Error(await traktError(res, traktClientId(current)))
+
+    const body = await res.json().catch(() => ({}))
+    const deleted = body.deleted?.episodes ?? body.deleted?.movies ?? 0
+    const notFound = (body.not_found?.ids || []).length > 0
+
+    if (notFound) throw new Error("Trakt did not recognise that history entry; it may already be gone.")
+    return { ok: true, deleted, historyId: id }
+}
+
 async function importTrakt(settings) {
     if (!settings.traktAccessToken) throw new Error("Authorize with Trakt first")
     const current = await traktRefreshIfNeeded(settings)
@@ -1164,6 +1285,10 @@ async function handle() {
                 return sendJson(200, await importTrakt(settings))
             case "archiveTrakt":
                 return sendJson(200, await archiveTrakt(settings))
+            case "compareTrakt":
+                return sendJson(200, await compareTrakt(settings))
+            case "deleteTraktHistory":
+                return sendJson(200, await deleteTraktHistory(settings, query.historyId, query.captured))
             case "stremioLogin":
                 return sendJson(200, await stremioLogin(settings))
             case "importStremio":

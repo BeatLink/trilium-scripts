@@ -1054,6 +1054,7 @@ function ImportTab({ settings, reloadSettings, onImported }) {
     const [status, setStatus] = useState(null)
     const [device, setDevice] = useState(null)
     const [archiveResult, setArchiveResult] = useState(null)
+    const [comparison, setComparison] = useState(null)
 
     const run = async (fn) => {
         setBusy(true); setStatus(null)
@@ -1106,6 +1107,44 @@ function ImportTab({ settings, reloadSettings, onImported }) {
         setStatus({ ok: "Logged in to Stremio" })
         await reloadSettings()
     })
+
+    const compare = () => run(async () => {
+        const r = await callBackend("compareTrakt")
+        setComparison(r)
+        setStatus({ ok: `${r.total} Trakt watches: ${r.captured} already in Trilium, ${r.missing} not yet.` })
+    })
+
+    // Deletes one Trakt history entry. Permanent, so it confirms first and names
+    // exactly what will go.
+    const deleteOne = async (row) => {
+        const ok = confirm(
+            `Permanently delete this watch from Trakt?\n\n`
+            + `${row.label}\nWatched ${String(row.watchedAt).slice(0, 10)}\n\n`
+            + `It stays in Trilium. This cannot be undone on Trakt.`
+        )
+        if (!ok) return
+
+        setBusy(true)
+        try {
+            await callBackend("deleteTraktHistory", {
+                historyId: String(row.historyId),
+                captured: String(row.captured)
+            })
+            // Drop the row locally rather than refetching the whole history.
+            setComparison(prev => prev && {
+                ...prev,
+                rows: prev.rows.filter(r => r.historyId !== row.historyId),
+                total: prev.total - 1,
+                captured: prev.captured - (row.captured ? 1 : 0),
+                missing: prev.missing - (row.captured ? 0 : 1)
+            })
+            setStatus({ ok: `Deleted from Trakt: ${row.label}` })
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
 
     // Full archive, for migrating off Trakt. Reports per-endpoint counts so you
     // can verify everything landed before deleting anything on Trakt's side.
@@ -1160,6 +1199,12 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                             onClick={archive}>
                             Archive everything
                         </button>
+                        <button class="mt-btn"
+                            disabled={busy || !settings.traktAccessToken}
+                            title="Compare Trakt's watch history against your Trilium library"
+                            onClick={compare}>
+                            Compare with Trakt
+                        </button>
                     </div>
                 )}
 
@@ -1196,9 +1241,45 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                             </p>
                         )}
                         <p class="mt-hint">
-                            Check those counts against Trakt before removing anything there. This
-                            addon never writes to or deletes from Trakt — deleting is done on Trakt's
-                            own site.
+                            Check those counts against Trakt before removing anything there, and back
+                            up Trilium first.
+                        </p>
+                    </div>
+                )}
+
+                {comparison && (
+                    <div class="mt-archive">
+                        <h5>Trakt history vs Trilium</h5>
+                        <p class="mt-hint">
+                            {comparison.total} watches on Trakt · {comparison.captured} already in
+                            Trilium · {comparison.missing} not yet.
+                            {comparison.missing > 0 && " Import before deleting the missing ones."}
+                        </p>
+                        <div class="mt-compare-list">
+                            {comparison.rows.map(row => (
+                                <div class={`mt-compare-row ${row.captured ? "" : "mt-compare-missing"}`}
+                                    key={row.historyId}>
+                                    <span class="mt-compare-state" title={row.captured
+                                        ? "Recorded in Trilium"
+                                        : "Not in Trilium yet"}>
+                                        {row.captured ? "✓" : "!"}
+                                    </span>
+                                    <span class="mt-compare-label">{row.label}</span>
+                                    <span class="mt-hint">{String(row.watchedAt).slice(0, 10)}</span>
+                                    <button class="mt-btn mt-compare-delete"
+                                        disabled={busy || !row.captured}
+                                        title={row.captured
+                                            ? "Permanently delete this one watch from Trakt"
+                                            : "Import this watch into Trilium before deleting it"}
+                                        onClick={() => deleteOne(row)}>
+                                        Delete from Trakt
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <p class="mt-hint">
+                            Delete removes that single watch from Trakt permanently — there is no undo
+                            there. It stays in Trilium. Entries not yet in Trilium cannot be deleted.
                         </p>
                     </div>
                 )}
