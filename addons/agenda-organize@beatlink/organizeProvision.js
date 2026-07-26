@@ -75,7 +75,10 @@ async function migrateAreaSlugs(areaList) {
 
         let migrated = 0
         for (const note of api.searchForNotes("#area")) {
-            const current = note.getLabelValue("area")
+            // Owned-only: #area is inherited by every note templated from an area
+            // collection, and setLabel() below would stamp the inherited value on
+            // as an owned one.
+            const current = note.getOwnedLabelValue("area")
             if (!current) continue
             const stripped = current.replace(/^\d\d-/, "")
             const target = byKey[aliases[stripped] || stripped]
@@ -117,7 +120,9 @@ async function migrateStructuralLabels(areaList) {
         const unparsed = []
 
         for (const note of api.getNotesWithLabel(legacyLabel)) {
-            const key = note.getLabelValue(legacyLabel)
+            // Owned-only: an inherited legacy key would stamp the structural
+            // identity label onto every instance of the template carrying it.
+            const key = note.getOwnedLabelValue(legacyLabel)
             if (!key) continue
 
             if (specials[key]) {
