@@ -1366,7 +1366,20 @@ async function handle() {
                 // can't be written into settings.
                 const config = tracker.parseGroupConfig(query.config)
                 persistFields({ collectionGroups: tracker.serializeGroupConfig(config) })
-                return sendJson(200, { ok: true, groups: config.groups })
+
+                // Return the state that was just written rather than making the
+                // caller re-read it: a read issued immediately after the write can
+                // still see the previous note content, which showed up as an
+                // assignment reverting on reload.
+                const doc = loadDocument(settings)
+                return sendJson(200, {
+                    ok: true,
+                    groups: config.groups,
+                    collections: tracker.listCollections(doc).map(name => ({
+                        name,
+                        group: tracker.groupOf(config, name)
+                    }))
+                })
             }
             case "setEpisodeRange":
                 return sendJson(200, setEpisodeRange(

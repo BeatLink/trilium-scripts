@@ -252,10 +252,13 @@ function CollectionGroupPanel() {
     const save = async (groups, assign) => {
         setBusy(true)
         try {
-            await callBackend("setCollectionGroups", {
+            // The save returns the state it just wrote. Using that instead of a
+            // follow-up read avoids a read-after-write that could still see the
+            // note's previous content, which made assignments revert on reload.
+            const saved = await callBackend("setCollectionGroups", {
                 config: JSON.stringify({ groups, assign })
             })
-            await load()
+            setData({ groups: saved.groups, collections: saved.collections })
         } catch (e) {
             setError(e.message)
         } finally {
