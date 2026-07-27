@@ -1283,7 +1283,17 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                                     </span>
                                     <span class="mt-compare-label">{row.label}</span>
                                     <span class="mt-hint">{String(row.watchedAt).slice(0, 10)}</span>
-                                    {!row.captured && (
+                                    {/* One action per row: a watch that isn't in
+                                        Trilium can only be imported, and only once
+                                        it is can it be deleted from Trakt. */}
+                                    {row.captured ? (
+                                        <button class="mt-btn mt-compare-delete"
+                                            disabled={busy}
+                                            title="Permanently delete this one watch from Trakt"
+                                            onClick={() => deleteOne(row)}>
+                                            Delete from Trakt
+                                        </button>
+                                    ) : (
                                         <button class="mt-btn mt-compare-delete"
                                             disabled={busy}
                                             title="Record this watch in Trilium"
@@ -1291,14 +1301,6 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                                             Import
                                         </button>
                                     )}
-                                    <button class="mt-btn mt-compare-delete"
-                                        disabled={busy || !row.captured}
-                                        title={row.captured
-                                            ? "Permanently delete this one watch from Trakt"
-                                            : "Import this watch into Trilium before deleting it"}
-                                        onClick={() => deleteOne(row)}>
-                                        Delete from Trakt
-                                    </button>
                                 </div>
                             ))}
                         </div>
