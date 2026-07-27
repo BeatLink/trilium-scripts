@@ -1399,6 +1399,14 @@ function ImportTab({ settings, reloadSettings, onImported }) {
                 nothing is ever written back to Trakt or Stremio.
             </p>
 
+            {/* Scheduled imports run in the background, so their outcome would
+                otherwise be invisible. */}
+            {settings.autoSyncLastResult && (
+                <p class="mt-hint">
+                    Last automatic import — {settings.autoSyncLastResult}
+                </p>
+            )}
+
             <div class="mt-source">
                 <h4>Trakt</h4>
                 {device ? (

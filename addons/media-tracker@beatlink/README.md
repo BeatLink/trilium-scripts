@@ -341,6 +341,22 @@ counts, back up Trilium, then delete. The watch remains in Trilium either way.
 This is the only place the addon writes to an external service; everything else is read-only, and
 Stremio is never written to at all.
 
+### Automatic imports
+
+Both sources can import on a schedule. On the **Import** settings tab:
+
+- **Auto-Import From Stremio** / **Auto-Import From Trakt** — enable per source
+- **Hours Between Auto-Imports** — minimum gap between runs (default 6; use 1 for hourly, 24 for
+  once a day)
+
+A background script wakes hourly and imports only if that many hours have passed, so the interval is
+independent of Trilium's hourly-only scheduling. Each source needs to be logged in or authorized
+first; one failing doesn't stop the other, and a failure still records the timestamp so a broken
+source doesn't retry every hour forever.
+
+The outcome of the last automatic run is shown at the top of the Import tab. Scheduled imports use
+exactly the same additive code path as the buttons — they only ever add and update.
+
 ### Import safety
 
 Repeated imports are safe and idempotent:

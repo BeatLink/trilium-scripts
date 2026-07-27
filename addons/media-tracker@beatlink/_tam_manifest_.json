@@ -69,6 +69,13 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTrackerBackend.js"
             },
             {
+                "id": "autosync",
+                "title": "autoSync.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/autoSync.js"
+            },
+            {
                 "id": "lib-tracker",
                 "title": "libMediaTracker.js",
                 "type": "code",
@@ -132,6 +139,9 @@
             { "parent": "launcher", "child": "backend" },
             { "parent": "backend", "child": "libsettings-backend" },
             { "parent": "backend", "child": "lib-tracker" },
+            { "parent": "launcher", "child": "autosync" },
+            { "parent": "autosync", "child": "libsettings-backend" },
+            { "parent": "autosync", "child": "backend" },
             { "parent": "libsettings-ui", "child": "libsettings-style" },
             { "parent": "libsettings-ui", "child": "colorpicker" },
             { "parent": "colorpicker", "child": "colorpicker-css" },
@@ -151,6 +161,9 @@
         ],
         "labels": [
             { "note": "backend", "name": "customRequestHandler", "value": "mediaTracker" },
+            { "note": "autosync", "name": "run", "value": "hourly" },
+            { "note": "autosync", "name": "iconClass", "value": "bx bx-sync" },
+            { "note": "settings", "name": "mediaTrackerConfig", "value": "" },
             { "note": "view", "name": "mediaTrackerRender", "value": "" },
             { "note": "style", "name": "appCss", "value": "" },
             { "note": "libsettings-style", "name": "appCss", "value": "" },

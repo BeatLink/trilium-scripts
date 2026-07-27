@@ -51,9 +51,22 @@ const DATABASE_TITLE = "Database"
 
 // --- settings ---------------------------------------------------------------
 
+// Normally resolved from this note's own relations. When these functions are
+// required from another script (autoSync.js), `api.currentNote` is that script
+// instead, so fall back to finding the settings note by its #mediaTrackerConfig
+// marker -- otherwise a scheduled import would fail the moment it tried to
+// persist a refreshed token.
 function getNoteIds() {
-    const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
-    const settingsNoteId = api.currentNote.getRelationValue("settingsNote")
+    let schemaNoteId = api.currentNote?.getRelationValue("schemaNote")
+    let settingsNoteId = api.currentNote?.getRelationValue("settingsNote")
+
+    if (!schemaNoteId || !settingsNoteId) {
+        const marker = api.getNoteWithLabel("mediaTrackerConfig")
+        if (!marker) throw new Error("Media Tracker settings note not found")
+        schemaNoteId = marker.getRelationValue("schemaNote")
+        settingsNoteId = marker.noteId
+    }
+
     const configNoteId = api.getNote(settingsNoteId).getRelationValue("configNote")
     return { schemaNoteId, configNoteId }
 }
@@ -1471,4 +1484,11 @@ async function handle() {
     }
 }
 
-handle()
+// Exported so the scheduled importer (autoSync.js) reuses these exact functions
+// rather than reimplementing them.
+module.exports = { importStremio, importTrakt }
+
+// Only serve a request when there actually is one. Requiring this note for its
+// exports must not trigger the HTTP handler, which would fail on the missing
+// api.req/api.res.
+if (typeof api !== "undefined" && api.req && api.res) handle()
