@@ -74,6 +74,9 @@ function countSeasonsComplete(seasons, seasonCounts) {
 
 const UNTAGGED = "Untagged"
 
+// Must match libMediaTracker.js: the bucket for collections in no group.
+const UNGROUPED = "Ungrouped"
+
 // Per-group "not in any collection of this group". A sentinel rather than a real
 // collection name, prefixed so it can't collide with one a user creates.
 const NONE = "__none__"
@@ -432,15 +435,15 @@ function TitleRow({
 
     // Sections for the picker. Built from the group structure, with any collection
     // the backend hasn't grouped yet (including one just created here) appended to
-    // "Other" so it never disappears from the list mid-edit.
+    // UNGROUPED so it never disappears from the list mid-edit.
     const pickerGroups = (() => {
         const grouped = new Set(collectionGroups.flatMap(([, names]) => names))
         const leftovers = allCollections.filter(n => !grouped.has(n))
         const sections = collectionGroups.map(([group, names]) => [group, names])
         if (leftovers.length) {
-            const other = sections.find(([group]) => group === "Other")
+            const other = sections.find(([group]) => group === UNGROUPED)
             if (other) other[1] = [...other[1], ...leftovers]
-            else sections.push(["Other", leftovers])
+            else sections.push([UNGROUPED, leftovers])
         }
         return sections
     })()

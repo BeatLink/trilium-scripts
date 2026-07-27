@@ -76,8 +76,8 @@ at once. **+ Add to collection** on any row opens a picker listing every collect
 current membership checked, so nothing has to be typed or remembered. When you have collection groups,
 the picker is split into a labelled section per group — Mood, Franchise, and so on — each edited
 separately. A field underneath creates a new collection; typing a name that already exists (in any
-casing) reuses it rather than making a near-duplicate, and a newly created one appears under **Other**
-until you assign it a group in Settings.
+casing) reuses it rather than making a near-duplicate, and a newly created one appears under
+**Ungrouped** until you file it into a group in Settings.
 
 Each tick saves immediately — there is no separate save step to forget.
 
@@ -92,9 +92,15 @@ Collections can be organised into **groups** — Mood, Franchise, Format, whatev
 group gets **its own titled dropdown** on the Library tab. Selections across groups combine with AND,
 so picking `Franchise: MCU` and `Mood: Comfort` narrows to titles in both.
 
-Define groups on the **Collections** tab in Settings, then assign each collection to one from a
-dropdown. A collection with no group appears under **Other**, so nothing is ever hidden by forgetting
-to categorise it, and removing a group returns its collections to Other rather than deleting them.
+Define groups on the **Collections** tab in Settings. Each group gets its own block listing its
+collections, with a text box to add another **directly into that group** — so a collection is created
+where it belongs rather than being filed afterwards. A collection can still be moved between groups
+with its dropdown.
+
+A collection created this way exists straight away, before any title uses it, and is marked *unused*
+until one does. Collections that belong to no group (created before groups existed, or left behind
+when a group was removed) appear in an **Ungrouped** block, which is omitted entirely when empty.
+Removing a group moves its collections there rather than deleting them.
 
 Groups live in settings, not on the titles — a title still just carries collection names — so you can
 reorganise your groups freely without rewriting any title data.

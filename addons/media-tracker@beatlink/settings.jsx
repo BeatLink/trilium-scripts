@@ -231,13 +231,15 @@ function GenrePanel({ disabled = false }) {
 // Collection groups: named axes (Mood, Franchise, ...) that each become their own
 // filter dropdown on the Library tab. Groups live here rather than on the titles,
 // so regrouping never rewrites a single title.
-const UNGROUPED = "Other"
+const UNGROUPED = "Ungrouped"
 
 function CollectionGroupPanel() {
     const [data, setData] = useState(null)
     const [error, setError] = useState(null)
     const [busy, setBusy] = useState(false)
     const [newGroup, setNewGroup] = useState("")
+    // Text pending in each group's "add collection" box, keyed by group name.
+    const [newInGroup, setNewInGroup] = useState({})
 
     const load = async () => {
         try {
@@ -300,6 +302,21 @@ function CollectionGroupPanel() {
         save(data.groups, assign)
     }
 
+    // Creates a collection directly inside a group. It exists as an assignment
+    // straight away, so it shows up in that group's filter dropdown before any
+    // title uses it.
+    const addToGroup = (group) => {
+        const name = (newInGroup[group] || "").trim()
+        if (!name) return
+        setNewInGroup({ ...newInGroup, [group]: "" })
+
+        const assign = currentAssign(data.collections)
+        // Reuse an existing name in any casing rather than making a twin.
+        const existing = data.collections.find(c => c.name.toLowerCase() === name.toLowerCase())
+        assign[existing ? existing.name : name] = group
+        save(data.groups, assign)
+    }
+
     if (error) return <p class="mt-error">{error}</p>
     if (!data) return <p class="mt-hint">Loading collections...</p>
 
@@ -331,39 +348,82 @@ function CollectionGroupPanel() {
                     onClick={addGroup}>Add group</button>
             </div>
 
-            {data.groups.length > 0 && (
-                <div class="mt-toolbar" style="margin-top: 8px; flex-wrap: wrap;">
-                    {data.groups.map(g => (
-                        <span class="mt-chip-group" key={g}>
-                            <span class="mt-chip">{g}</span>
-                            <button class="mt-btn mt-chip-action" disabled={busy}
-                                title={`Remove the group "${g}"`}
-                                onClick={() => removeGroup(g)}>×</button>
-                        </span>
-                    ))}
-                </div>
-            )}
 
-            <h5 style="margin: 14px 0 6px;">Collections</h5>
-            {data.collections.length === 0 ? (
-                <p class="mt-hint">
-                    No collections yet. Add one from any title's <strong>+ Add to collection</strong>
-                    {" "}on the Library tab.
-                </p>
-            ) : (
-                <div class="mt-tag-list mt-genre-list">
-                    {data.collections.map(c => (
-                        <div class="mt-tag-option" key={c.name}>
-                            <span style="flex: 1; min-width: 0;">{c.name}</span>
-                            <select class="mt-select" value={c.group} disabled={busy}
-                                onChange={e => assignTo(c.name, e.target.value)}>
-                                <option value={UNGROUPED}>{UNGROUPED}</option>
-                                {data.groups.map(g => (
-                                    <option key={g} value={g}>{g}</option>
-                                ))}
-                            </select>
+            {/* Collections are listed under the group they belong to, each group
+                with its own box to add one directly. A collection can still be
+                moved between groups with its dropdown. */}
+            {data.groups.map(group => {
+                const members = data.collections.filter(c => c.group === group)
+                return (
+                    <div class="mt-group-section" key={group}>
+                        <div class="mt-group-section-head">
+                            <strong>{group}</strong>
+                            <button class="mt-btn mt-chip-action" disabled={busy}
+                                title={`Remove the group "${group}"`}
+                                onClick={() => removeGroup(group)}>×</button>
                         </div>
-                    ))}
+
+                        {members.length === 0 ? (
+                            <p class="mt-hint">No collections in this group yet.</p>
+                        ) : (
+                            <div class="mt-tag-list">
+                                {members.map(c => (
+                                    <div class="mt-tag-option" key={c.name}>
+                                        <span style="flex: 1; min-width: 0;">
+                                            {c.name}
+                                            {!c.inUse && <span class="mt-hint"> (unused)</span>}
+                                        </span>
+                                        <select class="mt-select" value={c.group} disabled={busy}
+                                            onChange={e => assignTo(c.name, e.target.value)}>
+                                            {data.groups.map(g => (
+                                                <option key={g} value={g}>{g}</option>
+                                            ))}
+                                            <option value={UNGROUPED}>{UNGROUPED}</option>
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div class="mt-tag-edit">
+                            <input
+                                class="mt-input"
+                                placeholder={`New ${group} collection`}
+                                value={newInGroup[group] || ""}
+                                disabled={busy}
+                                onInput={e => setNewInGroup({ ...newInGroup, [group]: e.target.value })}
+                                onKeyDown={e => e.key === "Enter" && addToGroup(group)}
+                            />
+                            <button class="mt-btn"
+                                disabled={busy || !(newInGroup[group] || "").trim()}
+                                onClick={() => addToGroup(group)}>Add</button>
+                        </div>
+                    </div>
+                )
+            })}
+
+            {/* Strays: created before groups existed, or left behind when a group
+                was removed. Omitted entirely when there are none. */}
+            {data.collections.some(c => c.group === UNGROUPED) && (
+                <div class="mt-group-section">
+                    <div class="mt-group-section-head"><strong>{UNGROUPED}</strong></div>
+                    <p class="mt-hint">
+                        Not in any group, so these don't appear as a filter. Pick a group to file them.
+                    </p>
+                    <div class="mt-tag-list">
+                        {data.collections.filter(c => c.group === UNGROUPED).map(c => (
+                            <div class="mt-tag-option" key={c.name}>
+                                <span style="flex: 1; min-width: 0;">{c.name}</span>
+                                <select class="mt-select" value={UNGROUPED} disabled={busy}
+                                    onChange={e => assignTo(c.name, e.target.value)}>
+                                    <option value={UNGROUPED}>{UNGROUPED}</option>
+                                    {data.groups.map(g => (
+                                        <option key={g} value={g}>{g}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

@@ -272,41 +272,62 @@ const UNTAGGED = "Untagged"
 // reorganised without rewriting a single title.
 //
 // Shape: { groups: ["Mood", "Franchise"], assign: { "MCU": "Franchise" } }
-// A collection with no assignment falls into UNGROUPED, so nothing is ever
-// hidden by failing to categorise it.
+// A collection with no assignment falls into UNGROUPED. Collections are created
+// inside a group now, so this only holds strays -- ones created before groups
+// existed, or whose group was deleted. It is omitted entirely when empty.
 
-const UNGROUPED = "Other"
+const UNGROUPED = "Ungrouped"
 
 function parseGroupConfig(raw) {
     let parsed
     try {
         parsed = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {})
     } catch (e) {
-        return { groups: [], assign: {} }
+        return { groups: [], assign: {}, names: {} }
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        return { groups: [], assign: {} }
+        return { groups: [], assign: {}, names: {} }
     }
 
     const groups = Array.isArray(parsed.groups)
         ? [...new Set(parsed.groups.map(g => String(g || "").trim()).filter(Boolean))]
         : []
 
+    // Keys are lowercased so lookups are case-insensitive; `names` keeps the
+    // spelling to display, since a collection assigned but not yet used on any
+    // title has no other record of its casing.
     const assign = {}
+    const names = {}
     if (parsed.assign && typeof parsed.assign === "object" && !Array.isArray(parsed.assign)) {
         for (const [collection, group] of Object.entries(parsed.assign)) {
             const name = String(collection || "").trim()
             const target = String(group || "").trim()
             // An assignment to a group that no longer exists is dropped rather
             // than creating a phantom dropdown.
-            if (name && target && groups.includes(target)) assign[name.toLowerCase()] = target
+            if (!name || !target || !groups.includes(target)) continue
+            const key = name.toLowerCase()
+            assign[key] = target
+            names[key] = name
         }
     }
-    return { groups, assign }
+    // A previously stored `names` map wins for keys it covers, so display casing
+    // survives a round trip even when the assign key is already lowercase.
+    if (parsed.names && typeof parsed.names === "object" && !Array.isArray(parsed.names)) {
+        for (const [key, display] of Object.entries(parsed.names)) {
+            const k = String(key || "").trim().toLowerCase()
+            const value = String(display || "").trim()
+            if (k && value && assign[k]) names[k] = value
+        }
+    }
+    return { groups, assign, names }
 }
 
 function serializeGroupConfig(config) {
-    return JSON.stringify({ groups: config.groups || [], assign: config.assign || {} })
+    return JSON.stringify({
+        groups: config.groups || [],
+        assign: config.assign || {},
+        names: config.names || {}
+    })
 }
 
 function groupOf(config, collectionName) {
@@ -318,11 +339,24 @@ function groupOf(config, collectionName) {
 // doesn't render a dropdown with nothing in it. UNGROUPED sorts last.
 function collectionsByGroup(collections, config) {
     const buckets = new Map()
+    const seen = new Set()
+
     for (const name of collections) {
         const group = groupOf(config, name)
         if (!buckets.has(group)) buckets.set(group, [])
         buckets.get(group).push(name)
+        seen.add(name.toLowerCase())
     }
+
+    // Collections created in Settings but not yet applied to any title still
+    // belong in their group's dropdown -- otherwise they would be invisible
+    // until something happened to use them.
+    for (const [key, group] of Object.entries(config.assign)) {
+        if (seen.has(key)) continue
+        if (!buckets.has(group)) buckets.set(group, [])
+        buckets.get(group).push(config.names?.[key] || key)
+    }
+    for (const list of buckets.values()) list.sort((a, b) => a.localeCompare(b))
 
     const ordered = []
     for (const group of config.groups) {

@@ -105,6 +105,28 @@
     border-color: var(--main-text-color);
 }
 
+/* One block per collection group in Settings: its collections, then a box to add
+   another directly into that group. */
+.mt-group-section {
+    margin: 14px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.mt-group-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.mt-group-section .mt-tag-list {
+    max-height: 220px;
+    margin-bottom: 6px;
+}
+
 .mt-diag pre {
     font-size: 11px;
     white-space: pre-wrap;

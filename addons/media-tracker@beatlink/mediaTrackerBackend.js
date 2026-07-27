@@ -460,6 +460,25 @@ function saveViewState(query) {
 //
 // Matching is case-insensitive so "mcu" removes "MCU"; renaming to a name that
 // already exists merges the two rather than creating a duplicate.
+// Every collection the panel should show: those actually in use on titles, plus
+// any that exist only as a group assignment. A collection created in Settings has
+// no members yet, and collections are otherwise derived from titles, so without
+// this it would vanish the moment it was created.
+function collectionRows(doc, config) {
+    const seen = new Map()
+    for (const name of tracker.listCollections(doc)) {
+        seen.set(name.toLowerCase(), { name, group: tracker.groupOf(config, name), inUse: true })
+    }
+    for (const [key, group] of Object.entries(config.assign)) {
+        if (seen.has(key)) continue
+        // The stored key is lowercased; recover the display name from the
+        // config's own record of it.
+        const display = config.names?.[key] || key
+        seen.set(key, { name: display, group, inUse: false })
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 function renameCollection(settings, from, to) {
     const source = String(from || "").trim().toLowerCase()
     if (!source) throw new Error("Which collection?")
@@ -1358,10 +1377,7 @@ async function handle() {
                     // what is rendered can be seen rather than inferred.
                     raw: settings.collectionGroups ?? null,
                     groups: config.groups,
-                    collections: tracker.listCollections(doc).map(name => ({
-                        name,
-                        group: tracker.groupOf(config, name)
-                    }))
+                    collections: collectionRows(doc, config)
                 })
             }
             case "setCollectionGroups": {
