@@ -7,6 +7,22 @@
         "default": "",
         "tab": "Library"
     },
+    "collectionGroups": {
+        "type": "string",
+        "hidden": true,
+        "label": "Collection Groups",
+        "description": "JSON holding the collection groups and which group each collection belongs to. Managed by the Collections tab.",
+        "default": "{\"groups\":[],\"assign\":{}}",
+        "tab": "Library"
+    },
+    "viewGroupFilters": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Group Filters",
+        "description": "Remembered per-group Library filters. Managed by the widget, not edited here.",
+        "default": "{}",
+        "tab": "Library"
+    },
     "hiddenGenres": {
         "type": "string",
         "hidden": true,

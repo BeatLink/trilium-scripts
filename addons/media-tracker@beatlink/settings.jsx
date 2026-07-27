@@ -217,6 +217,138 @@ function GenrePanel() {
     )
 }
 
+// Collection groups: named axes (Mood, Franchise, ...) that each become their own
+// filter dropdown on the Library tab. Groups live here rather than on the titles,
+// so regrouping never rewrites a single title.
+const UNGROUPED = "Other"
+
+function CollectionGroupPanel() {
+    const [data, setData] = useState(null)
+    const [error, setError] = useState(null)
+    const [busy, setBusy] = useState(false)
+    const [newGroup, setNewGroup] = useState("")
+
+    const load = async () => {
+        try {
+            setData(await callBackend("collectionGroups"))
+        } catch (e) {
+            setError(e.message)
+        }
+    }
+
+    useEffect(() => { load() }, [])
+
+    const save = async (groups, assign) => {
+        setBusy(true)
+        try {
+            await callBackend("setCollectionGroups", {
+                config: JSON.stringify({ groups, assign })
+            })
+            await load()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    // The assignment map is rebuilt from the rendered rows each time, so it can
+    // never drift from what is on screen.
+    const currentAssign = (rows) => {
+        const assign = {}
+        for (const c of rows) {
+            if (c.group && c.group !== UNGROUPED) assign[c.name] = c.group
+        }
+        return assign
+    }
+
+    const addGroup = () => {
+        const name = newGroup.trim()
+        if (!name) return
+        setNewGroup("")
+        if (data.groups.some(g => g.toLowerCase() === name.toLowerCase())) return
+        save([...data.groups, name], currentAssign(data.collections))
+    }
+
+    const removeGroup = (group) => {
+        // Collections in a removed group fall back to Other rather than vanishing.
+        const assign = currentAssign(data.collections)
+        for (const [name, g] of Object.entries(assign)) {
+            if (g === group) delete assign[name]
+        }
+        save(data.groups.filter(g => g !== group), assign)
+    }
+
+    const assignTo = (collection, group) => {
+        const assign = currentAssign(data.collections)
+        if (group === UNGROUPED) delete assign[collection]
+        else assign[collection] = group
+        save(data.groups, assign)
+    }
+
+    if (error) return <p class="mt-error">{error}</p>
+    if (!data) return <p class="mt-hint">Loading collections...</p>
+
+    return (
+        <div>
+            <p class="mt-hint">
+                Each group becomes its own filter dropdown on the Library tab. A collection with no
+                group appears under <strong>{UNGROUPED}</strong>. Groups are just a way to organise
+                the filters — no title is changed by regrouping.
+            </p>
+
+            <div class="mt-tag-edit">
+                <input
+                    class="mt-input"
+                    placeholder="New group, e.g. Mood"
+                    value={newGroup}
+                    disabled={busy}
+                    onInput={e => setNewGroup(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addGroup()}
+                />
+                <button class="mt-btn" disabled={busy || !newGroup.trim()}
+                    onClick={addGroup}>Add group</button>
+            </div>
+
+            {data.groups.length > 0 && (
+                <div class="mt-toolbar" style="margin-top: 8px; flex-wrap: wrap;">
+                    {data.groups.map(g => (
+                        <span class="mt-chip-group" key={g}>
+                            <span class="mt-chip">{g}</span>
+                            <button class="mt-btn mt-chip-action" disabled={busy}
+                                title={`Remove the group "${g}"`}
+                                onClick={() => removeGroup(g)}>×</button>
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <h5 style="margin: 14px 0 6px;">Collections</h5>
+            {data.collections.length === 0 ? (
+                <p class="mt-hint">
+                    No collections yet. Add one from any title's <strong>+ Add to collection</strong>
+                    {" "}on the Library tab.
+                </p>
+            ) : (
+                <div class="mt-tag-list mt-genre-list">
+                    {data.collections.map(c => (
+                        <div class="mt-tag-option" key={c.name}>
+                            <span style="flex: 1; min-width: 0;">{c.name}</span>
+                            <select class="mt-select" value={c.group} disabled={busy}
+                                onChange={e => assignTo(c.name, e.target.value)}>
+                                <option value={UNGROUPED}>{UNGROUPED}</option>
+                                {data.groups.map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function MediaTrackerSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
@@ -268,6 +400,10 @@ export default function MediaTrackerSettings() {
                     initialNoteId={libraryRootNoteId}
                 />
             )
+        },
+        {
+            tab: "Collections",
+            render: () => <CollectionGroupPanel />
         },
         {
             tab: "Genres",

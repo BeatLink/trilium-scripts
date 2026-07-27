@@ -433,6 +433,7 @@ const VIEW_FIELDS = {
     statusFilter: "viewStatusFilter",
     typeFilter: "viewTypeFilter",
     collectionFilter: "viewCollectionFilter",
+    groupFilters: "viewGroupFilters",
     genreFilter: "viewGenreFilter",
     sortKey: "viewSortKey",
     sortDesc: "viewSortDesc",
@@ -1315,9 +1316,14 @@ async function handle() {
         switch (action) {
             case "listTitles": {
                 const doc = loadDocument(settings)
+                const collections = tracker.listCollections(doc)
+                const groupConfig = tracker.parseGroupConfig(settings.collectionGroups)
                 return sendJson(200, {
                     titles: tracker.listTitles(doc),
-                    collections: tracker.listCollections(doc),
+                    collections,
+                    // One entry per group that actually has collections; the
+                    // widget renders a dropdown for each.
+                    collectionGroups: tracker.collectionsByGroup(collections, groupConfig),
                     // Only genres the user hasn't hidden reach the filter row.
                     genres: tracker.visibleGenres(doc, settings.hiddenGenres)
                 })
@@ -1338,6 +1344,27 @@ async function handle() {
             case "setHiddenGenres":
                 persistFields({ hiddenGenres: String(query.hiddenGenres || "") })
                 return sendJson(200, { ok: true })
+            // Every collection in the library plus its group, for the settings
+            // panel. Read from the live library so a collection created on a row
+            // is immediately assignable.
+            case "collectionGroups": {
+                const doc = loadDocument(settings)
+                const config = tracker.parseGroupConfig(settings.collectionGroups)
+                return sendJson(200, {
+                    groups: config.groups,
+                    collections: tracker.listCollections(doc).map(name => ({
+                        name,
+                        group: tracker.groupOf(config, name)
+                    }))
+                })
+            }
+            case "setCollectionGroups": {
+                // Re-parsed before saving so an unknown group or malformed payload
+                // can't be written into settings.
+                const config = tracker.parseGroupConfig(query.config)
+                persistFields({ collectionGroups: tracker.serializeGroupConfig(config) })
+                return sendJson(200, { ok: true, groups: config.groups })
+            }
             case "setEpisodeRange":
                 return sendJson(200, setEpisodeRange(
                     settings, query.key, query.ranges,

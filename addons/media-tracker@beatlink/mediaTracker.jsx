@@ -662,9 +662,20 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     const [refreshing, setRefreshing] = useState(false)
     const [refreshResult, setRefreshResult] = useState(null)
     const [collections, setCollections] = useState([])
-    const [collectionFilter, setCollectionFilter] = useState(settings.viewCollectionFilter || "all")
     const [genres, setGenres] = useState([])
     const [genreFilter, setGenreFilter] = useState(settings.viewGenreFilter || "all")
+    // [[groupName, [collectionName, ...]], ...] from the backend.
+    const [collectionGroups, setCollectionGroups] = useState([])
+    // One active collection per group, keyed by group name. Groups filter
+    // independently and combine with AND, so "Mood: Comfort" + "Franchise: MCU"
+    // narrows to titles in both.
+    const [groupFilters, setGroupFilters] = useState(() => {
+        try {
+            return JSON.parse(settings.viewGroupFilters || "{}")
+        } catch (e) {
+            return {}
+        }
+    })
     // Key of the title whose details page is open, or null for the list.
     const [detailsKey, setDetailsKey] = useState(null)
     const [sortKey, setSortKey] = useState(settings.viewSortKey || "title")
@@ -685,6 +696,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
             const listed = await callBackend("listTitles")
             setTitles(listed.titles)
             setCollections(listed.collections || [])
+            setCollectionGroups(listed.collectionGroups || [])
             setGenres(listed.genres || [])
             setError(null)
         } catch (e) {
@@ -745,10 +757,16 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     // count within that narrowed set, so the numbers always describe what a
     // click would show.
     const needle = query.trim().toLowerCase()
+    // Each group's selection is an independent condition; a title must satisfy
+    // every active one. Selecting nothing in a group means that group doesn't
+    // constrain the list at all.
     const matchesCollection = (t) => {
-        if (collectionFilter === "all") return true
-        if (collectionFilter === UNTAGGED) return !(t.collections || []).length
-        return (t.collections || []).includes(collectionFilter)
+        const names = t.collections || []
+        for (const value of Object.values(groupFilters)) {
+            if (!value || value === "all") continue
+            if (value === UNTAGGED ? names.length : !names.includes(value)) return false
+        }
+        return true
     }
     const matchesGenre = (t) => genreFilter === "all" || titleHasGenre(t, genreFilter)
     const scoped = titles.filter(t =>
@@ -770,13 +788,20 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     )
     const untaggedCount = collectionScope.filter(t => !(t.collections || []).length).length
 
-    const pickCollection = (value) => {
-        // Clicking the active pill clears it, so a filter can be undone without
-        // hunting for the All pill.
-        const next = collectionFilter === value && value !== "all" ? "all" : value
-        setCollectionFilter(next)
-        rememberView({ collectionFilter: next })
+    const pickGroup = (group, value) => {
+        const next = { ...groupFilters, [group]: value }
+        // Don't persist inert "all" entries; keeps the stored object small and
+        // stops removed groups lingering in settings forever.
+        if (value === "all") delete next[group]
+        setGroupFilters(next)
+        rememberView({ groupFilters: JSON.stringify(next) })
     }
+
+    // The first real collection selected across all groups, for rename/remove.
+    const activeCollection = Object.entries(groupFilters)
+        .filter(([group, value]) => group !== "__untagged" && value && value !== "all"
+            && value !== UNTAGGED)
+        .map(([, value]) => value)[0] || ""
 
     // Genre counts are scoped by type, search, and collection -- but not by the
     // genre filter itself, so selecting one genre doesn't zero the others.
@@ -787,9 +812,8 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     )
 
     const pickGenre = (value) => {
-        const next = genreFilter === value && value !== "all" ? "all" : value
-        setGenreFilter(next)
-        rememberView({ genreFilter: next })
+        setGenreFilter(value)
+        rememberView({ genreFilter: value })
     }
 
     // Collections are derived from the titles that carry them, so removing one
@@ -814,11 +838,19 @@ function LibraryTab({ libraryRootNoteId, settings }) {
         setRefreshing(true)
         try {
             await callBackend("renameCollection", { from, to })
-            // The active filter would otherwise point at a name that no longer exists.
-            if (collectionFilter === from) {
-                const next = to || "all"
-                setCollectionFilter(next)
-                rememberView({ collectionFilter: next })
+            // Any group still selecting the old name would point at a collection
+            // that no longer exists, so retarget or clear it.
+            const next = { ...groupFilters }
+            let touched = false
+            for (const [group, value] of Object.entries(next)) {
+                if (value !== from) continue
+                touched = true
+                if (to) next[group] = to
+                else delete next[group]
+            }
+            if (touched) {
+                setGroupFilters(next)
+                rememberView({ groupFilters: JSON.stringify(next) })
             }
             setRefreshResult(okMessage)
             await reload()
@@ -847,103 +879,100 @@ function LibraryTab({ libraryRootNoteId, settings }) {
             </div>
             {refreshResult && <p class="mt-ok">{refreshResult}</p>}
 
-            <div class="mt-filters">
-                {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => {
-                    const count = value === "all"
-                        ? titles.length
-                        : titles.filter(t => t.mediaType === value).length
+            {/* Counts live in the option labels so a dropdown still says how many
+                rows each choice would show. Each list is scoped by the filters
+                that precede it but never by itself, so selecting one option never
+                zeroes the others. */}
+            <div class="mt-controls">
+                <label class="mt-control">
+                    Type
+                    <select class="mt-select" value={typeFilter}
+                        onChange={e => { setTypeFilter(e.target.value); rememberView({ typeFilter: e.target.value }) }}>
+                        {[["all", "All"], ["movie", "Movies"], ["show", "TV"]].map(([value, label]) => {
+                            const count = value === "all"
+                                ? titles.length
+                                : titles.filter(t => t.mediaType === value).length
+                            return <option key={value} value={value}>{label} ({count})</option>
+                        })}
+                    </select>
+                </label>
+
+                <label class="mt-control">
+                    Status
+                    {/* The colour follows the selection, so the dropdown itself
+                        shows the status palette rather than only the options. */}
+                    <select class={`mt-select ${filter === "all" ? "" : `mt-status-${filter}`}`} value={filter}
+                        onChange={e => { setFilter(e.target.value); rememberView({ statusFilter: e.target.value }) }}>
+                        <option value="all">All ({scoped.length})</option>
+                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                                {label} ({scoped.filter(t => t.status === value).length})
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                {/* One dropdown per collection group, titled after the group.
+                    Groups are defined on the Collections tab in Settings;
+                    collections with no group land in "Other". */}
+                {collectionGroups.map(([group, names]) => {
+                    const selected = groupFilters[group] || "all"
                     return (
-                        <button key={value} class={`mt-chip ${typeFilter === value ? "mt-chip-on" : ""}`}
-                            onClick={() => { setTypeFilter(value); rememberView({ typeFilter: value }) }}>{label} ({count})</button>
+                        <label class="mt-control" key={group}>
+                            {group}
+                            <select class="mt-select" value={selected}
+                                onChange={e => pickGroup(group, e.target.value)}>
+                                <option value="all">All ({collectionScope.length})</option>
+                                {names.map(name => (
+                                    <option key={name} value={name}>
+                                        {name} ({collectionScope.filter(t =>
+                                            (t.collections || []).includes(name)).length})
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
                     )
                 })}
+
+                {untaggedCount > 0 && collectionGroups.length > 0 && (
+                    <label class="mt-control">
+                        Tagged
+                        <select class="mt-select" value={groupFilters.__untagged || "all"}
+                            onChange={e => pickGroup("__untagged", e.target.value)}>
+                            <option value="all">Any ({collectionScope.length})</option>
+                            <option value={UNTAGGED}>{UNTAGGED} ({untaggedCount})</option>
+                        </select>
+                    </label>
+                )}
+
+                {/* Rename/remove act on whichever collection is currently selected
+                    in any group. */}
+                {activeCollection && (
+                    <span class="mt-chip-group">
+                        <button class="mt-btn mt-chip-action" disabled={refreshing}
+                            title={`Rename "${activeCollection}" everywhere`}
+                            onClick={() => renameCollection(activeCollection)}>✎</button>
+                        <button class="mt-btn mt-chip-action" disabled={refreshing}
+                            title={`Remove "${activeCollection}" from all titles`}
+                            onClick={() => deleteCollection(activeCollection)}>×</button>
+                    </span>
+                )}
+
+                {genres.length > 0 && (
+                    <label class="mt-control">
+                        Genre
+                        <select class="mt-select" value={genreFilter}
+                            onChange={e => pickGenre(e.target.value)}>
+                            <option value="all">All ({genreScope.length})</option>
+                            {genres.map(name => (
+                                <option key={name} value={name}>
+                                    {name} ({genreScope.filter(t => titleHasGenre(t, name)).length})
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
             </div>
-
-            <div class="mt-filters">
-                <button class={`mt-chip ${filter === "all" ? "mt-chip-on" : ""}`}
-                    onClick={() => { setFilter("all"); rememberView({ statusFilter: "all" }) }}>All ({scoped.length})</button>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => {
-                    const count = scoped.filter(t => t.status === value).length
-                    return (
-                        <button key={value}
-                            class={`mt-chip ${filter === value ? `mt-chip-on mt-status-${value}` : ""}`}
-                            onClick={() => { setFilter(value); rememberView({ statusFilter: value }) }}>{label} ({count})</button>
-                    )
-                })}
-            </div>
-
-            {/* Collection pills. Counts are scoped by the type and search filters
-                above, matching the status chips, so a count always says how many
-                rows clicking it would show. Only rendered when collections exist —
-                an empty row would just be noise. */}
-            {(collections.length > 0 || untaggedCount > 0) && (
-                <div class="mt-filters mt-filters-collections">
-                    <button class={`mt-chip ${collectionFilter === "all" ? "mt-chip-on" : ""}`}
-                        onClick={() => pickCollection("all")}>
-                        All ({collectionScope.length})
-                    </button>
-                    {collections.map(name => {
-                        const count = collectionScope.filter(t =>
-                            (t.collections || []).includes(name)).length
-                        const active = collectionFilter === name
-                        return (
-                            <span class="mt-chip-group" key={name}>
-                                <button class={`mt-chip ${active ? "mt-chip-on" : ""}`}
-                                    onClick={() => pickCollection(name)}>
-                                    {name} ({count})
-                                </button>
-                                {/* Manage actions only on the selected pill, so the
-                                    row stays readable when many collections exist. */}
-                                {active && (
-                                    <>
-                                        <button class="mt-chip mt-chip-action"
-                                            disabled={refreshing}
-                                            title={`Rename "${name}" everywhere`}
-                                            onClick={() => renameCollection(name)}>
-                                            ✎
-                                        </button>
-                                        <button class="mt-chip mt-chip-action"
-                                            disabled={refreshing}
-                                            title={`Remove "${name}" from all titles`}
-                                            onClick={() => deleteCollection(name)}>
-                                            ×
-                                        </button>
-                                    </>
-                                )}
-                            </span>
-                        )
-                    })}
-                    {untaggedCount > 0 && (
-                        <button class={`mt-chip ${collectionFilter === UNTAGGED ? "mt-chip-on" : ""}`}
-                            onClick={() => pickCollection(UNTAGGED)}>
-                            {UNTAGGED} ({untaggedCount})
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {/* Genre pills. Same scoping rule as collections: counts respond to
-                type and search but not to the genre filter itself. Genres come
-                from TMDB, so a title imported without metadata has none until a
-                Refresh; hidden genres are excluded upstream by the backend. */}
-            {genres.length > 0 && (
-                <div class="mt-filters mt-filters-collections">
-                    <button class={`mt-chip ${genreFilter === "all" ? "mt-chip-on" : ""}`}
-                        onClick={() => pickGenre("all")}>
-                        All genres ({genreScope.length})
-                    </button>
-                    {genres.map(name => {
-                        const count = genreScope.filter(t => titleHasGenre(t, name)).length
-                        return (
-                            <button key={name}
-                                class={`mt-chip ${genreFilter === name ? "mt-chip-on" : ""}`}
-                                onClick={() => pickGenre(name)}>
-                                {name} ({count})
-                            </button>
-                        )
-                    })}
-                </div>
-            )}
 
             <div class="mt-controls">
                 <label class="mt-control">

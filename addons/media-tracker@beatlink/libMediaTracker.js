@@ -263,6 +263,75 @@ function normalizeCollections(value) {
 // The bucket for titles carrying no collections at all.
 const UNTAGGED = "Untagged"
 
+// --- collection groups ------------------------------------------------------
+//
+// Groups let collections be organised into named axes -- Mood, Franchise,
+// Format -- each of which becomes its own filter dropdown. The groups themselves
+// and the collection -> group assignment live in settings (a JSON string), not on
+// the titles: a title still just carries collection names, so grouping can be
+// reorganised without rewriting a single title.
+//
+// Shape: { groups: ["Mood", "Franchise"], assign: { "MCU": "Franchise" } }
+// A collection with no assignment falls into UNGROUPED, so nothing is ever
+// hidden by failing to categorise it.
+
+const UNGROUPED = "Other"
+
+function parseGroupConfig(raw) {
+    let parsed
+    try {
+        parsed = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {})
+    } catch (e) {
+        return { groups: [], assign: {} }
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { groups: [], assign: {} }
+    }
+
+    const groups = Array.isArray(parsed.groups)
+        ? [...new Set(parsed.groups.map(g => String(g || "").trim()).filter(Boolean))]
+        : []
+
+    const assign = {}
+    if (parsed.assign && typeof parsed.assign === "object" && !Array.isArray(parsed.assign)) {
+        for (const [collection, group] of Object.entries(parsed.assign)) {
+            const name = String(collection || "").trim()
+            const target = String(group || "").trim()
+            // An assignment to a group that no longer exists is dropped rather
+            // than creating a phantom dropdown.
+            if (name && target && groups.includes(target)) assign[name.toLowerCase()] = target
+        }
+    }
+    return { groups, assign }
+}
+
+function serializeGroupConfig(config) {
+    return JSON.stringify({ groups: config.groups || [], assign: config.assign || {} })
+}
+
+function groupOf(config, collectionName) {
+    return config.assign[String(collectionName || "").trim().toLowerCase()] || UNGROUPED
+}
+
+// Collections bucketed by their group, in the order the groups were defined.
+// Only groups that actually contain collections are returned, so an empty group
+// doesn't render a dropdown with nothing in it. UNGROUPED sorts last.
+function collectionsByGroup(collections, config) {
+    const buckets = new Map()
+    for (const name of collections) {
+        const group = groupOf(config, name)
+        if (!buckets.has(group)) buckets.set(group, [])
+        buckets.get(group).push(name)
+    }
+
+    const ordered = []
+    for (const group of config.groups) {
+        if (buckets.has(group)) ordered.push([group, buckets.get(group)])
+    }
+    if (buckets.has(UNGROUPED)) ordered.push([UNGROUPED, buckets.get(UNGROUPED)])
+    return ordered
+}
+
 // --- genres -----------------------------------------------------------------
 //
 // Unlike collections, genres come from TMDB and are refreshed automatically, so
@@ -462,6 +531,11 @@ module.exports = {
     hiddenGenreSet,
     visibleGenres,
     titleHasGenre,
+    parseGroupConfig,
+    serializeGroupConfig,
+    groupOf,
+    collectionsByGroup,
+    UNGROUPED,
     normalizeCollections,
     listCollections,
     groupByCollection,

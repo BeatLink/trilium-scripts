@@ -25,14 +25,14 @@ reverts it without selecting a replacement.
 
 The widget has three tabs.
 
-**Library** shows everything you track, with three stacked filters that compose:
+**Library** shows everything you track, with filters that compose:
 
 - a **search box** that narrows by title as you type (case-insensitive substring)
-- **All / Movies / TV** chips
-- **status** chips (Planned, Watching, Watched, Dropped)
+- **Type** (All / Movies / TV), **Status**, **Collection**, and **Genre** dropdowns
 
-The status counts are scoped to the type and search filters above them, so a count always tells you
-how many rows clicking it would actually show. Status is colour-coded throughout: grey for planned,
+Every option carries its own count, and each dropdown is scoped by the filters before it but never by
+itself — so selecting one option never zeroes out the others, and a count always tells you how many
+rows that choice would show. Status is colour-coded throughout: grey for planned,
 blue for watching, green for watched, red for dropped.
 
 Each row has a status dropdown, a ★ rating box (0-10, blank for unrated), an **Episodes** toggle for
@@ -83,15 +83,25 @@ covers narrow film series rather than universes (nothing there joins the MCU's f
 and TV has no equivalent field at all. So *Game of Thrones* + *House of the Dragon*, or the MCU's
 films and series together, only group correctly when you say so.
 
-The toolbar shows every collection as a **filter pill** with its own count, plus an **Untagged** pill
-when any title has none. Clicking a pill filters to it; clicking the active pill clears the filter.
-Counts are scoped by the type and search filters above but not by the collection filter itself, so
-selecting one pill doesn't zero out the others and you can always see where else to go.
+### Collection groups
 
-Selecting a collection pill reveals **✎** (rename) and **×** (remove) next to it. Both sweep the whole
-library in one pass: rename updates every title carrying that collection, and remove clears the tag
-from all of them. Renaming onto a name that already exists merges the two rather than creating a
-near-duplicate.
+Collections can be organised into **groups** — Mood, Franchise, Format, whatever you need — and each
+group gets **its own titled dropdown** on the Library tab. Selections across groups combine with AND,
+so picking `Franchise: MCU` and `Mood: Comfort` narrows to titles in both.
+
+Define groups on the **Collections** tab in Settings, then assign each collection to one from a
+dropdown. A collection with no group appears under **Other**, so nothing is ever hidden by forgetting
+to categorise it, and removing a group returns its collections to Other rather than deleting them.
+
+Groups live in settings, not on the titles — a title still just carries collection names — so you can
+reorganise your groups freely without rewriting any title data.
+
+Each group's dropdown lists its collections with counts, plus a **Tagged** dropdown offering
+**Untagged** when any title has no collections at all.
+
+Choosing one reveals **✎** (rename) and **×** (remove) beside it. Both sweep the whole library in one
+pass: rename updates every title carrying that collection, and remove clears the tag from all of them.
+Renaming onto a name that already exists merges the two rather than creating a near-duplicate.
 
 Collections exist only as tags on titles — there is no separate list — so a collection disappears
 automatically once no title references it. Removing one never deletes any title; it only clears the
@@ -104,7 +114,7 @@ collections appears under each — groups overlap by design.
 
 Genres are separate from collections and work differently: they come from **TMDB automatically** and
 are refreshed by **Refresh**, whereas collections are yours and never touched. They appear as their
-own pill row with counts, scoped the same way — by type, search, and collection, but not by the genre
+own dropdown with counts, scoped the same way — by type, search, and collection, but not by the genre
 filter itself.
 
 Because TMDB assigns a lot of genres, the **Genres** tab in Settings lists every genre in your library
