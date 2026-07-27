@@ -140,7 +140,7 @@ function LibraryRootPicker({ schemaNoteId, configNoteId, initialNoteId }) {
 // Which genres appear in the Library's genre filter. Genres come from TMDB, so
 // this lists whatever the library actually contains rather than a fixed
 // vocabulary -- and it shows hidden ones too, since they must remain un-hideable.
-function GenrePanel() {
+function GenrePanel({ disabled = false }) {
     const [genres, setGenres] = useState(null)
     const [error, setError] = useState(null)
     const [busy, setBusy] = useState(false)
@@ -178,6 +178,17 @@ function GenrePanel() {
 
     if (error) return <p class="mt-error">{error}</p>
     if (!genres) return <p class="mt-hint">Loading genres...</p>
+
+    // The panel stays reachable when genres are off so the list isn't lost, but
+    // it says so rather than looking broken.
+    if (disabled) {
+        return (
+            <p class="mt-hint">
+                Genres are switched off in <strong>Library → Enable Genres</strong>. Turn that back
+                on to use the genre filter; your selections here are kept in the meantime.
+            </p>
+        )
+    }
 
     if (genres.length === 0) {
         return (
@@ -354,6 +365,7 @@ export default function MediaTrackerSettings() {
     const [configNoteId, setConfigNoteId] = useState(null)
     const [libraryRootNoteId, setLibraryRootNoteId] = useState("")
     const [backNoteId, setBackNoteId] = useState("")
+    const [genresDisabled, setGenresDisabled] = useState(false)
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
@@ -364,6 +376,7 @@ export default function MediaTrackerSettings() {
             setConfigNoteId(target.noteId)
             const values = await loadSettings(schema, target.noteId)
             setLibraryRootNoteId(values.libraryRootNoteId || "")
+            setGenresDisabled(values.genresEnabled === false)
 
             // Prefer the note the user actually came from (recorded by the
             // tracker's Settings button), then the library root, then the
@@ -407,7 +420,7 @@ export default function MediaTrackerSettings() {
         },
         {
             tab: "Genres",
-            render: () => <GenrePanel />
+            render: () => <GenrePanel disabled={genresDisabled} />
         }
     ]
 

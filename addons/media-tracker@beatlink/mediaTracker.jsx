@@ -74,6 +74,10 @@ function countSeasonsComplete(seasons, seasonCounts) {
 
 const UNTAGGED = "Untagged"
 
+// Per-group "not in any collection of this group". A sentinel rather than a real
+// collection name, prefixed so it can't collide with one a user creates.
+const NONE = "__none__"
+
 const SORTS = [
     { key: "title", label: "A-Z" },
     { key: "lastWatched", label: "Recently watched" },
@@ -150,7 +154,7 @@ function groupByCollection(titles) {
 
 // --- details page -----------------------------------------------------------
 
-function DetailsPage({ title, onBack, onChanged }) {
+function DetailsPage({ title, onBack, onChanged, showGenres = true }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState(null)
     const [busy, setBusy] = useState(false)
@@ -244,7 +248,9 @@ function DetailsPage({ title, onBack, onChanged }) {
                                 )}
                                 {data.entry?.rating != null && <span>★ {data.entry.rating}/10</span>}
                             </div>
-                            {data.genres && <p class="mt-hint">{data.genres}</p>}
+                            {showGenres && data.genres && (
+                                <p class="mt-hint">{data.genres}</p>
+                            )}
                             {(data.entry?.collections || []).length > 0 && (
                                 <div class="mt-row-meta">
                                     {data.entry.collections.map(name => (
@@ -749,6 +755,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                 title={detailsTitle}
                 onBack={() => setDetailsKey(null)}
                 onChanged={reload}
+                showGenres={settings.genresEnabled !== false}
             />
         )
     }
@@ -760,15 +767,29 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     // Each group's selection is an independent condition; a title must satisfy
     // every active one. Selecting nothing in a group means that group doesn't
     // constrain the list at all.
+    //
+    // NONE is per-group: "Franchise: None" means the title is in no Franchise
+    // collection, while still allowing it to be in a Mood one. That is more
+    // useful than a single global "has no collections at all".
+    const groupMembers = new Map(collectionGroups.map(([group, names]) => [group, names]))
+
     const matchesCollection = (t) => {
         const names = t.collections || []
-        for (const value of Object.values(groupFilters)) {
+        for (const [group, value] of Object.entries(groupFilters)) {
             if (!value || value === "all") continue
-            if (value === UNTAGGED ? names.length : !names.includes(value)) return false
+            if (value === NONE) {
+                const members = groupMembers.get(group) || []
+                if (names.some(n => members.includes(n))) return false
+                continue
+            }
+            if (!names.includes(value)) return false
         }
         return true
     }
-    const matchesGenre = (t) => genreFilter === "all" || titleHasGenre(t, genreFilter)
+    // A genre filter left over from before genres were disabled must not keep
+    // silently narrowing the library.
+    const genresOff = settings.genresEnabled === false
+    const matchesGenre = (t) => genresOff || genreFilter === "all" || titleHasGenre(t, genreFilter)
     const scoped = titles.filter(t =>
         (typeFilter === "all" || t.mediaType === typeFilter) &&
         (!needle || t.title.toLowerCase().includes(needle)) &&
@@ -786,7 +807,6 @@ function LibraryTab({ libraryRootNoteId, settings }) {
         (typeFilter === "all" || t.mediaType === typeFilter) &&
         (!needle || t.title.toLowerCase().includes(needle))
     )
-    const untaggedCount = collectionScope.filter(t => !(t.collections || []).length).length
 
     const pickGroup = (group, value) => {
         const next = { ...groupFilters, [group]: value }
@@ -799,8 +819,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
 
     // The first real collection selected across all groups, for rename/remove.
     const activeCollection = Object.entries(groupFilters)
-        .filter(([group, value]) => group !== "__untagged" && value && value !== "all"
-            && value !== UNTAGGED)
+        .filter(([, value]) => value && value !== "all" && value !== NONE)
         .map(([, value]) => value)[0] || ""
 
     // Genre counts are scoped by type, search, and collection -- but not by the
@@ -917,6 +936,9 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                     collections with no group land in "Other". */}
                 {collectionGroups.map(([group, names]) => {
                     const selected = groupFilters[group] || "all"
+                    // Titles in none of this group's collections.
+                    const noneCount = collectionScope.filter(t =>
+                        !(t.collections || []).some(n => names.includes(n))).length
                     return (
                         <label class="mt-control" key={group}>
                             {group}
@@ -929,21 +951,13 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                                             (t.collections || []).includes(name)).length})
                                     </option>
                                 ))}
+                                {noneCount > 0 && (
+                                    <option value={NONE}>None ({noneCount})</option>
+                                )}
                             </select>
                         </label>
                     )
                 })}
-
-                {untaggedCount > 0 && collectionGroups.length > 0 && (
-                    <label class="mt-control">
-                        Tagged
-                        <select class="mt-select" value={groupFilters.__untagged || "all"}
-                            onChange={e => pickGroup("__untagged", e.target.value)}>
-                            <option value="all">Any ({collectionScope.length})</option>
-                            <option value={UNTAGGED}>{UNTAGGED} ({untaggedCount})</option>
-                        </select>
-                    </label>
-                )}
 
                 {/* Rename/remove act on whichever collection is currently selected
                     in any group. */}

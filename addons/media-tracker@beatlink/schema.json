@@ -23,6 +23,13 @@
         "default": "{}",
         "tab": "Library"
     },
+    "genresEnabled": {
+        "type": "boolean",
+        "label": "Enable Genres",
+        "description": "Show the Genre filter and fetch genres from TMDB. Turn this off to categorise everything with your own collections instead.",
+        "default": true,
+        "tab": "Library"
+    },
     "hiddenGenres": {
         "type": "string",
         "hidden": true,

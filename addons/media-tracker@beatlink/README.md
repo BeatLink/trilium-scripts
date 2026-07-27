@@ -96,8 +96,10 @@ to categorise it, and removing a group returns its collections to Other rather t
 Groups live in settings, not on the titles — a title still just carries collection names — so you can
 reorganise your groups freely without rewriting any title data.
 
-Each group's dropdown lists its collections with counts, plus a **Tagged** dropdown offering
-**Untagged** when any title has no collections at all.
+Each group's dropdown lists its collections with counts, plus a **None** option showing titles that
+are in no collection of *that* group. This is per-group rather than global: `Franchise: None` finds
+titles you haven't assigned a franchise, even if they do have a Mood — which is what makes it useful
+for spotting gaps in one axis at a time.
 
 Choosing one reveals **✎** (rename) and **×** (remove) beside it. Both sweep the whole library in one
 pass: rename updates every title carrying that collection, and remove clears the tag from all of them.
@@ -116,6 +118,11 @@ Genres are separate from collections and work differently: they come from **TMDB
 are refreshed by **Refresh**, whereas collections are yours and never touched. They appear as their
 own dropdown with counts, scoped the same way — by type, search, and collection, but not by the genre
 filter itself.
+
+Genres can be switched off entirely with **Enable Genres** on the Library settings tab. With it off,
+the Genre dropdown disappears, genres are hidden on the details page, and any leftover genre filter
+stops applying — useful if you would rather categorise everything with your own collections. Nothing
+is deleted, so turning it back on restores your genre setup as it was.
 
 Because TMDB assigns a lot of genres, the **Genres** tab in Settings lists every genre in your library
 with a checkbox. Unticking one removes it from the filter row; it never changes a title's data.

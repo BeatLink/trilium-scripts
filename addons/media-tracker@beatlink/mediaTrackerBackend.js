@@ -1324,8 +1324,11 @@ async function handle() {
                     // One entry per group that actually has collections; the
                     // widget renders a dropdown for each.
                     collectionGroups: tracker.collectionsByGroup(collections, groupConfig),
-                    // Only genres the user hasn't hidden reach the filter row.
-                    genres: tracker.visibleGenres(doc, settings.hiddenGenres)
+                    // Only genres the user hasn't hidden reach the filter row, and
+                    // none at all when the genre system is switched off.
+                    genres: settings.genresEnabled === false
+                        ? []
+                        : tracker.visibleGenres(doc, settings.hiddenGenres)
                 })
             }
             // Every genre in the library plus its hidden state, for the settings
