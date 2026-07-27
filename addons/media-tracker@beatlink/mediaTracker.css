@@ -1,7 +1,5 @@
 .mt-view {
-    padding: 12px 16px;
-    max-width: 900px;
-    margin: 0 auto;
+    padding: 12px 1rem;
     font-size: 14px;
     /* Some Trilium themes disable selection inside widgets; re-enable it so
        titles, codes, and links can be copied by hand. */
