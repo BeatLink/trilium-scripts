@@ -73,8 +73,11 @@ no weight to your database note.
 
 Collections group titles into shared universes and work like **tags** — a title can belong to several
 at once. **+ Add to collection** on any row opens a picker listing every collection you have with its
-current membership checked, so nothing has to be typed or remembered. A field underneath creates a new
-one; typing a name that already exists (in any casing) reuses it rather than making a near-duplicate.
+current membership checked, so nothing has to be typed or remembered. When you have collection groups,
+the picker is split into a labelled section per group — Mood, Franchise, and so on — each edited
+separately. A field underneath creates a new collection; typing a name that already exists (in any
+casing) reuses it rather than making a near-duplicate, and a newly created one appears under **Other**
+until you assign it a group in Settings.
 
 Each tick saves immediately — there is no separate save step to forget.
 

@@ -400,7 +400,8 @@ function DetailsPage({ title, onBack, onChanged, showGenres = true }) {
 // --- library ----------------------------------------------------------------
 
 function TitleRow({
-    title, onChanged, expanded, onToggleEpisodes, onOpenDetails, allCollections = []
+    title, onChanged, expanded, onToggleEpisodes, onOpenDetails,
+    allCollections = [], collectionGroups = []
 }) {
     const [busy, setBusy] = useState(false)
     const [editingTags, setEditingTags] = useState(false)
@@ -428,6 +429,21 @@ function TitleRow({
             ? selected.filter(n => n !== name)
             : [...selected, name])
     }
+
+    // Sections for the picker. Built from the group structure, with any collection
+    // the backend hasn't grouped yet (including one just created here) appended to
+    // "Other" so it never disappears from the list mid-edit.
+    const pickerGroups = (() => {
+        const grouped = new Set(collectionGroups.flatMap(([, names]) => names))
+        const leftovers = allCollections.filter(n => !grouped.has(n))
+        const sections = collectionGroups.map(([group, names]) => [group, names])
+        if (leftovers.length) {
+            const other = sections.find(([group]) => group === "Other")
+            if (other) other[1] = [...other[1], ...leftovers]
+            else sections.push(["Other", leftovers])
+        }
+        return sections
+    })()
 
     const addNewCollection = () => {
         const name = newTag.trim()
@@ -472,22 +488,30 @@ function TitleRow({
                     </div>
                     {editingTags ? (
                         <div class="mt-tag-picker">
-                            {/* Every known collection is listed with its current
-                                membership, so nothing has to be typed or recalled.
-                                Checkboxes rather than a <select> because a title can
-                                be in several collections at once. */}
-                            {allCollections.length > 0 ? (
-                                <div class="mt-tag-list">
-                                    {allCollections.map(name => (
-                                        <label class="mt-tag-option" key={name}>
-                                            <input
-                                                type="checkbox"
-                                                disabled={busy}
-                                                checked={selected.includes(name)}
-                                                onChange={() => toggleCollection(name)}
-                                            />
-                                            {name}
-                                        </label>
+                            {/* One labelled section per collection group, so Mood,
+                                Franchise and the rest are edited separately rather
+                                than as one undifferentiated list. Still checkboxes,
+                                not dropdowns: a title can be in several collections
+                                within the same group. */}
+                            {pickerGroups.length > 0 ? (
+                                <div class="mt-tag-groups">
+                                    {pickerGroups.map(([group, names]) => (
+                                        <div class="mt-tag-group" key={group}>
+                                            <div class="mt-tag-group-head">{group}</div>
+                                            <div class="mt-tag-list">
+                                                {names.map(name => (
+                                                    <label class="mt-tag-option" key={name}>
+                                                        <input
+                                                            type="checkbox"
+                                                            disabled={busy}
+                                                            checked={selected.includes(name)}
+                                                            onChange={() => toggleCollection(name)}
+                                                        />
+                                                        {name}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
@@ -1033,6 +1057,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                                 onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
                                 onOpenDetails={t => setDetailsKey(t.key)}
                                 allCollections={collections}
+                                collectionGroups={collectionGroups}
                             />
                         ))}
                     </div>
@@ -1046,6 +1071,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                         onToggleEpisodes={t => setExpandedKey(expandedKey === t.key ? null : t.key)}
                         onOpenDetails={t => setDetailsKey(t.key)}
                         allCollections={collections}
+                        collectionGroups={collectionGroups}
                     />
                 ))}
         </div>
