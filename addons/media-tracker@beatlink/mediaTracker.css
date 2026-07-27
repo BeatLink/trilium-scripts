@@ -105,6 +105,17 @@
     border-color: var(--main-text-color);
 }
 
+.mt-diag pre {
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 6px 8px;
+    margin: 4px 0 0;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
 /* Collection manage actions sit beside the Collection dropdown. */
 .mt-chip-group {
     display: inline-flex;

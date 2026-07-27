@@ -258,7 +258,7 @@ function CollectionGroupPanel() {
             const saved = await callBackend("setCollectionGroups", {
                 config: JSON.stringify({ groups, assign })
             })
-            setData({ groups: saved.groups, collections: saved.collections })
+            setData({ raw: saved.raw, groups: saved.groups, collections: saved.collections })
         } catch (e) {
             setError(e.message)
         } finally {
@@ -310,6 +310,13 @@ function CollectionGroupPanel() {
                 group appears under <strong>{UNGROUPED}</strong>. Groups are just a way to organise
                 the filters — no title is changed by regrouping.
             </p>
+
+            {/* Shows exactly what is stored, so a save that appears to work but
+                does not persist can be diagnosed rather than guessed at. */}
+            <details class="mt-diag">
+                <summary class="mt-hint">Stored configuration</summary>
+                <pre class="mt-selectable">{data.raw ?? "(nothing stored yet)"}</pre>
+            </details>
 
             <div class="mt-tag-edit">
                 <input

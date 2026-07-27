@@ -1354,6 +1354,9 @@ async function handle() {
                 const doc = loadDocument(settings)
                 const config = tracker.parseGroupConfig(settings.collectionGroups)
                 return sendJson(200, {
+                    // Raw stored value, so a mismatch between what was saved and
+                    // what is rendered can be seen rather than inferred.
+                    raw: settings.collectionGroups ?? null,
                     groups: config.groups,
                     collections: tracker.listCollections(doc).map(name => ({
                         name,
@@ -1372,8 +1375,10 @@ async function handle() {
                 // still see the previous note content, which showed up as an
                 // assignment reverting on reload.
                 const doc = loadDocument(settings)
+                const stored = tracker.serializeGroupConfig(config)
                 return sendJson(200, {
                     ok: true,
+                    raw: stored,
                     groups: config.groups,
                     collections: tracker.listCollections(doc).map(name => ({
                         name,
