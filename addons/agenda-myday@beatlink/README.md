@@ -1,10 +1,11 @@
 # Agenda My Day
 
 The My Day focus panel, originally split out of [`agenda@beatlink`](../agenda@beatlink/README.md) and
-now fully standalone. It's a **right-pane widget**, shown only while the **My Day note** is active,
-modelled on Microsoft To Do's My Day page.
+now fully standalone. It ships **two right-pane widgets**: the main panel, shown only while the **My
+Day note** is active and modelled on Microsoft To Do's My Day page, and a small **per-task panel**
+shown on task notes themselves.
 
-It carries:
+The main panel carries:
 
 - a list of **suggested tasks** to add to your day, grouped into **Earlier** (overdue), **Today**, and
   **Next 7 Days**. Each row has a `+` that appends the task to your My Day note as a todo item;
@@ -12,11 +13,29 @@ It carries:
 - an optional loop that **files tasks into the My Day note** as their start time arrives (every 30s);
 - an optional loop that **sends a desktop notification** as each task comes due (every 15s).
 
+## The per-task panel
+
+A second **My Day** panel appears in the right pane on any note carrying the **Task Label** setting
+(default `#agendaTaskWidget`, the inheritable label agenda's task templates set). It holds one button:
+
+- **Add to My Day** when the task isn't on today — files it onto the My Day note and tags it
+  `#agendaMyDay`, exactly as the `+` in the suggestion list does;
+- **Remove from My Day** when it is — strips the link and clears the label.
+
+It is skipped on the My Day note itself, and stays hidden until **My Day Note** is set. Either action
+broadcasts `agenda:tasksChanged`, so the suggestion list updates to match; the button also re-reads
+its state on that event, which is how it follows a task completed or rescheduled elsewhere.
+
+This lives here rather than in `agenda-task@beatlink` because everything it needs — the My Day note
+id, and the add/remove pair that keeps the label and the note's links consistent — is owned by this
+addon. It reaches tasks the same way the suggestion list does: through a **shared label convention**,
+not a code dependency, so `agenda-task@beatlink` need not be installed.
+
 ## Visibility
 
-The panel renders **only when the active note is your My Day note** (the **My Day Note** setting).
-Everywhere else it returns `null`. No note ships with this addon, so **the panel stays hidden until
-you point that setting at a note of your own**.
+The main panel renders **only when the active note is your My Day note** (the **My Day Note**
+setting). Everywhere else it returns `null`. No note ships with this addon, so **the panel stays
+hidden until you point that setting at a note of your own**.
 
 The two background loops — **Add Tasks When Due** and **Send Due Notifications** — are deliberately
 kept *outside* that gate, so they keep firing wherever you are in the tree. Only the suggestion query
@@ -34,7 +53,8 @@ when the auto-file loop runs, and whenever another agenda widget broadcasts `age
 
 ## The `#agendaMyDay` label
 
-Adding a task tags it **`#agendaMyDay`**. That label - not the note's content - is the record of what
+Adding a task — from the suggestion list, the per-task panel, or the auto-file loop — tags it
+**`#agendaMyDay`**. That label - not the note's content - is the record of what
 is on your day; the link on the My Day note is just its visible rendering. Removing a task clears the
 label again, and a tagged task stops appearing in the suggestion list.
 
@@ -82,6 +102,7 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 | **Task Search** | The Trilium search deciding which notes can be suggested. Default: `(#startDateTime != "" OR #dueDateTime != "") AND not(note.parents.relations.template.title='3. Task')` |
 | **Start Datetime Label** | Note label holding a task's start datetime, without the `#`. Default `startDateTime`. |
 | **Due Datetime Label** | Note label holding a task's due datetime, without the `#`. Default `dueDateTime`. |
+| **Task Label** | Note label marking a note as a task, without the `#`. Any note carrying it gets the per-task Add / Remove button. Default `agendaTaskWidget`. |
 
 ## Relationship to agenda@beatlink
 

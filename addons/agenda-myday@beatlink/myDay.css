@@ -115,6 +115,10 @@ body .myDaySuggestion {
     }
 }
 
+body .myDayTaskActions {
+    padding: 0.5rem;
+}
+
 body .myDayEmpty {
     font-size: 0.85em;
     opacity: 0.7;

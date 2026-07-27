@@ -31,7 +31,10 @@ const DEFAULTS = {
         + 'AND not(note.parents.ancestors.labels.startDateTime != "") '
         + 'AND not(note.parents.ancestors.labels.dueDateTime != "")',
     startLabel: "startDateTime",
-    dueLabel: "dueDateTime"
+    dueLabel: "dueDateTime",
+    // Gates the per-task Add to My Day panel. Agenda's task templates set this
+    // as an inheritable label, so it marks exactly the notes that are tasks.
+    taskLabel: "agendaTaskWidget"
 }
 
 // My Day's own settings note ids, or null when it isn't discoverable. The
@@ -63,7 +66,8 @@ async function getMyDaySettings() {
         addToTop: values.addToTop ?? DEFAULTS.addToTop,
         taskSearch: values.taskSearch || DEFAULTS.taskSearch,
         startLabel: values.startLabel || DEFAULTS.startLabel,
-        dueLabel: values.dueLabel || DEFAULTS.dueLabel
+        dueLabel: values.dueLabel || DEFAULTS.dueLabel,
+        taskLabel: values.taskLabel || DEFAULTS.taskLabel
     }
 }
 

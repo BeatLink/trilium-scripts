@@ -61,5 +61,13 @@
         "default": "dueDateTime",
         "category": "Execute",
         "tab": "My Day"
+    },
+    "taskLabel": {
+        "type": "string",
+        "label": "Task Label",
+        "description": "The note label marking a note as a task, without the leading #. Any note carrying it gets an Add to My Day / Remove from My Day button in the right pane.",
+        "default": "agendaTaskWidget",
+        "category": "Execute",
+        "tab": "My Day"
     }
 }
