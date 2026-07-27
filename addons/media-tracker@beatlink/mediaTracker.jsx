@@ -792,6 +792,43 @@ function LibraryTab({ libraryRootNoteId, settings }) {
         rememberView({ genreFilter: next })
     }
 
+    // Collections are derived from the titles that carry them, so removing one
+    // means clearing it from every title -- there is no separate list to delete
+    // from. Both actions sweep the whole library in one write.
+    const renameCollection = async (from) => {
+        const to = prompt(`Rename "${from}" to:`, from)
+        if (to === null || !to.trim() || to.trim() === from) return
+        await applyCollectionChange(from, to.trim(), `Renamed to ${to.trim()}`)
+    }
+
+    const deleteCollection = async (from) => {
+        const count = titles.filter(t => (t.collections || []).includes(from)).length
+        if (!confirm(
+            `Remove the collection "${from}" from ${count} title${count === 1 ? "" : "s"}?\n\n`
+            + `The titles themselves are kept — only this tag is removed.`
+        )) return
+        await applyCollectionChange(from, "", `Removed ${from}`)
+    }
+
+    const applyCollectionChange = async (from, to, okMessage) => {
+        setRefreshing(true)
+        try {
+            await callBackend("renameCollection", { from, to })
+            // The active filter would otherwise point at a name that no longer exists.
+            if (collectionFilter === from) {
+                const next = to || "all"
+                setCollectionFilter(next)
+                rememberView({ collectionFilter: next })
+            }
+            setRefreshResult(okMessage)
+            await reload()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setRefreshing(false)
+        }
+    }
+
     return (
         <div>
             <div class="mt-search">
@@ -848,12 +885,32 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                     {collections.map(name => {
                         const count = collectionScope.filter(t =>
                             (t.collections || []).includes(name)).length
+                        const active = collectionFilter === name
                         return (
-                            <button key={name}
-                                class={`mt-chip ${collectionFilter === name ? "mt-chip-on" : ""}`}
-                                onClick={() => pickCollection(name)}>
-                                {name} ({count})
-                            </button>
+                            <span class="mt-chip-group" key={name}>
+                                <button class={`mt-chip ${active ? "mt-chip-on" : ""}`}
+                                    onClick={() => pickCollection(name)}>
+                                    {name} ({count})
+                                </button>
+                                {/* Manage actions only on the selected pill, so the
+                                    row stays readable when many collections exist. */}
+                                {active && (
+                                    <>
+                                        <button class="mt-chip mt-chip-action"
+                                            disabled={refreshing}
+                                            title={`Rename "${name}" everywhere`}
+                                            onClick={() => renameCollection(name)}>
+                                            ✎
+                                        </button>
+                                        <button class="mt-chip mt-chip-action"
+                                            disabled={refreshing}
+                                            title={`Remove "${name}" from all titles`}
+                                            onClick={() => deleteCollection(name)}>
+                                            ×
+                                        </button>
+                                    </>
+                                )}
+                            </span>
                         )
                     })}
                     {untaggedCount > 0 && (

@@ -117,6 +117,18 @@
     border-radius: 999px;
 }
 
+/* A pill and its manage actions read as one control. */
+.mt-chip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mt-chip-action {
+    padding: 3px 7px;
+    line-height: 1;
+}
+
 /* The settings genre list is longer than a row's collection picker and is the
    whole point of its tab, so it gets more room. */
 .mt-genre-list {

@@ -452,6 +452,40 @@ function saveViewState(query) {
     return { ok: true }
 }
 
+// Removes a collection from every title that carries it, or renames it across
+// all of them. Collections are derived from the titles rather than stored in
+// their own list (see listCollections), so a collection ceases to exist exactly
+// when no title references it -- there is nothing else to delete.
+//
+// Matching is case-insensitive so "mcu" removes "MCU"; renaming to a name that
+// already exists merges the two rather than creating a duplicate.
+function renameCollection(settings, from, to) {
+    const source = String(from || "").trim().toLowerCase()
+    if (!source) throw new Error("Which collection?")
+
+    const target = String(to || "").trim()
+    const doc = loadDocument(settings)
+    let changed = 0
+
+    for (const entry of Object.values(doc.titles)) {
+        const names = tracker.normalizeCollections(entry.collections)
+        if (!names.some(n => n.toLowerCase() === source)) continue
+
+        const rest = names.filter(n => n.toLowerCase() !== source)
+        // A blank target means delete; otherwise re-add under the new name unless
+        // the title already has it (which is how a merge collapses).
+        const next = target && !rest.some(n => n.toLowerCase() === target.toLowerCase())
+            ? [...rest, target]
+            : rest
+
+        entry.collections = tracker.normalizeCollections(next)
+        changed++
+    }
+
+    if (changed) saveDocument(settings, doc)
+    return { ok: true, changed, deleted: !target }
+}
+
 // Collections are tags: the whole set is replaced at once, sent comma-separated.
 function setCollections(settings, key, raw) {
     const doc = loadDocument(settings)
@@ -1313,6 +1347,8 @@ async function handle() {
                 return sendJson(200, saveViewState(query))
             case "setCollections":
                 return sendJson(200, setCollections(settings, query.key, query.collections))
+            case "renameCollection":
+                return sendJson(200, renameCollection(settings, query.from, query.to))
             case "fullDetails":
                 return sendJson(200, await fullDetails(
                     settings, query.mediaType, query.tmdbId, query.imdbId, query.key

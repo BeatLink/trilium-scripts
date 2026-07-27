@@ -88,6 +88,15 @@ when any title has none. Clicking a pill filters to it; clicking the active pill
 Counts are scoped by the type and search filters above but not by the collection filter itself, so
 selecting one pill doesn't zero out the others and you can always see where else to go.
 
+Selecting a collection pill reveals **✎** (rename) and **×** (remove) next to it. Both sweep the whole
+library in one pass: rename updates every title carrying that collection, and remove clears the tag
+from all of them. Renaming onto a name that already exists merges the two rather than creating a
+near-duplicate.
+
+Collections exist only as tags on titles — there is no separate list — so a collection disappears
+automatically once no title references it. Removing one never deletes any title; it only clears the
+tag.
+
 A **Group by collection** toggle renders rows under collection headers instead. A title in several
 collections appears under each — groups overlap by design.
 
