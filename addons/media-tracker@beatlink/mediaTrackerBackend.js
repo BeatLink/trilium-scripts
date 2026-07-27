@@ -433,6 +433,7 @@ const VIEW_FIELDS = {
     statusFilter: "viewStatusFilter",
     typeFilter: "viewTypeFilter",
     collectionFilter: "viewCollectionFilter",
+    genreFilter: "viewGenreFilter",
     sortKey: "viewSortKey",
     sortDesc: "viewSortDesc",
     grouped: "viewGrouped"
@@ -1282,9 +1283,27 @@ async function handle() {
                 const doc = loadDocument(settings)
                 return sendJson(200, {
                     titles: tracker.listTitles(doc),
-                    collections: tracker.listCollections(doc)
+                    collections: tracker.listCollections(doc),
+                    // Only genres the user hasn't hidden reach the filter row.
+                    genres: tracker.visibleGenres(doc, settings.hiddenGenres)
                 })
             }
+            // Every genre in the library plus its hidden state, for the settings
+            // panel. Separate from listTitles because that one deliberately omits
+            // hidden genres, and the panel needs to show them to un-hide them.
+            case "listAllGenres": {
+                const doc = loadDocument(settings)
+                const hidden = tracker.hiddenGenreSet(settings.hiddenGenres)
+                return sendJson(200, {
+                    genres: tracker.listGenres(doc).map(name => ({
+                        name,
+                        hidden: hidden.has(name.toLowerCase())
+                    }))
+                })
+            }
+            case "setHiddenGenres":
+                persistFields({ hiddenGenres: String(query.hiddenGenres || "") })
+                return sendJson(200, { ok: true })
             case "setEpisodeRange":
                 return sendJson(200, setEpisodeRange(
                     settings, query.key, query.ranges,

@@ -91,6 +91,21 @@ selecting one pill doesn't zero out the others and you can always see where else
 A **Group by collection** toggle renders rows under collection headers instead. A title in several
 collections appears under each — groups overlap by design.
 
+### Genres
+
+Genres are separate from collections and work differently: they come from **TMDB automatically** and
+are refreshed by **Refresh**, whereas collections are yours and never touched. They appear as their
+own pill row with counts, scoped the same way — by type, search, and collection, but not by the genre
+filter itself.
+
+Because TMDB assigns a lot of genres, the **Genres** tab in Settings lists every genre in your library
+with a checkbox. Unticking one removes it from the filter row; it never changes a title's data.
+**Show all** / **Hide all** are there for a fast reset.
+
+A title imported without TMDB metadata has no genres until you run **Refresh**. Note also that TMDB
+uses different vocabularies for film and TV — movies get "Science Fiction", shows get
+"Sci-Fi & Fantasy" — so both can appear as separate pills.
+
 ### Sorting
 
 Sort by **A-Z**, **Recently watched**, **Release date**, **Rating**, **Recently added**, or
@@ -100,8 +115,8 @@ list.
 
 ### Remembered view
 
-Your status filter, type filter, collection filter, sort field, sort direction, and grouping toggle
-are all saved, so the Library opens the way you left it. They live in the addon's settings note as
+Your status filter, type filter, collection filter, genre filter, sort field, sort direction, and
+grouping toggle are all saved, so the Library opens the way you left it. They live in the addon's settings note as
 hidden fields — persisted, but not shown on the Settings page, since the widget manages them.
 
 The **search box is deliberately not remembered**: a text filter silently hiding most of your library

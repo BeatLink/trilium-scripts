@@ -122,6 +122,15 @@ function sortTitles(titles, sortKey, descending) {
     return sorted
 }
 
+// Genres arrive from TMDB as a display string ("Drama, Sci-Fi & Fantasy").
+function titleHasGenre(title, genre) {
+    const wanted = String(genre || "").toLowerCase()
+    return String(title.genres || "")
+        .split(",")
+        .map(g => g.trim().toLowerCase())
+        .some(g => g === wanted)
+}
+
 // A title in several collections appears under each; those with none land in
 // one trailing Untagged bucket.
 function groupByCollection(titles) {
@@ -654,6 +663,8 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     const [refreshResult, setRefreshResult] = useState(null)
     const [collections, setCollections] = useState([])
     const [collectionFilter, setCollectionFilter] = useState(settings.viewCollectionFilter || "all")
+    const [genres, setGenres] = useState([])
+    const [genreFilter, setGenreFilter] = useState(settings.viewGenreFilter || "all")
     // Key of the title whose details page is open, or null for the list.
     const [detailsKey, setDetailsKey] = useState(null)
     const [sortKey, setSortKey] = useState(settings.viewSortKey || "title")
@@ -674,6 +685,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
             const listed = await callBackend("listTitles")
             setTitles(listed.titles)
             setCollections(listed.collections || [])
+            setGenres(listed.genres || [])
             setError(null)
         } catch (e) {
             setError(e.message)
@@ -738,10 +750,12 @@ function LibraryTab({ libraryRootNoteId, settings }) {
         if (collectionFilter === UNTAGGED) return !(t.collections || []).length
         return (t.collections || []).includes(collectionFilter)
     }
+    const matchesGenre = (t) => genreFilter === "all" || titleHasGenre(t, genreFilter)
     const scoped = titles.filter(t =>
         (typeFilter === "all" || t.mediaType === typeFilter) &&
         (!needle || t.title.toLowerCase().includes(needle)) &&
-        matchesCollection(t)
+        matchesCollection(t) &&
+        matchesGenre(t)
     )
     const filtered = filter === "all" ? scoped : scoped.filter(t => t.status === filter)
     const shown = sortTitles(filtered, sortKey, sortDesc)
@@ -762,6 +776,20 @@ function LibraryTab({ libraryRootNoteId, settings }) {
         const next = collectionFilter === value && value !== "all" ? "all" : value
         setCollectionFilter(next)
         rememberView({ collectionFilter: next })
+    }
+
+    // Genre counts are scoped by type, search, and collection -- but not by the
+    // genre filter itself, so selecting one genre doesn't zero the others.
+    const genreScope = titles.filter(t =>
+        (typeFilter === "all" || t.mediaType === typeFilter) &&
+        (!needle || t.title.toLowerCase().includes(needle)) &&
+        matchesCollection(t)
+    )
+
+    const pickGenre = (value) => {
+        const next = genreFilter === value && value !== "all" ? "all" : value
+        setGenreFilter(next)
+        rememberView({ genreFilter: next })
     }
 
     return (
@@ -834,6 +862,29 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                             {UNTAGGED} ({untaggedCount})
                         </button>
                     )}
+                </div>
+            )}
+
+            {/* Genre pills. Same scoping rule as collections: counts respond to
+                type and search but not to the genre filter itself. Genres come
+                from TMDB, so a title imported without metadata has none until a
+                Refresh; hidden genres are excluded upstream by the backend. */}
+            {genres.length > 0 && (
+                <div class="mt-filters mt-filters-collections">
+                    <button class={`mt-chip ${genreFilter === "all" ? "mt-chip-on" : ""}`}
+                        onClick={() => pickGenre("all")}>
+                        All genres ({genreScope.length})
+                    </button>
+                    {genres.map(name => {
+                        const count = genreScope.filter(t => titleHasGenre(t, name)).length
+                        return (
+                            <button key={name}
+                                class={`mt-chip ${genreFilter === name ? "mt-chip-on" : ""}`}
+                                onClick={() => pickGenre(name)}>
+                                {name} ({count})
+                            </button>
+                        )
+                    })}
                 </div>
             )}
 

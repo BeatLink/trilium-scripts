@@ -5,6 +5,17 @@ import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 // The icon stamped on the note that hosts the tracker UI.
 const LIBRARY_ICON = "bx bx-movie-play"
 
+const ENDPOINT = "custom/mediaTracker"
+
+async function callBackend(action, params = {}) {
+    const search = new URLSearchParams({ action, ...params })
+    const res = await fetch(`${ENDPOINT}?${search}`, { credentials: "same-origin" })
+    let body
+    try { body = await res.json() } catch (e) { body = { error: `HTTP ${res.status}` } }
+    if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`)
+    return body
+}
+
 // Point `noteId` at the tracker: make it a render note whose ~renderNote relation
 // targets the widget code note (found by #mediaTrackerRender), and stamp its icon.
 // Revert `previousNoteId` (if different) back to a plain text note, so switching
@@ -126,6 +137,86 @@ function LibraryRootPicker({ schemaNoteId, configNoteId, initialNoteId }) {
     )
 }
 
+// Which genres appear in the Library's genre filter. Genres come from TMDB, so
+// this lists whatever the library actually contains rather than a fixed
+// vocabulary -- and it shows hidden ones too, since they must remain un-hideable.
+function GenrePanel() {
+    const [genres, setGenres] = useState(null)
+    const [error, setError] = useState(null)
+    const [busy, setBusy] = useState(false)
+
+    const load = async () => {
+        try {
+            const { genres } = await callBackend("listAllGenres")
+            setGenres(genres)
+        } catch (e) {
+            setError(e.message)
+        }
+    }
+
+    useEffect(() => { load() }, [])
+
+    const save = async (rows) => {
+        setBusy(true)
+        setGenres(rows)
+        try {
+            await callBackend("setHiddenGenres", {
+                hiddenGenres: rows.filter(g => g.hidden).map(g => g.name).join(", ")
+            })
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const toggle = (name) => save(genres.map(g =>
+        g.name === name ? { ...g, hidden: !g.hidden } : g
+    ))
+
+    const setAll = (hidden) => save(genres.map(g => ({ ...g, hidden })))
+
+    if (error) return <p class="mt-error">{error}</p>
+    if (!genres) return <p class="mt-hint">Loading genres...</p>
+
+    if (genres.length === 0) {
+        return (
+            <p class="mt-hint">
+                No genres yet. Genres come from TMDB — add or import some titles, then use
+                <strong> Refresh </strong> on the Library tab to fetch their metadata.
+            </p>
+        )
+    }
+
+    const shown = genres.filter(g => !g.hidden).length
+
+    return (
+        <div>
+            <p class="mt-hint">
+                Ticked genres appear as filter pills on the Library tab. Unticking one only hides it
+                from that filter — it never changes a title's data. {shown} of {genres.length} shown.
+            </p>
+            <div class="mt-toolbar">
+                <button class="mt-btn" disabled={busy} onClick={() => setAll(false)}>Show all</button>
+                <button class="mt-btn" disabled={busy} onClick={() => setAll(true)}>Hide all</button>
+            </div>
+            <div class="mt-tag-list mt-genre-list">
+                {genres.map(g => (
+                    <label class="mt-tag-option" key={g.name}>
+                        <input
+                            type="checkbox"
+                            checked={!g.hidden}
+                            disabled={busy}
+                            onChange={() => toggle(g.name)}
+                        />
+                        {g.name}
+                    </label>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 export default function MediaTrackerSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
@@ -177,6 +268,10 @@ export default function MediaTrackerSettings() {
                     initialNoteId={libraryRootNoteId}
                 />
             )
+        },
+        {
+            tab: "Genres",
+            render: () => <GenrePanel />
         }
     ]
 

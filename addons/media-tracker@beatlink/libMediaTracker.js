@@ -263,6 +263,47 @@ function normalizeCollections(value) {
 // The bucket for titles carrying no collections at all.
 const UNTAGGED = "Untagged"
 
+// --- genres -----------------------------------------------------------------
+//
+// Unlike collections, genres come from TMDB and are refreshed automatically, so
+// they are never hand-edited here. They arrive as a display string
+// ("Drama, Sci-Fi & Fantasy") and are split for filtering.
+
+function parseGenres(value) {
+    if (!value || typeof value !== "string") return []
+    return value.split(",").map(g => g.trim()).filter(Boolean)
+}
+
+// Every distinct genre across the library, sorted. Case-insensitive dedupe
+// keeping the first spelling seen, so TMDB casing quirks don't create twins.
+function listGenres(doc) {
+    const seen = new Map()
+    for (const entry of Object.values(doc.titles)) {
+        for (const name of parseGenres(entry?.genres)) {
+            const key = name.toLowerCase()
+            if (!seen.has(key)) seen.set(key, name)
+        }
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b))
+}
+
+// Genres the user has hidden, as a lookup set. Stored as a comma-separated
+// string in settings for the same reason genres themselves are: it stays
+// readable in the config note.
+function hiddenGenreSet(hiddenValue) {
+    return new Set(parseGenres(hiddenValue).map(g => g.toLowerCase()))
+}
+
+function visibleGenres(doc, hiddenValue) {
+    const hidden = hiddenGenreSet(hiddenValue)
+    return listGenres(doc).filter(name => !hidden.has(name.toLowerCase()))
+}
+
+function titleHasGenre(entry, genre) {
+    const wanted = String(genre || "").toLowerCase()
+    return parseGenres(entry?.genres).some(g => g.toLowerCase() === wanted)
+}
+
 // --- link parsing -----------------------------------------------------------
 
 // Recognises a pasted TMDB or IMDb link (or a bare id) and returns what to look
@@ -416,6 +457,11 @@ module.exports = {
     normalizeTitle,
     listTitles,
     parseMediaLink,
+    parseGenres,
+    listGenres,
+    hiddenGenreSet,
+    visibleGenres,
+    titleHasGenre,
     normalizeCollections,
     listCollections,
     groupByCollection,

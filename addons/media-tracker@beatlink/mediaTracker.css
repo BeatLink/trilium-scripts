@@ -119,6 +119,12 @@
     border-radius: 999px;
 }
 
+/* The settings genre list is longer than a row's collection picker and is the
+   whole point of its tab, so it gets more room. */
+.mt-genre-list {
+    max-height: 320px;
+}
+
 /* --- controls --- */
 
 .mt-controls {
