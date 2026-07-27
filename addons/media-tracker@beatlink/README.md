@@ -83,8 +83,12 @@ covers narrow film series rather than universes (nothing there joins the MCU's f
 and TV has no equivalent field at all. So *Game of Thrones* + *House of the Dragon*, or the MCU's
 films and series together, only group correctly when you say so.
 
-The toolbar offers a **Collection** filter (including an **Untagged** option for titles with none) and
-a **Group by collection** toggle that renders rows under collection headers. A title in several
+The toolbar shows every collection as a **filter pill** with its own count, plus an **Untagged** pill
+when any title has none. Clicking a pill filters to it; clicking the active pill clears the filter.
+Counts are scoped by the type and search filters above but not by the collection filter itself, so
+selecting one pill doesn't zero out the others and you can always see where else to go.
+
+A **Group by collection** toggle renders rows under collection headers instead. A title in several
 collections appears under each — groups overlap by design.
 
 ### Sorting

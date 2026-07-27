@@ -747,6 +747,23 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     const shown = sortTitles(filtered, sortKey, sortDesc)
     const groups = grouped ? groupByCollection(shown) : null
 
+    // Collection pill counts are scoped by type and search but NOT by the
+    // collection filter itself -- otherwise picking one pill would zero every
+    // other pill's count and you could never see where else to go.
+    const collectionScope = titles.filter(t =>
+        (typeFilter === "all" || t.mediaType === typeFilter) &&
+        (!needle || t.title.toLowerCase().includes(needle))
+    )
+    const untaggedCount = collectionScope.filter(t => !(t.collections || []).length).length
+
+    const pickCollection = (value) => {
+        // Clicking the active pill clears it, so a filter can be undone without
+        // hunting for the All pill.
+        const next = collectionFilter === value && value !== "all" ? "all" : value
+        setCollectionFilter(next)
+        rememberView({ collectionFilter: next })
+    }
+
     return (
         <div>
             <div class="mt-search">
@@ -790,6 +807,36 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                 })}
             </div>
 
+            {/* Collection pills. Counts are scoped by the type and search filters
+                above, matching the status chips, so a count always says how many
+                rows clicking it would show. Only rendered when collections exist —
+                an empty row would just be noise. */}
+            {(collections.length > 0 || untaggedCount > 0) && (
+                <div class="mt-filters mt-filters-collections">
+                    <button class={`mt-chip ${collectionFilter === "all" ? "mt-chip-on" : ""}`}
+                        onClick={() => pickCollection("all")}>
+                        All ({collectionScope.length})
+                    </button>
+                    {collections.map(name => {
+                        const count = collectionScope.filter(t =>
+                            (t.collections || []).includes(name)).length
+                        return (
+                            <button key={name}
+                                class={`mt-chip ${collectionFilter === name ? "mt-chip-on" : ""}`}
+                                onClick={() => pickCollection(name)}>
+                                {name} ({count})
+                            </button>
+                        )
+                    })}
+                    {untaggedCount > 0 && (
+                        <button class={`mt-chip ${collectionFilter === UNTAGGED ? "mt-chip-on" : ""}`}
+                            onClick={() => pickCollection(UNTAGGED)}>
+                            {UNTAGGED} ({untaggedCount})
+                        </button>
+                    )}
+                </div>
+            )}
+
             <div class="mt-controls">
                 <label class="mt-control">
                     Sort
@@ -802,15 +849,6 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                     onClick={() => { const next = !sortDesc; setSortDesc(next); rememberView({ sortDesc: String(next) }) }}>
                     {sortDesc ? "↓" : "↑"}
                 </button>
-                <label class="mt-control">
-                    Collection
-                    <select class="mt-select" value={collectionFilter}
-                        onChange={e => { setCollectionFilter(e.target.value); rememberView({ collectionFilter: e.target.value }) }}>
-                        <option value="all">All</option>
-                        {collections.map(name => <option key={name} value={name}>{name}</option>)}
-                        <option value={UNTAGGED}>{UNTAGGED}</option>
-                    </select>
-                </label>
                 <button class={`mt-chip ${grouped ? "mt-chip-on" : ""}`}
                     title="Group rows under their collections"
                     onClick={() => { const next = !grouped; setGrouped(next); rememberView({ grouped: String(next) }) }}>

@@ -107,6 +107,18 @@
     border-color: var(--main-text-color);
 }
 
+/* Collections can run long, so this row wraps and scrolls rather than pushing
+   the rest of the toolbar around. Rounded pills distinguish it from the
+   type/status rows above it. */
+.mt-filters-collections {
+    max-height: 84px;
+    overflow-y: auto;
+}
+
+.mt-filters-collections .mt-chip {
+    border-radius: 999px;
+}
+
 /* --- controls --- */
 
 .mt-controls {
@@ -146,23 +158,31 @@
     background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
 }
 
+/* One collection per line: a wrapping row is hard to scan and hard to hit
+   accurately when names vary in length. */
 .mt-tag-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-    /* Long collection lists scroll rather than pushing the row apart. */
-    max-height: 132px;
+    flex-direction: column;
+    max-height: 176px;
     overflow-y: auto;
     margin-bottom: 8px;
 }
 
 .mt-tag-option {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 7px;
     font-size: 12px;
     margin: 0;
+    padding: 3px 4px;
+    border-radius: 4px;
     cursor: pointer;
+}
+
+/* Full-width hover target, so the whole line is clickable rather than just the
+   checkbox and its text. */
+.mt-tag-option:hover {
+    background: rgba(127, 127, 127, 0.14);
 }
 
 .mt-tag-edit {
