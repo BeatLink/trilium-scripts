@@ -401,6 +401,241 @@ async function igdbGamesByIds(settings, igdbIds) {
     return out
 }
 
+// Resolve game titles to IGDB entries in bulk.
+//
+// An imported file (an IGDB GDPR export in particular) carries only display
+// titles, no ids, so every row has to be matched by name. `~ "name"` is IGDB's
+// case-insensitive exact-match operator and `(a,b,c)` is its OR-list, so many
+// titles can be asked for in one request -- 186 games becomes a handful of
+// requests rather than 186, which is what keeps this inside the 4 req/s limit.
+//
+// Returns a Map of lowercased title -> mapped game.
+async function igdbGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(
+        titles.map(t => String(t || "").trim()).filter(Boolean)
+    )]
+    if (!wanted.length) return found
+
+    // Smaller batches than the id lookups: an OR-list of quoted strings is far
+    // longer per item than a list of numbers, and one game can match several
+    // rows (editions, regional releases) against the 500-row response cap.
+    const BATCH = 40
+    for (let i = 0; i < wanted.length; i += BATCH) {
+        const batch = wanted.slice(i, i + BATCH)
+        const list = batch.map(name => `~ ${quote(name)}`).join(" | ")
+
+        try {
+            const rows = await igdbQuery(settings, "games",
+                `fields ${GAME_FIELDS}; where ${list}; limit 500;`)
+
+            for (const raw of rows || []) {
+                const key = String(raw.name || "").trim().toLowerCase()
+                if (!key) continue
+                // IGDB returns every edition and port that matches the name.
+                // Prefer the entry that actually carries metadata, since the
+                // duplicates are usually bare stubs.
+                const existing = found.get(key)
+                const mapped = mapGame(raw, settings)
+                if (!existing || (!existing.cover && mapped.cover)) found.set(key, mapped)
+            }
+        } catch (e) {
+            // One failed batch must not lose the rest of the import.
+        }
+
+        if (onProgress) onProgress(Math.min(i + BATCH, wanted.length), wanted.length)
+        if (i + BATCH < wanted.length) await pause(300)
+    }
+
+    return found
+}
+
+// --- file import ------------------------------------------------------------
+
+// Parse an uploaded library file and report what it contains WITHOUT writing
+// anything. Every title is resolved against IGDB so the caller can see exactly
+// what matched before committing -- a title-matched import is a guess, and a
+// guess that silently writes 180 rows is not something to discover afterwards.
+async function previewImportFile(settings, text, filename) {
+    const parsed = tracker.parseImportFile(text, filename)
+
+    // Rows that already carry an id don't need matching at all.
+    const needMatch = parsed.rows.filter(r => !r.igdbId && !r.steamAppId)
+    const matched = needMatch.length
+        ? await igdbGamesByTitles(settings, needMatch.map(r => r.title))
+        : new Map()
+
+    const doc = loadDocument(settings)
+
+    const rows = parsed.rows.map(row => {
+        const hit = matched.get(String(row.title || "").trim().toLowerCase())
+        const identity = {
+            igdbId: row.igdbId || hit?.igdbId || "",
+            steamAppId: row.steamAppId || ""
+        }
+        return {
+            title: row.title,
+            status: row.status || "",
+            rating: row.rating ?? null,
+            playtime: row.playtime || 0,
+            list: row.list || "",
+            lists: row.lists || null,
+            igdbId: identity.igdbId,
+            matchedTitle: hit?.title || "",
+            year: hit?.year || "",
+            cover: hit?.cover || "",
+            // Whether this row can be imported at all, and whether it would land
+            // on a game already tracked.
+            matched: !!(identity.igdbId || identity.steamAppId),
+            existingKey: tracker.findGame(doc, identity) || ""
+        }
+    })
+
+    return {
+        format: parsed.format,
+        lists: parsed.lists || [],
+        total: rows.length,
+        matchedCount: rows.filter(r => r.matched).length,
+        unmatchedCount: rows.filter(r => !r.matched).length,
+        existingCount: rows.filter(r => r.existingKey).length,
+        rows
+    }
+}
+
+// Apply a file import. Takes the rows the preview produced (so what is written
+// is exactly what was shown), and goes through the same additive applyImport as
+// every other source.
+//
+// `listsAsCollections` files each game under the list it came from, which is how
+// an IGDB export's own organisation survives the import.
+async function importFile(settings, rowsJson, options) {
+    let rows
+    try {
+        rows = JSON.parse(rowsJson || "[]")
+    } catch (e) {
+        throw new Error("Malformed import payload")
+    }
+    if (!Array.isArray(rows)) throw new Error("Malformed import payload")
+
+    const usable = rows.filter(r => r && (r.igdbId || r.steamAppId))
+    if (!usable.length) {
+        throw new Error("Nothing to import: no row matched a game on IGDB.")
+    }
+
+    // Fetch full metadata for everything being imported, in bulk.
+    let metadata = new Map()
+    const igdbIds = usable.map(r => r.igdbId).filter(Boolean)
+    if (igdbIds.length && settings.importFetchMetadata !== false) {
+        try {
+            metadata = await igdbGamesByIds(settings, igdbIds)
+        } catch (e) {
+            // Metadata is a nice-to-have; never fail an import over it.
+        }
+    }
+
+    const asCollections = options?.listsAsCollections === "true"
+    const doc = loadDocument(settings)
+
+    const items = usable.map(row => {
+        const details = row.igdbId ? metadata.get(String(row.igdbId)) : null
+        const item = {
+            igdbId: row.igdbId || "",
+            steamAppId: row.steamAppId || "",
+            title: details?.title || row.matchedTitle || row.title || "Untitled",
+            year: details?.year || "",
+            summary: details?.summary || "",
+            cover: details?.cover || "",
+            genres: details?.genres || "",
+            platforms: details?.platforms || "",
+            rating: row.rating ?? null,
+            playtime: Number(row.playtime) || 0,
+            lastPlayed: row.lastPlayed || ""
+        }
+
+        // The file's status is explicit user intent, so unlike a Steam import it
+        // may set "beaten" -- the user filed the game as played themselves.
+        if (row.status) item.fileStatus = row.status
+
+        if (asCollections) {
+            const names = row.lists || (row.list ? [row.list] : [])
+            if (names.length) item.collections = names
+        }
+
+        return item
+    })
+
+    return applyFileImport(settings, doc, items)
+}
+
+// File imports differ from Steam's in two ways, so they get their own apply:
+// a file's status is explicit and may set "beaten", and its lists can become
+// collections. Everything else -- additive, one read, one write, ratings and
+// playtime preserved -- matches applyImport exactly.
+function applyFileImport(settings, doc, items) {
+    let added = 0
+    let updated = 0
+
+    for (const item of items) {
+        const existingKey = tracker.findGame(doc, item)
+        const key = existingKey || tracker.gameKey(item)
+        if (!key) continue
+
+        const previous = doc.games[key] || {}
+
+        const incomingRating = Number.isFinite(Number(item.rating)) ? Number(item.rating) : null
+        const rating = (incomingRating !== null
+            && (settings.importOverwriteRatings || previous.rating == null))
+            ? incomingRating
+            : (previous.rating ?? null)
+
+        const playtime = Math.max(Number(item.playtime) || 0, Number(previous.playtime) || 0)
+
+        // Collections merge rather than replace: a game already filed under the
+        // user's own tags keeps them, and the file's lists are added alongside.
+        const collections = item.collections
+            ? tracker.normalizeCollections([
+                ...tracker.normalizeCollections(previous.collections),
+                ...item.collections
+            ])
+            : tracker.normalizeCollections(previous.collections)
+
+        const entry = tracker.normalizeGame({
+            ...previous,
+            igdbId: item.igdbId || previous.igdbId || "",
+            steamAppId: item.steamAppId || previous.steamAppId || "",
+            title: item.title || previous.title || "Untitled",
+            year: item.year || previous.year || "",
+            summary: item.summary || previous.summary || "",
+            cover: item.cover || previous.cover || "",
+            genres: item.genres || previous.genres || "",
+            platforms: item.platforms || previous.platforms || "",
+            status: previous.status,
+            rating,
+            playtime,
+            collections,
+            addedAt: previous.addedAt || today()
+        })
+
+        if (item.lastPlayed && String(item.lastPlayed) > String(entry.lastPlayed || "")) {
+            entry.lastPlayed = String(item.lastPlayed).slice(0, 10)
+        }
+
+        // A status the user set in Trilium is only overwritten by a brand-new
+        // entry, or when the file is more definite than an untouched backlog.
+        if (item.fileStatus) {
+            const isNew = !existingKey
+            const untouched = !previous.status || previous.status === "backlog"
+            if (isNew || untouched) entry.status = item.fileStatus
+        }
+
+        doc.games[key] = entry
+        existingKey ? updated++ : added++
+    }
+
+    saveDocument(settings, doc)
+    return { added, updated, total: added + updated }
+}
+
 // --- game mutations ---------------------------------------------------------
 
 async function addGame(settings, igdbId) {

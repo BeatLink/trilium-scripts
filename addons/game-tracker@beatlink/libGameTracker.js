@@ -350,6 +350,419 @@ function parseGameLink(input) {
     return null
 }
 
+// --- file import ------------------------------------------------------------
+//
+// Parsers for library files exported from elsewhere. All of them produce the
+// same row shape so one importer handles every source:
+//
+//   { title, status, rating, playtime, lastPlayed, igdbId, steamAppId, list }
+//
+// Only `title` is required. Rows carrying an id are matched on it directly;
+// title-only rows have to be resolved against IGDB by name, which is why the
+// importer previews its matches before writing anything.
+
+// IGDB's GDPR export status values, per list. The export carries a list name
+// ("Played") and optionally a finer per-entry status ("Completed", "Abandoned"),
+// so the entry status wins where present and the list name is the fallback.
+//
+// Verified against a real export: list sections are "Want to Play", "Playing",
+// and "Played"; entry statuses seen are "", "Backlog", "Currently playing",
+// "Completed", "Finished", and "Abandoned".
+const IGDB_ENTRY_STATUS = {
+    "completed": "beaten",
+    "finished": "beaten",
+    "abandoned": "dropped",
+    "dropped": "dropped",
+    "currently playing": "playing",
+    "playing": "playing",
+    "backlog": "backlog",
+    "want to play": "backlog"
+}
+
+const IGDB_LIST_STATUS = {
+    "want to play": "backlog",
+    "wishlist": "backlog",
+    "playing": "playing",
+    "played": "beaten"
+}
+
+// A list called "Played" means the game was played, not necessarily finished.
+// Beaten is the closest honest mapping for a list the user themselves filed as
+// played, but an entry status always overrides it -- "Abandoned" inside "Played"
+// is a drop, not a completion.
+function igdbStatusFor(listName, entryStatus) {
+    const entry = String(entryStatus || "").trim().toLowerCase()
+    if (entry && IGDB_ENTRY_STATUS[entry]) return IGDB_ENTRY_STATUS[entry]
+    const list = String(listName || "").trim().toLowerCase()
+    return IGDB_LIST_STATUS[list] || "backlog"
+}
+
+// Strip HTML tags and decode the handful of entities an export actually
+// contains. Deliberately minimal: this runs on a file the user chose, not on
+// arbitrary remote input, and the result is only ever used as a title string.
+function stripTags(html) {
+    return String(html || "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;|&apos;|&#x27;/gi, "'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+
+// Parse IGDB's GDPR export (workingjoe-NNNN.zip -> index.html).
+//
+// Shape, confirmed against a real export: each list is an <h3> naming it,
+// followed by a metadata table, then an entries table whose header row is
+// Position | Description | Game | Platform | Status. Ratings live in their own
+// section with a Game | Rating header.
+//
+// The export carries NO game ids -- only display titles -- so every row here
+// must be resolved against IGDB by name.
+function parseIgdbExport(html) {
+    const text = String(html || "")
+    if (!text.trim()) return { rows: [], lists: [] }
+
+    const rows = []
+    const lists = []
+    const seen = new Set()
+
+    // Split on headings, keeping them, so each chunk of tables is attributable
+    // to the heading that introduced it.
+    const parts = text.split(/(<h[1-4][^>]*>[\s\S]*?<\/h[1-4]>)/i)
+    let current = ""
+
+    for (const part of parts) {
+        const heading = /^<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>$/i.exec(part)
+        if (heading) {
+            current = stripTags(heading[1]).replace(/^"|"$/g, "")
+            continue
+        }
+        if (!current) continue
+
+        for (const table of part.match(/<table[\s\S]*?<\/table>/gi) || []) {
+            const tableRows = table.match(/<tr[\s\S]*?<\/tr>/gi) || []
+            if (!tableRows.length) continue
+
+            // Only entry tables have a <th> header row; the metadata tables
+            // beside them are plain label/value pairs and are skipped.
+            const headers = (tableRows[0].match(/<th[^>]*>([\s\S]*?)<\/th>/gi) || [])
+                .map(h => stripTags(h).toLowerCase())
+            if (!headers.length) continue
+
+            const columnOf = (name) => headers.indexOf(name)
+            const gameAt = columnOf("game")
+            if (gameAt < 0) continue
+
+            const ratingAt = columnOf("rating")
+            const statusAt = columnOf("status")
+            const platformAt = columnOf("platform")
+
+            let count = 0
+            for (const row of tableRows.slice(1)) {
+                const cells = (row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || []).map(stripTags)
+                const title = cells[gameAt]
+                if (!title) continue
+
+                const parsed = { title, list: current }
+
+                // The Ratings section carries scores rather than list membership.
+                if (ratingAt >= 0) {
+                    const rating = Number(cells[ratingAt])
+                    // IGDB rates out of 100; the tracker uses 0-10.
+                    if (Number.isFinite(rating) && rating > 0) {
+                        parsed.rating = Math.round(rating / 10)
+                    }
+                } else {
+                    parsed.status = igdbStatusFor(current, statusAt >= 0 ? cells[statusAt] : "")
+                }
+
+                if (platformAt >= 0 && cells[platformAt]) parsed.platforms = cells[platformAt]
+
+                rows.push(parsed)
+                count++
+            }
+
+            if (count) {
+                lists.push({ name: current, count })
+                seen.add(current)
+            }
+        }
+    }
+
+    return { rows: mergeRows(rows), lists }
+}
+
+// Rows for the same title, collapsed. A game can appear in a list AND in the
+// ratings section, and the two carry different fields; merging means one import
+// row per game rather than two that overwrite each other.
+//
+// Status precedence follows how definite each one is: an explicit finished or
+// dropped state beats "currently playing", which beats a bare backlog entry.
+const STATUS_RANK = { backlog: 0, playing: 1, dropped: 2, beaten: 3 }
+
+function mergeRows(rows) {
+    const byTitle = new Map()
+    for (const row of rows) {
+        const key = String(row.title || "").trim().toLowerCase()
+        if (!key) continue
+
+        const existing = byTitle.get(key)
+        if (!existing) {
+            byTitle.set(key, { ...row })
+            continue
+        }
+
+        // Keep the first spelling of the title, fill in whatever is missing, and
+        // let the more definite status win.
+        if (row.rating != null && existing.rating == null) existing.rating = row.rating
+        if (row.playtime && !existing.playtime) existing.playtime = row.playtime
+        if (row.lastPlayed && !existing.lastPlayed) existing.lastPlayed = row.lastPlayed
+        if (row.igdbId && !existing.igdbId) existing.igdbId = row.igdbId
+        if (row.steamAppId && !existing.steamAppId) existing.steamAppId = row.steamAppId
+        if (row.platforms && !existing.platforms) existing.platforms = row.platforms
+        if (row.status && (STATUS_RANK[row.status] ?? -1) > (STATUS_RANK[existing.status] ?? -1)) {
+            existing.status = row.status
+        }
+        // Remember every list a game came from, for the collection option.
+        if (row.list && row.list !== existing.list) {
+            existing.lists = [...new Set([...(existing.lists || [existing.list]), row.list])]
+        }
+    }
+    return [...byTitle.values()]
+}
+
+// --- CSV --------------------------------------------------------------------
+
+// A small RFC 4180 reader: quoted fields, escaped quotes (""), and newlines
+// inside quotes. Written out rather than split(",") because a games CSV is full
+// of titles containing commas.
+function parseCsv(text) {
+    const rows = []
+    let row = []
+    let field = ""
+    let quoted = false
+
+    const source = String(text || "").replace(/^﻿/, "")
+
+    for (let i = 0; i < source.length; i++) {
+        const char = source[i]
+
+        if (quoted) {
+            if (char === '"') {
+                if (source[i + 1] === '"') { field += '"'; i++ }
+                else quoted = false
+            } else field += char
+            continue
+        }
+
+        if (char === '"') { quoted = true; continue }
+        if (char === ",") { row.push(field); field = ""; continue }
+        if (char === "\r") continue
+        if (char === "\n") {
+            row.push(field)
+            // Skip blank lines rather than emitting an empty row.
+            if (row.some(c => c !== "")) rows.push(row)
+            row = []
+            field = ""
+            continue
+        }
+        field += char
+    }
+
+    row.push(field)
+    if (row.some(c => c !== "")) rows.push(row)
+    return rows
+}
+
+// Column aliases, so a CSV from a spreadsheet, GOG export, or another tracker
+// maps without the user having to rename headers first.
+const CSV_COLUMNS = {
+    title: ["title", "name", "game", "game name", "gamename"],
+    status: ["status", "state", "progress", "list"],
+    rating: ["rating", "score", "my rating", "userrating", "user rating"],
+    playtime: ["playtime", "hours", "hours played", "time played", "playtime (hours)"],
+    lastPlayed: ["lastplayed", "last played", "last_played", "date"],
+    igdbId: ["igdbid", "igdb id", "igdb"],
+    steamAppId: ["steamappid", "appid", "steam appid", "steam id", "app id"],
+    platforms: ["platform", "platforms"]
+}
+
+function matchColumn(headers, aliases) {
+    for (const alias of aliases) {
+        const at = headers.indexOf(alias)
+        if (at >= 0) return at
+    }
+    return -1
+}
+
+// Free-text status values from wherever the CSV came from, mapped onto the
+// tracker's four. Anything unrecognised falls back to backlog rather than being
+// dropped, so a row is never silently lost.
+const CSV_STATUS = {
+    ...IGDB_ENTRY_STATUS,
+    "beaten": "beaten",
+    "complete": "beaten",
+    "100%": "beaten",
+    "played": "beaten",
+    "in progress": "playing",
+    "started": "playing",
+    "now playing": "playing",
+    "want to play": "backlog",
+    "wishlist": "backlog",
+    "plan to play": "backlog",
+    "unplayed": "backlog",
+    "never played": "backlog",
+    "on hold": "dropped",
+    "quit": "dropped",
+    "shelved": "dropped"
+}
+
+function parseGameCsv(text) {
+    const table = parseCsv(text)
+    if (table.length < 2) return { rows: [], lists: [] }
+
+    const headers = table[0].map(h => String(h || "").trim().toLowerCase())
+    const at = {}
+    for (const [field, aliases] of Object.entries(CSV_COLUMNS)) {
+        at[field] = matchColumn(headers, aliases)
+    }
+    if (at.title < 0) {
+        throw new Error("No title column found. The CSV needs a header row with a "
+            + "'Title', 'Name', or 'Game' column.")
+    }
+
+    const rows = []
+    for (const cells of table.slice(1)) {
+        const title = String(cells[at.title] || "").trim()
+        if (!title) continue
+
+        const row = { title }
+
+        if (at.status >= 0) {
+            const raw = String(cells[at.status] || "").trim().toLowerCase()
+            if (raw) row.status = CSV_STATUS[raw] || "backlog"
+        }
+        if (at.rating >= 0) {
+            const rating = Number(cells[at.rating])
+            // Accept both 0-10 and 0-100 scales: anything above 10 is treated as
+            // a percentage, which is how most other trackers export.
+            if (Number.isFinite(rating) && rating > 0) {
+                row.rating = Math.round(rating > 10 ? rating / 10 : rating)
+            }
+        }
+        if (at.playtime >= 0) {
+            const hours = Number(cells[at.playtime])
+            if (Number.isFinite(hours) && hours > 0) row.playtime = Math.round(hours * 60)
+        }
+        if (at.lastPlayed >= 0) {
+            const date = String(cells[at.lastPlayed] || "").trim().slice(0, 10)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) row.lastPlayed = date
+        }
+        if (at.igdbId >= 0 && String(cells[at.igdbId] || "").trim()) {
+            row.igdbId = String(cells[at.igdbId]).trim()
+        }
+        if (at.steamAppId >= 0 && String(cells[at.steamAppId] || "").trim()) {
+            row.steamAppId = String(cells[at.steamAppId]).trim()
+        }
+        if (at.platforms >= 0 && String(cells[at.platforms] || "").trim()) {
+            row.platforms = String(cells[at.platforms]).trim()
+        }
+
+        rows.push(row)
+    }
+
+    return { rows: mergeRows(rows), lists: [] }
+}
+
+// A JSON array of objects, or an object wrapping one. Field names go through the
+// same alias table as CSV, so an export from another tool usually just works.
+function parseGameJson(text) {
+    let parsed
+    try {
+        parsed = JSON.parse(text)
+    } catch (e) {
+        throw new Error("That file is not valid JSON.")
+    }
+
+    // Accept a bare array, or the first array-valued property of an object.
+    let list = parsed
+    if (!Array.isArray(list) && parsed && typeof parsed === "object") {
+        list = Object.values(parsed).find(v => Array.isArray(v))
+    }
+    if (!Array.isArray(list)) {
+        throw new Error("Expected a JSON array of games, or an object containing one.")
+    }
+
+    const pick = (entry, aliases) => {
+        for (const key of Object.keys(entry || {})) {
+            if (aliases.includes(key.trim().toLowerCase())) return entry[key]
+        }
+        return undefined
+    }
+
+    const rows = []
+    for (const entry of list) {
+        if (!entry || typeof entry !== "object") continue
+        const title = String(pick(entry, CSV_COLUMNS.title) || "").trim()
+        if (!title) continue
+
+        const row = { title }
+
+        const status = String(pick(entry, CSV_COLUMNS.status) || "").trim().toLowerCase()
+        if (status) row.status = CSV_STATUS[status] || "backlog"
+
+        const rating = Number(pick(entry, CSV_COLUMNS.rating))
+        if (Number.isFinite(rating) && rating > 0) {
+            row.rating = Math.round(rating > 10 ? rating / 10 : rating)
+        }
+
+        const hours = Number(pick(entry, CSV_COLUMNS.playtime))
+        if (Number.isFinite(hours) && hours > 0) row.playtime = Math.round(hours * 60)
+
+        const igdbId = pick(entry, CSV_COLUMNS.igdbId)
+        if (igdbId) row.igdbId = String(igdbId).trim()
+
+        const steamAppId = pick(entry, CSV_COLUMNS.steamAppId)
+        if (steamAppId) row.steamAppId = String(steamAppId).trim()
+
+        const platforms = pick(entry, CSV_COLUMNS.platforms)
+        if (platforms) {
+            row.platforms = Array.isArray(platforms) ? platforms.join(", ") : String(platforms)
+        }
+
+        rows.push(row)
+    }
+
+    return { rows: mergeRows(rows), lists: [] }
+}
+
+// Dispatch on what the file actually looks like rather than on its extension, so
+// a renamed file still imports. The IGDB export is an HTML document, which is
+// unambiguous enough to detect by content.
+function parseImportFile(text, filename) {
+    const source = String(text || "")
+    if (!source.trim()) throw new Error("That file is empty.")
+
+    const name = String(filename || "").toLowerCase()
+
+    if (/^\s*[[{]/.test(source) && !/<table/i.test(source)) {
+        return { format: "json", ...parseGameJson(source) }
+    }
+    if (/<table/i.test(source) || /<html/i.test(source) || name.endsWith(".html")) {
+        const result = parseIgdbExport(source)
+        if (!result.rows.length) {
+            throw new Error("No game lists found in that HTML file. An IGDB export should "
+                + "contain Want to Play / Playing / Played sections.")
+        }
+        return { format: "igdb-export", ...result }
+    }
+    return { format: "csv", ...parseGameCsv(source) }
+}
+
 // --- sorting ----------------------------------------------------------------
 
 const SORTS = [
@@ -461,6 +874,13 @@ module.exports = {
     normalizeGame,
     listGames,
     parseGameLink,
+    parseImportFile,
+    parseIgdbExport,
+    parseGameCsv,
+    parseGameJson,
+    parseCsv,
+    mergeRows,
+    igdbStatusFor,
     parseList,
     listGenres,
     listPlatforms,
