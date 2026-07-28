@@ -1,0 +1,584 @@
+.gt-view {
+    padding: 12px 1rem;
+    font-size: 14px;
+    /* Some Trilium themes disable selection inside widgets; re-enable it so
+       titles, ids, and links can be copied by hand. */
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.gt-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--main-border-color);
+    margin-bottom: 12px;
+}
+
+.gt-tab {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--muted-text-color, gray);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+.gt-tab-on {
+    color: var(--main-text-color);
+    border-bottom-color: var(--main-text-color);
+}
+
+/* Pushed to the far end of the tab row: it navigates away rather than switching
+   tabs, so it shouldn't sit among the tabs it isn't peer to. */
+.gt-tab-right {
+    margin-left: auto;
+}
+
+.gt-settings-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.gt-settings-head h3 {
+    margin: 0;
+}
+
+.gt-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    color: var(--main-text-color);
+    cursor: pointer;
+}
+
+.gt-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.gt-btn-primary {
+    font-weight: 600;
+}
+
+/* Shown in place of Add when a search result is already tracked. Not a button:
+   there is nothing to click, so it must not look actionable. Same green as the
+   "beaten" status so the palette stays consistent. */
+.gt-added {
+    color: rgb(46, 160, 87);
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+    cursor: default;
+    white-space: nowrap;
+}
+
+.gt-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* --- filters --- */
+
+.gt-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.gt-chip {
+    padding: 3px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gt-chip-on {
+    color: var(--main-text-color);
+    border-color: var(--main-text-color);
+}
+
+/* One block per collection group in Settings: its collections, then a box to add
+   another directly into that group. */
+.gt-group-section {
+    margin: 14px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.gt-group-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.gt-group-section .gt-tag-list {
+    max-height: 220px;
+    margin-bottom: 6px;
+}
+
+.gt-diag pre {
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 6px 8px;
+    margin: 4px 0 0;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
+/* Collection manage actions sit beside the collection dropdowns. */
+.gt-chip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.gt-chip-action {
+    padding: 3px 7px;
+    line-height: 1;
+}
+
+/* The settings genre list is longer than a row's collection picker and is the
+   whole point of its tab, so it gets more room. */
+.gt-genre-list {
+    max-height: 320px;
+}
+
+/* --- controls --- */
+
+.gt-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.gt-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Aggregate playtime for the current filter, pushed away from the sort controls
+   so it reads as a summary rather than another control. */
+.gt-total {
+    margin-left: auto;
+}
+
+/* --- collections --- */
+
+.gt-tag {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.18);
+    border: 1px solid var(--main-border-color);
+    font-size: 11px;
+}
+
+/* The collection picker: every known collection listed with its membership,
+   plus a field to create a new one. */
+.gt-tag-picker {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
+}
+
+/* Group sections sit side by side when there is room, so Series and Mood can be
+   edited without scrolling past each other. */
+.gt-tag-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.gt-tag-group {
+    min-width: 150px;
+}
+
+.gt-tag-group-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted-text-color, gray);
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--main-border-color);
+    margin-bottom: 4px;
+}
+
+/* Inside a group the list is already bounded by its section, so it drops the
+   standalone list's own margin and taller scroll cap. */
+.gt-tag-group .gt-tag-list {
+    margin-bottom: 0;
+    max-height: 132px;
+}
+
+/* One collection per line: a wrapping row is hard to scan and hard to hit
+   accurately when names vary in length. */
+.gt-tag-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 176px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+
+.gt-tag-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    margin: 0;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Full-width hover target, so the whole line is clickable rather than just the
+   checkbox and its text. */
+.gt-tag-option:hover {
+    background: rgba(127, 127, 127, 0.14);
+}
+
+.gt-tag-edit {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.gt-tag-edit .gt-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* A text-weight action that shouldn't compete with the row's real buttons. */
+.gt-linkbtn {
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted-text-color, gray);
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.gt-linkbtn:hover {
+    color: var(--main-text-color);
+}
+
+.gt-group {
+    margin-bottom: 14px;
+}
+
+.gt-group-head {
+    font-weight: 600;
+    padding: 6px 0 4px;
+    border-bottom: 2px solid var(--main-border-color);
+    margin-bottom: 4px;
+}
+
+/* --- rows --- */
+
+.gt-item {
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.gt-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 0;
+}
+
+/* IGDB cover art is 3:4, the same proportion as a film poster. */
+.gt-cover {
+    width: 46px;
+    height: 61px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.gt-cover-empty {
+    background: var(--main-border-color);
+}
+
+.gt-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.gt-row-title {
+    font-weight: 600;
+    color: var(--main-text-color);
+    text-decoration: none;
+}
+
+.gt-row-title:hover {
+    text-decoration: underline;
+}
+
+.gt-row-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.gt-badge {
+    padding: 1px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+}
+
+/* Playtime is the number most worth spotting in a games library, so it carries
+   slightly more weight than the rest of the meta row. */
+.gt-playtime {
+    font-variant-numeric: tabular-nums;
+    color: var(--main-text-color);
+}
+
+/* A game can list a dozen platforms; one clamped line keeps rows even. */
+.gt-platforms {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gt-overview {
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    margin: 6px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.gt-row-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.gt-select,
+.gt-rating,
+.gt-input {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--input-background-color, transparent);
+    color: var(--main-text-color);
+}
+
+/* Status palette. Translucent fills rather than solid colours so they composite
+   over both the light and dark Trilium themes without hard-coding a background,
+   and the border carries the hue at higher contrast than the fill alone. */
+.gt-status-backlog {
+    background: rgba(128, 128, 128, 0.16);
+    border-color: rgba(128, 128, 128, 0.55);
+}
+
+.gt-status-playing {
+    background: rgba(56, 132, 255, 0.16);
+    border-color: rgba(56, 132, 255, 0.6);
+}
+
+.gt-status-beaten {
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+}
+
+.gt-status-dropped {
+    background: rgba(219, 72, 72, 0.16);
+    border-color: rgba(219, 72, 72, 0.6);
+}
+
+/* The rating input is otherwise an unlabelled number box sitting next to the
+   status dropdown, which reads as mystery UI. The star marks what it is. */
+.gt-rating-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+
+.gt-rating-star {
+    color: var(--muted-text-color, gray);
+    font-size: 13px;
+}
+
+.gt-rating {
+    width: 52px;
+}
+
+/* Hours accepts decimals ("12.5"), so it needs more room than the 0-10 rating. */
+.gt-hours {
+    width: 64px;
+}
+
+/* --- search --- */
+
+.gt-search {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.gt-input {
+    flex: 1;
+}
+
+/* --- details page --- */
+
+.gt-details-nav {
+    margin-bottom: 12px;
+}
+
+.gt-details-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.gt-details-cover {
+    width: 140px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.gt-details-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.gt-details-title {
+    margin: 0 0 6px;
+}
+
+.gt-overview-full {
+    margin: 8px 0 0;
+    line-height: 1.5;
+}
+
+/* The row title doubles as the link into the details page, so it has to look
+   like text rather than a button. */
+.gt-row-title-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--main-text-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.gt-row-title-link:hover {
+    text-decoration: underline;
+}
+
+.gt-section {
+    margin-bottom: 16px;
+}
+
+.gt-section h4 {
+    margin: 0 0 8px;
+}
+
+/* Screenshots scroll horizontally rather than reflowing into a tall grid, so the
+   details page keeps its shape however many a game has. */
+.gt-shots {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.gt-shot {
+    width: 240px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+/* --- import --- */
+
+.gt-source {
+    border: 1px solid var(--main-border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.gt-source h4 {
+    margin: 0 0 8px;
+}
+
+.gt-code {
+    font-family: monospace;
+    padding: 2px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
+/* Widget text is not selectable by default in some Trilium themes, which makes
+   an id you are meant to copy by hand unusable. */
+.gt-selectable {
+    user-select: all;
+    -webkit-user-select: all;
+    cursor: text;
+}
+
+.gt-link {
+    color: var(--link-color, #4a9eff);
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+/* --- states --- */
+
+.gt-empty {
+    text-align: center;
+    padding: 24px 0;
+}
+
+.gt-hint {
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+}
+
+.gt-ok {
+    color: var(--success-color, green);
+}
+
+.gt-error {
+    color: var(--error-color, red);
+}

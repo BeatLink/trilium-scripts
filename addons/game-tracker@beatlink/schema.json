@@ -1,0 +1,227 @@
+{
+    "libraryRootNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Library Root",
+        "description": "Required. The note that hosts your library: its Database child note holds every tracked game. Selecting it converts that note into a render note showing the tracker; clearing it reverts the previously-chosen note to a text note.",
+        "default": "",
+        "tab": "Library"
+    },
+    "collectionGroups": {
+        "type": "string",
+        "hidden": true,
+        "label": "Collection Groups",
+        "description": "JSON holding the collection groups and which group each collection belongs to. Managed by the Collections tab.",
+        "default": "{\"groups\":[],\"assign\":{}}",
+        "tab": "Library"
+    },
+    "viewGroupFilters": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Group Filters",
+        "description": "Remembered per-group Library filters. Managed by the widget, not edited here.",
+        "default": "{}",
+        "tab": "Library"
+    },
+    "genresEnabled": {
+        "type": "boolean",
+        "label": "Enable Genres",
+        "description": "Show the Genre filter and fetch genres from IGDB. Turn this off to categorise everything with your own collections instead.",
+        "default": true,
+        "tab": "Library"
+    },
+    "hiddenGenres": {
+        "type": "string",
+        "hidden": true,
+        "label": "Hidden Genres",
+        "description": "Comma-separated genres to leave out of the Library's genre filter. Managed by the Genres tab.",
+        "default": "",
+        "tab": "Library"
+    },
+    "viewGenreFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Genre Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewStatusFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Status Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewPlatformFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Platform Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewCollectionFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Collection Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "all",
+        "tab": "Library"
+    },
+    "viewSortKey": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Sort",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": "title",
+        "tab": "Library"
+    },
+    "viewSortDesc": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Sort Direction",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": false,
+        "tab": "Library"
+    },
+    "viewGrouped": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Grouping",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "default": false,
+        "tab": "Library"
+    },
+    "defaultStatus": {
+        "type": "select",
+        "label": "Status For New Games",
+        "description": "Applied to a game added by hand from search. Imports set status from playtime instead.",
+        "default": "backlog",
+        "options": [
+            { "value": "backlog", "label": "Backlog" },
+            { "value": "playing", "label": "Playing" },
+            { "value": "beaten", "label": "Beaten" },
+            { "value": "dropped", "label": "Dropped" }
+        ],
+        "tab": "Library"
+    },
+    "coverSize": {
+        "type": "select",
+        "label": "Cover Size",
+        "description": "IGDB image size used for cover URLs stored with each game.",
+        "default": "cover_big",
+        "options": [
+            { "value": "cover_small", "label": "Small (90x128)" },
+            { "value": "cover_big", "label": "Big (264x374)" },
+            { "value": "720p", "label": "Large (1280x720)" }
+        ],
+        "tab": "Library"
+    },
+
+    "igdbClientId": {
+        "type": "string",
+        "label": "IGDB (Twitch) Client ID",
+        "description": "IGDB authenticates through Twitch. Register an application at https://dev.twitch.tv/console/apps with Client Type set to Confidential, then copy its Client ID here.",
+        "default": "",
+        "tab": "IGDB"
+    },
+    "igdbClientSecret": {
+        "type": "string",
+        "label": "IGDB (Twitch) Client Secret",
+        "description": "Client Secret from the same Twitch application. Used to obtain an access token; IGDB is free for non-commercial use.",
+        "default": "",
+        "tab": "IGDB"
+    },
+    "igdbAccessToken": {
+        "type": "string",
+        "hidden": true,
+        "label": "Access Token",
+        "description": "Fetched automatically from the Client ID and Secret, and renewed before it expires. Managed automatically.",
+        "default": "",
+        "tab": "IGDB"
+    },
+    "igdbTokenExpiresAt": {
+        "type": "number",
+        "hidden": true,
+        "label": "Token Expires At",
+        "description": "Unix seconds. Managed automatically.",
+        "default": 0,
+        "tab": "IGDB"
+    },
+
+    "steamApiKey": {
+        "type": "string",
+        "label": "Steam Web API Key",
+        "description": "Free key from https://steamcommunity.com/dev/apikey. Required to import your Steam library.",
+        "default": "",
+        "tab": "Steam"
+    },
+    "steamId": {
+        "type": "string",
+        "label": "SteamID64",
+        "description": "Your 17-digit Steam id. Use the Steam ID tab to convert a profile name or URL into one.",
+        "default": "",
+        "tab": "Steam"
+    },
+    "steamOnlyPlayed": {
+        "type": "boolean",
+        "label": "Import Only Played Games",
+        "description": "Skip owned games with no recorded playtime. Useful when a large bundle library would otherwise flood the tracker.",
+        "default": false,
+        "tab": "Steam"
+    },
+
+    "autoSyncSteam": {
+        "type": "boolean",
+        "label": "Auto-Import From Steam",
+        "description": "Run a Steam import automatically on a schedule. Requires a Steam key and SteamID64.",
+        "default": false,
+        "tab": "Import"
+    },
+    "autoSyncHours": {
+        "type": "number",
+        "label": "Hours Between Auto-Imports",
+        "description": "Minimum hours to wait between automatic imports. The check runs hourly, so 1 imports every hour and 24 once a day.",
+        "default": 6,
+        "tab": "Import"
+    },
+    "autoSyncLastRun": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Auto-Import",
+        "description": "Timestamp of the last automatic import. Managed automatically.",
+        "default": "",
+        "tab": "Import"
+    },
+    "autoSyncLastResult": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Auto-Import Result",
+        "description": "Outcome of the last automatic import, shown on the Import tab. Managed automatically.",
+        "default": "",
+        "tab": "Import"
+    },
+    "importMarksPlaying": {
+        "type": "boolean",
+        "label": "Imports Set Playing Status",
+        "description": "A game with recorded playtime is moved out of the backlog into Playing. Nothing is ever marked Beaten by an import: playtime cannot tell whether a game was finished.",
+        "default": true,
+        "tab": "Import"
+    },
+    "importFetchMetadata": {
+        "type": "boolean",
+        "label": "Fetch IGDB Metadata On Import",
+        "description": "Look each imported Steam game up on IGDB for its cover, summary, genres, and platforms. Slower, and needs IGDB credentials.",
+        "default": true,
+        "tab": "Import"
+    },
+    "importOverwriteRatings": {
+        "type": "boolean",
+        "label": "Let Imports Overwrite My Ratings",
+        "description": "Off by default so a re-import never clobbers a rating you set in Trilium. Import is one-way; nothing is ever written back to Steam or IGDB.",
+        "default": false,
+        "tab": "Import"
+    }
+}

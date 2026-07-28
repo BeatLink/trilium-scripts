@@ -1,0 +1,182 @@
+{
+    "id": "game-tracker@beatlink",
+    "name": "Game Tracker",
+    "description": "A video game tracker for TriliumNext. Your whole library lives in one JSON note created under a library root you choose, so it is a single note you can back up, inspect, or hand-edit. Pick any note as the Library Root and the addon wires it up for you: it becomes a render note showing the tracker, and switching roots reverts the old one. IGDB provides search, cover art, genres, and platforms; Steam is a one-way import source for your owned games and playtime, read but never written to. Steam appids are resolved to IGDB entries in bulk through IGDB's external_games index, so a whole library is matched in a handful of requests rather than one per game, and a game IGDB has never heard of is still imported with the name and playtime Steam supplied. Imports are additive and idempotent: games are keyed by their strongest known id and matched on any shared id so both sources converge on one entry, playtime never moves backwards, and your own ratings and status are never overwritten unless you opt in. Nothing is ever marked Beaten by an import -- playtime cannot tell whether a game was finished, so that stays your call. Each import reads the database once and writes once, so it cannot half-apply. Modelled on media-tracker@beatlink, which tracks films and TV.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/game-tracker@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-page",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "game-tracker@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "view",
+                "title": "gameTracker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/gameTracker.jsx"
+            },
+            {
+                "id": "style",
+                "title": "gameTracker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/gameTracker.css"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/config.json"
+            },
+            {
+                "id": "backend",
+                "title": "gameTrackerBackend.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/gameTrackerBackend.js"
+            },
+            {
+                "id": "autosync",
+                "title": "autoSync.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/autoSync.js"
+            },
+            {
+                "id": "lib-tracker",
+                "title": "libGameTracker.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/libGameTracker.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/game-tracker@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            { "parent": "root", "child": "launcher" },
+            { "parent": "launcher", "child": "view" },
+            { "parent": "view", "child": "style" },
+            { "parent": "view", "child": "libsettings-ui" },
+            { "parent": "launcher", "child": "settings-page" },
+            { "parent": "settings-page", "child": "settings" },
+            { "parent": "settings", "child": "libsettings-ui" },
+            { "parent": "launcher", "child": "schema" },
+            { "parent": "persistence", "child": "config" },
+            { "parent": "launcher", "child": "backend" },
+            { "parent": "backend", "child": "libsettings-backend" },
+            { "parent": "backend", "child": "lib-tracker" },
+            { "parent": "launcher", "child": "autosync" },
+            { "parent": "autosync", "child": "libsettings-backend" },
+            { "parent": "autosync", "child": "backend" },
+            { "parent": "libsettings-ui", "child": "libsettings-style" },
+            { "parent": "libsettings-ui", "child": "colorpicker" },
+            { "parent": "colorpicker", "child": "colorpicker-css" },
+            { "parent": "launcher", "child": "readme" }
+        ],
+        "relations": [
+            { "from": "settings", "type": "configNote", "to": "config" },
+            { "from": "settings", "type": "schemaNote", "to": "schema" },
+            { "from": "view", "type": "schemaNote", "to": "schema" },
+            { "from": "view", "type": "settingsNote", "to": "settings" },
+            { "from": "backend", "type": "schemaNote", "to": "schema" },
+            { "from": "backend", "type": "settingsNote", "to": "settings" },
+            { "from": "launcher", "type": "renderNote", "to": "view" },
+            { "from": "settings-page", "type": "renderNote", "to": "settings" },
+            { "from": "view", "type": "settingsPageNote", "to": "settings-page" },
+            { "from": "settings", "type": "trackerPageNote", "to": "launcher" }
+        ],
+        "labels": [
+            { "note": "backend", "name": "customRequestHandler", "value": "gameTracker" },
+            { "note": "autosync", "name": "run", "value": "hourly" },
+            { "note": "autosync", "name": "iconClass", "value": "bx bx-sync" },
+            { "note": "settings", "name": "gameTrackerConfig", "value": "" },
+            { "note": "view", "name": "gameTrackerRender", "value": "" },
+            { "note": "style", "name": "appCss", "value": "" },
+            { "note": "libsettings-style", "name": "appCss", "value": "" },
+            { "note": "colorpicker-css", "name": "appCss", "value": "" },
+            { "note": "launcher", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "view", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "backend", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "lib-tracker", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "schema", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "config", "name": "iconClass", "value": "bx bx-joystick" },
+            { "note": "settings-page", "name": "iconClass", "value": "bx bx-cog" },
+            { "note": "readme", "name": "iconClass", "value": "bx bx-joystick" }
+        ],
+        "readmeNote": "readme"
+    }
+}
