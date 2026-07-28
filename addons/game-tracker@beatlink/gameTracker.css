@@ -644,3 +644,12 @@
 .gt-error {
     color: var(--error-color, red);
 }
+
+/* Per-field provenance on the details page: which source supplied each value.
+   Two columns so a dozen fields stay compact. */
+.gt-provenance {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 2px 12px;
+    margin-top: 4px;
+}

@@ -27,6 +27,21 @@ const ENDPOINT = "custom/gameTracker"
 // stronger border, so a status reads correctly against both the light and dark
 // Trilium themes without hard-coding a background.
 
+// Display names for metadata sources, for the details page's provenance list.
+// "stored" is not a source: it means the value was already in the library and no
+// source overrode it.
+const SOURCE_LABELS = {
+    igdb: "IGDB",
+    rawg: "RAWG",
+    steam: "Steam",
+    gog: "GOG",
+    lutris: "Lutris",
+    steamgriddb: "SteamGridDB",
+    gamesdb: "TheGamesDB",
+    chain: "your sources",
+    stored: "already saved"
+}
+
 const FALLBACK_STATUS = { id: "", name: "—", color: "#808080", role: "none" }
 
 function findStatus(statuses, id) {
@@ -180,16 +195,15 @@ function DetailsPage({ game, onBack, onChanged, showGenres = true, statuses = []
     const [data, setData] = useState(null)
     const [error, setError] = useState(null)
 
+    // No id is required to open a details page. The backend composes the page
+    // from every enabled source, addressing each by whatever handle it can use
+    // (its own recorded id, the Steam appid, or the title), so a Steam-only or
+    // file-imported game opens just like any other.
     useEffect(() => {
         (async () => {
-            if (!game.igdbId) {
-                setError("This game has no IGDB id, so there is nothing more to show. "
-                    + "Run Refresh on the Library tab to try linking it.")
-                return
-            }
             try {
                 setData(await callBackend("fullDetails", {
-                    igdbId: game.igdbId,
+                    igdbId: game.igdbId || "",
                     key: game.key
                 }))
             } catch (e) {
@@ -264,15 +278,20 @@ function DetailsPage({ game, onBack, onChanged, showGenres = true, statuses = []
                             )}
 
                             {data.summary && <p class="gt-overview-full">{data.summary}</p>}
-                            {data.url && (
+                            {/* The page is composed from several sources, so the
+                                link is named after whichever one supplied it
+                                rather than always claiming to be IGDB. */}
+                            {(data.url || data.entry?.steamAppId) && (
                                 <p>
-                                    <a class="gt-link" href={data.url}
-                                        target="_blank" rel="noopener noreferrer">
-                                        View on IGDB
-                                    </a>
-                                    {data.entry?.steamAppId && (
+                                    {data.url && (
+                                        <a class="gt-link" href={data.url}
+                                            target="_blank" rel="noopener noreferrer">
+                                            View on {SOURCE_LABELS[data.sources?.url] || "source"}
+                                        </a>
+                                    )}
+                                    {data.entry?.steamAppId && data.sources?.url !== "steam" && (
                                         <>
-                                            {" · "}
+                                            {data.url && " · "}
                                             <a class="gt-link"
                                                 href={`https://store.steampowered.com/app/${data.entry.steamAppId}/`}
                                                 target="_blank" rel="noopener noreferrer">
@@ -281,6 +300,26 @@ function DetailsPage({ game, onBack, onChanged, showGenres = true, statuses = []
                                         </>
                                     )}
                                 </p>
+                            )}
+
+                            {/* Which source supplied each field. Worth surfacing
+                                because a composed page otherwise gives no way to
+                                tell where a wrong value came from. */}
+                            {data.sources && Object.keys(data.sources).length > 0 && (
+                                <details class="gt-diag">
+                                    <summary class="gt-hint">Where this data came from</summary>
+                                    <div class="gt-provenance">
+                                        {Object.entries(data.sources)
+                                            .filter(([, src]) => src)
+                                            .map(([field, src]) => (
+                                                <div class="gt-hint" key={field}>
+                                                    {field}: <strong>
+                                                        {SOURCE_LABELS[src] || src}
+                                                    </strong>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </details>
                             )}
                         </div>
                     </div>

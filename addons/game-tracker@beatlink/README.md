@@ -133,8 +133,10 @@ beside the sort controls, so narrowing to a series or a genre answers "how long 
 directly.
 
 **Refresh** runs a housekeeping sweep over the whole library: it re-fetches metadata and covers from
-your configured sources and links any unlinked games by Steam appid or title. It never changes a
-rating, a status, or a playtime.
+**every enabled source** (not just the first one), merges them field by field, and links any unlinked
+games by Steam appid or title. A field no source can supply keeps the value already stored, so
+refresh only ever adds and corrects — it never empties anything. It never changes a rating, a status,
+or a playtime.
 
 ### Statuses
 
@@ -201,13 +203,20 @@ wins.
 ### Details page
 
 Clicking a game's name opens a full details page: large cover, summary, storyline, developers and
-publishers, genres, platforms, game modes, IGDB's aggregate rating alongside your own, a scrollable
-row of screenshots, and a list of similar games. Links out to IGDB and — when the game came from
-Steam — to its Steam store page.
+publishers, genres, platforms, game modes, an aggregate critic rating alongside your own, a
+scrollable row of screenshots, and a list of similar games.
 
-Everything here is fetched live from your metadata sources rather than stored, so it adds no weight
-to your database
-note.
+Like the library metadata, this page is **composed from every enabled source**, merged field by
+field — so it might show IGDB's storyline, Steam's screenshots, and SteamGridDB's cover art at once.
+Each source is addressed by whatever handle it can use: its own recorded id, the Steam appid, or the
+title. **No particular source is required**, so a Steam-only or file-imported game opens exactly like
+any other, and a source with nothing for this game is simply skipped. The outbound link is named
+after whichever source supplied it.
+
+A **Where this data came from** panel lists which source supplied each field — worth having, since a
+composed page otherwise gives no way to tell where a wrong value originated.
+
+Everything here is fetched live rather than stored, so it adds no weight to your database note.
 
 ### Collections
 

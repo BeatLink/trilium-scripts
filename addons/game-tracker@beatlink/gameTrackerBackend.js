@@ -1900,19 +1900,172 @@ function removeGame(settings, key) {
     return { ok: true }
 }
 
-// Full metadata for the details page. Dispatches on the configured provider;
-// both return the same shape, with fields the provider cannot supply left empty
-// so the page renders identically either way.
-async function fullDetails(settings, igdbId, key) {
-    const details = provider(settings).id === "rawg"
-        ? await rawgFullDetails(settings, igdbId)
-        : await igdbFullDetails(settings, igdbId)
+// The rich fields the details page shows on top of the merged base fields.
+// Sources that cannot supply one leave it empty, and the composite below takes
+// the first non-empty value in source order -- exactly like the base fields.
+const DETAIL_FIELDS = [
+    "storyline", "url", "totalRating", "totalRatingCount",
+    "developers", "publishers", "modes", "perspectives", "themes",
+    "screenshots", "similar"
+]
 
-    // The entry's own tracked state, so the page can show status and playtime.
+const EMPTY_DETAILS = {
+    storyline: "", url: "", totalRating: null, totalRatingCount: 0,
+    developers: [], publishers: [], modes: [], perspectives: [], themes: [],
+    screenshots: [], similar: []
+}
+
+// Rich details from one source, by whatever id/title that source can use.
+// Returns null when the source has nothing for this game, which is normal and
+// never an error -- the composite simply moves on.
+async function detailsFromSource(settings, sourceId, { id, title, steamAppId }) {
+    try {
+        switch (sourceId) {
+            case "igdb":
+                return id ? await igdbFullDetails(settings, id) : null
+            case "rawg":
+                return id ? await rawgFullDetails(settings, id) : null
+            case "steam": {
+                const appId = steamAppId || id
+                return appId ? await steamFullDetails(settings, appId) : null
+            }
+            case "gog":
+            case "lutris":
+            case "gamesdb": {
+                // These have no separate "rich" endpoint, so their base record
+                // is reused: it still carries summary, genres, and platforms,
+                // which is what the page needs from them.
+                const source = PROVIDERS[sourceId]
+                if (!source?.gamesByTitles || !title) return null
+                const found = await source.gamesByTitles(settings, [title])
+                const game = found.get(String(title).toLowerCase())
+                return game ? { ...EMPTY_DETAILS, ...game } : null
+            }
+            case "steamgriddb": {
+                const art = await sgdbArtFor(settings, { steamAppId, title })
+                return art?.cover ? { ...EMPTY_DETAILS, cover: art.cover } : null
+            }
+            default:
+                return null
+        }
+    } catch (e) {
+        // One source failing must never take the page down.
+        return null
+    }
+}
+
+// Steam's rich details: it has screenshots, developers, publishers, and a
+// Metacritic score, which maps onto the same aggregate-rating slot IGDB's
+// total_rating uses.
+async function steamFullDetails(settings, appId) {
+    const raw = await steamStoreRaw(appId)
+    if (!raw) return null
+
+    return {
+        ...EMPTY_DETAILS,
+        ...(await steamStoreDetails(appId) || {}),
+        url: `https://store.steampowered.com/app/${appId}/`,
+        totalRating: Number.isFinite(Number(raw.metacritic?.score))
+            ? Number(raw.metacritic.score)
+            : null,
+        totalRatingCount: 0,
+        developers: Array.isArray(raw.developers) ? raw.developers : [],
+        publishers: Array.isArray(raw.publishers) ? raw.publishers : [],
+        // Steam's "categories" are the closest thing it has to game modes.
+        modes: (raw.categories || [])
+            .map(c => c.description)
+            .filter(Boolean)
+            .slice(0, 8),
+        screenshots: (raw.screenshots || [])
+            .slice(0, 8)
+            .map(s => s.path_thumbnail || s.path_full)
+            .filter(Boolean)
+    }
+}
+
+// Full metadata for the details page, composed from EVERY enabled source.
+//
+// Previously this asked one provider and refused outright without an IGDB id,
+// which made a Steam-only or file-imported game a dead end. Now the sources are
+// tried in the user's configured order and merged field by field, exactly like
+// the library metadata: the first source with a storyline wins the storyline,
+// the first with screenshots wins those, and so on.
+//
+// Every source is optional and every failure is survivable, so the page renders
+// with whatever could be gathered rather than erroring.
+async function fullDetails(settings, igdbId, key) {
     const doc = loadDocument(settings)
     const entry = key && doc.games[key] ? tracker.normalizeGame(doc.games[key]) : null
 
-    return { ...details, entry }
+    // Each source gets whichever handle it can actually use: its own recorded id
+    // where the entry has one, the primary id, the Steam appid, or the title.
+    const primary = provider(settings)
+    const title = entry?.title || ""
+    const steamAppId = entry?.steamAppId || ""
+
+    const results = []
+    for (const source of activeSources(settings)) {
+        // A source's own id for this game, recorded by an earlier merge.
+        const sourceId = entry?.sourceIds?.[source.id]
+            || (source.id === primary.id ? igdbId : "")
+
+        const details = await detailsFromSource(settings, source.id, {
+            id: sourceId,
+            title,
+            steamAppId
+        })
+        if (details) results.push({ source: source.id, game: details })
+
+        // Stop once the page has everything it can show.
+        if (detailsComplete(results)) break
+    }
+
+    if (!results.length) {
+        // Nothing answered. Fall back to what is already stored rather than
+        // failing: the library record alone still makes a usable page.
+        if (entry) {
+            return { ...EMPTY_DETAILS, ...entry, entry, sources: entry.sources || {} }
+        }
+        throw new Error("No metadata source could return details for this game. "
+            + "Check your sources on the Import tab.")
+    }
+
+    // Base fields merge through the same helper the library uses; the rich
+    // fields merge with the same first-non-empty-wins rule.
+    const base = tracker.mergeGameSources(results)
+    const merged = { ...EMPTY_DETAILS, ...base }
+    const provenance = { ...base.sources }
+
+    for (const field of DETAIL_FIELDS) {
+        for (const { source, game } of results) {
+            if (!tracker.hasValue(game?.[field])) continue
+            merged[field] = game[field]
+            provenance[field] = source
+            break
+        }
+    }
+
+    // The stored entry fills anything no source could supply, so a game whose
+    // metadata came from a file import still shows its title and cover.
+    if (entry) {
+        for (const field of tracker.MERGED_FIELDS) {
+            if (!tracker.hasValue(merged[field]) && tracker.hasValue(entry[field])) {
+                merged[field] = entry[field]
+                provenance[field] = "stored"
+            }
+        }
+    }
+
+    return { ...merged, entry, sources: provenance }
+}
+
+// Whether every field the details page renders has been filled, so remaining
+// sources can be skipped.
+function detailsComplete(results) {
+    const base = tracker.mergeGameSources(results)
+    if (!tracker.MERGED_FIELDS.every(f => tracker.hasValue(base[f]))) return false
+    return DETAIL_FIELDS.every(field =>
+        results.some(r => tracker.hasValue(r.game?.[field])))
 }
 
 // RAWG's single-game endpoint, plus its separate screenshots endpoint.
@@ -2086,12 +2239,40 @@ async function refreshLibrary(settings) {
         }
     }
 
-    // One bulk fetch for every entry that has an IGDB id.
-    const withIgdb = entries.filter(([, raw]) => raw.igdbId).map(([, raw]) => String(raw.igdbId))
-    let fetched = new Map()
-    if (withIgdb.length) {
+    // Metadata comes from the whole chain, not just the primary source.
+    //
+    // The primary source answers by id (exact, and cheap in bulk on IGDB); every
+    // other enabled source is then asked by title for whatever that left empty.
+    // Refreshing through only the primary would mean a field it lacks could
+    // never be filled -- which was the point of having a chain at all.
+    const primary = provider(settings)
+    const withId = entries.filter(([, raw]) => raw.igdbId).map(([, raw]) => String(raw.igdbId))
+
+    let byId = new Map()
+    if (withId.length && primary.gamesByIds) {
         try {
-            fetched = await provider(settings).gamesByIds(settings, withIgdb)
+            byId = await primary.gamesByIds(settings, withId)
+        } catch (e) {
+            failed++
+        }
+    }
+
+    // Everything the primary could not fully answer goes through the chain by
+    // title. chainByTitles asks each source only about the titles still missing
+    // something, so this costs little for a library the primary already covers.
+    const needsChain = []
+    for (const [, raw] of entries) {
+        const fromPrimary = raw.igdbId ? byId.get(String(raw.igdbId)) : null
+        const candidate = fromPrimary
+            ? [{ source: primary.id, game: fromPrimary }]
+            : []
+        if (!isComplete(candidate) && raw.title) needsChain.push(String(raw.title))
+    }
+
+    let byTitleChain = new Map()
+    if (needsChain.length) {
+        try {
+            byTitleChain = await chainByTitles(settings, needsChain)
         } catch (e) {
             failed++
         }
@@ -2099,20 +2280,40 @@ async function refreshLibrary(settings) {
 
     for (const [key, raw] of entries) {
         const entry = tracker.normalizeGame(raw)
-        const details = entry.igdbId ? fetched.get(entry.igdbId) : null
 
-        if (details) {
+        // Merge in priority order: the primary source's own record first, then
+        // the chain's composite, then whatever the entry already held. The
+        // stored values come last so a field no source can supply is preserved
+        // rather than blanked.
+        const results = []
+        const fromPrimary = entry.igdbId ? byId.get(entry.igdbId) : null
+        if (fromPrimary) results.push({ source: primary.id, game: fromPrimary })
+
+        const fromChain = entry.title
+            ? byTitleChain.get(entry.title.toLowerCase())
+            : null
+        if (fromChain) results.push({ source: "chain", game: fromChain })
+
+        if (results.length) {
             const before = JSON.stringify([
                 entry.title, entry.cover, entry.summary, entry.genres,
                 entry.platforms, entry.year
             ])
 
-            entry.title = details.title || entry.title
-            entry.year = details.year || entry.year
-            entry.summary = details.summary || entry.summary
-            entry.cover = details.cover || entry.cover
-            entry.genres = details.genres || entry.genres
-            entry.platforms = details.platforms || entry.platforms
+            const merged = tracker.mergeGameSources([
+                ...results,
+                // The existing entry is the final fallback, so refresh only ever
+                // adds and corrects -- it never empties a field.
+                { source: "stored", game: entry }
+            ])
+
+            for (const field of tracker.MERGED_FIELDS) {
+                if (tracker.hasValue(merged[field])) entry[field] = merged[field]
+            }
+            // Provenance: which source each field actually came from, and each
+            // source's own id, so the details page can show it.
+            entry.sources = { ...entry.sources, ...merged.sources }
+            entry.sourceIds = { ...entry.sourceIds, ...merged.sourceIds }
 
             const after = JSON.stringify([
                 entry.title, entry.cover, entry.summary, entry.genres,
@@ -2214,25 +2415,35 @@ async function steamCheck(settings) {
 // Steam's public store API, used only as a fallback when IGDB has no entry for
 // an appid. No key required. Returns null rather than throwing, since a missing
 // store page must never fail an import.
-async function steamStoreDetails(appId) {
+// The raw appdetails payload, for callers that need fields beyond the mapped
+// shape (screenshots, developers, Metacritic). Returns null rather than
+// throwing: a missing store page must never fail a lookup.
+async function steamStoreRaw(appId) {
     try {
         const json = await getJson(`${STEAM_STORE}/appdetails?appids=${encodeURIComponent(appId)}`)
         const entry = json?.[String(appId)]
         if (!entry?.success || !entry.data) return null
-        const data = entry.data
-
-        return {
-            igdbId: "",
-            steamAppId: String(appId),
-            title: data.name || "",
-            year: /(\d{4})/.exec(data.release_date?.date || "")?.[1] || "",
-            summary: data.short_description || "",
-            cover: data.header_image || "",
-            genres: (data.genres || []).map(g => g.description).filter(Boolean).join(", "),
-            platforms: "PC (Microsoft Windows)"
-        }
+        return entry.data
     } catch (e) {
         return null
+    }
+}
+
+async function steamStoreDetails(appId) {
+    const data = await steamStoreRaw(appId)
+    if (!data) return null
+
+    return {
+        igdbId: "",
+        steamAppId: String(appId),
+        title: data.name || "",
+        year: /(\d{4})/.exec(data.release_date?.date || "")?.[1] || "",
+        summary: data.short_description || "",
+        cover: data.header_image || "",
+        genres: (data.genres || []).map(g => g.description).filter(Boolean).join(", "),
+        // Read from the OS flags rather than assumed: a Steam entry can be
+        // Mac/Linux-only, and hard-coding Windows would state that wrongly.
+        platforms: steamPlatformString(data.platforms)
     }
 }
 
