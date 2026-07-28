@@ -13,9 +13,9 @@ TV. The two are independent addons with separate libraries and settings.
 2. Choose a **metadata provider** on the Provider tab in Settings and give it a key. See
    [Metadata providers](#metadata-providers) below — if you cannot enable two-factor authentication
    on Twitch, choose RAWG.
-3. Create a note to hold your library (anywhere in your tree), then pick it on the **Library Root**
-   tab in Settings. This is required — every tracked game is created as a child of it.
-4. Optionally set up Steam on the **Steam** and **Steam ID** tabs to import your owned games.
+3. Create a note to hold your library (anywhere in your tree), then pick it at the top of the
+   **Library** tab in Settings. This is required — every tracked game is created as a child of it.
+4. Optionally set up Steam on the **Steam** tab to import your owned games.
 
 Picking a Library Root wires it up automatically: the note is converted to a **render note** pointing
 at the tracker widget and given a joystick icon, so opening it in your tree shows the tracker itself.
@@ -76,14 +76,14 @@ it.
 
 ### Steam credentials
 
-Two things are needed, both on the Steam tabs in Settings:
+Two things are needed, both on the **Steam** tab in Settings:
 
 - a **Steam Web API key**, free from [steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)
 - your **SteamID64**, the 17-digit numeric id
 
-Steam shows you a profile name, not that number, so the **Steam ID** tab converts one for you: paste
-your profile URL (`https://steamcommunity.com/id/yourname`) or just the vanity name, press **Look
-up**, and the resolved id is saved. A `/profiles/765611...` URL is recognised directly. **Check
+Steam shows you a profile name, not that number, so the lookup box lower down that tab converts one
+for you: paste your profile URL (`https://steamcommunity.com/id/yourname`) or just the vanity name,
+press **Look up**, and the resolved id is saved. A `/profiles/765611...` URL is recognised directly. **Check
 connection** then confirms the whole setup by reporting how many games Steam returns.
 
 Your Steam profile's **Game details** privacy must be set to Public. When it is not, Steam answers
@@ -101,8 +101,8 @@ The widget has three tabs.
 
 Every option carries its own count, and each dropdown is scoped by the filters before it but never by
 itself — so selecting one option never zeroes out the others, and a count always tells you how many
-rows that choice would show. Status is colour-coded throughout: grey for backlog, blue for playing,
-green for beaten, red for dropped.
+rows that choice would show. Each status carries its own colour, which you choose — see
+[Statuses](#statuses).
 
 Each row has a status dropdown, a ★ rating box (0-10, blank for unrated), a **playtime** button, and a
 **×** to remove the game. A running total of playtime across whatever is currently filtered sits
@@ -113,16 +113,57 @@ directly.
 IGDB and links any Steam-only games to their IGDB records. It never changes a rating, a status, or a
 playtime.
 
-### Status, and why nothing is auto-completed
+### Statuses
 
-The four statuses are **Backlog**, **Playing**, **Beaten**, and **Dropped**.
+Statuses are **fully customizable** on the Statuses tab in Settings. Add, rename, recolour, reorder,
+or remove them freely. The addon ships four — **Backlog**, **Playing**, **Beaten**, **Dropped** — but
+they are only a starting point.
+
+A game stores a status **id**, not its name, so renaming a status never touches your library.
+
+#### Roles
+
+Each status carries a **role**, which is how imports know what a status *means* without depending on
+what you called it:
+
+| Role | Meaning |
+|---|---|
+| Backlog | Not started |
+| Playing | In progress |
+| Done | Finished |
+| Abandoned | Stopped |
+| None | Manual only — no import ever sets it |
+
+This indirection is the point. Rename *Beaten* to *Finished*, or add your own *Wishlist* and
+*Shortlist* both carrying the Backlog role, and every import keeps working — they target the role,
+never the name. Where several statuses share a role, the first in your order wins.
+
+Give a status the **None** role to make it purely manual: useful for something like *Favourite* that
+you only ever apply yourself and never want an import to touch.
+
+If your set has no status for a role an import needs, it degrades sensibly rather than failing —
+a Done with no Done-role status falls back to Playing, so the signal is not lost entirely.
+
+**Status For New Games** on the same tab picks what a hand-added game gets. Left automatic, it always
+follows your first Backlog-role status, so it keeps working even if you reorganise later.
+
+#### Removing a status
+
+Removing a status **never changes a game that still holds it**. Those games keep it, the tracker shows
+it marked *(removed)* in dropdowns and filters, and you reassign them whenever you like. Silently
+rewriting them would destroy your own classification, so the addon refuses to.
+
+For the same reason, an import never overwrites a removed status: as far as the addon is concerned it
+is a deliberate choice you made, not corruption.
+
+### Why nothing is auto-completed
 
 Unlike the TV tracker — where watching every episode unambiguously means a show is finished — a game
 has no equivalent signal. Two hundred hours in a roguelike says nothing about whether you have
 finished it, and thirty minutes in a short indie game might be the whole thing. So **status is never
-derived from playtime**. An import will move a game out of the backlog into **Playing** once Steam
-shows it has been played, and that is as far as it goes: marking something **Beaten** is always your
-decision.
+derived from playtime**. An import will move a game out of the backlog into a Playing-role status
+once Steam shows it has been played, and that is as far as it goes: marking something finished is
+always your decision.
 
 ### Playtime
 
@@ -280,7 +321,9 @@ the data travels with the library: move or export the root and your games come a
 The key is the game's strongest known id — the IGDB id when there is one, otherwise the Steam appid.
 Keying by identity is what makes repeated imports converge on one entry instead of duplicating.
 
-`playtime` is minutes. `status` is one of `backlog`, `playing`, `beaten`, `dropped`.
+`playtime` is minutes. `status` is a **status id** — a key of the `statuses` registry in Settings.
+The shipped ids are `backlog`, `playing`, `beaten`, and `dropped`, but you can add your own, and a
+game keeps whatever id it holds even if that status is later removed.
 
 ## Import
 
@@ -318,7 +361,8 @@ noise ("Game of the Year Edition", "™") that IGDB's canonical name does not.
 - **Your ratings** are never overwritten unless you tick *Let Imports Overwrite My Ratings*.
 - **Playtime never moves backwards** — the larger of the stored and incoming value wins.
 - **Last played never moves backwards** either.
-- **Beaten is never set by an import.** Playtime cannot tell whether a game was finished.
+- **A Done-role status is never set by a Steam import.** Playtime cannot tell whether a game was
+  finished. (A *file* import may set one, because there you explicitly filed the game as played.)
 - Metadata fields are only overwritten when the import actually supplies them, so a Steam-only row
   can't blank out metadata an earlier IGDB-backed run filled in.
 
@@ -346,16 +390,19 @@ them onto tracker statuses:
 
 | In the export | Becomes |
 |---|---|
-| Want to Play | Backlog |
-| Playing | Playing |
-| Played | Beaten |
-| Entry marked *Completed* / *Finished* | Beaten |
-| Entry marked *Abandoned* | Dropped |
-| Entry marked *Currently playing* | Playing |
+| Want to Play | Backlog role |
+| Playing | Playing role |
+| Played | Done role |
+| Entry marked *Completed* / *Finished* | Done role |
+| Entry marked *Abandoned* | Abandoned role |
+| Entry marked *Currently playing* | Playing role |
 
 A per-entry status always wins over the list it sits in, so an *Abandoned* game inside **Played**
-becomes Dropped rather than Beaten. A game appearing in more than one list is imported once, taking
-the most definite status of the two.
+takes the Abandoned role rather than Done. A game appearing in more than one list is imported once,
+taking the most definite status of the two.
+
+Note that these map onto **roles**, not fixed names — so whatever you have called your own
+Done-role status is what an imported *Completed* game actually gets.
 
 Ratings are converted from IGDB's 0-100 scale to the tracker's 0-10.
 
@@ -398,8 +445,8 @@ or a hand-made spreadsheet usually imports without editing:
 Quoted fields, commas inside titles, and escaped quotes are all handled. Ratings are accepted on
 either a 0-10 or 0-100 scale (anything above 10 is treated as a percentage), and playtime is read in
 hours. Status values are matched loosely — `Completed`, `beaten`, `100%`, `finished` all become
-Beaten; `abandoned`, `quit`, `shelved` become Dropped — with anything unrecognised falling back to
-Backlog rather than being dropped.
+the Done role; `abandoned`, `quit`, `shelved` become Abandoned — with anything unrecognised falling
+back to Backlog rather than being dropped.
 
 JSON works the same way: a bare array of objects, or an object containing one, with the same field
 names.

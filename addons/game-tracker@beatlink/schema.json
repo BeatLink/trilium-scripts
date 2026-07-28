@@ -94,17 +94,51 @@
         "default": false,
         "tab": "Library"
     },
-    "defaultStatus": {
-        "type": "select",
+    "statuses": {
+        "type": "registry",
+        "label": "Statuses",
+        "description": "The statuses a game can have. Add, rename, recolour, reorder, or remove them freely. Each status carries a Role, which is how imports know what a status means without depending on its name: an import targets the role, so renaming Beaten to Finished (or adding your own Wishlist alongside Backlog) never breaks it. Removing a status leaves any game still holding it untouched — the tracker shows it as-is until you change it.",
+        "default": {
+            "backlog": { "name": "Backlog", "role": "backlog", "color": "#808080" },
+            "playing": { "name": "Playing", "role": "playing", "color": "#3884ff" },
+            "beaten": { "name": "Beaten", "role": "done", "color": "#2ea057" },
+            "dropped": { "name": "Dropped", "role": "abandoned", "color": "#db4848" }
+        },
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "description": "Shown in the status dropdown and filters.",
+                "default": "New Status"
+            },
+            "role": {
+                "type": "select",
+                "label": "Role",
+                "description": "What this status means to imports and automation. Several statuses may share a role, and 'None' means imports never set this status automatically — pick that for statuses you only ever apply by hand.",
+                "default": "none",
+                "options": [
+                    { "value": "none", "label": "None (manual only)" },
+                    { "value": "backlog", "label": "Backlog — not started" },
+                    { "value": "playing", "label": "Playing — in progress" },
+                    { "value": "done", "label": "Done — finished" },
+                    { "value": "abandoned", "label": "Abandoned — stopped" }
+                ]
+            },
+            "color": {
+                "type": "color",
+                "label": "Colour",
+                "description": "Used for this status throughout the tracker.",
+                "default": "#808080"
+            }
+        },
+        "tab": "Statuses"
+    },
+    "defaultStatusId": {
+        "type": "string",
+        "hidden": true,
         "label": "Status For New Games",
-        "description": "Applied to a game added by hand from search. Imports set status from playtime instead.",
-        "default": "backlog",
-        "options": [
-            { "value": "backlog", "label": "Backlog" },
-            { "value": "playing", "label": "Playing" },
-            { "value": "beaten", "label": "Beaten" },
-            { "value": "dropped", "label": "Dropped" }
-        ],
+        "description": "Which status a game added by hand gets. Chosen on the Statuses tab; falls back to the first backlog-role status when unset.",
+        "default": "",
         "tab": "Library"
     },
     "coverSize": {

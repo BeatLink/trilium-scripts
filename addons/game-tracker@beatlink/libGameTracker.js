@@ -12,7 +12,7 @@
  *       "<key>": {
  *         igdbId, steamAppId,
  *         title, year, summary, cover, genres, platforms,
- *         status: "backlog" | "playing" | "beaten" | "dropped",
+ *         status: "<status id>",      // a key of the `statuses` registry
  *         rating: 0..10 | null,
  *         playtime: minutes,          // total, from Steam or entered by hand
  *         lastPlayed: "YYYY-MM-DD",
@@ -33,7 +33,129 @@
  * completion is the user's call and is never derived from playtime.
  */
 
-const STATUSES = ["backlog", "playing", "beaten", "dropped"]
+// --- statuses ---------------------------------------------------------------
+//
+// Statuses are user-defined. The four below are what the addon ships, and they
+// are only a fallback: the real set lives in the `statuses` registry in
+// settings, where they can be renamed, recoloured, reordered, added to, or
+// removed.
+//
+// A game stores a status *id* (the registry key), not a display name, so
+// renaming a status never touches a single game.
+//
+// Nothing in the addon keys behaviour off a status id or name. Behaviour keys
+// off a status's ROLE:
+//
+//   backlog    not started
+//   playing    in progress
+//   done       finished
+//   abandoned  stopped
+//   none       manual only; imports never set it
+//
+// That indirection is the whole point. "Beaten" can be renamed to "Finished",
+// and "Someday" and "Shortlist" can both carry the backlog role, without any
+// import or status-derivation logic changing.
+
+const SHIPPED_STATUSES = {
+    backlog: { name: "Backlog", role: "backlog", color: "#808080" },
+    playing: { name: "Playing", role: "playing", color: "#3884ff" },
+    beaten: { name: "Beaten", role: "done", color: "#2ea057" },
+    dropped: { name: "Dropped", role: "abandoned", color: "#db4848" }
+}
+
+const ROLES = ["none", "backlog", "playing", "done", "abandoned"]
+
+// The status list as an ordered array of { id, name, role, color }.
+//
+// Registries preserve insertion order, which is the order the user arranged, so
+// it is kept as-is. Falls back to the shipped set when settings hold nothing
+// usable, so the tracker is never left with no statuses at all.
+function listStatuses(statusesValue) {
+    const source = (statusesValue && typeof statusesValue === "object" && !Array.isArray(statusesValue)
+        && Object.keys(statusesValue).length)
+        ? statusesValue
+        : SHIPPED_STATUSES
+
+    const out = []
+    for (const [id, entry] of Object.entries(source)) {
+        if (!id || !entry || typeof entry !== "object") continue
+        const name = typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : id
+        out.push({
+            id,
+            name,
+            role: ROLES.includes(entry.role) ? entry.role : "none",
+            color: typeof entry.color === "string" && entry.color.trim() ? entry.color.trim() : "#808080"
+        })
+    }
+    return out.length ? out : listStatuses(null)
+}
+
+function statusById(statuses, id) {
+    return statuses.find(s => s.id === id) || null
+}
+
+// The first status carrying `role`, or null. First rather than only: several
+// statuses may legitimately share a role, and the earliest in the user's own
+// order is the reasonable default among them.
+function statusForRole(statuses, role) {
+    return statuses.find(s => s.role === role) || null
+}
+
+// The id an import should use for a role, falling back through roles that still
+// make sense before giving up. A library with no "done" status should not lose
+// an import's completion signal entirely, so it degrades to playing.
+const ROLE_FALLBACKS = {
+    backlog: ["backlog", "none"],
+    playing: ["playing", "backlog"],
+    done: ["done", "playing"],
+    abandoned: ["abandoned", "done", "playing"]
+}
+
+function statusIdForRole(statuses, role) {
+    for (const candidate of ROLE_FALLBACKS[role] || [role]) {
+        const found = statusForRole(statuses, candidate)
+        if (found) return found.id
+    }
+    return statuses[0]?.id || ""
+}
+
+// The status a newly added game gets: the user's explicit choice when it still
+// exists, else the first backlog-role status, else the first status.
+function defaultStatusId(statuses, configuredId) {
+    if (configuredId && statusById(statuses, configuredId)) return configuredId
+    return statusIdForRole(statuses, "backlog")
+}
+
+// A game may hold a status that has since been removed from settings. That is
+// not corruption and must not be silently rewritten -- doing so would lose the
+// user's own classification. It is surfaced as a synthetic entry instead, so the
+// tracker can display it, filter on it, and let the user change it deliberately.
+function resolveStatus(statuses, id) {
+    if (!id) return null
+    return statusById(statuses, id) || {
+        id,
+        name: id,
+        role: "none",
+        color: "#808080",
+        missing: true
+    }
+}
+
+// Every status id in use across the library that settings no longer defines.
+function orphanStatusIds(doc, statuses) {
+    const known = new Set(statuses.map(s => s.id))
+    const seen = new Set()
+    for (const entry of Object.values(doc.games || {})) {
+        const id = entry?.status
+        if (id && !known.has(id)) seen.add(id)
+    }
+    return [...seen]
+}
+
+// Legacy: the ids the addon originally hardcoded. Still exported because a
+// document written before statuses were customizable holds exactly these, and
+// they remain the shipped ids, so nothing needs migrating.
+const STATUSES = Object.keys(SHIPPED_STATUSES)
 
 // IGDB serves images from a fixed path with an interchangeable size segment.
 // Verified against api-docs.igdb.com: https://images.igdb.com/igdb/image/upload/t_{size}/{hash}.jpg
@@ -59,18 +181,29 @@ function formatPlaytime(minutes) {
     return rest ? `${hours}h ${rest}m` : `${hours}h`
 }
 
-// --- status -----------------------------------------------------------------
+// --- status derivation ------------------------------------------------------
 //
 // Unlike shows, status is never derived from progress: playtime cannot tell
 // whether a game was finished. An import may move a game out of the backlog
-// once it has been played, but only that far -- calling something "beaten" is
+// once it has been played, but only that far -- calling something finished is
 // always the user's decision.
-function statusFromPlaytime(previousStatus, minutes) {
+//
+// Works entirely in terms of roles, so it behaves identically whatever the user
+// has named or coloured their statuses.
+function statusFromPlaytime(statuses, previousStatusId, minutes) {
     const played = Number(minutes) || 0
-    if (played <= 0) return previousStatus || "backlog"
-    // Anything the user has already classified is left alone.
-    if (previousStatus && previousStatus !== "backlog") return previousStatus
-    return "playing"
+    const previous = previousStatusId
+        ? statusById(statuses, previousStatusId)
+        : null
+
+    if (played <= 0) return previousStatusId || statusIdForRole(statuses, "backlog")
+
+    // Anything the user has already classified beyond "not started" is left
+    // alone. A status the settings no longer define counts as classified too:
+    // it is the user's own, and an import must not overwrite it.
+    if (previousStatusId && (!previous || previous.role !== "backlog")) return previousStatusId
+
+    return statusIdForRole(statuses, "playing")
 }
 
 // --- document ---------------------------------------------------------------
@@ -137,7 +270,14 @@ function normalizeGame(entry) {
         cover: typeof entry?.cover === "string" ? entry.cover : "",
         genres: typeof entry?.genres === "string" ? entry.genres : "",
         platforms: typeof entry?.platforms === "string" ? entry.platforms : "",
-        status: STATUSES.includes(entry?.status) ? entry.status : "backlog",
+        // Any non-empty string is kept verbatim. Statuses are user-defined, so
+        // this cannot validate against a fixed list -- and must not, since
+        // rewriting an unrecognised status would silently destroy the user's own
+        // classification the moment they renamed or removed one. Display-time
+        // resolution (resolveStatus) handles ids settings no longer defines.
+        status: typeof entry?.status === "string" && entry.status.trim()
+            ? entry.status.trim()
+            : "backlog",
         rating: Number.isFinite(rating) && rating > 0 ? rating : null,
         playtime: Number.isFinite(playtime) && playtime > 0 ? Math.round(playtime) : 0,
         lastPlayed: typeof entry?.lastPlayed === "string" ? entry.lastPlayed : "",
@@ -360,19 +500,26 @@ function parseGameLink(input) {
 // Only `title` is required. Rows carrying an id are matched on it directly;
 // title-only rows have to be resolved against IGDB by name, which is why the
 // importer previews its matches before writing anything.
+//
+// A row's `status` is a ROLE, not a status id. The file says something means
+// "finished"; which of the user's statuses that becomes is decided at import
+// time by statusIdForRole. That keeps every parser independent of whatever the
+// user has named their statuses.
 
-// IGDB's GDPR export status values, per list. The export carries a list name
-// ("Played") and optionally a finer per-entry status ("Completed", "Abandoned"),
-// so the entry status wins where present and the list name is the fallback.
+// IGDB's GDPR export status values, per list, mapped to roles. The export
+// carries a list name ("Played") and optionally a finer per-entry status
+// ("Completed", "Abandoned"), so the entry status wins where present and the
+// list name is the fallback.
 //
 // Verified against a real export: list sections are "Want to Play", "Playing",
 // and "Played"; entry statuses seen are "", "Backlog", "Currently playing",
 // "Completed", "Finished", and "Abandoned".
 const IGDB_ENTRY_STATUS = {
-    "completed": "beaten",
-    "finished": "beaten",
-    "abandoned": "dropped",
-    "dropped": "dropped",
+    "completed": "done",
+    "finished": "done",
+    "beaten": "done",
+    "abandoned": "abandoned",
+    "dropped": "abandoned",
     "currently playing": "playing",
     "playing": "playing",
     "backlog": "backlog",
@@ -383,18 +530,18 @@ const IGDB_LIST_STATUS = {
     "want to play": "backlog",
     "wishlist": "backlog",
     "playing": "playing",
-    "played": "beaten"
+    "played": "done"
 }
 
 // A list called "Played" means the game was played, not necessarily finished.
-// Beaten is the closest honest mapping for a list the user themselves filed as
-// played, but an entry status always overrides it -- "Abandoned" inside "Played"
-// is a drop, not a completion.
+// The done role is the closest honest mapping for a list the user themselves
+// filed as played, but an entry status always overrides it -- "Abandoned" inside
+// "Played" is a drop, not a completion.
 function igdbStatusFor(listName, entryStatus) {
     const entry = String(entryStatus || "").trim().toLowerCase()
     if (entry && IGDB_ENTRY_STATUS[entry]) return IGDB_ENTRY_STATUS[entry]
     const list = String(listName || "").trim().toLowerCase()
-    return IGDB_LIST_STATUS[list] || "backlog"
+    return IGDB_LIST_STATUS[list] || "backlog"  // role, not an id
 }
 
 // Strip HTML tags and decode the handful of entities an export actually
@@ -502,7 +649,8 @@ function parseIgdbExport(html) {
 //
 // Status precedence follows how definite each one is: an explicit finished or
 // dropped state beats "currently playing", which beats a bare backlog entry.
-const STATUS_RANK = { backlog: 0, playing: 1, dropped: 2, beaten: 3 }
+// Ranked by how definite each ROLE is, for collapsing duplicate rows.
+const STATUS_RANK = { backlog: 0, playing: 1, abandoned: 2, done: 3 }
 
 function mergeRows(rows) {
     const byTitle = new Map()
@@ -599,26 +747,25 @@ function matchColumn(headers, aliases) {
     return -1
 }
 
-// Free-text status values from wherever the CSV came from, mapped onto the
-// tracker's four. Anything unrecognised falls back to backlog rather than being
+// Free-text status values from wherever the CSV came from, mapped onto roles.
+// Anything unrecognised falls back to the backlog role rather than being
 // dropped, so a row is never silently lost.
 const CSV_STATUS = {
     ...IGDB_ENTRY_STATUS,
-    "beaten": "beaten",
-    "complete": "beaten",
-    "100%": "beaten",
-    "played": "beaten",
+    "complete": "done",
+    "completed": "done",
+    "100%": "done",
+    "played": "done",
     "in progress": "playing",
     "started": "playing",
     "now playing": "playing",
-    "want to play": "backlog",
-    "wishlist": "backlog",
     "plan to play": "backlog",
     "unplayed": "backlog",
     "never played": "backlog",
-    "on hold": "dropped",
-    "quit": "dropped",
-    "shelved": "dropped"
+    "not started": "backlog",
+    "on hold": "abandoned",
+    "quit": "abandoned",
+    "shelved": "abandoned"
 }
 
 function parseGameCsv(text) {
@@ -644,7 +791,7 @@ function parseGameCsv(text) {
 
         if (at.status >= 0) {
             const raw = String(cells[at.status] || "").trim().toLowerCase()
-            if (raw) row.status = CSV_STATUS[raw] || "backlog"
+            if (raw) row.status = CSV_STATUS[raw] || "backlog"  // role
         }
         if (at.rating >= 0) {
             const rating = Number(cells[at.rating])
@@ -713,7 +860,7 @@ function parseGameJson(text) {
         const row = { title }
 
         const status = String(pick(entry, CSV_COLUMNS.status) || "").trim().toLowerCase()
-        if (status) row.status = CSV_STATUS[status] || "backlog"
+        if (status) row.status = CSV_STATUS[status] || "backlog"  // role
 
         const rating = Number(pick(entry, CSV_COLUMNS.rating))
         if (Number.isFinite(rating) && rating > 0) {
@@ -862,6 +1009,15 @@ function listGames(doc) {
 
 module.exports = {
     STATUSES,
+    SHIPPED_STATUSES,
+    ROLES,
+    listStatuses,
+    statusById,
+    statusForRole,
+    statusIdForRole,
+    defaultStatusId,
+    resolveStatus,
+    orphanStatusIds,
     IMAGE_BASE,
     coverUrl,
     formatPlaytime,

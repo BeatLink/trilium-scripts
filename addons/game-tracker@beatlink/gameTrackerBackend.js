@@ -699,6 +699,15 @@ function provider(settings) {
 
 // --- file import ------------------------------------------------------------
 
+// A status colour as an inline style, matching what the widget builds for its
+// own badges. Produced here because the preview rows are assembled server-side.
+function statusStyleFor(color) {
+    const hex = /^#?([0-9a-f]{6})$/i.exec(String(color || "").trim())
+    const n = hex ? parseInt(hex[1], 16) : 0x808080
+    const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
+    return `background: rgba(${rgb}, 0.16); border-color: rgba(${rgb}, 0.6);`
+}
+
 // Parse an uploaded library file and report what it contains WITHOUT writing
 // anything. Every title is resolved against IGDB so the caller can see exactly
 // what matched before committing -- a title-matched import is a guess, and a
@@ -713,16 +722,31 @@ async function previewImportFile(settings, text, filename) {
         : new Map()
 
     const doc = loadDocument(settings)
+    const statuses = tracker.listStatuses(settings.statuses)
 
     const rows = parsed.rows.map(row => {
         const hit = matched.get(String(row.title || "").trim().toLowerCase())
+        // A parsed row carries a ROLE; resolve it here so the preview shows the
+        // status the import would actually apply, under the user's own name for
+        // it, rather than an internal role word.
+        const resolvedStatusId = row.status
+            ? tracker.statusIdForRole(statuses, row.status)
+            : ""
+        const resolvedStatus = resolvedStatusId
+            ? tracker.statusById(statuses, resolvedStatusId)
+            : null
         const identity = {
             igdbId: row.igdbId || hit?.igdbId || "",
             steamAppId: row.steamAppId || ""
         }
         return {
             title: row.title,
+            // The role, kept as-is: applyFileImport resolves it again at write
+            // time, so a status added between preview and import is honoured.
             status: row.status || "",
+            // What that role resolves to right now, for display only.
+            statusName: resolvedStatus?.name || "",
+            statusStyle: resolvedStatus ? statusStyleFor(resolvedStatus.color) : "",
             rating: row.rating ?? null,
             playtime: row.playtime || 0,
             list: row.list || "",
@@ -824,6 +848,7 @@ async function importFile(settings, payload, options) {
 // collections. Everything else -- additive, one read, one write, ratings and
 // playtime preserved -- matches applyImport exactly.
 function applyFileImport(settings, doc, items) {
+    const statuses = tracker.listStatuses(settings.statuses)
     let added = 0
     let updated = 0
 
@@ -872,12 +897,21 @@ function applyFileImport(settings, doc, items) {
             entry.lastPlayed = String(item.lastPlayed).slice(0, 10)
         }
 
-        // A status the user set in Trilium is only overwritten by a brand-new
-        // entry, or when the file is more definite than an untouched backlog.
+        // The file supplies a ROLE; which of the user's statuses that becomes is
+        // decided here. A status the user set in Trilium is only overwritten by a
+        // brand-new entry, or when the existing one is still an untouched backlog.
         if (item.fileStatus) {
             const isNew = !existingKey
-            const untouched = !previous.status || previous.status === "backlog"
-            if (isNew || untouched) entry.status = item.fileStatus
+            const previousStatus = previous.status
+                ? tracker.statusById(statuses, previous.status)
+                : null
+            // A status settings no longer define counts as deliberate, not
+            // untouched: it is the user's own classification.
+            const untouched = !previous.status
+                || (previousStatus && previousStatus.role === "backlog")
+            if (isNew || untouched) {
+                entry.status = tracker.statusIdForRole(statuses, item.fileStatus)
+            }
         }
 
         doc.games[key] = entry
@@ -923,7 +957,9 @@ function upsertGame(settings, details) {
 
     doc.games[key] = tracker.normalizeGame({
         ...details,
-        status: settings.defaultStatus || "backlog",
+        status: tracker.defaultStatusId(
+            tracker.listStatuses(settings.statuses), settings.defaultStatusId
+        ),
         addedAt: today()
     })
     saveDocument(settings, doc)
@@ -937,11 +973,21 @@ function requireEntry(doc, key) {
 }
 
 function setStatus(settings, key, status) {
-    if (!tracker.STATUSES.includes(status)) throw new Error(`Unknown status: ${status}`)
+    const statuses = tracker.listStatuses(settings.statuses)
+    // Validated against the user's own set rather than a fixed list. An id the
+    // settings no longer define is still accepted when a game already holds it,
+    // so re-selecting a removed status from the dropdown is not an error.
+    const known = tracker.statusById(statuses, status)
     const doc = loadDocument(settings)
     const entry = requireEntry(doc, key)
+    if (!known && entry.status !== status) {
+        throw new Error(`Unknown status: ${status}`)
+    }
     entry.status = status
-    if (status === "playing" || status === "beaten") entry.lastPlayed = today()
+    // Stamped only for roles that imply the game was actually played.
+    if (known && (known.role === "playing" || known.role === "done")) {
+        entry.lastPlayed = today()
+    }
     saveDocument(settings, doc)
     return { ok: true }
 }
@@ -1563,7 +1609,9 @@ function applyImport(settings, items) {
         // shows the game has been played. Whether it was finished is the user's
         // call, so an import never sets "beaten".
         if (settings.importMarksPlaying !== false) {
-            entry.status = tracker.statusFromPlaytime(previous.status, playtime)
+            entry.status = tracker.statusFromPlaytime(
+                tracker.listStatuses(settings.statuses), previous.status, playtime
+            )
         }
 
         doc.games[key] = entry
@@ -1598,8 +1646,20 @@ async function handle() {
                 const doc = loadDocument(settings)
                 const collections = tracker.listCollections(doc)
                 const groupConfig = tracker.parseGroupConfig(settings.collectionGroups)
+                const statuses = tracker.listStatuses(settings.statuses)
+                // Any status id still in use that settings no longer define, so
+                // the widget can offer it in filters and dropdowns rather than
+                // rendering those games as blank.
+                const orphans = tracker.orphanStatusIds(doc, statuses)
                 return sendJson(200, {
                     games: tracker.listGames(doc),
+                    // The user's own statuses, in their order, plus any orphans
+                    // appended so nothing in the library is unrepresentable.
+                    statuses: [
+                        ...statuses,
+                        ...orphans.map(id => tracker.resolveStatus(statuses, id))
+                    ],
+                    defaultStatusId: tracker.defaultStatusId(statuses, settings.defaultStatusId),
                     collections,
                     // One entry per group that actually has collections; the
                     // widget renders a dropdown for each.
@@ -1625,6 +1685,10 @@ async function handle() {
                     }))
                 })
             }
+            // The user's statuses, for pickers that can't enumerate them from
+            // schema.json because they are user-defined.
+            case "listStatuses":
+                return sendJson(200, { statuses: tracker.listStatuses(settings.statuses) })
             case "setHiddenGenres":
                 persistFields({ hiddenGenres: String(query.hiddenGenres || "") })
                 return sendJson(200, { ok: true })

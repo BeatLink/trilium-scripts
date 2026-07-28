@@ -239,6 +239,97 @@ function SteamIdPanel({ schemaNoteId, configNoteId }) {
     )
 }
 
+// Explains what a status's Role is for. Worth stating plainly on the tab
+// itself: the registry editor shows a "Role" dropdown with no obvious meaning,
+// and getting it wrong is what makes imports behave oddly later.
+function StatusHelp() {
+    return (
+        <div>
+            <p class="gt-hint">
+                Add, rename, recolour, reorder, or remove statuses freely. A game stores the
+                status <em>id</em>, not its name, so renaming one never touches your library.
+            </p>
+            <p class="gt-hint">
+                Each status has a <strong>Role</strong>, which is how imports know what it means
+                without depending on its name. Rename <em>Beaten</em> to <em>Finished</em>, or add
+                your own <em>Wishlist</em> alongside <em>Backlog</em>, and imports keep working.
+                Several statuses can share a role — the first one in your order wins when an import
+                needs to pick. Give a status the role <strong>None</strong> to make it manual-only,
+                so no import ever sets it automatically.
+            </p>
+            <p class="gt-hint">
+                Removing a status never changes a game that still holds it. Those games keep it,
+                the tracker shows it marked <em>(removed)</em>, and you can reassign them whenever
+                you like.
+            </p>
+        </div>
+    )
+}
+
+// Which status a hand-added game gets. A `reference`-style picker rather than a
+// schema `select`, because the options are the user's own statuses and so
+// cannot be enumerated in schema.json.
+function DefaultStatusPicker({ schemaNoteId, configNoteId }) {
+    const [statuses, setStatuses] = useState(null)
+    const [chosen, setChosen] = useState("")
+    const [busy, setBusy] = useState(false)
+    const [status, setStatus] = useState(null)
+
+    const load = async () => {
+        try {
+            const values = await loadSettings(schemaNoteId, configNoteId)
+            const { statuses } = await callBackend("listStatuses")
+            setStatuses(statuses)
+            setChosen(values.defaultStatusId || "")
+        } catch (e) {
+            setStatus({ error: e.message })
+        }
+    }
+
+    useEffect(() => { load() }, [])
+
+    const save = async (value) => {
+        setBusy(true)
+        setChosen(value)
+        try {
+            const values = await loadSettings(schemaNoteId, configNoteId)
+            values.defaultStatusId = value
+            await saveSettings(schemaNoteId, configNoteId, values)
+            setStatus({ ok: "Saved." })
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    if (status?.error) return <p class="gt-error">{status.error}</p>
+    if (!statuses) return <p class="gt-hint">Loading statuses...</p>
+
+    return (
+        <div>
+            <div className="lst-field-row">
+                <label>Status For New Games</label>
+                <select class="gt-select" value={chosen} disabled={busy}
+                    onChange={e => save(e.target.value)}>
+                    {/* Blank means "decide from roles", which keeps working even
+                        if the chosen status is later removed. */}
+                    <option value="">First backlog status (automatic)</option>
+                    {statuses.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                </select>
+            </div>
+            <p class="gt-hint">
+                Applied to a game added by hand from search. Imports choose by role instead.
+                Leave this automatic and it always follows your first Backlog-role status, even
+                if you reorganise your statuses later.
+            </p>
+            {status?.ok && <p class="gt-ok">{status.ok}</p>}
+        </div>
+    )
+}
+
 // Which genres appear in the Library's genre filter. Genres come from IGDB, so
 // this lists whatever the library actually contains rather than a fixed
 // vocabulary -- and it shows hidden ones too, since they must remain un-hideable.
@@ -599,25 +690,61 @@ export default function GameTrackerSettings() {
         )
     }
 
-    // The Library Root field is `hidden` in the schema so the form doesn't render
-    // it twice — this panel owns it, because picking a note has side effects
-    // beyond storing the id. It gets its own tab rather than joining "Library":
-    // an extra panel sharing a schema tab's label replaces that tab's fields.
+    // An extra panel sharing a schema tab's label REPLACES that tab's fields
+    // rather than appending to them, so a tab that needs both (the Library Root
+    // picker plus the Library settings, the Steam ID lookup plus the Steam keys)
+    // renders the schema fields itself with a nested `only`-scoped form and puts
+    // the custom widget alongside. That is what keeps Library Root inside
+    // "Library" and Steam ID inside "Steam" instead of each needing its own tab.
     const extraPanels = [
         {
-            tab: "Library Root",
+            tab: "Library",
             render: () => (
-                <LibraryRootPicker
-                    schemaNoteId={schemaNoteId}
-                    configNoteId={configNoteId}
-                    initialNoteId={libraryRootNoteId}
-                />
+                <div>
+                    <LibraryRootPicker
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                        initialNoteId={libraryRootNoteId}
+                    />
+                    <hr class="gt-rule" />
+                    <SettingsForm
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                        only="Library"
+                    />
+                </div>
             )
         },
         {
-            tab: "Steam ID",
+            tab: "Statuses",
             render: () => (
-                <SteamIdPanel schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+                <div>
+                    <StatusHelp />
+                    <SettingsForm
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                        only="Statuses"
+                    />
+                    <hr class="gt-rule" />
+                    <DefaultStatusPicker
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                    />
+                </div>
+            )
+        },
+        {
+            tab: "Steam",
+            render: () => (
+                <div>
+                    <SettingsForm
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                        only="Steam"
+                    />
+                    <hr class="gt-rule" />
+                    <SteamIdPanel schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+                </div>
             )
         },
         {

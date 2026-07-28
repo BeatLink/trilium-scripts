@@ -17,11 +17,41 @@ import { loadSettings } from "libSettingsUI.jsx"
 
 const ENDPOINT = "custom/gameTracker"
 
-const STATUS_LABELS = {
-    backlog: "Backlog",
-    playing: "Playing",
-    beaten: "Beaten",
-    dropped: "Dropped"
+// Statuses are user-defined and arrive from the backend with the library, so
+// there is no fixed label map here. These helpers turn that list into what the
+// UI needs.
+//
+// Colours are per-status hex values rather than CSS classes, because a class
+// can only cover a set known at build time. They are applied as inline styles
+// built the same way the old .gt-status-* rules were: a translucent fill plus a
+// stronger border, so a status reads correctly against both the light and dark
+// Trilium themes without hard-coding a background.
+
+const FALLBACK_STATUS = { id: "", name: "—", color: "#808080", role: "none" }
+
+function findStatus(statuses, id) {
+    return (statuses || []).find(s => s.id === id)
+        // A game holding a status settings no longer define still has to render.
+        || (id ? { id, name: id, color: "#808080", role: "none", missing: true } : FALLBACK_STATUS)
+}
+
+function statusLabel(statuses, id) {
+    return findStatus(statuses, id).name
+}
+
+// #rrggbb -> "r, g, b", so one stored colour drives both the fill and the
+// border at different alphas. Falls back to grey on anything unparseable.
+function rgbOf(color) {
+    const hex = /^#?([0-9a-f]{6})$/i.exec(String(color || "").trim())
+    if (!hex) return "128, 128, 128"
+    const n = parseInt(hex[1], 16)
+    return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
+}
+
+function statusStyle(statuses, id) {
+    if (!id) return ""
+    const rgb = rgbOf(findStatus(statuses, id).color)
+    return `background: rgba(${rgb}, 0.16); border-color: rgba(${rgb}, 0.6);`
 }
 
 async function callBackend(action, params = {}) {
@@ -146,7 +176,7 @@ function groupByCollection(games) {
 
 // --- details page -----------------------------------------------------------
 
-function DetailsPage({ game, onBack, onChanged, showGenres = true }) {
+function DetailsPage({ game, onBack, onChanged, showGenres = true, statuses = [] }) {
     const [data, setData] = useState(null)
     const [error, setError] = useState(null)
 
@@ -188,8 +218,9 @@ function DetailsPage({ game, onBack, onChanged, showGenres = true }) {
                             <div class="gt-row-meta">
                                 {data.year && <span>{data.year}</span>}
                                 {data.entry?.status && (
-                                    <span class={`gt-badge gt-status-${data.entry.status}`}>
-                                        {STATUS_LABELS[data.entry.status]}
+                                    <span class="gt-badge"
+                                        style={statusStyle(statuses, data.entry.status)}>
+                                        {statusLabel(statuses, data.entry.status)}
                                     </span>
                                 )}
                                 {data.entry?.rating != null && <span>★ {data.entry.rating}/10</span>}
@@ -288,7 +319,7 @@ function DetailsPage({ game, onBack, onChanged, showGenres = true }) {
 
 function GameRow({
     game, onChanged, onOpenDetails,
-    allCollections = [], collectionGroups = []
+    allCollections = [], collectionGroups = [], statuses = []
 }) {
     const [busy, setBusy] = useState(false)
     const [editingTags, setEditingTags] = useState(false)
@@ -442,14 +473,17 @@ function GameRow({
                 </div>
                 <div class="gt-row-actions">
                     <select
-                        class={`gt-select gt-status-${game.status || "backlog"}`}
+                        class="gt-select"
+                        style={statusStyle(statuses, game.status)}
                         disabled={busy}
-                        value={game.status || "backlog"}
+                        value={game.status}
                         onChange={e => update(() =>
                             callBackend("setStatus", { key: game.key, status: e.target.value }))}
                     >
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>{label}</option>
+                        {statuses.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}{s.missing ? " (removed)" : ""}
+                            </option>
                         ))}
                     </select>
                     <label class="gt-rating-field" title="Your rating, 0-10. Leave blank for unrated.">
@@ -516,6 +550,9 @@ function LibraryTab({ libraryRootNoteId, settings }) {
     const [collections, setCollections] = useState([])
     const [genres, setGenres] = useState([])
     const [platforms, setPlatforms] = useState([])
+    // The user's own statuses, in their order, plus any still in use that
+    // settings no longer define. Owned by the backend so there is one source.
+    const [statuses, setStatuses] = useState([])
     const [genreFilter, setGenreFilter] = useState(settings.viewGenreFilter || "all")
     // [[groupName, [collectionName, ...]], ...] from the backend.
     const [collectionGroups, setCollectionGroups] = useState([])
@@ -551,6 +588,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
             setCollectionGroups(listed.collectionGroups || [])
             setGenres(listed.genres || [])
             setPlatforms(listed.platforms || [])
+            setStatuses(listed.statuses || [])
             setError(null)
         } catch (e) {
             setError(e.message)
@@ -618,6 +656,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                 onBack={() => setDetailsKey(null)}
                 onChanged={reload}
                 showGenres={settings.genresEnabled !== false}
+                statuses={statuses}
             />
         )
     }
@@ -771,12 +810,15 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                     Status
                     {/* The colour follows the selection, so the dropdown itself
                         shows the status palette rather than only the options. */}
-                    <select class={`gt-select ${filter === "all" ? "" : `gt-status-${filter}`}`} value={filter}
+                    <select class="gt-select"
+                        style={filter === "all" ? "" : statusStyle(statuses, filter)}
+                        value={filter}
                         onChange={e => { setFilter(e.target.value); rememberView({ statusFilter: e.target.value }) }}>
                         <option value="all">All ({scoped.length})</option>
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                                {label} ({scoped.filter(g => g.status === value).length})
+                        {statuses.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}{s.missing ? " (removed)" : ""}
+                                {" "}({scoped.filter(g => g.status === s.id).length})
                             </option>
                         ))}
                     </select>
@@ -906,6 +948,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                                 onOpenDetails={g => setDetailsKey(g.key)}
                                 allCollections={collections}
                                 collectionGroups={collectionGroups}
+                                statuses={statuses}
                             />
                         ))}
                     </div>
@@ -918,6 +961,7 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                         onOpenDetails={g => setDetailsKey(g.key)}
                         allCollections={collections}
                         collectionGroups={collectionGroups}
+                        statuses={statuses}
                     />
                 ))}
         </div>
@@ -1206,9 +1250,9 @@ function FileImportPanel({ settings, onImported }) {
                                         <span class="gt-hint"> → {r.matchedTitle}</span>
                                     )}
                                 </span>
-                                {r.status && (
-                                    <span class={`gt-badge gt-status-${r.status}`}>
-                                        {STATUS_LABELS[r.status]}
+                                {r.statusName && (
+                                    <span class="gt-badge" style={r.statusStyle || ""}>
+                                        {r.statusName}
                                     </span>
                                 )}
                                 {r.existingKey && <span class="gt-hint">already tracked</span>}

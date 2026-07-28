@@ -397,27 +397,18 @@
     color: var(--main-text-color);
 }
 
-/* Status palette. Translucent fills rather than solid colours so they composite
-   over both the light and dark Trilium themes without hard-coding a background,
-   and the border carries the hue at higher contrast than the fill alone. */
-.gt-status-backlog {
-    background: rgba(128, 128, 128, 0.16);
-    border-color: rgba(128, 128, 128, 0.55);
-}
+/* Status colours are user-defined, so they are applied as inline styles built at
+   render time (see statusStyle in gameTracker.jsx) rather than as fixed classes
+   here -- a class set can only cover statuses known when the CSS was written.
+   The inline styles use the same translucent-fill-plus-stronger-border pattern
+   the old fixed classes did, so they composite over both the light and dark
+   Trilium themes without hard-coding a background. */
 
-.gt-status-playing {
-    background: rgba(56, 132, 255, 0.16);
-    border-color: rgba(56, 132, 255, 0.6);
-}
-
-.gt-status-beaten {
-    background: rgba(46, 160, 87, 0.16);
-    border-color: rgba(46, 160, 87, 0.6);
-}
-
-.gt-status-dropped {
-    background: rgba(219, 72, 72, 0.16);
-    border-color: rgba(219, 72, 72, 0.6);
+/* Separates a custom panel from the schema fields sharing its tab. */
+.gt-rule {
+    border: none;
+    border-top: 1px solid var(--main-border-color);
+    margin: 16px 0;
 }
 
 /* The rating input is otherwise an unlabelled number box sitting next to the
