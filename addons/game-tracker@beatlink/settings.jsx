@@ -124,6 +124,20 @@ function LibraryRootPicker({ schemaNoteId, configNoteId, initialNoteId }) {
                 Every tracked game is created as a child of this note, and the note itself becomes
                 the tracker UI. Clearing it reverts the previously-chosen note back to a text note.
             </p>
+            {/* The tracker reads this value back through a different path than
+                the one that saves it here (widget -> settingsNote -> configNote,
+                versus this page's own configNote relation). If the two ever
+                resolve to different notes, a root saved here reads back as unset
+                over there -- so name the note being written to, for comparison
+                with the id the tracker reports. */}
+            <details class="gt-diag">
+                <summary class="gt-hint">Where is this saved?</summary>
+                <p class="gt-hint">
+                    Config note <code class="gt-code gt-selectable">{configNoteId || "unknown"}</code>.
+                    If the tracker still says no library root is set, check that it reports the same
+                    id — a mismatch means the addon needs reinstalling in TAM.
+                </p>
+            </details>
             {/* Re-runs the wiring on the note already selected. Needed because
                 picking the same note again is a no-op, so a root that was set
                 while the addon was disabled (or before it wired roots at all)
@@ -524,14 +538,33 @@ export default function GameTrackerSettings() {
     const [backNoteId, setBackNoteId] = useState("")
     const [genresDisabled, setGenresDisabled] = useState(false)
     const [ready, setReady] = useState(false)
+    const [loadError, setLoadError] = useState("")
 
     useEffect(() => {
         (async () => {
+            // TAM renames activation attributes to `disabled:<name>` while an
+            // addon is disabled, so both spellings are accepted. Without this a
+            // disabled addon resolves nothing, loadSettings falls back to schema
+            // defaults, and a saved Library Root reads back as empty -- which
+            // looks exactly like never having set one.
             const schema = await api.currentNote.getRelationValue("schemaNote")
-            const target = await api.currentNote.getRelationTarget("configNote")
+                || await api.currentNote.getRelationValue("disabled:schemaNote")
+            const config = await api.currentNote.getRelationValue("configNote")
+                || await api.currentNote.getRelationValue("disabled:configNote")
+
+            if (!schema || !config) {
+                setLoadError(
+                    "This settings page has no schemaNote/configNote relation, so there is nowhere "
+                    + "to read or save settings. That normally means game-tracker is installed but "
+                    + "not enabled in TAM — enable it, then reload this page."
+                )
+                setReady(true)
+                return
+            }
+
             setSchemaNoteId(schema)
-            setConfigNoteId(target.noteId)
-            const values = await loadSettings(schema, target.noteId)
+            setConfigNoteId(config)
+            const values = await loadSettings(schema, config)
             setLibraryRootNoteId(values.libraryRootNoteId || "")
             setGenresDisabled(values.genresEnabled === false)
 
@@ -555,6 +588,16 @@ export default function GameTrackerSettings() {
     }, [])
 
     if (!ready) return <div>Loading...</div>
+
+    if (loadError) {
+        return (
+            <div class="gt-settings">
+                <div class="gt-settings-head"><h3>Game Tracker</h3></div>
+                <p class="gt-error">Settings could not be loaded.</p>
+                <p class="gt-hint">{loadError}</p>
+            </div>
+        )
+    }
 
     // The Library Root field is `hidden` in the schema so the form doesn't render
     // it twice — this panel owns it, because picking a note has side effects

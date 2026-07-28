@@ -541,6 +541,77 @@
     margin: 0 0 8px;
 }
 
+/* --- file import --- */
+
+/* A file input styled as a button: the native control can't be restyled, so the
+   real input is hidden inside a label that looks like the rest of the toolbar. */
+.gt-file-label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.gt-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.gt-preview {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--main-border-color);
+}
+
+/* Bounded so a 180-game preview doesn't push the Import button off-screen. */
+.gt-preview-list {
+    max-height: 340px;
+    overflow-y: auto;
+    margin-top: 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.gt-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    font-size: 12px;
+}
+
+.gt-preview-row:last-child {
+    border-bottom: none;
+}
+
+.gt-preview-cover {
+    width: 28px;
+    height: 37px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.gt-preview-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gt-unmatched {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 6px 0;
+    padding: 6px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
 .gt-code {
     font-family: monospace;
     padding: 2px 6px;

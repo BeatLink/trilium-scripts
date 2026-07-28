@@ -4,18 +4,20 @@
  * One HTTP endpoint (custom/gameTracker) routed by ?action=:
  *
  *   listGames        read the whole library out of the database note
- *   search           IGDB search
- *   details          IGDB details for one game
- *   fullDetails      details plus screenshots, companies, and similar games
- *   addGame          add a game to the database from an IGDB id
- *   addFromLink      add from a pasted IGDB or Steam link
+ *   search           provider search
+ *   fullDetails      details plus screenshots and companies
+ *   addGame          add a game to the database from a provider id
+ *   addFromLink      add from a pasted IGDB, RAWG, or Steam link
  *   removeGame       drop a game from the database
  *   setStatus        set play status
  *   setRating        set rating
  *   setPlaytime      set playtime by hand (minutes)
  *   refreshLibrary   re-fetch metadata and backfill ids
+ *   providerCheck    verify the configured metadata provider's credentials
  *   steamCheck       verify the Steam key/id and report the library size
  *   importSteam      one-way import of the Steam library
+ *   previewImport    parse an uploaded library file and report what it matched
+ *   importFile       apply a previewed file import
  *
  * Storage: every game lives in ONE JSON note titled "Database", a direct child
  * of the configured Library Root (find-or-create, see resolveDatabaseNote).
@@ -26,7 +28,24 @@
  * Imports are additive: they only ever add and update games, never remove them.
  * A game removed from a Steam account upstream is left untouched here, so an
  * external change can't quietly delete your Trilium data. Nothing is ever
- * written to Steam or IGDB -- both are strictly read-only.
+ * written to Steam, IGDB, or RAWG -- all three are strictly read-only.
+ *
+ * METADATA PROVIDERS
+ *
+ * Metadata comes from one of two interchangeable providers, chosen by the
+ * `metadataProvider` setting. Both are reached only through the PROVIDERS table
+ * below, which gives each one the same five operations (searchByName,
+ * gamesByIds, gamesByTitles, fullDetails, bySteamAppId) returning the same
+ * normalised shape. Nothing outside that table knows which provider is in use,
+ * so a game's stored `igdbId` is really "the current provider's id" and the two
+ * are never mixed within one library.
+ *
+ *   IGDB  - the richer source, but authenticating means registering a Twitch
+ *           application, and Twitch requires 2FA on the account to allow that.
+ *   RAWG  - a plain email signup, no OAuth and no 2FA, so it is the fallback
+ *           when the Twitch requirement is a blocker. Thinner metadata (no
+ *           storyline or game modes) but broader coverage of older and
+ *           non-Steam titles.
  *
  * API contracts verified against live endpoints and first-party docs:
  *   IGDB auth     - api-docs.igdb.com: POST https://id.twitch.tv/oauth2/token with
@@ -36,8 +55,17 @@
  *                   "Authorization: Bearer <token>", APIcalypse query in the BODY.
  *                   Rate limit 4 requests/second, 8 concurrent. Confirmed live:
  *                   a bad token returns a JSON "Authorization Failure" body.
+ *                   Filters: `~ "name"` is case-insensitive exact match, `|` is
+ *                   OR, and `limit` caps at 500.
  *   IGDB images   - https://images.igdb.com/igdb/image/upload/t_{size}/{hash}.jpg
  *   IGDB->Steam   - external_games where category = 1 (steam); `uid` is the appid.
+ *   RAWG          - GET https://api.rawg.io/api/games?key=...&search=...  Field
+ *                   names and parameters taken from RAWG's own OpenAPI schema
+ *                   (api.rawg.io/docs/?format=openapi): id, slug, name, released,
+ *                   background_image, metacritic, rating, genres[].name,
+ *                   platforms[].platform.name, description_raw, developers[].name,
+ *                   publishers[].name, and the search_exact/search_precise flags.
+ *                   Confirmed live: a missing key returns 401 with a JSON body.
  *   Steam         - IPlayerService/GetOwnedGames/v1 on api.steampowered.com.
  *                   Request params and every response field name taken from Valve's
  *                   own protobuf (SteamDatabase/Protobufs steammessages_player):
@@ -50,6 +78,7 @@ const tracker = require("libGameTracker.js")
 
 const TWITCH_OAUTH = "https://id.twitch.tv/oauth2/token"
 const IGDB_API = "https://api.igdb.com/v4"
+const RAWG_API = "https://api.rawg.io/api"
 const STEAM_API = "https://api.steampowered.com"
 const STEAM_STORE = "https://store.steampowered.com/api"
 
@@ -294,6 +323,12 @@ function releaseYear(seconds) {
     return new Date(value * 1000).toISOString().slice(0, 4)
 }
 
+// IGDB's raw game -> the normalised shape every provider returns.
+//
+// `igdbId` is really "the metadata provider's id for this game". It keeps the
+// IGDB name because that is what the stored documents already use, and because
+// a library is only ever populated by one provider -- switching providers means
+// re-linking, which refreshLibrary does.
 function mapGame(raw, settings) {
     return {
         igdbId: String(raw.id),
@@ -450,6 +485,218 @@ async function igdbGamesByTitles(settings, titles, onProgress) {
     return found
 }
 
+// --- RAWG -------------------------------------------------------------------
+//
+// The no-OAuth alternative to IGDB: a RAWG key is a plain string from an email
+// signup, with no Twitch application and no 2FA requirement. Free tier is 20,000
+// requests/month, which is why the bulk paths below still batch rather than
+// firing one request per game.
+//
+// RAWG has no bulk-by-id or bulk-by-name endpoint, so where IGDB resolves 200
+// games in one request, RAWG needs one request per game. That is the main
+// practical difference between the two providers and the reason a large Steam
+// import is noticeably slower on RAWG.
+
+function rawgKey(settings) {
+    const key = String(settings.rawgApiKey || "").trim()
+    if (!key) throw new Error("Set a RAWG API key in Settings first")
+    return key
+}
+
+async function rawgGet(settings, path, params) {
+    const key = rawgKey(settings)
+    const query = new URLSearchParams({ key, ...(params || {}) })
+    const res = await fetch(`${RAWG_API}${path}?${query}`, { headers: outboundHeaders() })
+
+    if (res.status === 401 || res.status === 403) {
+        throw new Error("RAWG rejected the API key. Check it in Settings against "
+            + "your key at rawg.io/apidocs.")
+    }
+    if (res.status === 429) {
+        throw new Error("RAWG rate limit reached. The free tier allows 20,000 requests "
+            + "per month; wait a while and retry.")
+    }
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error(`RAWG request failed (HTTP ${res.status})`)
+
+    return res.json()
+}
+
+// RAWG's raw game -> the same normalised shape mapGame produces for IGDB.
+//
+// Field names are from RAWG's OpenAPI schema. `description_raw` only exists on
+// the single-game endpoint, so a search result has no summary until the game is
+// actually opened or added.
+function mapRawgGame(raw) {
+    return {
+        igdbId: String(raw.id),
+        title: raw.name || "",
+        year: String(raw.released || "").slice(0, 4),
+        summary: raw.description_raw || "",
+        // RAWG serves one image URL rather than IGDB's size-templated path, so
+        // the coverSize setting has no effect here.
+        cover: raw.background_image || "",
+        genres: (raw.genres || []).map(g => g.name).filter(Boolean).join(", "),
+        platforms: (raw.platforms || [])
+            .map(p => p.platform?.name)
+            .filter(Boolean)
+            .join(", ")
+    }
+}
+
+async function rawgSearch(settings, query) {
+    const text = String(query || "").trim()
+    if (!text) return []
+
+    const json = await rawgGet(settings, "/games", { search: text, page_size: "30" })
+
+    let doc = { games: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
+    return (json?.results || [])
+        .filter(r => r && r.name)
+        .map(raw => {
+            const game = mapRawgGame(raw)
+            return { ...game, trackedKey: tracker.findGame(doc, game) || "" }
+        })
+}
+
+async function rawgById(settings, id) {
+    // The detail endpoint accepts a numeric id or a slug, so both link forms
+    // work without a separate lookup.
+    const json = await rawgGet(settings, `/games/${encodeURIComponent(id)}`)
+    if (!json?.id) throw new Error("RAWG has no game with that id")
+    return mapRawgGame(json)
+}
+
+// One request per id: RAWG has no bulk endpoint. Spaced so a large import does
+// not look like an attack.
+async function rawgGamesByIds(settings, ids, onProgress) {
+    const out = new Map()
+    const wanted = [...new Set(ids.map(String).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        try {
+            out.set(wanted[i], await rawgById(settings, wanted[i]))
+        } catch (e) {
+            // Skip a game RAWG can't serve rather than losing the whole batch.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(120)
+    }
+    return out
+}
+
+// Title matching. `search_exact` tells RAWG to treat the query as an exact
+// phrase rather than fuzzy-matching it, which is what makes a title-only import
+// land on the right game instead of a sequel.
+async function rawgGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        try {
+            const json = await rawgGet(settings, "/games", {
+                search: title,
+                search_exact: "true",
+                page_size: "5"
+            })
+            const results = json?.results || []
+            // Accept only a genuine name match: RAWG still returns near misses,
+            // and silently importing "Tropico 6" for "Tropico" is worse than
+            // reporting the row as unmatched.
+            const exact = results.find(r =>
+                normalizeTitle(r.name) === normalizeTitle(title))
+            if (exact) found.set(title.toLowerCase(), mapRawgGame(exact))
+        } catch (e) {
+            // One failed lookup must not lose the rest of the import.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(120)
+    }
+    return found
+}
+
+// Punctuation and casing vary between sources ("Hitman 2" vs "HITMAN 2",
+// "Half-Life" vs "Half Life"), so titles are compared on letters and digits
+// alone. Deliberately not fuzzy beyond that: dropping a character would start
+// matching sequels to each other.
+function normalizeTitle(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/&/g, " and ")
+        .replace(/[^a-z0-9]+/g, "")
+}
+
+// RAWG indexes store links, so a Steam appid can be resolved by asking for the
+// game whose Steam store entry matches. There is no bulk form, so this is only
+// used for single additions -- a Steam *import* keys off the appid directly and
+// fills metadata in by title instead.
+async function rawgBySteamAppId(settings, appId) {
+    const store = await steamStoreDetails(appId)
+    if (!store?.title) return null
+    const matched = await rawgGamesByTitles(settings, [store.title])
+    const hit = matched.get(store.title.toLowerCase())
+    return hit ? { ...hit, steamAppId: String(appId) } : null
+}
+
+// --- provider dispatch ------------------------------------------------------
+//
+// The single place that knows which metadata provider is configured. Every
+// caller goes through `provider(settings)` and gets the same five operations
+// back, so no other function in this file branches on the provider.
+
+const PROVIDERS = {
+    igdb: {
+        id: "igdb",
+        label: "IGDB",
+        searchByName: (settings, query) => igdbSearch(settings, query),
+        gamesByIds: (settings, ids, onProgress) => igdbGamesByIds(settings, ids, onProgress),
+        gamesByTitles: (settings, titles, onProgress) =>
+            igdbGamesByTitles(settings, titles, onProgress),
+        byId: (settings, id) => igdbById(settings, id),
+        bySlug: (settings, slug) => igdbBySlug(settings, slug),
+        // IGDB can map many appids at once through external_games.
+        idsForSteamAppIds: (settings, appIds, onProgress) =>
+            igdbIdsForSteamAppIds(settings, appIds, onProgress),
+        check: async (settings) => {
+            const rows = await igdbQuery(settings, "games", "fields name; limit 1;")
+            return { ok: true, provider: "IGDB", sample: rows?.[0]?.name || "" }
+        }
+    },
+    rawg: {
+        id: "rawg",
+        label: "RAWG",
+        searchByName: (settings, query) => rawgSearch(settings, query),
+        gamesByIds: (settings, ids, onProgress) => rawgGamesByIds(settings, ids, onProgress),
+        gamesByTitles: (settings, titles, onProgress) =>
+            rawgGamesByTitles(settings, titles, onProgress),
+        byId: (settings, id) => rawgById(settings, id),
+        bySlug: (settings, slug) => rawgById(settings, slug),
+        // No bulk store lookup; a Steam import resolves metadata by title.
+        idsForSteamAppIds: null,
+        check: async (settings) => {
+            const json = await rawgGet(settings, "/games", { page_size: "1" })
+            return {
+                ok: true,
+                provider: "RAWG",
+                sample: json?.results?.[0]?.name || "",
+                total: json?.count ?? null
+            }
+        }
+    }
+}
+
+function provider(settings) {
+    const chosen = String(settings.metadataProvider || "igdb").trim().toLowerCase()
+    return PROVIDERS[chosen] || PROVIDERS.igdb
+}
+
 // --- file import ------------------------------------------------------------
 
 // Parse an uploaded library file and report what it contains WITHOUT writing
@@ -462,7 +709,7 @@ async function previewImportFile(settings, text, filename) {
     // Rows that already carry an id don't need matching at all.
     const needMatch = parsed.rows.filter(r => !r.igdbId && !r.steamAppId)
     const matched = needMatch.length
-        ? await igdbGamesByTitles(settings, needMatch.map(r => r.title))
+        ? await provider(settings).gamesByTitles(settings, needMatch.map(r => r.title))
         : new Map()
 
     const doc = loadDocument(settings)
@@ -508,12 +755,17 @@ async function previewImportFile(settings, text, filename) {
 //
 // `listsAsCollections` files each game under the list it came from, which is how
 // an IGDB export's own organisation survives the import.
-async function importFile(settings, rowsJson, options) {
-    let rows
-    try {
-        rows = JSON.parse(rowsJson || "[]")
-    } catch (e) {
-        throw new Error("Malformed import payload")
+async function importFile(settings, payload, options) {
+    // Arrives as a real array from a JSON POST body, or as a JSON string when it
+    // came up the query string. Both are accepted so the caller doesn't have to
+    // care which transport was used.
+    let rows = payload
+    if (typeof rows === "string") {
+        try {
+            rows = JSON.parse(rows || "[]")
+        } catch (e) {
+            throw new Error("Malformed import payload")
+        }
     }
     if (!Array.isArray(rows)) throw new Error("Malformed import payload")
 
@@ -527,7 +779,7 @@ async function importFile(settings, rowsJson, options) {
     const igdbIds = usable.map(r => r.igdbId).filter(Boolean)
     if (igdbIds.length && settings.importFetchMetadata !== false) {
         try {
-            metadata = await igdbGamesByIds(settings, igdbIds)
+            metadata = await provider(settings).gamesByIds(settings, igdbIds)
         } catch (e) {
             // Metadata is a nice-to-have; never fail an import over it.
         }
@@ -639,7 +891,7 @@ function applyFileImport(settings, doc, items) {
 // --- game mutations ---------------------------------------------------------
 
 async function addGame(settings, igdbId) {
-    const details = await igdbById(settings, igdbId)
+    const details = await provider(settings).byId(settings, igdbId)
     return upsertGame(settings, details)
 }
 
@@ -725,21 +977,24 @@ async function addFromLink(settings, input) {
             + "https://store.steampowered.com/app/1145360/Hades/")
     }
 
-    if (parsed.igdbSlug) return upsertGame(settings, await igdbBySlug(settings, parsed.igdbSlug))
+    if (parsed.igdbSlug) {
+        return upsertGame(settings, await provider(settings).bySlug(settings, parsed.igdbSlug))
+    }
 
-    // A Steam appid is resolved to its IGDB entry so the game gets full
-    // metadata; if IGDB doesn't know it, fall back to the Steam store's own
-    // data rather than refusing.
-    const mapped = await igdbIdsForSteamAppIds(settings, [parsed.steamAppId])
-    const igdbId = mapped.get(String(parsed.steamAppId))
-    if (igdbId) {
-        const details = await igdbById(settings, igdbId)
+    // A Steam appid is resolved to the provider's entry so the game gets full
+    // metadata; if the provider doesn't know it, fall back to the Steam store's
+    // own data rather than refusing.
+    const active = provider(settings)
+    const mapped = await linkSteamAppIds(settings, [parsed.steamAppId])
+    const providerId = mapped.get(String(parsed.steamAppId))
+    if (providerId) {
+        const details = await active.byId(settings, providerId)
         return upsertGame(settings, { ...details, steamAppId: String(parsed.steamAppId) })
     }
 
     const store = await steamStoreDetails(parsed.steamAppId)
     if (!store) {
-        throw new Error(`Neither IGDB nor Steam has a game for appid ${parsed.steamAppId}.`)
+        throw new Error(`Neither ${active.label} nor Steam has a game for appid ${parsed.steamAppId}.`)
     }
     return upsertGame(settings, store)
 }
@@ -837,13 +1092,62 @@ function removeGame(settings, key) {
     return { ok: true }
 }
 
-// Full metadata for the details page: everything a game lookup returns, plus
-// screenshots, companies, and IGDB's aggregate rating.
+// Full metadata for the details page. Dispatches on the configured provider;
+// both return the same shape, with fields the provider cannot supply left empty
+// so the page renders identically either way.
+async function fullDetails(settings, igdbId, key) {
+    const details = provider(settings).id === "rawg"
+        ? await rawgFullDetails(settings, igdbId)
+        : await igdbFullDetails(settings, igdbId)
+
+    // The entry's own tracked state, so the page can show status and playtime.
+    const doc = loadDocument(settings)
+    const entry = key && doc.games[key] ? tracker.normalizeGame(doc.games[key]) : null
+
+    return { ...details, entry }
+}
+
+// RAWG's single-game endpoint, plus its separate screenshots endpoint.
+//
+// RAWG has no storyline, game modes, or player perspectives, so those come back
+// empty. `metacritic` is 0-100, the same scale IGDB's total_rating uses, so it
+// maps onto the same field the details page already renders.
+async function rawgFullDetails(settings, id) {
+    const json = await rawgGet(settings, `/games/${encodeURIComponent(id)}`)
+    if (!json?.id) throw new Error("RAWG has no game with that id")
+
+    let screenshots = []
+    try {
+        const shots = await rawgGet(settings, `/games/${encodeURIComponent(id)}/screenshots`)
+        screenshots = (shots?.results || []).slice(0, 8).map(s => s.image).filter(Boolean)
+    } catch (e) {
+        // Screenshots are decorative; never fail the page over them.
+    }
+
+    return {
+        ...mapRawgGame(json),
+        storyline: "",
+        url: json.website || `https://rawg.io/games/${json.slug || id}`,
+        // RAWG's `metacritic` is the closest equivalent to IGDB's aggregate.
+        totalRating: Number.isFinite(Number(json.metacritic)) ? Number(json.metacritic) : null,
+        totalRatingCount: Number(json.ratings_count) || 0,
+        developers: (json.developers || []).map(d => d.name).filter(Boolean),
+        publishers: (json.publishers || []).map(p => p.name).filter(Boolean),
+        modes: [],
+        perspectives: [],
+        themes: (json.tags || []).slice(0, 8).map(t => t.name).filter(Boolean),
+        screenshots,
+        similar: []
+    }
+}
+
+// Full metadata from IGDB: everything a game lookup returns, plus screenshots,
+// companies, and IGDB's aggregate rating.
 //
 // Every field is read defensively -- IGDB omits fields it has no data for (an
 // unreleased game has no screenshots or rating), so a missing value must render
 // as blank rather than "undefined".
-async function fullDetails(settings, igdbId, key) {
+async function igdbFullDetails(settings, igdbId) {
     const rows = await igdbQuery(settings, "games",
         `fields ${GAME_FIELDS},screenshots.image_id,similar_games.name,similar_games.id,`
         + `game_modes.name,player_perspectives.name,themes.name;`
@@ -880,18 +1184,52 @@ async function fullDetails(settings, igdbId, key) {
             .map(g => ({ id: String(g.id), name: g.name }))
     }
 
-    // The entry's own tracked state, so the page can show status and playtime.
-    const doc = loadDocument(settings)
-    const entry = key && doc.games[key] ? tracker.normalizeGame(doc.games[key]) : null
-
-    return { ...details, entry }
+    return details
 }
 
 // --- housekeeping -----------------------------------------------------------
 
-// Re-derives everything that can drift: refreshes metadata and covers from IGDB
-// and backfills missing IGDB ids from Steam appids. Reads the document once and
-// writes once, like the importers. Never changes a rating, status, or playtime.
+// Map Steam appids to provider ids, whichever provider is configured.
+//
+// IGDB indexes Steam appids directly (external_games), so it answers in bulk.
+// RAWG does not, so the appids are resolved through the Steam store's own titles
+// and then matched by name. The fallback is slower and slightly less certain,
+// which is why the provider table exposes `idsForSteamAppIds: null` for RAWG
+// rather than pretending the two are equivalent.
+//
+// Returns a Map of appid (string) -> provider id (string).
+async function linkSteamAppIds(settings, appIds, onProgress) {
+    const active = provider(settings)
+    if (active.idsForSteamAppIds) {
+        return active.idsForSteamAppIds(settings, appIds, onProgress)
+    }
+
+    const found = new Map()
+    const wanted = [...new Set(appIds.map(String).filter(Boolean))]
+    if (!wanted.length) return found
+
+    // Steam's store API gives the canonical title for an appid without a key;
+    // the provider is then asked for that exact title.
+    const titles = new Map()
+    for (let i = 0; i < wanted.length; i++) {
+        const store = await steamStoreDetails(wanted[i])
+        if (store?.title) titles.set(wanted[i], store.title)
+        if (onProgress) onProgress(i + 1, wanted.length * 2)
+        await pause(120)
+    }
+
+    const matched = await active.gamesByTitles(settings, [...titles.values()])
+    for (const [appId, title] of titles) {
+        const hit = matched.get(title.toLowerCase())
+        if (hit?.igdbId) found.set(appId, hit.igdbId)
+    }
+    return found
+}
+
+// Re-derives everything that can drift: refreshes metadata and covers from the
+// configured provider and backfills missing provider ids from Steam appids.
+// Reads the document once and writes once, like the importers. Never changes a
+// rating, status, or playtime.
 async function refreshLibrary(settings) {
     const doc = loadDocument(settings)
     const entries = Object.entries(doc.games)
@@ -900,15 +1238,15 @@ async function refreshLibrary(settings) {
     let linked = 0
     let failed = 0
 
-    // Backfill IGDB ids for Steam-only entries first, in bulk, so the metadata
-    // pass below can cover them too.
+    // Backfill provider ids for Steam-only entries first, so the metadata pass
+    // below can cover them too.
     const unlinked = entries
         .filter(([, raw]) => !raw.igdbId && raw.steamAppId)
         .map(([, raw]) => String(raw.steamAppId))
 
     if (unlinked.length) {
         try {
-            const mapped = await igdbIdsForSteamAppIds(settings, unlinked)
+            const mapped = await linkSteamAppIds(settings, unlinked)
             for (const [, raw] of entries) {
                 if (raw.igdbId || !raw.steamAppId) continue
                 const igdbId = mapped.get(String(raw.steamAppId))
@@ -920,12 +1258,32 @@ async function refreshLibrary(settings) {
         }
     }
 
+    // Entries that still have no provider id, but do have a title, can often be
+    // matched by name -- this is what links a file-imported library after a
+    // provider switch.
+    const unmatchedTitles = entries
+        .filter(([, raw]) => !raw.igdbId && !raw.steamAppId && raw.title)
+        .map(([, raw]) => String(raw.title))
+
+    if (unmatchedTitles.length) {
+        try {
+            const byTitle = await provider(settings).gamesByTitles(settings, unmatchedTitles)
+            for (const [, raw] of entries) {
+                if (raw.igdbId || !raw.title) continue
+                const hit = byTitle.get(String(raw.title).toLowerCase())
+                if (hit?.igdbId) { raw.igdbId = hit.igdbId; linked++ }
+            }
+        } catch (e) {
+            failed++
+        }
+    }
+
     // One bulk fetch for every entry that has an IGDB id.
     const withIgdb = entries.filter(([, raw]) => raw.igdbId).map(([, raw]) => String(raw.igdbId))
     let fetched = new Map()
     if (withIgdb.length) {
         try {
-            fetched = await igdbGamesByIds(settings, withIgdb)
+            fetched = await provider(settings).gamesByIds(settings, withIgdb)
         } catch (e) {
             failed++
         }
@@ -1088,14 +1446,27 @@ async function importSteam(settings) {
 
     const appIds = rows.map(g => String(g.appid)).filter(Boolean)
 
-    // Resolve to IGDB in bulk. A failure here is not fatal: the import falls
-    // back to Steam's own names so the library is still populated.
+    // Resolve to the metadata provider. A failure here is not fatal: the import
+    // falls back to Steam's own names so the library is still populated.
+    //
+    // IGDB maps appids directly in bulk. RAWG cannot, but Steam has already
+    // given us every title, so those are matched by name instead -- far cheaper
+    // than looking each appid up in the Steam store first.
+    const active = provider(settings)
     let mapped = new Map()
     let metadata = new Map()
+    let byTitle = new Map()
+
     if (settings.importFetchMetadata !== false) {
         try {
-            mapped = await igdbIdsForSteamAppIds(settings, appIds)
-            metadata = await igdbGamesByIds(settings, [...mapped.values()])
+            if (active.idsForSteamAppIds) {
+                mapped = await active.idsForSteamAppIds(settings, appIds)
+                metadata = await active.gamesByIds(settings, [...mapped.values()])
+            } else {
+                byTitle = await active.gamesByTitles(
+                    settings, rows.map(g => g.name).filter(Boolean)
+                )
+            }
         } catch (e) {
             // Metadata is a nice-to-have; never fail an import over it.
         }
@@ -1104,8 +1475,9 @@ async function importSteam(settings) {
     const items = []
     for (const row of rows) {
         const appId = String(row.appid)
-        const igdbId = mapped.get(appId) || ""
-        const details = igdbId ? metadata.get(igdbId) : null
+        const matchedByTitle = byTitle.get(String(row.name || "").trim().toLowerCase())
+        const igdbId = mapped.get(appId) || matchedByTitle?.igdbId || ""
+        const details = matchedByTitle || (igdbId ? metadata.get(igdbId) : null)
 
         items.push({
             igdbId,
@@ -1212,6 +1584,12 @@ async function handle() {
     const query = api.req.query
     const action = query.action
 
+    // File imports arrive as POST bodies: an IGDB export is a couple of hundred
+    // kilobytes of HTML, far past what a URL query string can carry. Trilium
+    // parses JSON bodies for a customRequestHandler, so `body` is already an
+    // object here. Everything else stays on the query string.
+    const body = api.req.body || {}
+
     try {
         const settings = getSettings()
 
@@ -1293,7 +1671,7 @@ async function handle() {
             case "refreshLibrary":
                 return sendJson(200, await refreshLibrary(settings))
             case "search":
-                return sendJson(200, { results: await igdbSearch(settings, query.query || "") })
+                return sendJson(200, { results: await provider(settings).searchByName(settings, query.query || "") })
             case "addGame":
                 return sendJson(200, await addGame(settings, query.igdbId))
             case "addFromLink":
@@ -1312,6 +1690,22 @@ async function handle() {
                 return sendJson(200, await steamCheck(settings))
             case "importSteam":
                 return sendJson(200, await importSteam(settings))
+            // Confirms the configured provider's credentials actually work,
+            // before a user discovers otherwise halfway through an import.
+            case "providerCheck":
+                return sendJson(200, await provider(settings).check(settings))
+            // The file import is deliberately two calls: parse and match first,
+            // show the user what it found, and only write when they confirm.
+            case "previewImport":
+                return sendJson(200, await previewImportFile(
+                    settings, body.text ?? query.text, body.filename ?? query.filename
+                ))
+            case "importFile":
+                return sendJson(200, await importFile(
+                    settings,
+                    body.rows ?? query.rows,
+                    { listsAsCollections: String(body.listsAsCollections ?? query.listsAsCollections) }
+                ))
             default:
                 return sendJson(400, { error: `Unknown action: ${action}` })
         }

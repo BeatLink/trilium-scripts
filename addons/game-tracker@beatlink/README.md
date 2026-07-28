@@ -10,8 +10,9 @@ TV. The two are independent addons with separate libraries and settings.
 ## Setup
 
 1. Install and enable the addon.
-2. Create a **Twitch application** for IGDB access (free) and paste its credentials on the **IGDB**
-   tab in Settings. See [IGDB credentials](#igdb-credentials) below.
+2. Choose a **metadata provider** on the Provider tab in Settings and give it a key. See
+   [Metadata providers](#metadata-providers) below — if you cannot enable two-factor authentication
+   on Twitch, choose RAWG.
 3. Create a note to hold your library (anywhere in your tree), then pick it on the **Library Root**
    tab in Settings. This is required — every tracked game is created as a child of it.
 4. Optionally set up Steam on the **Steam** and **Steam ID** tabs to import your owned games.
@@ -21,13 +22,38 @@ at the tracker widget and given a joystick icon, so opening it in your tree show
 Choosing a different note reverts the old one back to a plain text note, and clearing the setting
 reverts it without selecting a replacement.
 
+## Metadata providers
+
+Covers, genres, platforms, and summaries come from one of two interchangeable providers, selected on
+the **Provider** tab. Everything else in the addon works identically either way.
+
+| | IGDB | RAWG |
+|---|---|---|
+| Signup | Twitch application | Email address |
+| **Requires 2FA** | **Yes** | No |
+| Free tier | Unlimited, non-commercial | 20,000 requests/month |
+| Metadata depth | Fuller: storyline, game modes, perspectives, similar games | Genres, platforms, developers, screenshots |
+| Steam matching | Bulk, by appid | By title |
+| Bulk lookups | 200 games per request | One request per game |
+
+**IGDB** is the richer source, but Twitch will not let you register an application unless the account
+has two-factor authentication enabled. There is no way around that requirement.
+
+**RAWG** exists here precisely for that case: it needs nothing but an email signup. Its metadata is
+thinner (no storyline or game modes) but its coverage of older and non-Steam titles is good, which
+matters when importing a list full of games that were never on Steam.
+
+Switching providers loses nothing. Games stay in the library with their status, rating, and playtime;
+run **Refresh** on the Library tab afterwards and the addon re-links them to the new provider by
+Steam appid or by title.
+
 ### IGDB credentials
 
 IGDB is owned by Twitch, so it authenticates as a Twitch application rather than with a simple API
 key:
 
-1. Sign in at [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) (two-factor
-   authentication must be enabled on the Twitch account).
+1. Sign in at [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps). **Two-factor
+   authentication must be enabled on the Twitch account** — app registration is blocked without it.
 2. Register an application. The OAuth Redirect URL is unused by IGDB — put `http://localhost`.
    **Client Type must be Confidential**, otherwise no client secret can be generated.
 3. Copy the **Client ID**, generate a **Client Secret**, and paste both into Settings → IGDB.
@@ -35,6 +61,18 @@ key:
 That is all that is needed. The addon exchanges those for an access token itself, stores it, and
 renews it automatically a day before it expires — there is nothing to re-authorize by hand. IGDB is
 free for non-commercial use.
+
+### RAWG credentials
+
+1. Sign up at [rawg.io/apidocs](https://rawg.io/apidocs) with an email address.
+2. Copy the API key into Settings → RAWG.
+
+No OAuth, no application registration, no two-factor requirement. The free tier covers 20,000
+requests a month, which is far more than a personal library needs — though note that RAWG has no bulk
+endpoints, so a large Steam import spends one request per game rather than one per 200.
+
+Use **Check connection** on the Import tab to confirm either provider is working before relying on
+it.
 
 ### Steam credentials
 
@@ -208,7 +246,7 @@ An IGDB link is resolved by its slug. A Steam link or bare appid is looked up in
 `external_games` index first so the game gets full metadata; if IGDB has never heard of it, the
 addon falls back to Steam's own store data rather than refusing.
 
-**Import** is the one-way Steam import described below.
+**Import** covers the one-way Steam import and the file import, both described below.
 
 A **Settings** button at the end of the tab row opens the settings page, and a **Back** button there
 returns you to the tracker — to the library root you came from, or the addon's launcher note if no
@@ -293,6 +331,82 @@ noise ("Game of the Year Edition", "™") that IGDB's canonical name does not.
 - **Imports Set Playing Status** moves played games out of the backlog. Off leaves status entirely
   alone.
 
+## Import from a file
+
+**Import → Import from a file** loads a library from a file instead of an API. It handles an IGDB
+data export, or any CSV/JSON list of games.
+
+### IGDB data export
+
+IGDB will email you a ZIP of everything it holds on your account. Unzip it and pick the
+`index.html` inside — that single file is the whole export.
+
+The addon reads your **Want to Play**, **Playing**, and **Played** lists, plus any ratings, and maps
+them onto tracker statuses:
+
+| In the export | Becomes |
+|---|---|
+| Want to Play | Backlog |
+| Playing | Playing |
+| Played | Beaten |
+| Entry marked *Completed* / *Finished* | Beaten |
+| Entry marked *Abandoned* | Dropped |
+| Entry marked *Currently playing* | Playing |
+
+A per-entry status always wins over the list it sits in, so an *Abandoned* game inside **Played**
+becomes Dropped rather than Beaten. A game appearing in more than one list is imported once, taking
+the most definite status of the two.
+
+Ratings are converted from IGDB's 0-100 scale to the tracker's 0-10.
+
+**The export contains no game ids — only titles.** Every row therefore has to be matched against your
+metadata provider by name, which is a guess, which is why the import happens in two steps.
+
+### Preview before writing
+
+Choosing a file never writes anything. The addon parses it, matches every title, and then reports:
+
+- how many games it found, and which lists they came from
+- how many matched the provider, and how many did not
+- how many are already in your library
+- a scrollable list of the matches, each showing the provider's own spelling when it differs from
+  the file's — so a wrong match is visible *before* it is committed
+
+Only then does **Import N games** write anything. Unmatched rows are skipped entirely: with no id
+there is nothing to key on. They are usually titles the provider spells differently, or genuinely
+does not have — add those by hand from the Add tab.
+
+A **File each game under its list as a collection** option files imported games under collections
+named after their source lists, so the export's own organisation survives.
+
+### CSV and JSON
+
+Any CSV with a header row works. Column names are matched flexibly, so an export from another tracker
+or a hand-made spreadsheet usually imports without editing:
+
+| Field | Accepted column names |
+|---|---|
+| Title (required) | `title`, `name`, `game`, `game name` |
+| Status | `status`, `state`, `progress`, `list` |
+| Rating | `rating`, `score`, `my rating` |
+| Playtime | `playtime`, `hours`, `hours played`, `time played` |
+| Last played | `lastplayed`, `last played`, `date` |
+| IGDB id | `igdbid`, `igdb id`, `igdb` |
+| Steam appid | `steamappid`, `appid`, `steam appid` |
+| Platform | `platform`, `platforms` |
+
+Quoted fields, commas inside titles, and escaped quotes are all handled. Ratings are accepted on
+either a 0-10 or 0-100 scale (anything above 10 is treated as a percentage), and playtime is read in
+hours. Status values are matched loosely — `Completed`, `beaten`, `100%`, `finished` all become
+Beaten; `abandoned`, `quit`, `shelved` become Dropped — with anything unrecognised falling back to
+Backlog rather than being dropped.
+
+JSON works the same way: a bare array of objects, or an object containing one, with the same field
+names.
+
+**A row carrying an `igdbId` or `steamAppId` skips title matching entirely** and is matched on the id,
+which is exact. If you are hand-building a file, including ids is worth the effort.
+
 ### Scheduled import
 
 **Auto-Import From Steam** runs the same import on a schedule. Trilium schedules no finer than hourly,
@@ -310,7 +424,17 @@ records the timestamp, so a persistently broken source doesn't retry every hour 
   addon has a backend component at all.
 - **The IGDB token is an app token.** There is no user account involved and no per-user authorization
   step — the Client ID and Secret are exchanged for a token that the addon renews on its own.
+- **IGDB requires Twitch 2FA.** This is Twitch's rule for registering any application, not something
+  the addon can work around. Use RAWG if that blocks you.
+- **Title matching is a guess.** A file with no ids is matched by name, and a game whose title the
+  provider spells differently will not match. This is why the file import previews before writing,
+  and why unmatched rows are skipped rather than guessed at.
+- **RAWG has no bulk endpoints.** A large Steam import or library refresh spends one request per game
+  rather than one per 200, so it is noticeably slower than the same operation on IGDB.
+- **The two providers' ids are not interchangeable.** A library populated by one stores that
+  provider's ids. Switching is supported — Refresh re-links by Steam appid or title — but it is a
+  re-match, not a translation, so a game the new provider does not have will end up unlinked.
 - **Steam only reports totals.** There is no per-session history in the API, so `playtime` is a running
   total, not a log of sessions.
-- **Non-Steam launchers are not imported.** GOG, Epic, and console libraries have no equivalent
-  read-only API available here; add those games by hand from IGDB and set their playtime directly.
+- **Non-Steam launchers have no API import.** GOG, Epic, and console libraries have no equivalent
+  read-only API available here. Export them to CSV and use the file import, or add them by hand.

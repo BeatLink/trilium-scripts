@@ -33,6 +33,21 @@ async function callBackend(action, params = {}) {
     return body
 }
 
+// POST variant, for payloads too large for a URL. An IGDB export is a couple of
+// hundred kilobytes of HTML, which no query string will carry.
+async function postBackend(action, payload) {
+    const res = await fetch(`${ENDPOINT}?action=${encodeURIComponent(action)}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    let body
+    try { body = await res.json() } catch (e) { body = { error: `HTTP ${res.status}` } }
+    if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`)
+    return body
+}
+
 // --- collections and sorting ------------------------------------------------
 // Mirrors of libGameTracker.js: this file runs in the frontend and can't
 // require the backend module. Kept deliberately small; the backend owns the
@@ -574,6 +589,21 @@ function LibraryTab({ libraryRootNoteId, settings }) {
                     Pick a note on the <strong>Library Root</strong> tab in Settings. Every tracked
                     game is created under it, and that note becomes this tracker.
                 </p>
+                {/* If a root WAS chosen and this still appears, the widget and the
+                    settings page are reading different config notes -- so show
+                    what this widget actually loaded rather than leaving the user
+                    to re-pick a root that is already set. */}
+                <details class="gt-diag">
+                    <summary class="gt-hint">Already picked one?</summary>
+                    <p class="gt-hint">
+                        This widget read its settings from config note{" "}
+                        <code class="gt-code gt-selectable">{settings.__configNoteId || "unknown"}</code>{" "}
+                        and found <code class="gt-code">libraryRootNoteId</code> empty.
+                        If you did pick a root, the settings page saved it somewhere this widget is
+                        not reading — reinstall or update game-tracker in TAM so both point at the
+                        same config note.
+                    </p>
+                </details>
             </div>
         )
     }
@@ -1015,6 +1045,188 @@ function AddTab({ onAdded }) {
 
 // --- import -----------------------------------------------------------------
 
+// Import a library file: IGDB's GDPR export, or any CSV/JSON list of games.
+//
+// Two steps on purpose. A file carrying only titles has to be matched against
+// the metadata provider by name, and name matching is a guess -- so the preview
+// shows exactly what matched, what didn't, and what is already tracked, and
+// nothing is written until the user confirms.
+function FileImportPanel({ settings, onImported }) {
+    const [busy, setBusy] = useState(false)
+    const [status, setStatus] = useState(null)
+    const [preview, setPreview] = useState(null)
+    const [filename, setFilename] = useState("")
+    const [asCollections, setAsCollections] = useState(true)
+    const [showUnmatched, setShowUnmatched] = useState(false)
+
+    const providerLabel = settings.metadataProvider === "rawg" ? "RAWG" : "IGDB"
+
+    const readFile = async (file) => {
+        if (!file) return
+        setBusy(true)
+        setStatus(null)
+        setPreview(null)
+        setFilename(file.name)
+        try {
+            const text = await file.text()
+            setStatus({ hint: `Matching titles against ${providerLabel}...` })
+            const result = await postBackend("previewImport", { text, filename: file.name })
+            setPreview(result)
+            setStatus(null)
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const apply = async () => {
+        setBusy(true)
+        setStatus(null)
+        try {
+            // Only matched rows are sent: an unmatched row has no id to key on,
+            // so there is nothing to write.
+            const rows = preview.rows.filter(r => r.matched)
+            const result = await postBackend("importFile", {
+                rows,
+                listsAsCollections: String(asCollections)
+            })
+            setStatus({ ok: `Imported: ${result.added} added, ${result.updated} updated.` })
+            setPreview(null)
+            setFilename("")
+            await onImported()
+        } catch (e) {
+            setStatus({ error: e.message })
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const unmatched = preview?.rows.filter(r => !r.matched) || []
+
+    return (
+        <div class="gt-source">
+            <h4>Import from a file</h4>
+            <p class="gt-hint">
+                Accepts an <strong>IGDB data export</strong> (the <code>index.html</code> inside the
+                ZIP IGDB emails you), or any CSV/JSON list of games with a title column. Nothing is
+                written until you review what matched.
+            </p>
+
+            <div class="gt-toolbar">
+                <label class="gt-btn gt-file-label">
+                    Choose file
+                    <input
+                        class="gt-file-input"
+                        type="file"
+                        accept=".html,.htm,.csv,.json,.txt"
+                        disabled={busy}
+                        onChange={e => readFile(e.target.files?.[0])}
+                    />
+                </label>
+                {filename && <span class="gt-hint">{filename}</span>}
+            </div>
+
+            {status?.hint && <p class="gt-hint">{status.hint}</p>}
+
+            {preview && (
+                <div class="gt-preview">
+                    <p class="gt-hint">
+                        Found <strong>{preview.total}</strong> games
+                        {preview.format === "igdb-export" ? " in an IGDB export" : ""}.
+                        {" "}<strong>{preview.matchedCount}</strong> matched on {providerLabel},
+                        {" "}<strong>{preview.unmatchedCount}</strong> did not
+                        {preview.existingCount > 0 && (
+                            <>, and <strong>{preview.existingCount}</strong> are already tracked</>
+                        )}.
+                    </p>
+
+                    {preview.lists.length > 0 && (
+                        <p class="gt-hint">
+                            Lists: {preview.lists.map(l => `${l.name} (${l.count})`).join(" · ")}
+                        </p>
+                    )}
+
+                    {preview.lists.length > 0 && (
+                        <label class="gt-tag-option">
+                            <input
+                                type="checkbox"
+                                checked={asCollections}
+                                disabled={busy}
+                                onChange={e => setAsCollections(e.target.checked)}
+                            />
+                            File each game under its list as a collection
+                        </label>
+                    )}
+
+                    {unmatched.length > 0 && (
+                        <>
+                            <button class="gt-linkbtn"
+                                onClick={() => setShowUnmatched(!showUnmatched)}>
+                                {showUnmatched ? "Hide" : "Show"} the {unmatched.length} unmatched
+                            </button>
+                            {showUnmatched && (
+                                <div class="gt-unmatched">
+                                    {unmatched.map(r => (
+                                        <div class="gt-hint" key={r.title}>{r.title}</div>
+                                    ))}
+                                </div>
+                            )}
+                            <p class="gt-hint">
+                                Unmatched games are skipped. They are usually titles {providerLabel} spells
+                                differently, or does not have at all — add those by hand from the Add tab.
+                            </p>
+                        </>
+                    )}
+
+                    <div class="gt-toolbar">
+                        <button class="gt-btn gt-btn-primary"
+                            disabled={busy || !preview.matchedCount}
+                            onClick={apply}>
+                            Import {preview.matchedCount} games
+                        </button>
+                        <button class="gt-btn" disabled={busy}
+                            onClick={() => { setPreview(null); setFilename("") }}>
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div class="gt-preview-list">
+                        {preview.rows.filter(r => r.matched).slice(0, 40).map(r => (
+                            <div class="gt-preview-row" key={r.title + r.igdbId}>
+                                {r.cover
+                                    ? <img class="gt-preview-cover" src={r.cover} alt="" loading="lazy" />
+                                    : <div class="gt-preview-cover gt-cover-empty" />}
+                                <span class="gt-preview-title">
+                                    {r.title}
+                                    {/* The provider's own spelling, when it differs
+                                        from the file's -- so a wrong match is
+                                        visible before it is written. */}
+                                    {r.matchedTitle && r.matchedTitle !== r.title && (
+                                        <span class="gt-hint"> → {r.matchedTitle}</span>
+                                    )}
+                                </span>
+                                {r.status && (
+                                    <span class={`gt-badge gt-status-${r.status}`}>
+                                        {STATUS_LABELS[r.status]}
+                                    </span>
+                                )}
+                                {r.existingKey && <span class="gt-hint">already tracked</span>}
+                            </div>
+                        ))}
+                        {preview.matchedCount > 40 && (
+                            <div class="gt-hint">…and {preview.matchedCount - 40} more.</div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {status?.ok && <p class="gt-ok">{status.ok}</p>}
+            {status?.error && <p class="gt-error">{status.error}</p>}
+        </div>
+    )
+}
+
 function ImportTab({ settings, reloadSettings, onImported }) {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
@@ -1038,13 +1250,32 @@ function ImportTab({ settings, reloadSettings, onImported }) {
     })
 
     const ready = !!settings.steamApiKey && !!settings.steamId
+    const providerLabel = settings.metadataProvider === "rawg" ? "RAWG" : "IGDB"
+
+    const checkProvider = () => run(async () => {
+        const r = await callBackend("providerCheck")
+        setStatus({ ok: `${r.provider} is working${r.sample ? ` (sample: ${r.sample})` : ""}.` })
+    })
 
     return (
         <div class="gt-import">
             <p class="gt-hint">
                 Import is one-way. Games and playtime are copied into Trilium; nothing is ever
-                written back to Steam or IGDB.
+                written back to Steam, IGDB, or RAWG.
             </p>
+
+            <div class="gt-source">
+                <h4>Metadata provider</h4>
+                <p class="gt-hint">
+                    Currently using <strong>{providerLabel}</strong> for covers, genres, and
+                    platforms. Change this on the Provider tab in Settings.
+                </p>
+                <button class="gt-btn" disabled={busy} onClick={checkProvider}>
+                    Check {providerLabel} connection
+                </button>
+            </div>
+
+            <FileImportPanel settings={settings} onImported={onImported} />
 
             {/* Scheduled imports run in the background, so their outcome would
                 otherwise be invisible. */}
@@ -1107,15 +1338,62 @@ export default function GameTracker() {
     const [tab, setTab] = useState("library")
     const [reloadKey, setReloadKey] = useState(0)
     const [settingsPageNoteId, setSettingsPageNoteId] = useState("")
+    // Why settings could not be resolved, if they couldn't. Distinct from
+    // `settings` being null (still loading) and from a loaded-but-empty config.
+    const [wiringError, setWiringError] = useState("")
 
+    // Resolve the schema and config notes from this widget's own relations.
+    //
+    // Every failure here is reported rather than swallowed. loadSettings falls
+    // back to schema defaults when given a bad id, and the default for
+    // libraryRootNoteId is "" -- which renders as "No library root set" even
+    // when a root IS saved in the config note. That makes a wiring problem look
+    // exactly like an unset setting, so the two are separated explicitly.
+    //
+    // The usual cause is TAM: it renames activation attributes to
+    // `disabled:<name>` while an addon is disabled, so a widget rendered from a
+    // disabled addon finds no `schemaNote`/`settingsNote` at all.
     const readSettings = async () => {
         const schemaNoteId = await api.currentNote.getRelationValue("schemaNote")
+            || await api.currentNote.getRelationValue("disabled:schemaNote")
         const settingsNoteId = await api.currentNote.getRelationValue("settingsNote")
-        const configNoteId = (await api.getNote(settingsNoteId)).getRelationValue("configNote")
-        return loadSettings(schemaNoteId, configNoteId)
+            || await api.currentNote.getRelationValue("disabled:settingsNote")
+
+        if (!schemaNoteId || !settingsNoteId) {
+            throw new Error(
+                "This widget's schemaNote/settingsNote relations are missing. That normally means "
+                + "game-tracker is installed but not enabled in TAM — enable it, then reload."
+            )
+        }
+
+        const settingsNote = await api.getNote(settingsNoteId)
+        if (!settingsNote) {
+            throw new Error("The settings note this widget points at no longer exists. "
+                + "Reinstall or update game-tracker in TAM.")
+        }
+
+        const configNoteId = settingsNote.getRelationValue("configNote")
+            || settingsNote.getRelationValue("disabled:configNote")
+        if (!configNoteId) {
+            throw new Error("The settings note has no configNote relation, so there is nowhere "
+                + "to read saved settings from. Reinstall or update game-tracker in TAM.")
+        }
+
+        const values = await loadSettings(schemaNoteId, configNoteId)
+        // Stamped on so the library view can name the note it actually read,
+        // which is the one thing that distinguishes "not set" from "set, but
+        // saved somewhere this widget isn't looking".
+        return { ...values, __configNoteId: configNoteId }
     }
 
-    const reloadSettings = useCallback(async () => setSettings(await readSettings()), [])
+    const reloadSettings = useCallback(async () => {
+        try {
+            setSettings(await readSettings())
+            setWiringError("")
+        } catch (e) {
+            setWiringError(e.message)
+        }
+    }, [])
 
     useEffect(() => { reloadSettings() }, [reloadSettings])
 
@@ -1141,6 +1419,19 @@ export default function GameTracker() {
             // sessionStorage can be unavailable; Back falls back to the launcher.
         }
         activateNote(settingsPageNoteId)
+    }
+
+    // A wiring failure is shown as itself, rather than falling through to the
+    // library's "no library root set" message -- which would send the user off
+    // to set a root they have very likely already set.
+    if (wiringError) {
+        return (
+            <div class="gt-view">
+                <p class="gt-error">Game Tracker could not read its settings.</p>
+                <p class="gt-hint">{wiringError}</p>
+                <button class="gt-btn" onClick={reloadSettings}>Retry</button>
+            </div>
+        )
     }
 
     if (!settings) return <div class="gt-view">Loading...</div>

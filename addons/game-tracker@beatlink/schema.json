@@ -110,7 +110,7 @@
     "coverSize": {
         "type": "select",
         "label": "Cover Size",
-        "description": "IGDB image size used for cover URLs stored with each game.",
+        "description": "IGDB image size used for cover URLs stored with each game. Has no effect on RAWG, which serves a single image URL per game.",
         "default": "cover_big",
         "options": [
             { "value": "cover_small", "label": "Small (90x128)" },
@@ -120,10 +120,30 @@
         "tab": "Library"
     },
 
+    "metadataProvider": {
+        "type": "select",
+        "label": "Metadata Provider",
+        "description": "Where covers, genres, and platforms come from. IGDB is richer but requires registering a Twitch application, which Twitch only allows on accounts with two-factor authentication enabled. RAWG needs only an email signup, so pick it if the Twitch requirement is a blocker. Switching provider does not lose any games: run Refresh afterwards to re-link them.",
+        "default": "igdb",
+        "options": [
+            { "value": "igdb", "label": "IGDB (needs a Twitch app + 2FA)" },
+            { "value": "rawg", "label": "RAWG (email signup only)" }
+        ],
+        "tab": "Provider"
+    },
+
+    "rawgApiKey": {
+        "type": "string",
+        "label": "RAWG API Key",
+        "description": "Free key from https://rawg.io/apidocs — a plain email signup, no OAuth and no two-factor requirement. The free tier allows 20,000 requests per month. Only used when Metadata Provider is set to RAWG.",
+        "default": "",
+        "tab": "RAWG"
+    },
+
     "igdbClientId": {
         "type": "string",
         "label": "IGDB (Twitch) Client ID",
-        "description": "IGDB authenticates through Twitch. Register an application at https://dev.twitch.tv/console/apps with Client Type set to Confidential, then copy its Client ID here.",
+        "description": "IGDB authenticates through Twitch. Register an application at https://dev.twitch.tv/console/apps with Client Type set to Confidential, then copy its Client ID here. Twitch requires two-factor authentication on the account before it will allow app registration; if you cannot enable it, switch Metadata Provider to RAWG instead.",
         "default": "",
         "tab": "IGDB"
     },
