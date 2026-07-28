@@ -1103,8 +1103,8 @@ function FileImportPanel({ settings, onImported }) {
     const [asCollections, setAsCollections] = useState(true)
     const [showUnmatched, setShowUnmatched] = useState(false)
 
-    const providerLabel = settings.metadataProvider === "rawg" ? "RAWG" : "IGDB"
-
+    // The chain is ordered in Settings; the panel only needs to say "your
+    // sources" rather than name one.
     const readFile = async (file) => {
         if (!file) return
         setBusy(true)
@@ -1113,7 +1113,7 @@ function FileImportPanel({ settings, onImported }) {
         setFilename(file.name)
         try {
             const text = await file.text()
-            setStatus({ hint: `Matching titles against ${providerLabel}...` })
+            setStatus({ hint: "Matching titles against your metadata sources..." })
             const result = await postBackend("previewImport", { text, filename: file.name })
             setPreview(result)
             setStatus(null)
@@ -1178,7 +1178,7 @@ function FileImportPanel({ settings, onImported }) {
                     <p class="gt-hint">
                         Found <strong>{preview.total}</strong> games
                         {preview.format === "igdb-export" ? " in an IGDB export" : ""}.
-                        {" "}<strong>{preview.matchedCount}</strong> matched on {providerLabel},
+                        {" "}<strong>{preview.matchedCount}</strong> matched,
                         {" "}<strong>{preview.unmatchedCount}</strong> did not
                         {preview.existingCount > 0 && (
                             <>, and <strong>{preview.existingCount}</strong> are already tracked</>
@@ -1217,8 +1217,8 @@ function FileImportPanel({ settings, onImported }) {
                                 </div>
                             )}
                             <p class="gt-hint">
-                                Unmatched games are skipped. They are usually titles {providerLabel} spells
-                                differently, or does not have at all — add those by hand from the Add tab.
+                                Unmatched games are skipped. They are usually titles your sources spell
+                                differently, or do not have at all — add those by hand from the Add tab.
                             </p>
                         </>
                     )}
@@ -1294,11 +1294,13 @@ function ImportTab({ settings, reloadSettings, onImported }) {
     })
 
     const ready = !!settings.steamApiKey && !!settings.steamId
-    const providerLabel = settings.metadataProvider === "rawg" ? "RAWG" : "IGDB"
+    // Each configured source is checked individually: "metadata is broken" is
+    // far less useful than knowing which of seven sources is the one failing.
+    const [sourceChecks, setSourceChecks] = useState(null)
 
-    const checkProvider = () => run(async () => {
+    const checkProviders = () => run(async () => {
         const r = await callBackend("providerCheck")
-        setStatus({ ok: `${r.provider} is working${r.sample ? ` (sample: ${r.sample})` : ""}.` })
+        setSourceChecks(r.sources || [])
     })
 
     return (
@@ -1309,14 +1311,35 @@ function ImportTab({ settings, reloadSettings, onImported }) {
             </p>
 
             <div class="gt-source">
-                <h4>Metadata provider</h4>
+                <h4>Metadata sources</h4>
                 <p class="gt-hint">
-                    Currently using <strong>{providerLabel}</strong> for covers, genres, and
-                    platforms. Change this on the Provider tab in Settings.
+                    Sources are consulted in the order set on the <strong>Sources</strong> tab in
+                    Settings, and merged field by field — the first source with a value for a field
+                    wins it, and anything it leaves empty falls through to the next.
                 </p>
-                <button class="gt-btn" disabled={busy} onClick={checkProvider}>
-                    Check {providerLabel} connection
+                <button class="gt-btn" disabled={busy} onClick={checkProviders}>
+                    Check all sources
                 </button>
+                {sourceChecks && (
+                    <div class="gt-preview-list">
+                        {sourceChecks.map(c => (
+                            <div class="gt-preview-row" key={c.id}>
+                                <span class="gt-compare-state"
+                                    style={c.ok ? "" : "color: var(--error-color, red);"}>
+                                    {c.ok ? "\u2713" : "\u00d7"}
+                                </span>
+                                <span class="gt-preview-title">
+                                    {c.label}
+                                    {c.sample && <span class="gt-hint"> — {c.sample}</span>}
+                                    {c.remaining != null && (
+                                        <span class="gt-hint"> — {c.remaining} requests left this month</span>
+                                    )}
+                                </span>
+                                {!c.ok && <span class="gt-hint">{c.error}</span>}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <FileImportPanel settings={settings} onImported={onImported} />

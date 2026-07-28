@@ -10,9 +10,8 @@ TV. The two are independent addons with separate libraries and settings.
 ## Setup
 
 1. Install and enable the addon.
-2. Choose a **metadata provider** on the Provider tab in Settings and give it a key. See
-   [Metadata providers](#metadata-providers) below — if you cannot enable two-factor authentication
-   on Twitch, choose RAWG.
+2. Optionally set up metadata sources on the **Sources** tab. You can skip this entirely —
+   Steam, GOG, and Lutris need no key at all. See [Metadata sources](#metadata-sources).
 3. Create a note to hold your library (anywhere in your tree), then pick it at the top of the
    **Library** tab in Settings. This is required — every tracked game is created as a child of it.
 4. Optionally set up Steam on the **Steam** tab to import your owned games.
@@ -22,30 +21,39 @@ at the tracker widget and given a joystick icon, so opening it in your tree show
 Choosing a different note reverts the old one back to a plain text note, and clearing the setting
 reverts it without selecting a replacement.
 
-## Metadata providers
+## Metadata sources
 
-Covers, genres, platforms, and summaries come from one of two interchangeable providers, selected on
-the **Provider** tab. Everything else in the addon works identically either way.
+Covers, genres, platforms, and summaries come from an **ordered list of sources**, configured on the
+**Sources** tab. They are consulted in order and merged **field by field**: the first source that
+supplies a value wins that field, and anything it leaves empty falls through to the next.
 
-| | IGDB | RAWG |
-|---|---|---|
-| Signup | Twitch application | Email address |
-| **Requires 2FA** | **Yes** | No |
-| Free tier | Unlimited, non-commercial | 20,000 requests/month |
-| Metadata depth | Fuller: storyline, game modes, perspectives, similar games | Genres, platforms, developers, screenshots |
-| Steam matching | Bulk, by appid | By title |
-| Bulk lookups | 200 games per request | One request per game |
+So one game can end up with IGDB's platforms, SteamGridDB's cover art, and Steam's summary — which is
+usually better than any single source alone. Reorder to change precedence; untick to disable.
 
-**IGDB** is the richer source, but Twitch will not let you register an application unless the account
-has two-factor authentication enabled. There is no way around that requirement.
+| Source | Key needed | Strengths | Gaps |
+|---|---|---|---|
+| **IGDB** | Twitch app + **2FA** | Fullest metadata: storyline, game modes, console platforms | 2FA blocks registration for some |
+| **RAWG** | Email signup | Broad coverage incl. older and non-Steam titles | No storyline or game modes |
+| **Steam** | **None** | Descriptions, genres, developers, screenshots, Metacritic | No console platforms; Steam titles only |
+| **GOG** | **None** | DRM-free and older PC games Steam never carried | No console platforms; no summaries |
+| **Lutris** | **None** | Console platforms, descriptions; bridges Steam/GOG ids | Community-edited, so uneven |
+| **SteamGridDB** | Free signup | Best cover art of any source | **Art only** — no metadata at all |
+| **TheGamesDB** | Free login | Best retro and console coverage | **Monthly request quota** |
 
-**RAWG** exists here precisely for that case: it needs nothing but an email signup. Its metadata is
-thinner (no storyline or game modes) but its coverage of older and non-Steam titles is good, which
-matters when importing a list full of games that were never on Steam.
+**Three sources need no key whatsoever** (Steam, GOG, Lutris), so the tracker works fully with no
+setup at all. Any source whose key you have not set is skipped automatically, so leaving one enabled
+is harmless.
 
-Switching providers loses nothing. Games stay in the library with their status, rating, and playtime;
-run **Refresh** on the Library tab afterwards and the addon re-links them to the new provider by
-Steam appid or by title.
+### Ordering and cost
+
+Order is not just preference — it controls cost. Once every field is filled, the chain **stops
+early**, so sources further down are never consulted. That is why the two key-requiring sources ship
+last, and why **TheGamesDB ships disabled**: it has a monthly quota, and placed last it is only ever
+asked for fields nothing else could supply.
+
+Bulk operations shrink the list as they go, too: each source is only asked about the titles still
+missing something, so a large import spends its later sources on a handful of stragglers rather than
+the whole library.
 
 ### IGDB credentials
 
@@ -56,23 +64,38 @@ key:
    authentication must be enabled on the Twitch account** — app registration is blocked without it.
 2. Register an application. The OAuth Redirect URL is unused by IGDB — put `http://localhost`.
    **Client Type must be Confidential**, otherwise no client secret can be generated.
-3. Copy the **Client ID**, generate a **Client Secret**, and paste both into Settings → IGDB.
+3. Copy the **Client ID**, generate a **Client Secret**, and paste both into Settings → Sources.
 
-That is all that is needed. The addon exchanges those for an access token itself, stores it, and
-renews it automatically a day before it expires — there is nothing to re-authorize by hand. IGDB is
-free for non-commercial use.
+The addon exchanges those for an access token itself and renews it automatically a day before it
+expires. IGDB is free for non-commercial use.
+
+**If you cannot enable Twitch 2FA**, simply leave IGDB disabled — the remaining six sources cover PC
+gaming comprehensively, and three of them need no key at all.
 
 ### RAWG credentials
 
-1. Sign up at [rawg.io/apidocs](https://rawg.io/apidocs) with an email address.
-2. Copy the API key into Settings → RAWG.
+Sign up at [rawg.io/apidocs](https://rawg.io/apidocs) with an email address and paste the key into
+Settings → Sources. No OAuth, no application registration, no two-factor requirement. The free tier
+covers 20,000 requests a month.
 
-No OAuth, no application registration, no two-factor requirement. The free tier covers 20,000
-requests a month, which is far more than a personal library needs — though note that RAWG has no bulk
-endpoints, so a large Steam import spends one request per game rather than one per 200.
+### SteamGridDB credentials
 
-Use **Check connection** on the Import tab to confirm either provider is working before relying on
-it.
+Free key from [steamgriddb.com/profile/preferences/api](https://www.steamgriddb.com/profile/preferences/api)
+after a plain signup. SteamGridDB contributes **cover art only** — no genres, summaries, or
+platforms — so enable it only if you want better artwork than the general sources provide. Place it
+above the others to have its art win.
+
+### TheGamesDB credentials
+
+Log in at [thegamesdb.net](https://thegamesdb.net) and open **API Key**. Its retro and console
+coverage is the best of any source here, but it has a **monthly request quota**, so it ships last and
+disabled.
+
+Its genres and platforms arrive as numeric ids rather than names; the addon fetches those lookup
+tables **once** and caches them, so resolving them costs no extra quota per game.
+
+Use **Check all sources** on the Import tab to see which sources are working, and how much
+TheGamesDB quota remains.
 
 ### Steam credentials
 
@@ -110,8 +133,8 @@ beside the sort controls, so narrowing to a series or a genre answers "how long 
 directly.
 
 **Refresh** runs a housekeeping sweep over the whole library: it re-fetches metadata and covers from
-IGDB and links any Steam-only games to their IGDB records. It never changes a rating, a status, or a
-playtime.
+your configured sources and links any unlinked games by Steam appid or title. It never changes a
+rating, a status, or a playtime.
 
 ### Statuses
 
@@ -182,7 +205,8 @@ publishers, genres, platforms, game modes, IGDB's aggregate rating alongside you
 row of screenshots, and a list of similar games. Links out to IGDB and — when the game came from
 Steam — to its Steam store page.
 
-Everything here is fetched from IGDB live rather than stored, so it adds no weight to your database
+Everything here is fetched live from your metadata sources rather than stored, so it adds no weight
+to your database
 note.
 
 ### Collections
@@ -236,8 +260,8 @@ collections appears under each — groups overlap by design.
 
 ### Genres and platforms
 
-Both come from **IGDB automatically** and are refreshed by **Refresh**, whereas collections are yours
-and never touched. Each appears as its own dropdown with counts, scoped the same way — by the filters
+Both come from your **metadata sources automatically** and are refreshed by **Refresh**, whereas
+collections are yours and never touched. Each appears as its own dropdown with counts, scoped the same way — by the filters
 before it, but not by itself.
 
 Genres can be switched off entirely with **Enable Genres** on the Library settings tab. With it off,
@@ -407,7 +431,7 @@ Done-role status is what an imported *Completed* game actually gets.
 Ratings are converted from IGDB's 0-100 scale to the tracker's 0-10.
 
 **The export contains no game ids — only titles.** Every row therefore has to be matched against your
-metadata provider by name, which is a guess, which is why the import happens in two steps.
+metadata sources by name, which is a guess, which is why the import happens in two steps.
 
 ### Preview before writing
 
@@ -476,11 +500,16 @@ records the timestamp, so a persistently broken source doesn't retry every hour 
 - **Title matching is a guess.** A file with no ids is matched by name, and a game whose title the
   provider spells differently will not match. This is why the file import previews before writing,
   and why unmatched rows are skipped rather than guessed at.
-- **RAWG has no bulk endpoints.** A large Steam import or library refresh spends one request per game
-  rather than one per 200, so it is noticeably slower than the same operation on IGDB.
-- **The two providers' ids are not interchangeable.** A library populated by one stores that
-  provider's ids. Switching is supported — Refresh re-links by Steam appid or title — but it is a
-  re-match, not a translation, so a game the new provider does not have will end up unlinked.
+- **Only IGDB has bulk endpoints.** Every other source needs one request per game, so a large import
+  is noticeably slower when IGDB is disabled.
+- **Source ids are not interchangeable.** A game stores the id of whichever source is *primary* (the
+  first one that supports id lookups). Reordering so a different source leads is supported — Refresh
+  re-links by Steam appid or title — but it is a re-match, not a translation, so a game the new
+  primary does not have will end up unlinked.
+- **SteamGridDB supplies art only.** It contributes `cover` and nothing else; it can never fill a
+  genre, platform, or summary.
+- **TheGamesDB has a monthly quota.** It ships last and disabled for that reason. Enabling it and
+  moving it up the order will spend quota quickly on a large library.
 - **Steam only reports totals.** There is no per-session history in the API, so `playtime` is a running
   total, not a log of sessions.
 - **Non-Steam launchers have no API import.** GOG, Epic, and console libraries have no equivalent

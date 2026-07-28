@@ -157,6 +157,107 @@ function orphanStatusIds(doc, statuses) {
 // they remain the shipped ids, so nothing needs migrating.
 const STATUSES = Object.keys(SHIPPED_STATUSES)
 
+// --- metadata sources -------------------------------------------------------
+//
+// Metadata comes from an ordered list of sources rather than a single provider.
+// Each source is tried in turn PER FIELD, so a gap in one is filled by the next:
+// Steam has no console platforms, IGDB does; Steam has no entry at all for a
+// game that never shipped there, RAWG usually does. Ordering them lets the user
+// say "prefer IGDB's data, but fall back to Steam" without losing either.
+//
+// The merge is per-field, not per-source: the first source that supplies a
+// non-empty value for a field wins that field, independently of every other
+// field. A game can therefore end up with IGDB's platforms, Steam's cover, and
+// RAWG's summary, which is usually better than any one source alone.
+
+// Fields that participate in the merge. `id` fields are excluded deliberately:
+// they identify the game within a source and are merged separately, not
+// overwritten by whichever source answered first.
+const MERGED_FIELDS = [
+    "title", "year", "summary", "cover", "genres", "platforms"
+]
+
+// Whether a source actually supplied a field. Empty strings, zeroes, and blank
+// arrays all count as "no data" -- a source returning "" for summary must not
+// stop a later source that has one.
+function hasValue(value) {
+    if (value === null || value === undefined) return false
+    if (typeof value === "string") return value.trim() !== ""
+    if (Array.isArray(value)) return value.length > 0
+    return true
+}
+
+// Merge source results in priority order into one game, recording which source
+// each field came from.
+//
+// `results` is [{ source, game }] in the user's configured order. Later entries
+// only fill fields earlier ones left empty, so reordering sources in settings
+// changes precedence without changing anything else.
+//
+// Returns { ...fields, sources: { field: sourceId }, sourceIds: { sourceId: id } }
+// so the UI can show where each value came from and later refreshes can reuse
+// each source's own id for the game.
+function mergeGameSources(results) {
+    const merged = {}
+    const sources = {}
+    const sourceIds = {}
+
+    for (const { source, game } of results) {
+        if (!game) continue
+
+        // Each source's own id for this game is kept alongside the merged
+        // fields, so a later refresh can go straight back to that source
+        // instead of matching by title again.
+        if (game.igdbId) sourceIds[source] = String(game.igdbId)
+        if (game.steamAppId && !merged.steamAppId) merged.steamAppId = String(game.steamAppId)
+
+        for (const field of MERGED_FIELDS) {
+            if (field in merged && hasValue(merged[field])) continue
+            if (!hasValue(game[field])) continue
+            merged[field] = game[field]
+            sources[field] = source
+        }
+    }
+
+    return { ...merged, sources, sourceIds }
+}
+
+// The configured source order, as an array of source ids.
+//
+// Stored as a registry so it can be reordered and toggled in settings. Only
+// enabled sources are returned, in their configured order. Falls back to a
+// sensible default when nothing is configured, so a fresh install works before
+// the user has touched the tab.
+const KNOWN_SOURCES = [
+    "igdb", "rawg", "steam", "gog", "lutris", "steamgriddb", "gamesdb"
+]
+
+// The order a fresh install uses. IGDB and RAWG lead because their data is the
+// most complete and consistent; the keyless store sources follow; the two
+// requiring a key sit last, which for the quota-limited TheGamesDB is what keeps
+// it cheap -- placed last it is only consulted for fields nothing else filled.
+const DEFAULT_SOURCE_ORDER = [
+    "igdb", "rawg", "steam", "gog", "lutris", "steamgriddb", "gamesdb"
+]
+
+function listSources(sourcesValue) {
+    if (!sourcesValue || typeof sourcesValue !== "object" || Array.isArray(sourcesValue)) {
+        return [...DEFAULT_SOURCE_ORDER]
+    }
+
+    const out = []
+    for (const [id, entry] of Object.entries(sourcesValue)) {
+        if (!KNOWN_SOURCES.includes(id)) continue
+        // A source is on unless explicitly disabled, so an entry added by a
+        // later addon version is active without needing a settings edit.
+        if (entry && entry.enabled === false) continue
+        out.push(id)
+    }
+    // An empty list would mean no metadata at all, which is never what someone
+    // intends -- treat it as "not configured" instead.
+    return out.length ? out : [...DEFAULT_SOURCE_ORDER]
+}
+
 // IGDB serves images from a fixed path with an interchangeable size segment.
 // Verified against api-docs.igdb.com: https://images.igdb.com/igdb/image/upload/t_{size}/{hash}.jpg
 const IMAGE_BASE = "https://images.igdb.com/igdb/image/upload/"
@@ -285,8 +386,18 @@ function normalizeGame(entry) {
         // Series / themes / personal buckets, set by hand. IGDB's own franchise
         // and collection fields are inconsistently populated, so these stay the
         // user's own vocabulary rather than an imported one.
-        collections: normalizeCollections(entry?.collections ?? entry?.collection)
+        collections: normalizeCollections(entry?.collections ?? entry?.collection),
+        // Which source supplied each field, and each source's own id for this
+        // game. Both are bookkeeping for the metadata chain: `sources` lets the
+        // UI show provenance, and `sourceIds` lets a refresh go straight back to
+        // a source rather than re-matching by title.
+        sources: isPlainMap(entry?.sources) ? { ...entry.sources } : {},
+        sourceIds: isPlainMap(entry?.sourceIds) ? { ...entry.sourceIds } : {}
     }
+}
+
+function isPlainMap(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value)
 }
 
 // Accepts an array, a single string, or nothing. Trims, drops blanks, and
@@ -1029,6 +1140,12 @@ module.exports = {
     findGame,
     normalizeGame,
     listGames,
+    MERGED_FIELDS,
+    KNOWN_SOURCES,
+    DEFAULT_SOURCE_ORDER,
+    hasValue,
+    mergeGameSources,
+    listSources,
     parseGameLink,
     parseImportFile,
     parseIgdbExport,

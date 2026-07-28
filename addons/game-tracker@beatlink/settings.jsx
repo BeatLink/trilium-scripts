@@ -748,6 +748,30 @@ export default function GameTrackerSettings() {
             )
         },
         {
+            tab: "Sources",
+            render: () => (
+                <div>
+                    <p class="gt-hint">
+                        Sources are consulted <strong>in the order listed</strong> and merged
+                        field by field: the first source that supplies a value wins that field,
+                        and anything it leaves empty falls through to the next. A game can end up
+                        with IGDB's platforms, SteamGridDB's cover, and Steam's summary.
+                    </p>
+                    <p class="gt-hint">
+                        Use the arrows on each entry to reorder, and untick <em>Enabled</em> to skip
+                        one. <strong>Steam</strong>, <strong>GOG</strong>, and <strong>Lutris</strong>
+                        need no key at all, so the tracker works with no setup. A source whose key
+                        you have not set is skipped automatically.
+                    </p>
+                    <SettingsForm
+                        schemaNoteId={schemaNoteId}
+                        configNoteId={configNoteId}
+                        only="Sources"
+                    />
+                </div>
+            )
+        },
+        {
             tab: "Collections",
             render: () => <CollectionGroupPanel />
         },
@@ -767,9 +791,9 @@ export default function GameTrackerSettings() {
                 <h3>Game Tracker</h3>
             </div>
             <p class="gt-hint">
-                IGDB (via a free Twitch app) powers search, covers, and metadata. Steam is an
-                optional one-way import source for your owned games and playtime: it is read,
-                never written to.
+Metadata comes from an ordered list of sources, merged field by field — set them up on the
+                Sources tab. Steam is also a one-way import source for your owned games and
+                playtime: every source here is read, never written to.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

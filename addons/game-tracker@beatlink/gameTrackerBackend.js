@@ -79,6 +79,10 @@ const tracker = require("libGameTracker.js")
 const TWITCH_OAUTH = "https://id.twitch.tv/oauth2/token"
 const IGDB_API = "https://api.igdb.com/v4"
 const RAWG_API = "https://api.rawg.io/api"
+const GOG_CATALOG = "https://catalog.gog.com/v1"
+const LUTRIS_API = "https://lutris.net/api"
+const SGDB_API = "https://www.steamgriddb.com/api/v2"
+const TGDB_API = "https://api.thegamesdb.net"
 const STEAM_API = "https://api.steampowered.com"
 const STEAM_STORE = "https://store.steampowered.com/api"
 
@@ -645,11 +649,527 @@ async function rawgBySteamAppId(settings, appId) {
     return hit ? { ...hit, steamAppId: String(appId) } : null
 }
 
-// --- provider dispatch ------------------------------------------------------
+// --- Steam as a metadata source ---------------------------------------------
 //
-// The single place that knows which metadata provider is configured. Every
-// caller goes through `provider(settings)` and gets the same five operations
-// back, so no other function in this file branches on the provider.
+// Steam's storefront API needs no key at all, which makes it the only source
+// that works with zero setup. It is genuinely rich for games that shipped on
+// Steam -- description, genres, developers, screenshots, Metacritic -- but it
+// has two hard limits that the source chain exists to cover:
+//
+//   * `platforms` is only {windows, mac, linux}. There is no console
+//     information, so a Steam-only library has no PlayStation or Switch data.
+//   * A game that never shipped on Steam simply is not there.
+//
+// Both endpoints are public and unauthenticated; verified live.
+
+// Search the storefront by title. Returns the same shape as the other sources.
+async function steamSearchByName(settings, query) {
+    const text = String(query || "").trim()
+    if (!text) return []
+
+    const json = await getJson(`${STEAM_STORE}/storesearch/`
+        + `?term=${encodeURIComponent(text)}&l=en&cc=US`)
+
+    let doc = { games: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
+    // storesearch returns only a name and capsule image, so results are shallow
+    // by design -- full metadata arrives when the game is actually added.
+    return (json?.items || [])
+        .filter(item => item && item.name && item.id)
+        .map(item => {
+            const game = {
+                igdbId: "",
+                steamAppId: String(item.id),
+                title: item.name,
+                year: "",
+                summary: "",
+                cover: item.tiny_image || "",
+                genres: "",
+                platforms: steamPlatformString(item.platforms)
+            }
+            return { ...game, trackedKey: tracker.findGame(doc, game) || "" }
+        })
+}
+
+// Steam reports OS support, not the console platforms the other sources list.
+// Named to match IGDB's spelling so the same platform filter covers both.
+function steamPlatformString(platforms) {
+    if (!platforms || typeof platforms !== "object") return ""
+    const names = []
+    if (platforms.windows) names.push("PC (Microsoft Windows)")
+    if (platforms.mac) names.push("Mac")
+    if (platforms.linux) names.push("Linux")
+    return names.join(", ")
+}
+
+// Full metadata for one appid, mapped to the shared shape.
+async function steamGameByAppId(settings, appId) {
+    const details = await steamStoreDetails(appId)
+    return details || null
+}
+
+// Resolve titles to Steam appids via the storefront search, accepting only an
+// exact name match for the same reason RAWG's matcher does: importing
+// "Hades II" for "Hades" is worse than reporting the row unmatched.
+async function steamGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        try {
+            const json = await getJson(`${STEAM_STORE}/storesearch/`
+                + `?term=${encodeURIComponent(title)}&l=en&cc=US`)
+            const exact = (json?.items || []).find(item =>
+                item?.name && normalizeTitle(item.name) === normalizeTitle(title))
+            if (exact) {
+                // storesearch is shallow, so the full record is fetched for the
+                // one match rather than for every candidate.
+                const full = await steamStoreDetails(exact.id)
+                if (full) found.set(title.toLowerCase(), full)
+            }
+        } catch (e) {
+            // One failed lookup must not lose the rest.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(150)
+    }
+    return found
+}
+
+// --- GOG --------------------------------------------------------------------
+//
+// GOG's storefront catalog is public and needs no key. Its value in the chain is
+// coverage of DRM-free and older PC titles Steam never carried, plus clean
+// genre and developer data.
+//
+// Verified live against catalog.gog.com/v1/catalog: products carry id, slug,
+// title, releaseDate ("YYYY.MM.DD"), coverVertical/coverHorizontal, developers,
+// publishers, operatingSystems, and genres[].name. Search is fuzzy and ranks
+// DLC and soundtracks alongside base games, so matching accepts only exact
+// titles and prefers productType "game".
+
+async function gogSearch(settings, query) {
+    const text = String(query || "").trim()
+    if (!text) return []
+
+    const json = await getJson(`${GOG_CATALOG}/catalog`
+        + `?limit=20&query=${encodeURIComponent(`like:${text}`)}`
+        + `&locale=en-US&currencyCode=USD&countryCode=US`)
+
+    let doc = { games: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
+    return (json?.products || [])
+        .filter(p => p && p.title && p.productType !== "dlc")
+        .map(raw => {
+            const game = mapGogGame(raw)
+            return { ...game, trackedKey: tracker.findGame(doc, game) || "" }
+        })
+}
+
+function mapGogGame(raw) {
+    return {
+        // GOG ids live in their own namespace; the chain records them per source
+        // rather than treating any one as the game's identity.
+        igdbId: "",
+        gogId: String(raw.id || ""),
+        steamAppId: "",
+        title: raw.title || "",
+        // "2020.01.29"
+        year: String(raw.releaseDate || "").slice(0, 4),
+        summary: "",
+        cover: raw.coverVertical || raw.coverHorizontal || "",
+        genres: (raw.genres || []).map(g => g.name).filter(Boolean).join(", "),
+        // GOG reports OS support, not console platforms.
+        platforms: (raw.operatingSystems || [])
+            .map(os => ({
+                windows: "PC (Microsoft Windows)", osx: "Mac", mac: "Mac", linux: "Linux"
+            })[String(os).toLowerCase()])
+            .filter(Boolean)
+            .join(", ")
+    }
+}
+
+async function gogGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        try {
+            const json = await getJson(`${GOG_CATALOG}/catalog`
+                + `?limit=10&query=${encodeURIComponent(`like:${title}`)}`
+                + `&locale=en-US&currencyCode=USD&countryCode=US`)
+            // Exact name only, and never a DLC or soundtrack: GOG's fuzzy search
+            // happily returns "The Pedestrian Soundtrack" for an unrelated query.
+            const exact = (json?.products || []).find(p =>
+                p?.title && p.productType !== "dlc"
+                && normalizeTitle(p.title) === normalizeTitle(title))
+            if (exact) found.set(title.toLowerCase(), mapGogGame(exact))
+        } catch (e) {
+            // One failed lookup must not lose the rest.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(150)
+    }
+    return found
+}
+
+// --- Lutris -----------------------------------------------------------------
+//
+// Public, no key. Community-contributed, so its data is uneven -- it dates Hades
+// to its early-access year and sometimes lists only Windows for a
+// multi-platform game -- which is why it belongs below IGDB and RAWG in the
+// default order rather than above them.
+//
+// Its distinctive value is cross-referencing: a Lutris entry carries `steamid`
+// and `gogslug`, so it can bridge a game's identity between stores when nothing
+// else can.
+//
+// Verified live: /api/games?search= for search, /api/games/{slug} for detail,
+// returning name, year, platforms[].name, genres[].name, description, coverart.
+
+async function lutrisSearch(settings, query) {
+    const text = String(query || "").trim()
+    if (!text) return []
+
+    const json = await getJson(`${LUTRIS_API}/games?search=${encodeURIComponent(text)}`)
+
+    let doc = { games: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
+    return (json?.results || [])
+        .filter(g => g && g.name)
+        .slice(0, 20)
+        .map(raw => {
+            const game = mapLutrisGame(raw)
+            return { ...game, trackedKey: tracker.findGame(doc, game) || "" }
+        })
+}
+
+function mapLutrisGame(raw) {
+    return {
+        igdbId: "",
+        lutrisSlug: String(raw.slug || ""),
+        // The bridge: Lutris records the game's Steam appid where it knows one.
+        steamAppId: raw.steamid ? String(raw.steamid) : "",
+        gogSlug: String(raw.gogslug || ""),
+        title: raw.name || "",
+        year: raw.year ? String(raw.year) : "",
+        summary: typeof raw.description === "string" ? raw.description.trim() : "",
+        cover: raw.coverart || raw.banner_url || "",
+        genres: (raw.genres || []).map(g => g.name).filter(Boolean).join(", "),
+        platforms: (raw.platforms || []).map(p => p.name).filter(Boolean).join(", ")
+    }
+}
+
+async function lutrisGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        try {
+            const json = await getJson(`${LUTRIS_API}/games?search=${encodeURIComponent(title)}`)
+            const exact = (json?.results || []).find(g =>
+                g?.name && normalizeTitle(g.name) === normalizeTitle(title))
+            if (exact) {
+                // The search response omits `description`, so the detail record
+                // is fetched for the one match.
+                let full = exact
+                try {
+                    full = await getJson(`${LUTRIS_API}/games/${encodeURIComponent(exact.slug)}`) || exact
+                } catch (e) {
+                    // Fall back to the shallower search row.
+                }
+                found.set(title.toLowerCase(), mapLutrisGame(full))
+            }
+        } catch (e) {
+            // One failed lookup must not lose the rest.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(150)
+    }
+    return found
+}
+
+// --- SteamGridDB ------------------------------------------------------------
+//
+// Art only: no genres, no summaries, no platforms. It exists in the chain purely
+// to supply better cover art than the general sources manage, so it contributes
+// exactly one field (`cover`) and leaves everything else to the others.
+//
+// Needs a free key (a plain signup, no OAuth). Contract taken from SteamGridDB's
+// own npm client (steamgriddb@2.2.1): Bearer auth, every response wrapped as
+// { success, data }, /search/autocomplete/{term}, /games/steam/{appid}, and
+// /grids/game/{id} returning images with `url` and `thumb`.
+
+function sgdbKey(settings) {
+    const key = String(settings.steamGridDbApiKey || "").trim()
+    if (!key) throw new Error("Set a SteamGridDB API key in Settings first")
+    return key
+}
+
+async function sgdbGet(settings, path) {
+    const res = await fetch(`${SGDB_API}${path}`, {
+        headers: outboundHeaders({ Authorization: `Bearer ${sgdbKey(settings)}` })
+    })
+
+    if (res.status === 401 || res.status === 403) {
+        throw new Error("SteamGridDB rejected the API key. Check it in Settings against "
+            + "your key at steamgriddb.com/profile/preferences/api.")
+    }
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error(`SteamGridDB request failed (HTTP ${res.status})`)
+
+    const json = await res.json()
+    // The envelope reports failure in-band rather than by status code.
+    if (!json?.success) return null
+    return json.data ?? null
+}
+
+// The best-scoring grid for a SteamGridDB game id. Grids are the vertical
+// cover-style art, which is what this tracker displays.
+async function sgdbCoverForGameId(settings, gameId) {
+    const grids = await sgdbGet(settings, `/grids/game/${encodeURIComponent(gameId)}`)
+    if (!Array.isArray(grids) || !grids.length) return ""
+    // Highest community score first; `url` is the full-size image.
+    const best = [...grids].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))[0]
+    return best?.url ? String(best.url) : ""
+}
+
+// Art for a game, by Steam appid when known (exact) or by title (a search).
+async function sgdbArtFor(settings, { steamAppId, title }) {
+    try {
+        if (steamAppId) {
+            const game = await sgdbGet(settings, `/games/steam/${encodeURIComponent(steamAppId)}`)
+            if (game?.id) {
+                const cover = await sgdbCoverForGameId(settings, game.id)
+                if (cover) return { title: game.name || "", cover }
+            }
+        }
+        if (title) {
+            const matches = await sgdbGet(settings,
+                `/search/autocomplete/${encodeURIComponent(title)}`)
+            const exact = (matches || []).find(m =>
+                m?.name && normalizeTitle(m.name) === normalizeTitle(title))
+            if (exact?.id) {
+                const cover = await sgdbCoverForGameId(settings, exact.id)
+                if (cover) return { title: exact.name || "", cover }
+            }
+        }
+    } catch (e) {
+        // Art is decorative; never fail a lookup over it.
+    }
+    return null
+}
+
+async function sgdbGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        const art = await sgdbArtFor(settings, { title })
+        if (art?.cover) {
+            // Only `cover` is populated: everything else is left empty so the
+            // merge takes those fields from a real metadata source.
+            found.set(title.toLowerCase(), {
+                igdbId: "", steamAppId: "",
+                title: art.title || title,
+                year: "", summary: "", genres: "", platforms: "",
+                cover: art.cover
+            })
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(150)
+    }
+    return found
+}
+
+// --- TheGamesDB -------------------------------------------------------------
+//
+// A community database whose strength is retro and console titles -- the gap
+// every store-based source leaves. Free self-service key (a site login), but
+// unlike the keyless sources it has a MONTHLY REQUEST QUOTA, which shapes how
+// it is used here:
+//
+//   * It sits last in the default order, so it is only consulted for fields the
+//     other sources left empty.
+//   * Its genres, developers, publishers, and platform come back as integer
+//     IDs, not names. Resolving those naively would cost 3-4 extra requests per
+//     game, so the ID->name tables are fetched ONCE and cached in settings.
+//
+// Contract from TheGamesDB's own OpenAPI spec (api.thegamesdb.net/spec.yaml):
+// every response carries { code, status, remaining_monthly_allowance, data },
+// /v1/Games/ByGameName takes apikey + name + optional comma-delimited `fields`,
+// and Game has game_title, release_date, overview, genres[], developers[],
+// platform.
+
+function tgdbKey(settings) {
+    const key = String(settings.gamesDbApiKey || "").trim()
+    if (!key) throw new Error("Set a TheGamesDB API key in Settings first")
+    return key
+}
+
+async function tgdbGet(settings, path, params) {
+    const query = new URLSearchParams({ apikey: tgdbKey(settings), ...(params || {}) })
+    const res = await fetch(`${TGDB_API}${path}?${query}`, { headers: outboundHeaders() })
+
+    if (res.status === 403) {
+        throw new Error("TheGamesDB rejected the API key. Check it in Settings against "
+            + "your key at thegamesdb.net (log in, then API Key).")
+    }
+    if (!res.ok) throw new Error(`TheGamesDB request failed (HTTP ${res.status})`)
+
+    const json = await res.json()
+    // The quota is reported in-band on every response. Surfacing it is the only
+    // way a user can see they are close to the limit before requests start
+    // failing.
+    if (Number.isFinite(Number(json?.remaining_monthly_allowance))) {
+        lastTgdbAllowance = Number(json.remaining_monthly_allowance)
+    }
+    return json
+}
+
+// Most recent quota figure seen, reported by the connection check.
+let lastTgdbAllowance = null
+
+// The ID -> name tables, fetched once and cached in the config note.
+//
+// Without this, every game would need extra requests just to turn `genres: [1,
+// 8]` into "Action, Adventure" -- on a quota-limited API that is the difference
+// between a usable source and one that exhausts itself on a single import.
+async function tgdbLookups(settings) {
+    let cached = null
+    try {
+        cached = JSON.parse(settings.gamesDbLookups || "null")
+    } catch (e) {
+        // Malformed cache; refetch below.
+    }
+    if (cached?.genres && cached?.developers && cached?.platforms) return cached
+
+    const tables = { genres: {}, developers: {}, publishers: {}, platforms: {} }
+
+    // Each of these is ONE request for the whole table.
+    const sources = [
+        ["genres", "/v1/Genres", "genres"],
+        ["developers", "/v1/Developers", "developers"],
+        ["publishers", "/v1/Publishers", "publishers"],
+        ["platforms", "/v1/Platforms", "platforms"]
+    ]
+
+    for (const [key, path, field] of sources) {
+        try {
+            const json = await tgdbGet(settings, path)
+            const rows = json?.data?.[field] || {}
+            for (const [id, entry] of Object.entries(rows)) {
+                if (entry?.name) tables[key][String(id)] = entry.name
+            }
+        } catch (e) {
+            // A missing table just means those fields stay blank.
+        }
+        await pause(200)
+    }
+
+    persistFields({ gamesDbLookups: JSON.stringify(tables) })
+    return tables
+}
+
+function tgdbNames(table, ids) {
+    return (Array.isArray(ids) ? ids : [])
+        .map(id => table?.[String(id)])
+        .filter(Boolean)
+        .join(", ")
+}
+
+function mapTgdbGame(raw, tables) {
+    return {
+        igdbId: "",
+        gamesDbId: String(raw.id || ""),
+        steamAppId: "",
+        title: raw.game_title || "",
+        year: String(raw.release_date || "").slice(0, 4),
+        summary: typeof raw.overview === "string" ? raw.overview.trim() : "",
+        // Boxart needs a separate include; the art sources cover that better.
+        cover: "",
+        genres: tgdbNames(tables?.genres, raw.genres),
+        // A single platform id, which is exactly the console information the
+        // store-based sources cannot provide.
+        platforms: tables?.platforms?.[String(raw.platform)] || ""
+    }
+}
+
+async function tgdbSearch(settings, query) {
+    const text = String(query || "").trim()
+    if (!text) return []
+
+    const tables = await tgdbLookups(settings)
+    const json = await tgdbGet(settings, "/v1/Games/ByGameName", {
+        name: text,
+        fields: "overview,genres,platform"
+    })
+
+    let doc = { games: {} }
+    try {
+        doc = loadDocument(settings)
+    } catch (e) {
+        // No library root configured yet.
+    }
+
+    return (json?.data?.games || [])
+        .filter(g => g && g.game_title)
+        .slice(0, 20)
+        .map(raw => {
+            const game = mapTgdbGame(raw, tables)
+            return { ...game, trackedKey: tracker.findGame(doc, game) || "" }
+        })
+}
+
+async function tgdbGamesByTitles(settings, titles, onProgress) {
+    const found = new Map()
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+    if (!wanted.length) return found
+
+    const tables = await tgdbLookups(settings)
+
+    for (let i = 0; i < wanted.length; i++) {
+        const title = wanted[i]
+        try {
+            const json = await tgdbGet(settings, "/v1/Games/ByGameName", {
+                name: title,
+                fields: "overview,genres,platform"
+            })
+            const exact = (json?.data?.games || []).find(g =>
+                g?.game_title && normalizeTitle(g.game_title) === normalizeTitle(title))
+            if (exact) found.set(title.toLowerCase(), mapTgdbGame(exact, tables))
+        } catch (e) {
+            // One failed lookup must not lose the rest.
+        }
+        if (onProgress) onProgress(i + 1, wanted.length)
+        if (i + 1 < wanted.length) await pause(200)
+    }
+    return found
+}
+
+// --- source registry --------------------------------------------------------
+//
+// Every metadata source implements the same operations and returns the same
+// normalised shape, so the chain below can treat them interchangeably.
 
 const PROVIDERS = {
     igdb: {
@@ -689,12 +1209,219 @@ const PROVIDERS = {
                 total: json?.count ?? null
             }
         }
+    },
+    steam: {
+        id: "steam",
+        label: "Steam",
+        needsKey: false,
+        searchByName: (settings, query) => steamSearchByName(settings, query),
+        gamesByTitles: (settings, titles, onProgress) =>
+            steamGamesByTitles(settings, titles, onProgress),
+        // Steam's own id IS the appid, so a lookup by id is a direct hit.
+        byId: (settings, id) => steamGameByAppId(settings, id),
+        bySlug: (settings, slug) => steamGameByAppId(settings, slug),
+        gamesByIds: async (settings, ids, onProgress) => {
+            const out = new Map()
+            for (let i = 0; i < ids.length; i++) {
+                const game = await steamGameByAppId(settings, ids[i])
+                if (game) out.set(String(ids[i]), game)
+                if (onProgress) onProgress(i + 1, ids.length)
+                await pause(150)
+            }
+            return out
+        },
+        idsForSteamAppIds: null,
+        check: async () => {
+            // Any public app confirms the endpoint is reachable; no key exists
+            // to validate.
+            const details = await steamStoreDetails(440)
+            return { ok: !!details, provider: "Steam", sample: details?.title || "" }
+        }
+    },
+    gog: {
+        id: "gog",
+        label: "GOG",
+        needsKey: false,
+        searchByName: (settings, query) => gogSearch(settings, query),
+        gamesByTitles: (settings, titles, onProgress) =>
+            gogGamesByTitles(settings, titles, onProgress),
+        byId: null,
+        bySlug: null,
+        gamesByIds: null,
+        idsForSteamAppIds: null,
+        check: async () => {
+            const json = await getJson(`${GOG_CATALOG}/catalog`
+                + `?limit=1&query=${encodeURIComponent("like:witcher")}`
+                + `&locale=en-US&currencyCode=USD&countryCode=US`)
+            return {
+                ok: true,
+                provider: "GOG",
+                sample: json?.products?.[0]?.title || ""
+            }
+        }
+    },
+    lutris: {
+        id: "lutris",
+        label: "Lutris",
+        needsKey: false,
+        searchByName: (settings, query) => lutrisSearch(settings, query),
+        gamesByTitles: (settings, titles, onProgress) =>
+            lutrisGamesByTitles(settings, titles, onProgress),
+        byId: null,
+        bySlug: null,
+        gamesByIds: null,
+        idsForSteamAppIds: null,
+        check: async () => {
+            const json = await getJson(`${LUTRIS_API}/games?search=portal`)
+            return {
+                ok: true,
+                provider: "Lutris",
+                sample: json?.results?.[0]?.name || ""
+            }
+        }
+    },
+    steamgriddb: {
+        id: "steamgriddb",
+        label: "SteamGridDB",
+        needsKey: true,
+        // Art only: it contributes `cover` and nothing else, so it has no
+        // meaningful standalone search in this addon's sense.
+        searchByName: null,
+        gamesByTitles: (settings, titles, onProgress) =>
+            sgdbGamesByTitles(settings, titles, onProgress),
+        byId: null,
+        bySlug: null,
+        gamesByIds: null,
+        idsForSteamAppIds: null,
+        check: async (settings) => {
+            const data = await sgdbGet(settings, "/search/autocomplete/portal")
+            return {
+                ok: true,
+                provider: "SteamGridDB",
+                sample: (data || [])[0]?.name || ""
+            }
+        }
+    },
+    gamesdb: {
+        id: "gamesdb",
+        label: "TheGamesDB",
+        needsKey: true,
+        searchByName: (settings, query) => tgdbSearch(settings, query),
+        gamesByTitles: (settings, titles, onProgress) =>
+            tgdbGamesByTitles(settings, titles, onProgress),
+        byId: null,
+        bySlug: null,
+        gamesByIds: null,
+        idsForSteamAppIds: null,
+        check: async (settings) => {
+            const json = await tgdbGet(settings, "/v1/Games/ByGameName", { name: "portal" })
+            return {
+                ok: true,
+                provider: "TheGamesDB",
+                sample: json?.data?.games?.[0]?.game_title || "",
+                // The quota is the thing worth reporting for this source.
+                remaining: lastTgdbAllowance
+            }
+        }
     }
 }
 
+// --- the metadata chain -----------------------------------------------------
+//
+// Sources are consulted in the user's configured order and merged PER FIELD:
+// the first source supplying a non-empty value wins that field, independently of
+// every other field. A game can end up with IGDB's platforms, SteamGridDB's
+// cover, and Steam's summary.
+//
+// Every source is optional. One that is unconfigured, unreachable, or simply has
+// no entry for a game is skipped without affecting the others -- which is why a
+// chain is more robust than any single provider, not just richer.
+
+function activeSources(settings) {
+    return tracker.listSources(settings.sources)
+        .map(id => PROVIDERS[id])
+        .filter(Boolean)
+}
+
+// Look one title up across every configured source, in order, and merge.
+async function chainByTitle(settings, title, options) {
+    const results = []
+    for (const source of activeSources(settings)) {
+        if (!source.gamesByTitles) continue
+        try {
+            const found = await source.gamesByTitles(settings, [title])
+            const game = found.get(String(title).toLowerCase())
+            if (game) results.push({ source: source.id, game })
+        } catch (e) {
+            // A source that is unconfigured or failing must not stop the chain.
+        }
+        // Stop early once every merged field is filled, so a fully-answered
+        // lookup does not spend quota on sources it does not need.
+        if (!options?.exhaustive && isComplete(results)) break
+    }
+    return results.length ? tracker.mergeGameSources(results) : null
+}
+
+// Whether the merged result already has every field, so later sources can be
+// skipped. This is what keeps the quota-limited sources cheap: placed last,
+// they are usually never reached.
+function isComplete(results) {
+    const merged = tracker.mergeGameSources(results)
+    return tracker.MERGED_FIELDS.every(f => tracker.hasValue(merged[f]))
+}
+
+// Bulk variant: resolve many titles across the chain in one pass per source,
+// which matters because IGDB can answer 40 titles in one request.
+async function chainByTitles(settings, titles, onProgress) {
+    const wanted = [...new Set(titles.map(t => String(t || "").trim()).filter(Boolean))]
+    if (!wanted.length) return new Map()
+
+    // Per title, the ordered list of source results gathered so far.
+    const perTitle = new Map(wanted.map(t => [t.toLowerCase(), []]))
+
+    for (const source of activeSources(settings)) {
+        if (!source.gamesByTitles) continue
+
+        // Only ask a source about titles still missing something, so later
+        // sources (the quota-limited ones) see a shrinking list.
+        const outstanding = wanted.filter(t => {
+            const got = perTitle.get(t.toLowerCase())
+            return !got.length || !isComplete(got)
+        })
+        if (!outstanding.length) break
+
+        try {
+            const found = await source.gamesByTitles(settings, outstanding, onProgress)
+            for (const [key, game] of found) {
+                const bucket = perTitle.get(key)
+                if (bucket) bucket.push({ source: source.id, game })
+            }
+        } catch (e) {
+            // Skip a failing source entirely rather than failing the batch.
+        }
+    }
+
+    const out = new Map()
+    for (const [key, results] of perTitle) {
+        if (results.length) out.set(key, tracker.mergeGameSources(results))
+    }
+    return out
+}
+
+// The PRIMARY source: the first configured one that can answer id-based
+// lookups. A game's stored `igdbId` belongs to whichever source is primary, so
+// operations addressed by id (add-by-id, refresh-by-id) go here while
+// everything title-based goes through the chain.
 function provider(settings) {
-    const chosen = String(settings.metadataProvider || "igdb").trim().toLowerCase()
-    return PROVIDERS[chosen] || PROVIDERS.igdb
+    const ordered = activeSources(settings)
+    return ordered.find(s => s.byId && s.gamesByIds) || ordered[0] || PROVIDERS.igdb
+}
+
+// Search goes to the first source that supports it, rather than the whole
+// chain: search results are a ranked list to pick from, and interleaving seven
+// sources' rankings produces a worse list, not a better one.
+function searchSource(settings) {
+    return activeSources(settings).find(s => s.searchByName) || PROVIDERS.igdb
 }
 
 // --- file import ------------------------------------------------------------
@@ -718,7 +1445,7 @@ async function previewImportFile(settings, text, filename) {
     // Rows that already carry an id don't need matching at all.
     const needMatch = parsed.rows.filter(r => !r.igdbId && !r.steamAppId)
     const matched = needMatch.length
-        ? await provider(settings).gamesByTitles(settings, needMatch.map(r => r.title))
+        ? await chainByTitles(settings, needMatch.map(r => r.title))
         : new Map()
 
     const doc = loadDocument(settings)
@@ -924,9 +1651,44 @@ function applyFileImport(settings, doc, items) {
 
 // --- game mutations ---------------------------------------------------------
 
+// Add a game chosen from search. The id belongs to whichever source produced the
+// search result, so that source answers first; the rest of the chain then fills
+// whatever it left empty, by title.
 async function addGame(settings, igdbId) {
-    const details = await provider(settings).byId(settings, igdbId)
+    const primary = provider(settings)
+    const details = await primary.byId(settings, igdbId)
+
+    // Enrich from the remaining sources. A failure here costs nothing -- the
+    // game is still added with what the primary source gave.
+    try {
+        const enriched = await enrichFromChain(settings, details, primary.id)
+        if (enriched) return upsertGame(settings, enriched)
+    } catch (e) {
+        // Fall through to the unenriched record.
+    }
     return upsertGame(settings, details)
+}
+
+// Merge `details` (already obtained from `fromSource`) with whatever the other
+// configured sources can add for the same title. The originating source keeps
+// priority, so this only ever fills gaps.
+async function enrichFromChain(settings, details, fromSource) {
+    if (!details?.title) return details
+
+    const results = [{ source: fromSource, game: details }]
+    for (const source of activeSources(settings)) {
+        if (source.id === fromSource || !source.gamesByTitles) continue
+        if (isComplete(results)) break
+        try {
+            const found = await source.gamesByTitles(settings, [details.title])
+            const game = found.get(details.title.toLowerCase())
+            if (game) results.push({ source: source.id, game })
+        } catch (e) {
+            // Skip a source that is unconfigured or failing.
+        }
+    }
+
+    return tracker.mergeGameSources(results)
 }
 
 // Shared by every "add one game" path so they behave identically.
@@ -1264,7 +2026,7 @@ async function linkSteamAppIds(settings, appIds, onProgress) {
         await pause(120)
     }
 
-    const matched = await active.gamesByTitles(settings, [...titles.values()])
+    const matched = await chainByTitles(settings, [...titles.values()])
     for (const [appId, title] of titles) {
         const hit = matched.get(title.toLowerCase())
         if (hit?.igdbId) found.set(appId, hit.igdbId)
@@ -1313,7 +2075,7 @@ async function refreshLibrary(settings) {
 
     if (unmatchedTitles.length) {
         try {
-            const byTitle = await provider(settings).gamesByTitles(settings, unmatchedTitles)
+            const byTitle = await chainByTitles(settings, unmatchedTitles)
             for (const [, raw] of entries) {
                 if (raw.igdbId || !raw.title) continue
                 const hit = byTitle.get(String(raw.title).toLowerCase())
@@ -1509,7 +2271,7 @@ async function importSteam(settings) {
                 mapped = await active.idsForSteamAppIds(settings, appIds)
                 metadata = await active.gamesByIds(settings, [...mapped.values()])
             } else {
-                byTitle = await active.gamesByTitles(
+                byTitle = await chainByTitles(
                     settings, rows.map(g => g.name).filter(Boolean)
                 )
             }
@@ -1735,7 +2497,7 @@ async function handle() {
             case "refreshLibrary":
                 return sendJson(200, await refreshLibrary(settings))
             case "search":
-                return sendJson(200, { results: await provider(settings).searchByName(settings, query.query || "") })
+                return sendJson(200, { results: await searchSource(settings).searchByName(settings, query.query || "") })
             case "addGame":
                 return sendJson(200, await addGame(settings, query.igdbId))
             case "addFromLink":
@@ -1756,8 +2518,32 @@ async function handle() {
                 return sendJson(200, await importSteam(settings))
             // Confirms the configured provider's credentials actually work,
             // before a user discovers otherwise halfway through an import.
-            case "providerCheck":
-                return sendJson(200, await provider(settings).check(settings))
+            // Every configured source, checked independently. "Metadata is
+            // broken" is far less actionable than knowing which of seven
+            // sources is the one failing, so each reports its own result.
+            case "providerCheck": {
+                const results = []
+                for (const source of activeSources(settings)) {
+                    try {
+                        const r = await source.check(settings)
+                        results.push({
+                            id: source.id,
+                            label: source.label,
+                            ok: !!r.ok,
+                            sample: r.sample || "",
+                            remaining: r.remaining ?? null
+                        })
+                    } catch (e) {
+                        results.push({
+                            id: source.id,
+                            label: source.label,
+                            ok: false,
+                            error: e.message
+                        })
+                    }
+                }
+                return sendJson(200, { sources: results })
+            }
             // The file import is deliberately two calls: parse and match first,
             // show the user what it found, and only write when they confirm.
             case "previewImport":

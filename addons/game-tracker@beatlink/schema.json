@@ -99,10 +99,26 @@
         "label": "Statuses",
         "description": "The statuses a game can have. Add, rename, recolour, reorder, or remove them freely. Each status carries a Role, which is how imports know what a status means without depending on its name: an import targets the role, so renaming Beaten to Finished (or adding your own Wishlist alongside Backlog) never breaks it. Removing a status leaves any game still holding it untouched — the tracker shows it as-is until you change it.",
         "default": {
-            "backlog": { "name": "Backlog", "role": "backlog", "color": "#808080" },
-            "playing": { "name": "Playing", "role": "playing", "color": "#3884ff" },
-            "beaten": { "name": "Beaten", "role": "done", "color": "#2ea057" },
-            "dropped": { "name": "Dropped", "role": "abandoned", "color": "#db4848" }
+            "backlog": {
+                "name": "Backlog",
+                "role": "backlog",
+                "color": "#808080"
+            },
+            "playing": {
+                "name": "Playing",
+                "role": "playing",
+                "color": "#3884ff"
+            },
+            "beaten": {
+                "name": "Beaten",
+                "role": "done",
+                "color": "#2ea057"
+            },
+            "dropped": {
+                "name": "Dropped",
+                "role": "abandoned",
+                "color": "#db4848"
+            }
         },
         "itemSchema": {
             "name": {
@@ -117,11 +133,26 @@
                 "description": "What this status means to imports and automation. Several statuses may share a role, and 'None' means imports never set this status automatically — pick that for statuses you only ever apply by hand.",
                 "default": "none",
                 "options": [
-                    { "value": "none", "label": "None (manual only)" },
-                    { "value": "backlog", "label": "Backlog — not started" },
-                    { "value": "playing", "label": "Playing — in progress" },
-                    { "value": "done", "label": "Done — finished" },
-                    { "value": "abandoned", "label": "Abandoned — stopped" }
+                    {
+                        "value": "none",
+                        "label": "None (manual only)"
+                    },
+                    {
+                        "value": "backlog",
+                        "label": "Backlog — not started"
+                    },
+                    {
+                        "value": "playing",
+                        "label": "Playing — in progress"
+                    },
+                    {
+                        "value": "done",
+                        "label": "Done — finished"
+                    },
+                    {
+                        "value": "abandoned",
+                        "label": "Abandoned — stopped"
+                    }
                 ]
             },
             "color": {
@@ -147,46 +178,113 @@
         "description": "IGDB image size used for cover URLs stored with each game. Has no effect on RAWG, which serves a single image URL per game.",
         "default": "cover_big",
         "options": [
-            { "value": "cover_small", "label": "Small (90x128)" },
-            { "value": "cover_big", "label": "Big (264x374)" },
-            { "value": "720p", "label": "Large (1280x720)" }
+            {
+                "value": "cover_small",
+                "label": "Small (90x128)"
+            },
+            {
+                "value": "cover_big",
+                "label": "Big (264x374)"
+            },
+            {
+                "value": "720p",
+                "label": "Large (1280x720)"
+            }
         ],
         "tab": "Library"
     },
-
-    "metadataProvider": {
-        "type": "select",
-        "label": "Metadata Provider",
-        "description": "Where covers, genres, and platforms come from. IGDB is richer but requires registering a Twitch application, which Twitch only allows on accounts with two-factor authentication enabled. RAWG needs only an email signup, so pick it if the Twitch requirement is a blocker. Switching provider does not lose any games: run Refresh afterwards to re-link them.",
-        "default": "igdb",
-        "options": [
-            { "value": "igdb", "label": "IGDB (needs a Twitch app + 2FA)" },
-            { "value": "rawg", "label": "RAWG (email signup only)" }
-        ],
-        "tab": "Provider"
+    "sources": {
+        "type": "registry",
+        "label": "Metadata Sources",
+        "description": "Where covers, genres, platforms, and summaries come from. Sources are consulted in the order listed and merged FIELD BY FIELD: the first source that supplies a value wins that field, and any it leaves empty falls through to the next. So a game can end up with IGDB's platforms, SteamGridDB's cover, and Steam's summary. Reorder to change precedence; untick to disable. Three sources need no key at all (Steam, GOG, Lutris), so the tracker works with no setup whatsoever.",
+        "default": {
+            "igdb": {
+                "name": "IGDB",
+                "enabled": true
+            },
+            "rawg": {
+                "name": "RAWG",
+                "enabled": true
+            },
+            "steam": {
+                "name": "Steam",
+                "enabled": true
+            },
+            "gog": {
+                "name": "GOG",
+                "enabled": true
+            },
+            "lutris": {
+                "name": "Lutris",
+                "enabled": true
+            },
+            "steamgriddb": {
+                "name": "SteamGridDB (art only)",
+                "enabled": false
+            },
+            "gamesdb": {
+                "name": "TheGamesDB",
+                "enabled": false
+            }
+        },
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Source",
+                "description": "Display name only. The source itself is identified by its entry id, so renaming this changes nothing but the label.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "description": "Untick to skip this source entirely. A source needing a key you have not set is skipped automatically, so leaving it on is harmless.",
+                "default": true
+            }
+        },
+        "tab": "Sources"
     },
-
     "rawgApiKey": {
         "type": "string",
         "label": "RAWG API Key",
-        "description": "Free key from https://rawg.io/apidocs — a plain email signup, no OAuth and no two-factor requirement. The free tier allows 20,000 requests per month. Only used when Metadata Provider is set to RAWG.",
+        "description": "Free key from https://rawg.io/apidocs — a plain email signup, no OAuth and no two-factor requirement. The free tier allows 20,000 requests per month.",
         "default": "",
-        "tab": "RAWG"
+        "tab": "Sources"
     },
-
+    "steamGridDbApiKey": {
+        "type": "string",
+        "label": "SteamGridDB API Key",
+        "description": "Free key from https://www.steamgriddb.com/profile/preferences/api (a plain signup). SteamGridDB supplies cover art only — no genres, summaries, or platforms — so it is worth enabling only if you want better artwork than the general sources provide.",
+        "default": "",
+        "tab": "Sources"
+    },
+    "gamesDbApiKey": {
+        "type": "string",
+        "label": "TheGamesDB API Key",
+        "description": "Free key from https://thegamesdb.net (log in, then API Key). Best coverage of retro and console titles. Note it has a monthly request quota, which is why it ships last in the order and disabled — placed last, it is only consulted for fields the other sources left empty.",
+        "default": "",
+        "tab": "Sources"
+    },
+    "gamesDbLookups": {
+        "type": "string",
+        "hidden": true,
+        "label": "TheGamesDB Lookup Tables",
+        "description": "Cached genre/developer/platform id-to-name tables from TheGamesDB, fetched once so resolving those fields costs no extra quota per game. Managed automatically; clear it to refetch.",
+        "default": "",
+        "tab": "Sources"
+    },
     "igdbClientId": {
         "type": "string",
         "label": "IGDB (Twitch) Client ID",
         "description": "IGDB authenticates through Twitch. Register an application at https://dev.twitch.tv/console/apps with Client Type set to Confidential, then copy its Client ID here. Twitch requires two-factor authentication on the account before it will allow app registration; if you cannot enable it, switch Metadata Provider to RAWG instead.",
         "default": "",
-        "tab": "IGDB"
+        "tab": "Sources"
     },
     "igdbClientSecret": {
         "type": "string",
         "label": "IGDB (Twitch) Client Secret",
         "description": "Client Secret from the same Twitch application. Used to obtain an access token; IGDB is free for non-commercial use.",
         "default": "",
-        "tab": "IGDB"
+        "tab": "Sources"
     },
     "igdbAccessToken": {
         "type": "string",
@@ -194,7 +292,7 @@
         "label": "Access Token",
         "description": "Fetched automatically from the Client ID and Secret, and renewed before it expires. Managed automatically.",
         "default": "",
-        "tab": "IGDB"
+        "tab": "Sources"
     },
     "igdbTokenExpiresAt": {
         "type": "number",
@@ -202,9 +300,8 @@
         "label": "Token Expires At",
         "description": "Unix seconds. Managed automatically.",
         "default": 0,
-        "tab": "IGDB"
+        "tab": "Sources"
     },
-
     "steamApiKey": {
         "type": "string",
         "label": "Steam Web API Key",
@@ -226,7 +323,6 @@
         "default": false,
         "tab": "Steam"
     },
-
     "autoSyncSteam": {
         "type": "boolean",
         "label": "Auto-Import From Steam",
