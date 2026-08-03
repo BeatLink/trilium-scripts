@@ -17,7 +17,7 @@ const {
     parseBudget,
     serializeBudget,
     computeTotals,
-    grandTotal,
+    grandTotals,
     updateRow,
     removeRow,
     addRow,
@@ -33,7 +33,7 @@ const {
     formatDate,
     transactionsForMonth,
     rowOptions,
-    spendingReport,
+    monthlyReport,
     monthlyTrend,
     resolveColumns,
     parentIds,
@@ -46,12 +46,37 @@ const {
 const TREND_MONTHS = 6
 
 function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle, onChange, onAdd, onRemove, onMove }) {
-    const info = totals[row.id] || { total: 0, isLeaf: true, over: false }
+    const info = totals[row.id] || { income: 0, expense: 0, balance: 0, isLeaf: true, over: false }
     const hasChildren = row.children.length > 0
     const isCollapsed = collapsed.has(row.id)
 
-    // In computed mode a parent's amount is derived, so its cell is read-only.
-    const amountDerived = hasChildren && settings.rollupMode === "computed"
+    // In computed mode a parent's amounts are derived, so its cells are read-only.
+    const derived = hasChildren && settings.rollupMode === "computed"
+    const money = value => formatAmount(value, settings.currency, settings.locale)
+
+    const amountCell = column => (
+        <td className="budget-cell-amount" key={column}>
+            {derived ? (
+                <span className="budget-derived">{money(info[column])}</span>
+            ) : (
+                <input
+                    type="number"
+                    step="0.01"
+                    className="budget-input budget-input-amount"
+                    value={row[column]}
+                    onInput={e => onChange(row.id, { [column]: parseFloat(e.target.value) || 0 })}
+                />
+            )}
+            {settings.rollupMode === "cap" && hasChildren && (
+                <span className="budget-subtotal">
+                    {money(column === "income" ? info.childrenIncome : info.childrenExpense)} used
+                </span>
+            )}
+            {settings.rollupMode === "additive" && hasChildren && (
+                <span className="budget-subtotal">incl. {money(row[column])} own</span>
+            )}
+        </td>
+    )
 
     return (
         <>
@@ -76,36 +101,12 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
                     </div>
                 </td>
                 {columns.map(column => {
-                    if (column.key === "amount") return (
-                        <td className="budget-cell-amount" key={column.key}>
-                            {amountDerived ? (
-                                <span className="budget-derived">{formatAmount(info.total, settings.currency, settings.locale)}</span>
-                            ) : (
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="budget-input budget-input-amount"
-                                    value={row.amount}
-                                    onInput={e => onChange(row.id, { amount: parseFloat(e.target.value) || 0 })}
-                                />
-                            )}
-                        </td>
-                    )
-                    if (column.key === "total") return (
-                        <td className="budget-cell-total" key={column.key}>
-                            <span className={info.over ? "budget-total budget-total-over" : "budget-total"}>
-                                {formatAmount(info.total, settings.currency, settings.locale)}
+                    if (column.key === "income" || column.key === "expense") return amountCell(column.key)
+                    if (column.key === "balance") return (
+                        <td className="budget-cell-balance" key={column.key}>
+                            <span className={info.balance < 0 ? "budget-total budget-net-negative" : "budget-total"}>
+                                {money(info.balance)}
                             </span>
-                            {settings.rollupMode === "cap" && hasChildren && (
-                                <span className="budget-subtotal">
-                                    {formatAmount(info.childrenTotal, settings.currency, settings.locale)} used
-                                </span>
-                            )}
-                            {settings.rollupMode === "additive" && hasChildren && (
-                                <span className="budget-subtotal">
-                                    incl. {formatAmount(row.amount, settings.currency, settings.locale)} own
-                                </span>
-                            )}
                         </td>
                     )
                     return (
@@ -147,7 +148,7 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
     )
 }
 
-// Shared by the Spending and Report tabs, which always show the same month.
+// Shared by the Transactions and Report tabs, which always show the same month.
 function MonthNav({ month, settings, onChange }) {
     return (
         <div className="budget-month-nav">
@@ -175,7 +176,7 @@ function MonthNav({ month, settings, onChange }) {
     )
 }
 
-function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd }) {
+function TransactionsTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd }) {
     // Sorted for reading rather than in storage, so the document keeps the
     // order things were entered in and a re-dated transaction just moves.
     const monthly = useMemo(
@@ -183,7 +184,9 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
         [doc.transactions, month]
     )
     const options = useMemo(() => rowOptions(doc.rows), [doc.rows])
-    const total = monthly.reduce((sum, transaction) => sum + transaction.amount, 0)
+    const money = value => formatAmount(value, settings.currency, settings.locale)
+    const income = monthly.reduce((sum, t) => sum + t.income, 0)
+    const spent = monthly.reduce((sum, t) => sum + t.expense, 0)
 
     return (
         <>
@@ -193,7 +196,9 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
                     <tr>
                         <th className="budget-cell-date">Date</th>
                         <th>Description</th>
-                        <th className="budget-cell-amount">Amount</th>
+                        <th className="budget-cell-amount">Income</th>
+                        <th className="budget-cell-amount">Expense</th>
+                        <th className="budget-cell-balance">Balance</th>
                         <th className="budget-cell-row">Budget Row</th>
                         <th className="budget-cell-actions" />
                     </tr>
@@ -201,9 +206,10 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
                 <tbody>
                     {monthly.map(transaction => {
                         // A row deleted since the transaction was recorded leaves a
-                        // dangling id; the select falls back to off-budget, which is
+                        // dangling id; the select falls back to unassigned, which is
                         // exactly how the report counts it.
                         const known = options.some(option => option.id === transaction.rowId)
+                        const balance = transaction.income - transaction.expense
                         return (
                             <tr className="budget-row" key={transaction.id}>
                                 <td className="budget-cell-date">
@@ -225,14 +231,21 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
                                         onInput={e => onChange(transaction.id, { description: e.target.value })}
                                     />
                                 </td>
-                                <td className="budget-cell-amount">
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="budget-input budget-input-amount"
-                                        value={transaction.amount}
-                                        onInput={e => onChange(transaction.id, { amount: parseFloat(e.target.value) || 0 })}
-                                    />
+                                {["income", "expense"].map(column => (
+                                    <td className="budget-cell-amount" key={column}>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="budget-input budget-input-amount"
+                                            value={transaction[column]}
+                                            onInput={e => onChange(transaction.id, { [column]: parseFloat(e.target.value) || 0 })}
+                                        />
+                                    </td>
+                                ))}
+                                <td className="budget-cell-balance">
+                                    <span className={balance < 0 ? "budget-total budget-net-negative" : "budget-total"}>
+                                        {money(balance)}
+                                    </span>
                                 </td>
                                 <td className="budget-cell-row">
                                     <select
@@ -240,7 +253,7 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
                                         value={known ? transaction.rowId : ""}
                                         onChange={e => onChange(transaction.id, { rowId: e.target.value || null })}
                                     >
-                                        <option value="">-- off budget --</option>
+                                        <option value="">-- unbudgeted --</option>
                                         {options.map(option => (
                                             <option value={option.id} key={option.id}>{option.label}</option>
                                         ))}
@@ -257,14 +270,18 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
                         )
                     })}
                     {monthly.length === 0 && (
-                        <tr><td colSpan={5} className="budget-empty">No spending recorded this month.</td></tr>
+                        <tr><td colSpan={7} className="budget-empty">Nothing recorded this month.</td></tr>
                     )}
                 </tbody>
                 <tfoot>
                     <tr>
                         <td className="budget-grand-label" colSpan={2}>Month Total</td>
-                        <td className="budget-cell-amount budget-grand-total">
-                            {formatAmount(total, settings.currency, settings.locale)}
+                        <td className="budget-cell-amount budget-grand-total budget-income-text">{money(income)}</td>
+                        <td className="budget-cell-amount budget-grand-total">{money(spent)}</td>
+                        <td className={income - spent < 0
+                            ? "budget-cell-balance budget-grand-total budget-net-negative"
+                            : "budget-cell-balance budget-grand-total"}>
+                            {money(income - spent)}
                         </td>
                         <td colSpan={2} />
                     </tr>
@@ -277,8 +294,8 @@ function SpendingTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd 
     )
 }
 
-// A month's on/off totals as one proportional bar. A month with no spending
-// renders an empty track rather than dividing by zero.
+// The month's plan adherence as one proportional bar. A month with nothing to
+// measure renders an empty track rather than dividing by zero.
 function SplitBar({ onBudget, offBudget }) {
     const total = onBudget + offBudget
     const share = value => (total > 0 ? `${(value / total) * 100}%` : "0%")
@@ -290,17 +307,52 @@ function SplitBar({ onBudget, offBudget }) {
     )
 }
 
+// Budgeted vs actual for one amount column. Variance is signed so that negative
+// always means off plan: overspent for expenses, short for income.
+function VarianceTable({ entries, money, emptyText }) {
+    return (
+        <table className="budget-table">
+            <thead>
+                <tr>
+                    <th className="budget-cell-title">Row</th>
+                    <th className="budget-cell-amount">Budgeted</th>
+                    <th className="budget-cell-amount">Actual</th>
+                    <th className="budget-cell-amount">Variance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {entries.map(entry => (
+                    <tr className={entry.offPlan ? "budget-row budget-row-over" : "budget-row"} key={entry.id}>
+                        <td className="budget-cell-title">
+                            <span style={{ paddingLeft: `${entry.depth * 20}px` }}>{entry.title || "Untitled"}</span>
+                        </td>
+                        <td className="budget-cell-amount">{money(entry.budgeted)}</td>
+                        <td className="budget-cell-amount">{money(entry.actual)}</td>
+                        <td className={entry.offPlan ? "budget-cell-amount budget-total-over" : "budget-cell-amount"}>
+                            {money(entry.variance)}
+                        </td>
+                    </tr>
+                ))}
+                {entries.length === 0 && (
+                    <tr><td colSpan={4} className="budget-empty">{emptyText}</td></tr>
+                )}
+            </tbody>
+        </table>
+    )
+}
+
 function ReportTab({ doc, month, settings, onMonth }) {
     const report = useMemo(
-        () => spendingReport(doc.rows, doc.transactions, month, settings.rollupMode),
+        () => monthlyReport(doc.rows, doc.transactions, month, settings.rollupMode),
         [doc, month, settings.rollupMode]
     )
     const trend = useMemo(
-        () => monthlyTrend(doc.rows, doc.transactions, month, TREND_MONTHS),
-        [doc, month]
+        () => monthlyTrend(doc.rows, doc.transactions, month, TREND_MONTHS, settings.rollupMode),
+        [doc, month, settings.rollupMode]
     )
-    const trendPeak = Math.max(...trend.map(entry => entry.total), 0)
-    const percent = value => (report.total > 0 ? `${Math.round((value / report.total) * 100)}%` : "-")
+    const trendPeak = Math.max(...trend.map(entry => entry.onBudget + entry.offBudget), 0)
+    const measured = report.onBudget + report.offBudget
+    const percent = value => (measured > 0 ? `${Math.round((value / measured) * 100)}%` : "-")
     const money = value => formatAmount(value, settings.currency, settings.locale)
 
     return (
@@ -311,53 +363,69 @@ function ReportTab({ doc, month, settings, onMonth }) {
                 <div className="budget-summary-card">
                     <span className="budget-summary-label">On budget</span>
                     <span className="budget-summary-value budget-on-text">{money(report.onBudget)}</span>
-                    <span className="budget-summary-share">{percent(report.onBudget)} of spending</span>
+                    <span className="budget-summary-share">{percent(report.onBudget)} — went to plan</span>
                 </div>
                 <div className="budget-summary-card">
                     <span className="budget-summary-label">Off budget</span>
                     <span className="budget-summary-value budget-off-text">{money(report.offBudget)}</span>
-                    <span className="budget-summary-share">{percent(report.offBudget)} of spending</span>
+                    <span className="budget-summary-share">{percent(report.offBudget)} — over or short</span>
                 </div>
                 <div className="budget-summary-card">
-                    <span className="budget-summary-label">Total spent</span>
-                    <span className="budget-summary-value">{money(report.total)}</span>
+                    <span className="budget-summary-label">Income</span>
+                    <span className="budget-summary-value budget-income-text">{money(report.income)}</span>
                     <span className="budget-summary-share">
-                        {report.transactions.length} transaction{report.transactions.length === 1 ? "" : "s"}
+                        {report.incomeTransactions.length} entr{report.incomeTransactions.length === 1 ? "y" : "ies"}
                     </span>
+                </div>
+                <div className="budget-summary-card">
+                    <span className="budget-summary-label">Spent</span>
+                    <span className="budget-summary-value">{money(report.spent)}</span>
+                    <span className="budget-summary-share">
+                        {report.transactions.length} record{report.transactions.length === 1 ? "" : "s"}
+                    </span>
+                </div>
+                <div className="budget-summary-card">
+                    <span className="budget-summary-label">Balance</span>
+                    <span className={report.balance < 0 ? "budget-summary-value budget-net-negative" : "budget-summary-value"}>
+                        {money(report.balance)}
+                    </span>
+                    <span className="budget-summary-share">income minus spending</span>
                 </div>
             </div>
             <SplitBar onBudget={report.onBudget} offBudget={report.offBudget} />
 
-            <h4 className="budget-report-heading">Budgeted vs actual</h4>
+            <h4 className="budget-report-heading">What went off budget</h4>
             <table className="budget-table">
                 <thead>
                     <tr>
-                        <th className="budget-cell-title">Row</th>
-                        <th className="budget-cell-amount">Budgeted</th>
-                        <th className="budget-cell-amount">Actual</th>
-                        <th className="budget-cell-amount">Variance</th>
+                        <th className="budget-cell-title">Category</th>
+                        <th className="budget-cell-amount">Overspent</th>
+                        <th className="budget-cell-amount">Income short</th>
+                        <th className="budget-cell-amount">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {report.perRow.map(entry => (
-                        <tr className={entry.over ? "budget-row budget-row-over" : "budget-row"} key={entry.id}>
-                            <td className="budget-cell-title">
-                                <span style={{ paddingLeft: `${entry.depth * 20}px` }}>{entry.title || "Untitled"}</span>
-                            </td>
-                            <td className="budget-cell-amount">{money(entry.budgeted)}</td>
-                            <td className="budget-cell-amount">{money(entry.actual)}</td>
-                            <td className={entry.over ? "budget-cell-amount budget-total-over" : "budget-cell-amount"}>
-                                {money(entry.variance)}
-                            </td>
+                    {report.offBudgetDetail.map(entry => (
+                        <tr className="budget-row" key={entry.id ?? "unbudgeted"}>
+                            <td className="budget-cell-title">{entry.title}</td>
+                            <td className="budget-cell-amount">{entry.overspent > 0 ? money(entry.overspent) : ""}</td>
+                            <td className="budget-cell-amount">{entry.shortfall > 0 ? money(entry.shortfall) : ""}</td>
+                            <td className="budget-cell-amount budget-total-over">{money(entry.total)}</td>
                         </tr>
                     ))}
-                    {report.perRow.length === 0 && (
-                        <tr><td colSpan={4} className="budget-empty">No budget rows yet.</td></tr>
+                    {report.offBudgetDetail.length === 0 && (
+                        <tr><td colSpan={4} className="budget-empty">Everything this month went to plan.</td></tr>
                     )}
                 </tbody>
             </table>
 
-            <h4 className="budget-report-heading">Off-budget transactions</h4>
+            <h4 className="budget-report-heading">Expenses: budgeted vs actual</h4>
+            <VarianceTable entries={report.perRowExpense} money={money} emptyText="No expense rows yet." />
+
+            <h4 className="budget-report-heading">Income: budgeted vs actual</h4>
+            <VarianceTable entries={report.perRowIncome} money={money} emptyText="No income rows yet." />
+
+            <h4 className="budget-report-heading">Income this month</h4>
             <table className="budget-table">
                 <thead>
                     <tr>
@@ -367,17 +435,17 @@ function ReportTab({ doc, month, settings, onMonth }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {[...report.offBudgetTransactions]
+                    {[...report.incomeTransactions]
                         .sort((a, b) => a.date.localeCompare(b.date))
                         .map(transaction => (
                             <tr className="budget-row" key={transaction.id}>
                                 <td className="budget-cell-date">{formatDate(transaction.date, settings.locale)}</td>
                                 <td>{transaction.description || "Untitled"}</td>
-                                <td className="budget-cell-amount">{money(transaction.amount)}</td>
+                                <td className="budget-cell-amount budget-income-text">{money(transaction.income)}</td>
                             </tr>
                         ))}
-                    {report.offBudgetTransactions.length === 0 && (
-                        <tr><td colSpan={3} className="budget-empty">Everything this month was on budget.</td></tr>
+                    {report.incomeTransactions.length === 0 && (
+                        <tr><td colSpan={3} className="budget-empty">No income recorded this month.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -387,43 +455,52 @@ function ReportTab({ doc, month, settings, onMonth }) {
                 <thead>
                     <tr>
                         <th>Month</th>
-                        <th className="budget-cell-trend">Split</th>
+                        <th className="budget-cell-trend">On / off budget</th>
                         <th className="budget-cell-amount">On budget</th>
                         <th className="budget-cell-amount">Off budget</th>
-                        <th className="budget-cell-amount">Total</th>
+                        <th className="budget-cell-amount">Income</th>
+                        <th className="budget-cell-amount">Spent</th>
+                        <th className="budget-cell-amount">Balance</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {trend.map(entry => (
-                        <tr className="budget-row" key={entry.month}>
-                            <td>
-                                <button className="budget-trend-month" onClick={() => onMonth(entry.month)}>
-                                    {formatMonth(entry.month, settings.locale)}
-                                </button>
-                            </td>
-                            <td className="budget-cell-trend">
-                                {/* Bars are scaled against the busiest month in the window, so
-                                    the series is comparable month to month rather than each
-                                    row filling its own width. */}
-                                <div
-                                    className="budget-split-bar budget-split-bar-trend"
-                                    style={{ width: trendPeak > 0 ? `${(entry.total / trendPeak) * 100}%` : "0%" }}
-                                >
+                    {trend.map(entry => {
+                        const total = entry.onBudget + entry.offBudget
+                        return (
+                            <tr className="budget-row" key={entry.month}>
+                                <td>
+                                    <button className="budget-trend-month" onClick={() => onMonth(entry.month)}>
+                                        {formatMonth(entry.month, settings.locale)}
+                                    </button>
+                                </td>
+                                <td className="budget-cell-trend">
+                                    {/* Bars are scaled against the busiest month in the window, so
+                                        the series is comparable month to month rather than each
+                                        row filling its own width. */}
                                     <div
-                                        className="budget-split-on"
-                                        style={{ width: entry.total > 0 ? `${(entry.onBudget / entry.total) * 100}%` : "0%" }}
-                                    />
-                                    <div
-                                        className="budget-split-off"
-                                        style={{ width: entry.total > 0 ? `${(entry.offBudget / entry.total) * 100}%` : "0%" }}
-                                    />
-                                </div>
-                            </td>
-                            <td className="budget-cell-amount budget-on-text">{money(entry.onBudget)}</td>
-                            <td className="budget-cell-amount budget-off-text">{money(entry.offBudget)}</td>
-                            <td className="budget-cell-amount">{money(entry.total)}</td>
-                        </tr>
-                    ))}
+                                        className="budget-split-bar budget-split-bar-trend"
+                                        style={{ width: trendPeak > 0 ? `${(total / trendPeak) * 100}%` : "0%" }}
+                                    >
+                                        <div
+                                            className="budget-split-on"
+                                            style={{ width: total > 0 ? `${(entry.onBudget / total) * 100}%` : "0%" }}
+                                        />
+                                        <div
+                                            className="budget-split-off"
+                                            style={{ width: total > 0 ? `${(entry.offBudget / total) * 100}%` : "0%" }}
+                                        />
+                                    </div>
+                                </td>
+                                <td className="budget-cell-amount budget-on-text">{money(entry.onBudget)}</td>
+                                <td className="budget-cell-amount budget-off-text">{money(entry.offBudget)}</td>
+                                <td className="budget-cell-amount budget-income-text">{money(entry.income)}</td>
+                                <td className="budget-cell-amount">{money(entry.spent)}</td>
+                                <td className={entry.balance < 0 ? "budget-cell-amount budget-net-negative" : "budget-cell-amount"}>
+                                    {money(entry.balance)}
+                                </td>
+                            </tr>
+                        )
+                    })}
                 </tbody>
             </table>
         </>
@@ -500,8 +577,9 @@ function BudgetTable() {
         id => mutate(doc => ({ ...doc, transactions: removeTransaction(doc.transactions, id) })),
         [mutate]
     )
-    // New spending lands in the month being viewed — today if that's the current
-    // month, else the 1st, so it never files itself into a month you can't see.
+    // New entries land in the month being viewed — today if that's the current
+    // month, else the 1st, so they never file themselves into a month you can't
+    // see.
     const onTransactionAdd = useCallback(() => {
         const date = monthOf(currentDate()) === month ? currentDate() : `${month}-01`
         mutate(doc => ({ ...doc, transactions: addTransaction(doc.transactions, newTransaction({ date })) }))
@@ -568,15 +646,32 @@ function BudgetTable() {
         () => resolveColumns(settings?.columns).filter(c => c.visible),
         [settings]
     )
-    const showTotalColumn = columns.some(c => c.key === "total")
 
     if (!doc || !settings) return <div className="budget-table-widget">Loading...</div>
 
     const tabs = [
         { key: "budget", label: "Budget" },
-        { key: "spending", label: "Spending" },
+        { key: "transactions", label: "Transactions" },
         { key: "report", label: "Report" }
     ]
+
+    const planned = grandTotals(doc.rows, totals)
+    const money = value => formatAmount(value, settings.currency, settings.locale)
+
+    /* Each figure lands under its own column; a column that's been hidden takes
+       its figure with it, and the label spans whatever is left. */
+    const footerCell = column => {
+        if (column.key === "income") return <td className="budget-cell-amount budget-grand-total budget-income-text" key={column.key}>{money(planned.income)}</td>
+        if (column.key === "expense") return <td className="budget-cell-amount budget-grand-total" key={column.key}>{money(planned.expense)}</td>
+        if (column.key === "balance") return (
+            <td className={planned.balance < 0
+                ? "budget-cell-balance budget-grand-total budget-net-negative"
+                : "budget-cell-balance budget-grand-total"} key={column.key}>
+                {money(planned.balance)}
+            </td>
+        )
+        return <td key={column.key} />
+    }
 
     return (
         <div className="budget-table-widget">
@@ -627,20 +722,9 @@ function BudgetTable() {
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td className="budget-cell-title budget-grand-label">Grand Total</td>
-                                {/* The total lands under whichever position the Total column now
-                                    occupies; with that column hidden it falls back to the last cell
-                                    so the figure is never dropped. */}
-                                {columns.map(column => (
-                                    column.key === "total" ? (
-                                        <td className="budget-cell-total budget-grand-total" key={column.key}>
-                                            {formatAmount(grandTotal(doc.rows, totals), settings.currency, settings.locale)}
-                                        </td>
-                                    ) : <td key={column.key} />
-                                ))}
-                                <td className={showTotalColumn ? "" : "budget-cell-total budget-grand-total"}>
-                                    {!showTotalColumn && formatAmount(grandTotal(doc.rows, totals), settings.currency, settings.locale)}
-                                </td>
+                                <td className="budget-cell-title budget-grand-label">Budget Total</td>
+                                {columns.map(footerCell)}
+                                <td />
                             </tr>
                         </tfoot>
                     </table>
@@ -664,8 +748,8 @@ function BudgetTable() {
                 </>
             )}
 
-            {tab === "spending" && (
-                <SpendingTab
+            {tab === "transactions" && (
+                <TransactionsTab
                     doc={doc}
                     month={month}
                     settings={settings}

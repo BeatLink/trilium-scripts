@@ -2,24 +2,46 @@
  * Budget tree model. Pure functions over the JSON document stored in a budget
  * note's own content:
  *   {
- *     rows: [ { id, title, amount, notes, children: [...] } ],
- *     transactions: [ { id, date, description, amount, rowId } ]
+ *     rows: [ { id, title, income, expense, notes, children: [...] } ],
+ *     transactions: [ { id, date, description, income, expense, rowId } ]
  *   }
- * `rows` is what was planned, `transactions` what was actually spent. A
- * transaction naming a row is on-budget spending; one with no row (or naming a
- * row that has since been deleted) is off-budget.
+ * `rows` is what was planned, `transactions` what actually moved. Single-entry
+ * bookkeeping: every record carries an income amount and an expense amount, and
+ * its balance is income minus expense. Nothing marks a record as one kind or the
+ * other — a record with only an expense is a bill, one with only income is a
+ * paycheck, and one with both nets out.
+ *
+ * A transaction naming a row is on-budget; one with no row, or naming a row that
+ * has since been deleted, is off-budget.
  */
 
 function newId() {
     return Math.random().toString(36).slice(2, 10)
 }
 
+/*
+ * Both amounts off any record shape, tolerating the pre-2.0 single `amount`
+ * field, which was always an expense. Keeps an old document readable rather
+ * than silently zeroing every figure in it.
+ */
+function normalizeAmounts(source) {
+    const income = Number(source?.income)
+    const expense = Number(source?.expense)
+    const legacy = Number(source?.amount)
+    return {
+        income: Number.isFinite(income) ? income : 0,
+        expense: Number.isFinite(expense)
+            ? expense
+            : (source?.expense === undefined && Number.isFinite(legacy) ? legacy : 0)
+    }
+}
+
 function newRow(overrides = {}) {
-    return { id: newId(), title: "", amount: 0, notes: "", children: [], ...overrides }
+    return { id: newId(), title: "", income: 0, expense: 0, notes: "", children: [], ...overrides }
 }
 
 function newTransaction(overrides = {}) {
-    return { id: newId(), date: "", description: "", amount: 0, rowId: null, ...overrides }
+    return { id: newId(), date: "", description: "", income: 0, expense: 0, rowId: null, ...overrides }
 }
 
 /*
@@ -41,23 +63,25 @@ function parseBudget(content) {
 }
 
 function normalizeRow(row) {
-    const amount = Number(row?.amount)
+    const { income, expense } = normalizeAmounts(row)
     return {
         id: typeof row?.id === "string" && row.id ? row.id : newId(),
         title: typeof row?.title === "string" ? row.title : "",
-        amount: Number.isFinite(amount) ? amount : 0,
+        income,
+        expense,
         notes: typeof row?.notes === "string" ? row.notes : "",
         children: Array.isArray(row?.children) ? row.children.map(normalizeRow) : []
     }
 }
 
 function normalizeTransaction(transaction) {
-    const amount = Number(transaction?.amount)
+    const { income, expense } = normalizeAmounts(transaction)
     return {
         id: typeof transaction?.id === "string" && transaction.id ? transaction.id : newId(),
         date: typeof transaction?.date === "string" ? transaction.date : "",
         description: typeof transaction?.description === "string" ? transaction.description : "",
-        amount: Number.isFinite(amount) ? amount : 0,
+        income,
+        expense,
         rowId: typeof transaction?.rowId === "string" && transaction.rowId ? transaction.rowId : null
     }
 }
@@ -67,45 +91,65 @@ function serializeBudget(budget) {
 }
 
 /*
- * Resolves each row's effective total according to the configured rollup mode,
- * returning a parallel map of { id -> { total, childrenTotal, isLeaf, over } }.
- * Kept separate from the rows themselves so the stored document always holds
- * only what the user actually typed.
+ * Resolves each row's effective income and expense according to the configured
+ * rollup mode, returning a parallel map of
+ * { id -> { income, expense, balance, childrenIncome, childrenExpense, isLeaf, over } }.
+ * The mode applies to each of the two amounts independently. Kept separate from
+ * the rows themselves so the stored document always holds only what the user
+ * actually typed.
  */
 function computeTotals(rows, mode) {
     const totals = {}
 
     function walk(row) {
         const isLeaf = row.children.length === 0
-        const childrenTotal = row.children.reduce((sum, child) => sum + walk(child), 0)
+        let childrenIncome = 0
+        let childrenExpense = 0
+        for (const child of row.children) {
+            const resolved = walk(child)
+            childrenIncome += resolved.income
+            childrenExpense += resolved.expense
+        }
 
-        let total
-        if (isLeaf) {
-            total = row.amount
+        let income
+        let expense
+        if (isLeaf || mode === "cap") {
+            income = row.income
+            expense = row.expense
         } else if (mode === "additive") {
-            total = row.amount + childrenTotal
-        } else if (mode === "cap") {
-            total = row.amount
+            income = row.income + childrenIncome
+            expense = row.expense + childrenExpense
         } else {
-            total = childrenTotal
+            income = childrenIncome
+            expense = childrenExpense
         }
 
         totals[row.id] = {
-            total,
-            childrenTotal,
+            income,
+            expense,
+            balance: income - expense,
+            childrenIncome,
+            childrenExpense,
             isLeaf,
             // Only meaningful in cap mode: children spending past the allocation.
-            over: mode === "cap" && !isLeaf && childrenTotal > row.amount
+            over: mode === "cap" && !isLeaf && childrenExpense > row.expense
         }
-        return total
+        return { income, expense }
     }
 
     rows.forEach(walk)
     return totals
 }
 
-function grandTotal(rows, totals) {
-    return rows.reduce((sum, row) => sum + (totals[row.id]?.total ?? 0), 0)
+// The document's bottom line, from the top-level rows' effective totals.
+function grandTotals(rows, totals) {
+    let income = 0
+    let expense = 0
+    for (const row of rows) {
+        income += totals[row.id]?.income ?? 0
+        expense += totals[row.id]?.expense ?? 0
+    }
+    return { income, expense, balance: income - expense }
 }
 
 // Structural edits. Each returns a new rows array; the caller persists it.
@@ -205,8 +249,8 @@ function rowIds(rows) {
 
 /*
  * A transaction is on-budget when it names a row that still exists. Deleting a
- * row therefore turns its spending off-budget rather than making it vanish from
- * the totals, and no cleanup pass over the transactions is needed on delete.
+ * row therefore turns its transactions off-budget rather than making them vanish
+ * from the totals, and no cleanup pass over the transactions is needed on delete.
  */
 function isOnBudget(transaction, ids) {
     return Boolean(transaction.rowId) && ids.has(transaction.rowId)
@@ -230,79 +274,171 @@ function rowOptions(rows) {
 }
 
 /*
- * The month's spending resolved against the budget: the on/off split, and each
- * row's budgeted amount beside what was actually spent against it. A row's
- * actual includes its descendants' spending, so a parent's actual is comparable
- * to the budgeted total the rollup mode gives it.
+ * One month resolved against the budget. On/off budget is a measure of how
+ * closely the month followed the plan, not of whether a transaction was filed
+ * under a category:
+ *
+ *   off budget = spending past a category's allocation
+ *              + income that fell short of what the category expected
+ *              + spending charged to no category at all (no allocation to be
+ *                within, so all of it counts as off)
+ *   on budget  = spending that stayed inside its allocation
+ *              + income received up to what was expected
+ *
+ * Both are measured at the top-level rows — the categories that carry an
+ * allocation. They cover every assigned transaction exactly once whatever depth
+ * it was charged at; measuring at every level would count a parent's allocation
+ * and its children's twice over.
+ *
+ * The two figures do not sum to the month's cash flow, and are not meant to: a
+ * shortfall is money that never arrived, and income above expectation is a
+ * happy deviation that belongs in neither figure. `income`/`spent`/`balance`
+ * are the actual cash.
  */
-function spendingReport(rows, transactions, month, mode) {
+function resolveMonth(rows, transactions, month, totals) {
     const ids = rowIds(rows)
-    const totals = computeTotals(rows, mode)
     const monthly = transactionsForMonth(transactions, month)
 
     const direct = {}
-    let onBudget = 0
-    let offBudget = 0
+    const unassigned = { income: 0, expense: 0 }
+    let income = 0
+    let spent = 0
     for (const transaction of monthly) {
+        income += transaction.income
+        spent += transaction.expense
         if (isOnBudget(transaction, ids)) {
-            onBudget += transaction.amount
-            direct[transaction.rowId] = (direct[transaction.rowId] ?? 0) + transaction.amount
+            const own = direct[transaction.rowId] || (direct[transaction.rowId] = { income: 0, expense: 0 })
+            own.income += transaction.income
+            own.expense += transaction.expense
         } else {
-            offBudget += transaction.amount
+            unassigned.income += transaction.income
+            unassigned.expense += transaction.expense
         }
     }
 
     const actuals = {}
     function rollup(row) {
-        const total = (direct[row.id] ?? 0) + row.children.reduce((sum, child) => sum + rollup(child), 0)
-        actuals[row.id] = total
-        return total
+        const own = direct[row.id] ?? { income: 0, expense: 0 }
+        let rowIncome = own.income
+        let rowExpense = own.expense
+        for (const child of row.children) {
+            const resolved = rollup(child)
+            rowIncome += resolved.income
+            rowExpense += resolved.expense
+        }
+        actuals[row.id] = { income: rowIncome, expense: rowExpense }
+        return { income: rowIncome, expense: rowExpense }
     }
     rows.forEach(rollup)
 
-    const perRow = []
+    const categories = rows.map(row => {
+        const budgeted = totals[row.id] ?? { income: 0, expense: 0 }
+        const actual = actuals[row.id] ?? { income: 0, expense: 0 }
+        return {
+            id: row.id,
+            title: row.title,
+            budgeted,
+            actual,
+            overspent: Math.max(0, actual.expense - budgeted.expense),
+            shortfall: Math.max(0, budgeted.income - actual.income)
+        }
+    })
+
+    let onBudget = 0
+    let offBudget = unassigned.expense
+    for (const category of categories) {
+        onBudget += Math.min(category.actual.expense, category.budgeted.expense)
+        onBudget += Math.min(category.actual.income, category.budgeted.income)
+        offBudget += category.overspent + category.shortfall
+    }
+
+    return { month, monthly, actuals, categories, unassigned, income, spent, balance: income - spent, onBudget, offBudget }
+}
+
+/*
+ * The full report for one month: the on/off budget measure above, the cash
+ * figures, an itemisation of everything counted as off budget, and each row's
+ * budgeted figures beside what actually moved against it.
+ *
+ * The per-row comparison comes back as two lists, one per amount column, since
+ * a row is over budget when it spends more than planned but off plan when it
+ * earns less. Both use a `variance` signed so negative always reads as off plan,
+ * and a row appears in a list only if it has a figure in that column.
+ */
+function monthlyReport(rows, transactions, month, mode) {
+    const totals = computeTotals(rows, mode)
+    const resolved = resolveMonth(rows, transactions, month, totals)
+
+    const flat = []
     function flatten(row, depth) {
-        const budgeted = totals[row.id]?.total ?? 0
-        const actual = actuals[row.id] ?? 0
-        perRow.push({
+        flat.push({
             id: row.id,
             title: row.title,
             depth,
-            budgeted,
-            actual,
-            variance: budgeted - actual,
-            over: actual > budgeted
+            budgeted: totals[row.id] ?? { income: 0, expense: 0 },
+            actual: resolved.actuals[row.id] ?? { income: 0, expense: 0 }
         })
         row.children.forEach(child => flatten(child, depth + 1))
     }
     rows.forEach(row => flatten(row, 0))
 
+    const compare = (column, sign) => flat
+        .filter(entry => entry.budgeted[column] !== 0 || entry.actual[column] !== 0)
+        .map(entry => {
+            const budgeted = entry.budgeted[column]
+            const actual = entry.actual[column]
+            const variance = sign * (budgeted - actual)
+            return { id: entry.id, title: entry.title, depth: entry.depth, budgeted, actual, variance, offPlan: variance < 0 }
+        })
+
+    // Every component of the off-budget figure, so it can be audited rather
+    // than just read. Unassigned spending closes the list as its own line.
+    const offBudgetDetail = resolved.categories
+        .filter(category => category.overspent > 0 || category.shortfall > 0)
+        .map(category => ({
+            id: category.id,
+            title: category.title || "Untitled",
+            overspent: category.overspent,
+            shortfall: category.shortfall,
+            total: category.overspent + category.shortfall
+        }))
+    if (resolved.unassigned.expense > 0) {
+        offBudgetDetail.push({
+            id: null,
+            title: "Unbudgeted spending",
+            overspent: resolved.unassigned.expense,
+            shortfall: 0,
+            total: resolved.unassigned.expense
+        })
+    }
+
     return {
         month,
-        transactions: monthly,
-        offBudgetTransactions: monthly.filter(t => !isOnBudget(t, ids)),
-        onBudget,
-        offBudget,
-        total: onBudget + offBudget,
-        perRow
+        transactions: resolved.monthly,
+        incomeTransactions: resolved.monthly.filter(t => t.income !== 0),
+        onBudget: resolved.onBudget,
+        offBudget: resolved.offBudget,
+        offBudgetDetail,
+        unassigned: resolved.unassigned,
+        income: resolved.income,
+        spent: resolved.spent,
+        balance: resolved.balance,
+        // Overspending is negative variance; earning less than planned is too.
+        perRowExpense: compare("expense", 1),
+        perRowIncome: compare("income", -1)
     }
 }
 
-// The on/off split for `count` months ending at (and including) `endMonth`,
-// oldest first. Months with no spending are included as zeroes so the series
-// has no gaps.
-function monthlyTrend(rows, transactions, endMonth, count) {
-    const ids = rowIds(rows)
+// The on/off budget measure, income, spending and balance for `count` months
+// ending at (and including) `endMonth`, oldest first. Months with nothing
+// recorded are included as zeroes so the series has no gaps.
+function monthlyTrend(rows, transactions, endMonth, count, mode) {
+    const totals = computeTotals(rows, mode)
     const trend = []
     for (let offset = count - 1; offset >= 0; offset--) {
-        const month = shiftMonth(endMonth, -offset)
-        let onBudget = 0
-        let offBudget = 0
-        for (const transaction of transactionsForMonth(transactions, month)) {
-            if (isOnBudget(transaction, ids)) onBudget += transaction.amount
-            else offBudget += transaction.amount
-        }
-        trend.push({ month, onBudget, offBudget, total: onBudget + offBudget })
+        const { month, income, spent, balance, onBudget, offBudget } =
+            resolveMonth(rows, transactions, shiftMonth(endMonth, -offset), totals)
+        trend.push({ month, income, spent, balance, onBudget, offBudget })
     }
     return trend
 }
@@ -313,8 +449,9 @@ function monthlyTrend(rows, transactions, endMonth, count) {
  * can be neither hidden nor moved. Actions are likewise always last.
  */
 const COLUMNS = [
-    { key: "amount", label: "Amount Budgeted" },
-    { key: "total", label: "Total" },
+    { key: "income", label: "Income" },
+    { key: "expense", label: "Expense" },
+    { key: "balance", label: "Balance" },
     { key: "notes", label: "Notes" }
 ]
 
@@ -438,7 +575,7 @@ module.exports = {
     parseBudget,
     serializeBudget,
     computeTotals,
-    grandTotal,
+    grandTotals,
     updateRow,
     removeRow,
     addRow,
@@ -454,7 +591,7 @@ module.exports = {
     formatDate,
     transactionsForMonth,
     rowOptions,
-    spendingReport,
+    monthlyReport,
     monthlyTrend,
     COLUMNS,
     resolveColumns,

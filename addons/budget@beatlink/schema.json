@@ -2,11 +2,11 @@
     "rollupMode": {
         "type": "select",
         "label": "Parent Totals",
-        "description": "How a parent row's amount relates to its children",
+        "description": "How a parent row's income and expense relate to its children's",
         "options": [
-            {"value": "computed", "label": "Computed - parent amount is the sum of its children"},
-            {"value": "additive", "label": "Own + children - parent's own amount is added to its children's sum"},
-            {"value": "cap", "label": "Budget cap - parent amount is an allocation, children are shown against it"}
+            {"value": "computed", "label": "Computed - parent amounts are the sum of its children"},
+            {"value": "additive", "label": "Own + children - parent's own amounts are added to its children's sum"},
+            {"value": "cap", "label": "Budget cap - parent amounts are an allocation, children are shown against it"}
         ],
         "default": "computed"
     },
@@ -20,8 +20,9 @@
             "visible": {"type": "boolean", "label": "Visible", "default": true}
         },
         "default": [
-            {"key": "amount", "visible": true},
-            {"key": "total", "visible": true},
+            {"key": "income", "visible": true},
+            {"key": "expense", "visible": true},
+            {"key": "balance", "visible": true},
             {"key": "notes", "visible": true}
         ]
     },

@@ -22,8 +22,12 @@
     vertical-align: middle;
 }
 
+/* The header cells are classed from the column key, the body cells from what
+   they hold, so both spellings of the money columns line up here. */
 .budget-cell-amount,
-.budget-cell-total {
+.budget-cell-income,
+.budget-cell-expense,
+.budget-cell-balance {
     width: 1%;
     white-space: nowrap;
     text-align: right;
@@ -279,8 +283,13 @@
 }
 
 .budget-off-text,
-.budget-off {
+.budget-off,
+.budget-net-negative {
     color: var(--error-text-color, #d33);
+}
+
+.budget-income-text {
+    color: var(--success-text-color, #2a7f4f);
 }
 
 .budget-split-bar {
