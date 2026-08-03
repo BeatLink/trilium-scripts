@@ -244,38 +244,30 @@
     border-color: var(--main-border-color);
 }
 
-/* On/off budget totals. */
-.budget-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.budget-summary-card {
-    border: 1px solid var(--main-border-color);
-    border-radius: 6px;
-    display: flex;
-    flex: 1 1 140px;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 12px;
-}
-
-.budget-summary-label {
-    color: var(--muted-text-color);
-    font-size: 0.85em;
-}
-
-.budget-summary-value {
-    font-size: 1.3em;
-    font-weight: 700;
+/* The on/off budget matrix: one row per column of the ledger. */
+.budget-matrix td {
+    font-size: 1.05em;
     font-variant-numeric: tabular-nums;
+    padding: 6px 8px;
 }
 
-.budget-summary-share {
+.budget-matrix-label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.budget-matrix-note {
     color: var(--muted-text-color);
     font-size: 0.82em;
+}
+
+/* The components an off-budget figure is the sum of, under the figure itself. */
+.budget-summary-parts {
+    color: var(--muted-text-color);
+    display: block;
+    font-size: 0.78em;
+    font-variant-numeric: normal;
+    margin-top: 2px;
 }
 
 .budget-on-text {

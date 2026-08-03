@@ -89,15 +89,38 @@ charges them again.
 **On and off budget measure how closely the month followed the plan** — not whether a record was
 filed under a category:
 
-| Counts as | Made up of |
-|---|---|
-| **Off budget** | Spending past a category's allocation, **plus** income that fell short of what the category expected, **plus** spending charged to no category at all (nothing to be within, so all of it is off) |
-| **On budget** | Spending that stayed inside its allocation, **plus** income received up to what was expected |
+**On budget** is every amount that stayed within the limits of the record it was charged to.
+**Off budget** is every amount that broke them, plus anything charged to no record at all — which had
+no limit to be within.
 
-Both are measured at the **top-level rows** — the categories that carry an allocation. They cover
-every charged record exactly once whatever depth it was charged at; measuring at every level would
-count a parent's allocation and its children's twice over. So a category whose children collectively
-overshoot is over by the shortfall of the whole category, not row by row.
+The two are reported **per column**, never added together: one figure combining money in with money
+out means nothing on its own. The report opens with the matrix:
+
+|  | On budget | Off budget | Actual |
+|---|---|---|---|
+| **Income** | Received up to what the record expected | Short of it, above it, or unbudgeted | What actually came in |
+| **Spending** | Inside its allocation | Past it, or unbudgeted | What actually went out |
+
+**Spending's row is a true partition** — on plus off is exactly what was spent. **Income's is not, and
+can't be**: a shortfall is money that never arrived, so it counts as off budget without ever having
+been cash. On plus off *minus the shortfall* is what actually came in. Each off-budget figure names
+its components underneath for that reason.
+
+### Which record a figure is measured against
+
+An amount is compared against the allocation that actually governs it, and **no allocation is ever
+counted twice** — a budget counted at both a parent and its children would report one overrun twice,
+and a tree under a single root would report every figure in it two or three times over. Which rows
+own an allocation follows from the [rollup mode](#rollup-modes):
+
+| Mode | Measured at |
+|---|---|
+| **Computed** | Every leaf, against what it was typed. A parent's budget is only the sum of its children's, so the parent owns nothing of its own. |
+| **Own + children** | Every row, against what it was typed. A parent's children are extra on top, so parent and child never share an amount. |
+| **Budget cap** | Every row that has children, against its cap and its whole subtree's actual. Its descendants aren't measured separately — the cap is the limit they all draw on. |
+
+Except under a cap, a row is measured against what was charged to it **directly**, not to its
+descendants — the same money would otherwise be judged again at every level above it.
 
 The two figures deliberately do **not** sum to the month's cash flow. A shortfall is money that never
 arrived rather than money that moved, and income above expectation is a happy deviation that belongs
@@ -107,9 +130,10 @@ in neither figure. **Income**, **Spent** and **Balance** are the actual cash.
 
 - **The summary** — on budget and off budget with each one's share, then the month's actual income,
   spending, and balance. A proportional bar shows the on/off ratio.
-- **What went off budget** — every component of the off-budget figure itemised: each category's
-  overspend and income shortfall, and unbudgeted spending as its own line. The column adds up to the
-  off-budget figure exactly, so it can be audited rather than just read.
+- **What went off budget** — every component of the off-budget figure itemised: each record's
+  overspend and income shortfall by full path (`Net Cash / Expenses / Home / Bills / Power`), with
+  unbudgeted spending and unbudgeted income as their own lines. The column adds up to the off-budget
+  figure exactly, so it can be audited rather than just read.
 - **Expenses / Income: budgeted vs actual** — every budget row with a figure in that column, its
   budgeted amount, what actually moved against it, and the variance. A row's actual includes its
   descendants', so a parent's figure is comparable to the budgeted total its rollup mode gives it.

@@ -274,28 +274,76 @@ function rowOptions(rows) {
 }
 
 /*
+ * The rows an on/off budget measure may compare against, each paired with the
+ * allocation that is genuinely its own and the actual that belongs to it.
+ * Nothing here may overlap: a budget counted at both a parent and its children
+ * would report one overrun twice, and a tree with a single root would report
+ * every figure in it two or three times over.
+ *
+ * Which rows own an allocation depends on the rollup mode:
+ *
+ *   computed   A parent's budget is only the sum of its children's, so the
+ *              parent owns nothing and every leaf owns what it was typed.
+ *   own+child  Every row owns what it was typed; a parent's children are extra
+ *              on top, so parent and child never share an amount.
+ *   cap        A parent's amount is the allocation everything beneath it draws
+ *              on, so it is measured against its whole subtree's actual and its
+ *              descendants are not measured separately at all.
+ *
+ * In every mode the actual is what was charged to that row directly, except a
+ * cap, which takes its subtree's — matching the allocation it is compared to.
+ */
+function measurableRows(rows, mode, direct, rolled) {
+    const measurable = []
+    // An allocation below zero is not a limit anything can be within — it would
+    // make the on-budget figure negative — so a row typed that way is read as
+    // having no allocation at all.
+    const allocation = row => ({ income: Math.max(0, row.income), expense: Math.max(0, row.expense) })
+    function walk(row, path) {
+        const label = path ? `${path} / ${row.title || "Untitled"}` : (row.title || "Untitled")
+        const hasChildren = row.children.length > 0
+        if (mode === "cap" && hasChildren) {
+            measurable.push({
+                id: row.id,
+                label,
+                budgeted: allocation(row),
+                actual: rolled[row.id] ?? { income: 0, expense: 0 }
+            })
+            return
+        }
+        measurable.push({
+            id: row.id,
+            label,
+            budgeted: (mode === "computed" && hasChildren)
+                ? { income: 0, expense: 0 }
+                : allocation(row),
+            actual: direct[row.id] ?? { income: 0, expense: 0 }
+        })
+        row.children.forEach(child => walk(child, label))
+    }
+    rows.forEach(row => walk(row, ""))
+    return measurable
+}
+
+/*
  * One month resolved against the budget. On/off budget is a measure of how
  * closely the month followed the plan, not of whether a transaction was filed
  * under a category:
  *
- *   off budget = spending past a category's allocation
- *              + income that fell short of what the category expected
- *              + spending charged to no category at all (no allocation to be
- *                within, so all of it counts as off)
- *   on budget  = spending that stayed inside its allocation
- *              + income received up to what was expected
+ *   on budget  = every amount that stayed within the limits of the record it
+ *                was charged to — spending inside its allocation, and income
+ *                received up to what that record expected
+ *   off budget = the variances that broke those limits — spending past an
+ *                allocation, income short of expectation, and income beyond it —
+ *                plus anything charged to no record at all, which had no limit
+ *                to be within
  *
- * Both are measured at the top-level rows — the categories that carry an
- * allocation. They cover every assigned transaction exactly once whatever depth
- * it was charged at; measuring at every level would count a parent's allocation
- * and its children's twice over.
- *
- * The two figures do not sum to the month's cash flow, and are not meant to: a
- * shortfall is money that never arrived, and income above expectation is a
- * happy deviation that belongs in neither figure. `income`/`spent`/`balance`
- * are the actual cash.
+ * Measured record by record over `measurableRows` above, so a figure is
+ * compared against the allocation that actually governs it and no allocation is
+ * counted twice. Reported per column: see the note on the return value for why
+ * spending partitions exactly and income cannot.
  */
-function resolveMonth(rows, transactions, month, totals) {
+function resolveMonth(rows, transactions, month, totals, mode) {
     const ids = rowIds(rows)
     const monthly = transactionsForMonth(transactions, month)
 
@@ -331,28 +379,47 @@ function resolveMonth(rows, transactions, month, totals) {
     }
     rows.forEach(rollup)
 
-    const categories = rows.map(row => {
-        const budgeted = totals[row.id] ?? { income: 0, expense: 0 }
-        const actual = actuals[row.id] ?? { income: 0, expense: 0 }
-        return {
-            id: row.id,
-            title: row.title,
-            budgeted,
-            actual,
-            overspent: Math.max(0, actual.expense - budgeted.expense),
-            shortfall: Math.max(0, budgeted.income - actual.income)
-        }
-    })
+    const measured = measurableRows(rows, mode, direct, actuals).map(entry => ({
+        ...entry,
+        withinExpense: Math.min(entry.actual.expense, entry.budgeted.expense),
+        withinIncome: Math.min(entry.actual.income, entry.budgeted.income),
+        overspent: Math.max(0, entry.actual.expense - entry.budgeted.expense),
+        shortfall: Math.max(0, entry.budgeted.income - entry.actual.income),
+        surplus: Math.max(0, entry.actual.income - entry.budgeted.income)
+    }))
 
-    let onBudget = 0
-    let offBudget = unassigned.expense
-    for (const category of categories) {
-        onBudget += Math.min(category.actual.expense, category.budgeted.expense)
-        onBudget += Math.min(category.actual.income, category.budgeted.income)
-        offBudget += category.overspent + category.shortfall
+    const sum = key => measured.reduce((total, entry) => total + entry[key], 0)
+    const overspent = sum("overspent")
+    const shortfall = sum("shortfall")
+    const surplus = sum("surplus")
+
+    return {
+        month,
+        monthly,
+        actuals,
+        measured,
+        unassigned,
+        income,
+        spent,
+        balance: income - spent,
+        overspent,
+        shortfall,
+        surplus,
+        /*
+         * On and off budget are kept per column rather than as one combined
+         * figure, since adding money in to money out gives a number that means
+         * nothing on its own.
+         *
+         * Spending is a true partition — on plus off is exactly what was spent.
+         * Income is not, and can't be: a shortfall is money that never arrived,
+         * so it sits in the off-budget figure without ever having been cash.
+         * On plus off minus the shortfall is what actually came in.
+         */
+        onBudgetExpense: sum("withinExpense"),
+        offBudgetExpense: overspent + unassigned.expense,
+        onBudgetIncome: sum("withinIncome"),
+        offBudgetIncome: surplus + shortfall + unassigned.income
     }
-
-    return { month, monthly, actuals, categories, unassigned, income, spent, balance: income - spent, onBudget, offBudget }
 }
 
 /*
@@ -367,7 +434,7 @@ function resolveMonth(rows, transactions, month, totals) {
  */
 function monthlyReport(rows, transactions, month, mode) {
     const totals = computeTotals(rows, mode)
-    const resolved = resolveMonth(rows, transactions, month, totals)
+    const resolved = resolveMonth(rows, transactions, month, totals, mode)
 
     const flat = []
     function flatten(row, depth) {
@@ -392,23 +459,37 @@ function monthlyReport(rows, transactions, month, mode) {
         })
 
     // Every component of the off-budget figure, so it can be audited rather
-    // than just read. Unassigned spending closes the list as its own line.
-    const offBudgetDetail = resolved.categories
-        .filter(category => category.overspent > 0 || category.shortfall > 0)
-        .map(category => ({
-            id: category.id,
-            title: category.title || "Untitled",
-            overspent: category.overspent,
-            shortfall: category.shortfall,
-            total: category.overspent + category.shortfall
+    // than just read: the column adds back up to it exactly. Rows are labelled
+    // by full path, since an overrun usually sits on a leaf whose title alone
+    // ("Bills") wouldn't say which one.
+    const offBudgetDetail = resolved.measured
+        .filter(entry => entry.overspent > 0 || entry.shortfall > 0 || entry.surplus > 0)
+        .map(entry => ({
+            id: entry.id,
+            title: entry.label,
+            overspent: entry.overspent,
+            shortfall: entry.shortfall,
+            surplus: entry.surplus,
+            total: entry.overspent + entry.shortfall + entry.surplus
         }))
     if (resolved.unassigned.expense > 0) {
         offBudgetDetail.push({
-            id: null,
+            id: "unbudgeted-expense",
             title: "Unbudgeted spending",
             overspent: resolved.unassigned.expense,
             shortfall: 0,
+            surplus: 0,
             total: resolved.unassigned.expense
+        })
+    }
+    if (resolved.unassigned.income > 0) {
+        offBudgetDetail.push({
+            id: "unbudgeted-income",
+            title: "Unbudgeted income",
+            overspent: 0,
+            shortfall: 0,
+            surplus: resolved.unassigned.income,
+            total: resolved.unassigned.income
         })
     }
 
@@ -416,9 +497,14 @@ function monthlyReport(rows, transactions, month, mode) {
         month,
         transactions: resolved.monthly,
         incomeTransactions: resolved.monthly.filter(t => t.income !== 0),
-        onBudget: resolved.onBudget,
-        offBudget: resolved.offBudget,
         offBudgetDetail,
+        onBudgetExpense: resolved.onBudgetExpense,
+        offBudgetExpense: resolved.offBudgetExpense,
+        onBudgetIncome: resolved.onBudgetIncome,
+        offBudgetIncome: resolved.offBudgetIncome,
+        overspent: resolved.overspent,
+        shortfall: resolved.shortfall,
+        surplus: resolved.surplus,
         unassigned: resolved.unassigned,
         income: resolved.income,
         spent: resolved.spent,
@@ -430,15 +516,24 @@ function monthlyReport(rows, transactions, month, mode) {
 }
 
 // The on/off budget measure, income, spending and balance for `count` months
-// ending at (and including) `endMonth`, oldest first. Months with nothing
+// ending at (and including) `endMonth`, oldest first. `onBudget`/`offBudget`
+// here are the spending split — the one that partitions its column exactly, and
+// so the one a bar can be drawn from. Months with nothing
 // recorded are included as zeroes so the series has no gaps.
 function monthlyTrend(rows, transactions, endMonth, count, mode) {
     const totals = computeTotals(rows, mode)
     const trend = []
     for (let offset = count - 1; offset >= 0; offset--) {
-        const { month, income, spent, balance, onBudget, offBudget } =
-            resolveMonth(rows, transactions, shiftMonth(endMonth, -offset), totals)
-        trend.push({ month, income, spent, balance, onBudget, offBudget })
+        const resolved = resolveMonth(rows, transactions, shiftMonth(endMonth, -offset), totals, mode)
+        const { month, income, spent, balance } = resolved
+        trend.push({
+            month,
+            income,
+            spent,
+            balance,
+            onBudget: resolved.onBudgetExpense,
+            offBudget: resolved.offBudgetExpense
+        })
     }
     return trend
 }

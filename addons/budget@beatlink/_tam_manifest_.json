@@ -1,11 +1,11 @@
 {
     "id": "budget@beatlink",
     "name": "Budget",
-    "description": "Nested single-entry budget tables with monthly tracking — apply the Budget template to any note and edit Title / Income / Expense / Notes rows in place, each row showing its balance and child rows rolling up into their parents. A Transactions tab records dated income and expenses against budget rows a month at a time, and a Report tab measures the month against the plan: how much stayed on budget versus went off it (spending past an allocation, income short of expectation, or spending with no allocation at all), an itemisation of every off-budget component, budgeted vs actual per row for both columns, the month's income, and a six-month trend. Rollup behaviour (computed, own + children, or budget cap) is configurable, amounts are shown and stored at a configurable number of decimal places, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
+    "description": "Nested single-entry budget tables with monthly tracking — apply the Budget template to any note and edit Title / Income / Expense / Notes rows in place, each row showing its balance and child rows rolling up into their parents. A Transactions tab records dated income and expenses against budget rows a month at a time, and a Report tab measures the month against the plan record by record: how much stayed within each record limits versus went off them, reported separately for income and for spending (spending past an allocation, income short of or beyond expectation, or anything with no allocation at all), an itemisation of every off-budget component, budgeted vs actual per row for both columns, the month's income, and a six-month trend. Rollup behaviour (computed, own + children, or budget cap) is configurable, amounts are shown and stored at a configurable number of decimal places, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.1.0",
+    "latestVersion": "2.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",

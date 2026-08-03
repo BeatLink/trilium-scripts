@@ -355,56 +355,74 @@ function ReportTab({ doc, month, settings, onMonth }) {
         [doc, month, settings.rollupMode]
     )
     const trendPeak = Math.max(...trend.map(entry => entry.onBudget + entry.offBudget), 0)
-    const measured = report.onBudget + report.offBudget
-    const percent = value => (measured > 0 ? `${Math.round((value / measured) * 100)}%` : "-")
+    const percent = value => (report.spent > 0 ? `${Math.round((value / report.spent) * 100)}%` : "-")
     const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
 
     return (
         <>
             <MonthNav month={month} settings={settings} onChange={onMonth} />
 
-            <div className="budget-summary">
-                <div className="budget-summary-card">
-                    <span className="budget-summary-label">On budget</span>
-                    <span className="budget-summary-value budget-on-text">{money(report.onBudget)}</span>
-                    <span className="budget-summary-share">{percent(report.onBudget)} — went to plan</span>
-                </div>
-                <div className="budget-summary-card">
-                    <span className="budget-summary-label">Off budget</span>
-                    <span className="budget-summary-value budget-off-text">{money(report.offBudget)}</span>
-                    <span className="budget-summary-share">{percent(report.offBudget)} — over or short</span>
-                </div>
-                <div className="budget-summary-card">
-                    <span className="budget-summary-label">Income</span>
-                    <span className="budget-summary-value budget-income-text">{money(report.income)}</span>
-                    <span className="budget-summary-share">
-                        {report.incomeTransactions.length} entr{report.incomeTransactions.length === 1 ? "y" : "ies"}
-                    </span>
-                </div>
-                <div className="budget-summary-card">
-                    <span className="budget-summary-label">Spent</span>
-                    <span className="budget-summary-value">{money(report.spent)}</span>
-                    <span className="budget-summary-share">
-                        {report.transactions.length} record{report.transactions.length === 1 ? "" : "s"}
-                    </span>
-                </div>
-                <div className="budget-summary-card">
-                    <span className="budget-summary-label">Balance</span>
-                    <span className={report.balance < 0 ? "budget-summary-value budget-net-negative" : "budget-summary-value"}>
-                        {money(report.balance)}
-                    </span>
-                    <span className="budget-summary-share">income minus spending</span>
-                </div>
-            </div>
-            <SplitBar onBudget={report.onBudget} offBudget={report.offBudget} />
+            {/* Kept per column: on plus off across both would add money in to
+                money out. Spending's row partitions exactly; income's cannot,
+                since a shortfall never was cash. */}
+            <table className="budget-table budget-matrix">
+                <thead>
+                    <tr>
+                        <th />
+                        <th className="budget-cell-amount">On budget</th>
+                        <th className="budget-cell-amount">Off budget</th>
+                        <th className="budget-cell-amount">Actual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr className="budget-row">
+                        <td className="budget-matrix-label">Income</td>
+                        <td className="budget-cell-amount budget-on-text">{money(report.onBudgetIncome)}</td>
+                        <td className="budget-cell-amount budget-off-text">
+                            {money(report.offBudgetIncome)}
+                            <span className="budget-summary-parts">
+                                {money(report.shortfall)} short · {money(report.surplus)} above plan
+                                · {money(report.unassigned.income)} unbudgeted
+                            </span>
+                        </td>
+                        <td className="budget-cell-amount budget-income-text">{money(report.income)}</td>
+                    </tr>
+                    <tr className="budget-row">
+                        <td className="budget-matrix-label">Spending</td>
+                        <td className="budget-cell-amount budget-on-text">{money(report.onBudgetExpense)}</td>
+                        <td className="budget-cell-amount budget-off-text">
+                            {money(report.offBudgetExpense)}
+                            <span className="budget-summary-parts">
+                                {money(report.overspent)} over · {money(report.unassigned.expense)} unbudgeted
+                            </span>
+                        </td>
+                        <td className="budget-cell-amount">{money(report.spent)}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td className="budget-matrix-label budget-grand-label">Balance</td>
+                        <td colSpan={2} className="budget-matrix-note">
+                            {percent(report.onBudgetExpense)} of spending stayed within its allocation
+                        </td>
+                        <td className={report.balance < 0
+                            ? "budget-cell-amount budget-grand-total budget-net-negative"
+                            : "budget-cell-amount budget-grand-total"}>
+                            {money(report.balance)}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+            <SplitBar onBudget={report.onBudgetExpense} offBudget={report.offBudgetExpense} />
 
             <h4 className="budget-report-heading">What went off budget</h4>
             <table className="budget-table">
                 <thead>
                     <tr>
-                        <th className="budget-cell-title">Category</th>
+                        <th className="budget-cell-title">Record</th>
                         <th className="budget-cell-amount">Overspent</th>
                         <th className="budget-cell-amount">Income short</th>
+                        <th className="budget-cell-amount">Income above plan</th>
                         <th className="budget-cell-amount">Total</th>
                     </tr>
                 </thead>
@@ -414,11 +432,12 @@ function ReportTab({ doc, month, settings, onMonth }) {
                             <td className="budget-cell-title">{entry.title}</td>
                             <td className="budget-cell-amount">{entry.overspent > 0 ? money(entry.overspent) : ""}</td>
                             <td className="budget-cell-amount">{entry.shortfall > 0 ? money(entry.shortfall) : ""}</td>
+                            <td className="budget-cell-amount">{entry.surplus > 0 ? money(entry.surplus) : ""}</td>
                             <td className="budget-cell-amount budget-total-over">{money(entry.total)}</td>
                         </tr>
                     ))}
                     {report.offBudgetDetail.length === 0 && (
-                        <tr><td colSpan={4} className="budget-empty">Everything this month went to plan.</td></tr>
+                        <tr><td colSpan={5} className="budget-empty">Everything this month went to plan.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -459,7 +478,7 @@ function ReportTab({ doc, month, settings, onMonth }) {
                 <thead>
                     <tr>
                         <th>Month</th>
-                        <th className="budget-cell-trend">On / off budget</th>
+                        <th className="budget-cell-trend">Spending split</th>
                         <th className="budget-cell-amount">On budget</th>
                         <th className="budget-cell-amount">Off budget</th>
                         <th className="budget-cell-amount">Income</th>
