@@ -8,7 +8,8 @@ shown on task notes themselves.
 The main panel carries:
 
 - a list of **suggested tasks** to add to your day, grouped into **Earlier** (overdue), **Today**, and
-  **Next 7 Days**. Each row has a `+` that appends the task to your My Day note as a todo item;
+  **Next 7 Days**. Each row has a `+` that appends the task to your My Day note as a todo item and
+  clones it under that note;
 - a **countdown timer** with selectable durations and start / select / end sounds;
 - an optional loop that **files tasks into the My Day note** as their start time arrives (every 30s);
 - an optional loop that **sends a desktop notification** as each task comes due (every 15s).
@@ -18,16 +19,17 @@ The main panel carries:
 A second **My Day** panel appears in the right pane on any note carrying the **Task Label** setting
 (default `#agendaTaskWidget`, the inheritable label agenda's task templates set). It holds one button:
 
-- **Add to My Day** when the task isn't on today — files it onto the My Day note and tags it
-  `#agendaMyDay`, exactly as the `+` in the suggestion list does;
-- **Remove from My Day** when it is — strips the link and clears the label.
+- **Add to My Day** when the task isn't on today — files it onto the My Day note, clones it there, and
+  tags it `#agendaMyDay`, exactly as the `+` in the suggestion list does;
+- **Remove from My Day** when it is — strips the link, removes the clone, and clears the label.
 
 It is skipped on the My Day note itself, and stays hidden until **My Day Note** is set. Either action
 broadcasts `agenda:tasksChanged`, so the suggestion list updates to match; the button also re-reads
 its state on that event, which is how it follows a task completed or rescheduled elsewhere.
 
 This lives here rather than in `agenda-task@beatlink` because everything it needs — the My Day note
-id, and the add/remove pair that keeps the label and the note's links consistent — is owned by this
+id, and the add/remove pair that keeps the label, the note's links, and its clones consistent — is
+owned by this
 addon. It reaches tasks the same way the suggestion list does: through a **shared label convention**,
 not a code dependency, so `agenda-task@beatlink` need not be installed.
 
@@ -48,15 +50,16 @@ falling back to **due datetime** when no start is set. Tasks with neither date, 
 more than a week out, are not suggested.
 
 A task drops off the list once it's in your day: adding it appends a reference link to the My Day
-note, and any task already linked there is filtered out. The list refreshes when you add something,
-when the auto-file loop runs, and whenever another agenda widget broadcasts `agenda:tasksChanged`.
+note and clones the task under it, and any tagged or already-linked task is filtered out. The list
+refreshes when you add something, when the auto-file loop runs, and whenever another agenda widget
+broadcasts `agenda:tasksChanged`.
 
 ## The `#agendaMyDay` label
 
 Adding a task — from the suggestion list, the per-task panel, or the auto-file loop — tags it
-**`#agendaMyDay`**. That label - not the note's content - is the record of what
-is on your day; the link on the My Day note is just its visible rendering. Removing a task clears the
-label again, and a tagged task stops appearing in the suggestion list.
+**`#agendaMyDay`**. That label - not the note's content, not the tree - is the record of what is on
+your day; the link on the My Day note and the clone under it are its two visible renderings. Removing
+a task clears the label again, and a tagged task stops appearing in the suggestion list.
 
 `agenda-task@beatlink` **removes the label** when a task leaves today: on completion (a one-off is
 archived, a recurring task advances to its next occurrence), on reschedule, and on a manual date edit
@@ -66,8 +69,10 @@ page.
 ## Pruning
 
 Whenever My Day loads - and on every `agenda:tasksChanged` event - it checks each task linked on the
-My Day note and **removes any that has lost its `#agendaMyDay` label**. That is what makes completed
-and rescheduled tasks disappear from the page.
+My Day note **or cloned under it** and **removes any that has lost its `#agendaMyDay` label**. That is
+what makes completed and rescheduled tasks disappear from the page. Clones are read from the backend
+rather than the client cache, because a completed task is archived and archived children are filtered
+out of the client's view.
 
 The prune is **not** gated on visibility, since tasks are usually completed from their own note
 rather than from My Day. It also runs when the panel becomes visible, catching changes made while it
@@ -79,11 +84,14 @@ task as untagged whether or not it ever carried the label.
 
 Removal strips the whole entry - the enclosing `<li>` or `<p>`, never just the `<a>` - so no orphan
 checkboxes remain, and only the containing `<li>` goes, so neighbouring tasks in a merged todo list
-survive.
+survive. The clone goes with it, as a branch removal only: Trilium refuses to remove a note's last
+remaining parent, so a note living *solely* under My Day is left in place rather than deleted.
 
-> **Note:** anything linked on the My Day note that lacks `#agendaMyDay` is removed on the next
-> prune, including links you added by hand. Keep hand-written references on a different note, or tag
-> them `#agendaMyDay` to make them stick.
+> **Note:** anything linked on the My Day note **or cloned under it** that lacks `#agendaMyDay` is
+> removed on the next prune, including links and clones you placed by hand. Keep hand-written
+> references and hand-filed clones on a different note, or tag them `#agendaMyDay` to make them
+> stick. A note whose *only* parent is the My Day note is never touched, since removing its branch
+> would delete it.
 
 ## Configuration
 

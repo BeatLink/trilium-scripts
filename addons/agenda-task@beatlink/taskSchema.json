@@ -64,6 +64,15 @@
         "tab": "Settings",
         "subgroup": "Task"
     },
+    "blockedByRelation": {
+        "type": "string",
+        "label": "Blocked By Relation",
+        "description": "The multi-valued relation a task carries for each task it waits on. The Blocking side is the same relation read backwards, so there is only ever this one name.",
+        "default": "blockedBy",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Task"
+    },
     "rescheduleOptions": {
         "type": "registry",
         "hidden": true,

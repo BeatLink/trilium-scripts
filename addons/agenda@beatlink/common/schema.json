@@ -570,6 +570,24 @@
                         "enabled": true
                     }
                 }
+            },
+            "blocking": {
+                "name": "Blocking",
+                "profileId": "default",
+                "children": {
+                    "unblocked": {
+                        "name": "Unblocked",
+                        "type": "search",
+                        "rule": "~!blockedBy",
+                        "enabled": true
+                    },
+                    "blocked": {
+                        "name": "Blocked",
+                        "type": "search",
+                        "rule": "~blockedBy",
+                        "enabled": false
+                    }
+                }
             }
         }
     },

@@ -78,7 +78,8 @@ async function getAgendaTaskSettings() {
         DUE_DATE_LABEL: settings.dueDateLabel,
         DUE_TIME_LABEL: settings.dueTimeLabel,
         DURATION_LABEL: settings.durationLabel,
-        RECURRENCE_LABEL: settings.recurrenceLabel
+        RECURRENCE_LABEL: settings.recurrenceLabel,
+        BLOCKED_BY_RELATION: settings.blockedByRelation
     }
 
     const rescheduleOptions = Object.entries(settings.rescheduleOptions || {})
