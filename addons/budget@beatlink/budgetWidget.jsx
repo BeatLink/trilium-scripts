@@ -39,7 +39,9 @@ const {
     parentIds,
     importBudget,
     exportBudget,
-    formatAmount
+    formatAmount,
+    roundAmount,
+    amountStep
 } = require("libBudget.js")
 
 // How many months the report's trend covers, ending at the month being viewed.
@@ -52,7 +54,7 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
 
     // In computed mode a parent's amounts are derived, so its cells are read-only.
     const derived = hasChildren && settings.rollupMode === "computed"
-    const money = value => formatAmount(value, settings.currency, settings.locale)
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
 
     const amountCell = column => (
         <td className="budget-cell-amount" key={column}>
@@ -61,10 +63,12 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
             ) : (
                 <input
                     type="number"
-                    step="0.01"
+                    step={amountStep(settings.decimals)}
                     className="budget-input budget-input-amount"
                     value={row[column]}
-                    onInput={e => onChange(row.id, { [column]: parseFloat(e.target.value) || 0 })}
+                    // Trimmed on entry, so what's stored is what's shown rather
+                    // than a figure the display quietly rounds off.
+                    onInput={e => onChange(row.id, { [column]: roundAmount(e.target.value, settings.decimals) })}
                 />
             )}
             {settings.rollupMode === "cap" && hasChildren && (
@@ -184,7 +188,7 @@ function TransactionsTab({ doc, month, settings, onMonth, onChange, onRemove, on
         [doc.transactions, month]
     )
     const options = useMemo(() => rowOptions(doc.rows), [doc.rows])
-    const money = value => formatAmount(value, settings.currency, settings.locale)
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
     const income = monthly.reduce((sum, t) => sum + t.income, 0)
     const spent = monthly.reduce((sum, t) => sum + t.expense, 0)
 
@@ -235,10 +239,10 @@ function TransactionsTab({ doc, month, settings, onMonth, onChange, onRemove, on
                                     <td className="budget-cell-amount" key={column}>
                                         <input
                                             type="number"
-                                            step="0.01"
+                                            step={amountStep(settings.decimals)}
                                             className="budget-input budget-input-amount"
                                             value={transaction[column]}
-                                            onInput={e => onChange(transaction.id, { [column]: parseFloat(e.target.value) || 0 })}
+                                            onInput={e => onChange(transaction.id, { [column]: roundAmount(e.target.value, settings.decimals) })}
                                         />
                                     </td>
                                 ))}
@@ -353,7 +357,7 @@ function ReportTab({ doc, month, settings, onMonth }) {
     const trendPeak = Math.max(...trend.map(entry => entry.onBudget + entry.offBudget), 0)
     const measured = report.onBudget + report.offBudget
     const percent = value => (measured > 0 ? `${Math.round((value / measured) * 100)}%` : "-")
-    const money = value => formatAmount(value, settings.currency, settings.locale)
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
 
     return (
         <>
@@ -656,7 +660,7 @@ function BudgetTable() {
     ]
 
     const planned = grandTotals(doc.rows, totals)
-    const money = value => formatAmount(value, settings.currency, settings.locale)
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
 
     /* Each figure lands under its own column; a column that's been hidden takes
        its figure with it, and the label spans whatever is left. */

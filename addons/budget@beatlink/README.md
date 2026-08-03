@@ -168,8 +168,12 @@ added by a future version appears automatically in an existing config, and a sto
 longer exists is ignored, so a config never has to be reset across an upgrade — the pre-2.0 `amount`
 and `total` columns are dropped this way, and the new ones appear in their place.
 
-**Currency** (ISO 4217, e.g. `USD`, `JMD`) and **Locale** (e.g. `en-US`; blank uses the system
-default) control amount formatting. Settings are stored in a persisted note via TAM's
+**Currency** (ISO 4217, e.g. `USD`, `JMD`), **Locale** (e.g. `en-US`; blank uses the system default),
+and **Decimal Places** control amount formatting. Decimal Places (2 by default) is both how amounts
+are displayed *and* the precision they're stored at — typing more precision than it allows rounds to
+it on entry, so what's stored is what's shown rather than a figure the display quietly rounds off.
+Set it to 0 for whole-currency budgeting. Amounts already stored with more precision than the current
+setting keep it until you next edit them. Settings are stored in a persisted note via TAM's
 [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism, so they survive
 addon updates.
 
@@ -202,7 +206,8 @@ A budget note's content is a JSON document:
 balance is always derived, never stored. A transaction's `rowId` names the budget row it is charged
 to; `null`, or an id whose row has since been deleted, means unbudgeted. Months are taken as the
 `YYYY-MM` prefix of `date` rather than by parsing it as a timestamp, so the 1st of a month never
-lands in the previous one in a western timezone.
+lands in the previous one in a western timezone. Amounts are stored trimmed to the configured
+**Decimal Places**.
 
 Documents from earlier versions still read: a pre-2.0 record's single `amount` field is taken as its
 expense (that field only ever held spending), and a pre-1.5 document with no `transactions` key reads

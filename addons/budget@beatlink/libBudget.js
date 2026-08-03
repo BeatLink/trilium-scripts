@@ -551,12 +551,40 @@ function exportBudget(budget) {
     return serializeBudget(budget)
 }
 
-function formatAmount(value, currency, locale) {
+/*
+ * Amounts are held and shown to a configurable number of decimal places, 2 by
+ * default. Intl caps fraction digits at 20 and rejects a negative, so an
+ * out-of-range setting is clamped rather than thrown on — a settings field is
+ * free text as far as this is concerned.
+ */
+function resolveDecimals(decimals) {
+    const places = Math.floor(Number(decimals))
+    return Number.isFinite(places) ? Math.min(Math.max(places, 0), 20) : 2
+}
+
+// Trims a typed amount to the configured precision, via a scaled integer so it
+// comes back as a number rather than toFixed's string. Rounding is only ever as
+// good as the double it's handed: 1.005 is really 1.00499…, so it trims to 1.00
+// exactly as toFixed would.
+function roundAmount(value, decimals) {
+    const places = resolveDecimals(decimals)
+    const scale = 10 ** places
+    return Math.round((Number(value) || 0) * scale) / scale
+}
+
+// The step a number input should advance by at the configured precision.
+function amountStep(decimals) {
+    const places = resolveDecimals(decimals)
+    return places === 0 ? "1" : `0.${"0".repeat(places - 1)}1`
+}
+
+function formatAmount(value, currency, locale, decimals) {
+    const places = resolveDecimals(decimals)
     return new Intl.NumberFormat(locale || undefined, {
         style: "currency",
         currency: currency || "USD",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: places,
+        maximumFractionDigits: places
     }).format(value)
 }
 
@@ -599,5 +627,7 @@ module.exports = {
     parentIds,
     importBudget,
     exportBudget,
-    formatAmount
+    formatAmount,
+    roundAmount,
+    amountStep
 }

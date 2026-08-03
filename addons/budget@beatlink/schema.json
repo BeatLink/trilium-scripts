@@ -26,6 +26,12 @@
             {"key": "notes", "visible": true}
         ]
     },
+    "decimals": {
+        "type": "number",
+        "label": "Decimal Places",
+        "description": "How many decimal places amounts are shown and stored with. Entering more precision than this rounds to it. 0 gives whole-currency budgeting.",
+        "default": 2
+    },
     "currency": {
         "type": "string",
         "label": "Currency Code",
