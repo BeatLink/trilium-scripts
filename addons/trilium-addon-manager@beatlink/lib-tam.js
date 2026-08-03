@@ -134,10 +134,18 @@ function versionCompare(remote, local) {
     return remote.localeCompare(local, undefined, { numeric: true, sensitivity: 'base' })
 }
 
-// Retries on HTTP 429, honoring Retry-After when sent, else exponential backoff.
+/*
+ * Retries on HTTP 429, honoring Retry-After when sent, else exponential backoff.
+ *
+ * The URL is normalized through `new URL()` rather than encodeURI, which
+ * escapes a percent sign and so double-encodes a URL that already carries an
+ * escape: a stored `...manager%40beatlink/...` became `%2540`, which fetched
+ * GitHub's "404: Not Found" body. `new URL().href` leaves an existing escape
+ * alone while still encoding a literal space.
+ */
 async function fetchWithRetry(url, maxRetries = 5) {
     for (let attempt = 0; ; attempt++) {
-        const response = await fetch(encodeURI(url))
+        const response = await fetch(new URL(url).href)
         if (response.status !== 429 || attempt >= maxRetries) return response
         const retryAfter = Number(response.headers.get("retry-after"))
         const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -152,7 +160,7 @@ async function fetchJson(url) {
     return await api.runAsyncOnBackendWithManualTransactionHandling(async (url) => {
         async function fetchWithRetry(url, maxRetries = 5) {
             for (let attempt = 0; ; attempt++) {
-                const response = await fetch(encodeURI(url))
+                const response = await fetch(new URL(url).href)
                 if (response.status !== 429 || attempt >= maxRetries) return response
                 const retryAfter = Number(response.headers.get("retry-after"))
                 const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -162,6 +170,10 @@ async function fetchJson(url) {
             }
         }
         const response = await fetchWithRetry(url)
+        // An error page is still a body, and parsing it yields a JSON syntax
+        // error that names neither the status nor the URL — the actual fault
+        // (a dead manifestSourceUrl, say) then has to be guessed at.
+        if (!response.ok) throw new Error(`TAM: fetch of ${url} failed with HTTP ${response.status} ${response.statusText}`)
         return await response.json()
     }, [url])
 }
@@ -341,7 +353,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                 async (tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, skipParenting) => {
                     async function fetchWithRetry(url, maxRetries = 5) {
                         for (let attempt = 0; ; attempt++) {
-                            const response = await fetch(encodeURI(url))
+                            const response = await fetch(new URL(url).href)
                             if (response.status !== 429 || attempt >= maxRetries) return response
                             const retryAfter = Number(response.headers.get("retry-after"))
                             const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
