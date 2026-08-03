@@ -344,6 +344,10 @@ be real local ids — `"root"`/`"persistence"` are not valid targets):
 {"from": "launcher", "type": "renderNote", "to": "settings"}
 ```
 
+A relation may cross the persistence boundary in either direction: a persistent note can point at a
+structural one (`{"from": "template", "type": "renderNote", "to": "widget"}`) even though the
+persistence pass runs first, because such a relation is deferred until every note has been resolved.
+
 **Cross-addon relation** — the target is a note exported by a dependency:
 ```json
 {"from": "script", "type": "scriptNote", "addon": "lib@author", "to": "main"}

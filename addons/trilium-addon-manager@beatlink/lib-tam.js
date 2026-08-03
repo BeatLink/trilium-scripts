@@ -544,26 +544,47 @@ async function clearPendingPrompts(addonId) {
 // Install / Sync: the install/update entry point (syncAddon, installByUrl).
 // =========================================================================
 
+async function applyRelation(fromRealId, type, toRealId) {
+    await api.runOnBackend((fromId, type, toId) => {
+        const note = api.getNote(fromId)
+        const disabledType = `disabled:${type}`
+        const targetType = note.hasRelation(disabledType) ? disabledType : type
+        note.setRelation(targetType, toId)
+    }, [fromRealId, type, toRealId])
+}
+
 // Resolves `m`'s notes (scoped via scopeLocalIds) and applies labels/relations for that same scope.
 async function resolveManifest(m, addonId, parentRealId, options = {}) {
-    const { entryLocalId = null, scopeLocalIds = null, rootExternallyParented = false, existingNoteMap = null } = options
+    const {
+        entryLocalId = null,
+        scopeLocalIds = null,
+        rootExternallyParented = false,
+        existingNoteMap = null,
+        deferredRelations = null
+    } = options
     const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
     const resolved = await resolveNotes(m, addonId, parentRealId, {
         entryLocalId, scopeLocalIds, rootExternallyParented
     })
     const noteMap = existingNoteMap ? Object.assign(existingNoteMap, resolved) : resolved
     await applyLabels((m.labels || []).filter(l => inScope(l.note)), noteMap)
+    // A `to` that isn't one of the manifest's own local ids is taken as a real
+    // note id (e.g. "root"); one that is must come from the map, since passing
+    // the local id through would set a relation to a note that doesn't exist.
+    const localIds = new Set((m.notes || []).map(n => n.id))
     for (const rel of (m.relations || []).filter(r => inScope(r.from))) {
         const fromRealId = noteMap[rel.from]
         if (!fromRealId) continue
+        if (localIds.has(rel.to) && !noteMap[rel.to]) {
+            // The target is in a scope this pass hasn't resolved yet — a
+            // persistent note pointing at a structural one. Hand it back to the
+            // caller to apply once every scope has been resolved.
+            if (deferredRelations) deferredRelations.push(rel)
+            continue
+        }
         const toRealId = noteMap[rel.to] || rel.to
         if (!toRealId) continue
-        await api.runOnBackend((fromId, type, toId) => {
-            const note = api.getNote(fromId)
-            const disabledType = `disabled:${type}`
-            const targetType = note.hasRelation(disabledType) ? disabledType : type
-            note.setRelation(targetType, toId)
-        }, [fromRealId, rel.type, toRealId])
+        await applyRelation(fromRealId, rel.type, toRealId)
     }
     return noteMap
 }
@@ -596,13 +617,18 @@ async function syncAddon(addonId, options = {}) {
         ? await getAddonRootNoteId()
         : await ensureAddonAnchor(addonId, manifest.name, addonAnchorRootLocalId, await getAddonRootNoteId())
     const noteMap = {}
+    // Relations from a persistent note to a structural one, which the
+    // persistence pass below can't resolve because the structural pass hasn't
+    // run yet.
+    const deferredRelations = []
     if (persistentIds.size) {
         const persistenceAnchorId = isSelf
             ? await getPersistenceNoteId()
             : await ensureAddonAnchor(addonId, manifest.name, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
         await resolveManifest(m, addonId, persistenceAnchorId, {
             scopeLocalIds: persistentIds,
-            existingNoteMap: noteMap
+            existingNoteMap: noteMap,
+            deferredRelations
         })
     }
     await resolveManifest(m, addonId, addonRootAnchorId, {
@@ -611,6 +637,9 @@ async function syncAddon(addonId, options = {}) {
         scopeLocalIds: structuralScope,
         existingNoteMap: noteMap
     })
+    for (const rel of deferredRelations) {
+        if (noteMap[rel.from] && noteMap[rel.to]) await applyRelation(noteMap[rel.from], rel.type, noteMap[rel.to])
+    }
     if (isSelf && !noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
     await pruneRemovedNotes(m, addonId)
     const storedManifest = stripManifestForStorage(m)
