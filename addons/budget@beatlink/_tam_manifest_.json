@@ -1,11 +1,11 @@
 {
     "id": "budget@beatlink",
     "name": "Budget",
-    "description": "Nested budget tables — apply the Budget template to any note and edit Title / Amount Budgeted / Notes rows in place, with child rows rolling up into their parents. Rollup behaviour (computed, own + children, or budget cap) is configurable, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
+    "description": "Nested budget tables with monthly spending — apply the Budget template to any note and edit Title / Amount Budgeted / Notes rows in place, with child rows rolling up into their parents. A Spending tab records dated transactions against budget rows, and a Report tab breaks the month down into on-budget and off-budget spending, budgeted vs actual per row, the off-budget transactions themselves, and a six-month trend. Rollup behaviour (computed, own + children, or budget cap) is configurable, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.4",
+    "latestVersion": "1.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",
