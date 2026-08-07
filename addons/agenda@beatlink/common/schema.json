@@ -398,6 +398,22 @@
                         "enabled": true
                     }
                 }
+            },
+            "leaf": {
+                "name": "Leaf Tasks",
+                "profileId": "default",
+                "children": {
+                    "leafTasks": {
+                        "name": "Leaf Subtasks",
+                        "rule": "~template.title='3. Task' AND note.ancestors.relations.template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
+                        "enabled": false
+                    },
+                    "leafTasksAnyDepth": {
+                        "name": "Leaf Tasks (Any Depth)",
+                        "rule": "~template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
+                        "enabled": false
+                    }
+                }
             }
         }
     },
