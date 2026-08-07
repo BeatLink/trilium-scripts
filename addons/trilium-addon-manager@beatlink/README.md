@@ -75,7 +75,7 @@ separate notes.
 ### The UI
 
 TAM's own widget is a self-contained Preact app (`TAM.jsx`), styled to match the
-GitHub Pages catalog (`docs/`) — same card grid, type badges, search/filter toolbar, and sidebar
+GitHub Pages catalog (`resources/docs/`) — same card grid, type badges, search/filter toolbar, and sidebar
 detail layout — while still adapting to Trilium's light/dark theme via its own CSS custom properties
 for surfaces and text. It has **no addon dependencies of its own** (`dependencies: []` in its own
 manifest) — everything below is built directly against `trilium:preact`'s built-in components rather
@@ -93,7 +93,7 @@ itself would risk taking down the one thing that could otherwise fix it.
   [The Database Record](#the-database-record)). Not-yet-installed entries show an **Install** button;
   already-installed ones open the normal detail view instead. Reached via the **Browse** button on
   that catalog's row in the Settings view, not from the main list.
-- **Addon detail view** — one page per addon (mirroring `docs/{addon-id}/index.html`): a sticky
+- **Addon detail view** — one page per addon (mirroring `resources/docs/{addon-id}/index.html`): a sticky
   sidebar with the addon's metadata table and full action set (Home Page, Install/Delete,
   Enable/Disable, Settings, Update), and a main panel with the description and — for
   installed addons that declare a `readmeNote` — the addon's own README rendered from its locally
@@ -109,7 +109,7 @@ itself would risk taking down the one thing that could otherwise fix it.
 
 ## Dependency graph
 
-The **GitHub Pages catalog** (`docs/`) renders a [Mermaid](https://mermaid.js.org/) flowchart of the
+The **GitHub Pages catalog** (`resources/docs/`) renders a [Mermaid](https://mermaid.js.org/) flowchart of the
 dependency edges between addons (every addon's `manifest.dependencies`): a collapsible whole-catalog
 graph on the index page, and a focused per-addon subgraph (the addon plus its transitive dependencies
 and dependents) on each addon's detail page. Built at generate time by `tamhelper.js generate-pages`
@@ -705,7 +705,7 @@ Setting `promptOnUpdate` or `skipOnUpdate` on a note that is already reachable f
 
 ## Scripts Reference
 
-The toolchain is a single Node.js CLI, `resources/scripts/tamhelper.js`, run from the repository root as `node resources/scripts/tamhelper.js <command>`. Inside `nix-shell`/`nix develop` each command is also exposed as a shell function (`validate`, `tam_to_zip`, `zip_to_tam`, `generate_pages`, `generate_readme`, `publish_release`, `backfill_manifest_source_url`). The only runtime dependency is `marked` (installed via `npm ci` from the committed `package-lock.json`).
+The toolchain is a single Node.js CLI, `resources/scripts/tamhelper.js`, run from the repository root as `node resources/scripts/tamhelper.js <command>`. Inside `nix-shell resources/nix`/`nix develop ./resources/nix` each command is also exposed as a shell function (`validate`, `tam_to_zip`, `zip_to_tam`, `generate_pages`, `generate_readme`, `publish_release`, `backfill_manifest_source_url`). The only runtime dependency is `marked` (installed via `npm ci` from the committed `resources/package-lock.json`).
 
 ### `validate`
 
@@ -775,15 +775,15 @@ node resources/scripts/tamhelper.js backfill-source-url
 
 ### `generate-pages`
 
-Generates the static GitHub Pages catalog site at `docs/`. For each addon:
+Generates the static GitHub Pages catalog site at `resources/docs/`. For each addon:
 
 - Renders a card on the index page with name, type badge, description, version, and author.
-- Renders a detail page (`docs/{addon-id}/index.html`) with the README, metadata table, download buttons, and — when the addon has any dependency or dependent — a focused Mermaid dependency subgraph (see [Dependency graph](#dependency-graph)).
+- Renders a detail page (`resources/docs/{addon-id}/index.html`) with the README, metadata table, download buttons, and — when the addon has any dependency or dependent — a focused Mermaid dependency subgraph (see [Dependency graph](#dependency-graph)).
 - The index page has a search bar, type filter buttons, and a collapsible whole-catalog Mermaid dependency graph.
 - Author names link to their GitHub profiles.
 - Download buttons: **Download ZIP** (Trilium import), **View Manifest** (the addon's own `manifestSourceUrl`, if set), **Source** (GitHub homepage).
 
-Also generates `docs/catalog.json` — the `{"tam-addons": [...]}` list of every addon's own `manifestSourceUrl` (addons missing one are skipped) — this is what TAM's "add catalog" action consumes; see [Catalog Format](#catalog-format).
+Also generates `resources/docs/catalog.json` — the `{"tam-addons": [...]}` list of every addon's own `manifestSourceUrl` (addons missing one are skipped) — this is what TAM's "add catalog" action consumes; see [Catalog Format](#catalog-format).
 
 ```
 node resources/scripts/tamhelper.js generate-pages
@@ -793,7 +793,7 @@ Requires the `marked` package (installed via `npm ci`).
 
 ### `generate-readme`
 
-Regenerates `README.md` from `README_base.md` by injecting an addon table (name, type, description, version) between the `<!-- GENERATED:START -->` and `<!-- GENERATED:END -->` markers. Shares manifest loading with `generate-pages`.
+Regenerates the repo-root `README.md` from `resources/README_base.md` by injecting an addon table (name, type, description, version) between the `<!-- GENERATED:START -->` and `<!-- GENERATED:END -->` markers. Shares manifest loading with `generate-pages`.
 
 ```
 node resources/scripts/tamhelper.js generate-readme
@@ -824,8 +824,8 @@ Runs on every push to `main` and on manual dispatch. Steps:
 Runs on every push to `main` and on manual dispatch. Builds and deploys the GitHub Pages catalog site:
 
 1. Installs the npm dependencies (`npm ci`).
-2. Runs `tamhelper.js generate-pages` to produce `docs/` (including `catalog.json`).
-3. Uploads `docs/` as a Pages artifact and deploys it.
+2. Runs `tamhelper.js generate-pages` to produce `resources/docs/` (including `catalog.json`).
+3. Uploads `resources/docs/` as a Pages artifact and deploys it.
 
 ---
 
