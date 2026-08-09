@@ -8,6 +8,30 @@
         "Dimensions",
         "Settings"
     ],
+    "startDatetimeLabel": {
+        "type": "string",
+        "label": "Start Datetime Label",
+        "description": "The note label holding a task's start datetime. Read for the overview's Start column, the iCal feed and due notifications. agenda-task@beatlink and agenda-myday@beatlink each carry their own copy of this setting; rename it in one and rename it in the others too.",
+        "default": "startDateTime",
+        "category": "Settings",
+        "tab": "Settings"
+    },
+    "dueDatetimeLabel": {
+        "type": "string",
+        "label": "Due Datetime Label",
+        "description": "The note label holding a task's due datetime. Read for the overview's Due column and the iCal feed.",
+        "default": "dueDateTime",
+        "category": "Settings",
+        "tab": "Settings"
+    },
+    "recurrenceLabel": {
+        "type": "string",
+        "label": "Recurrence Label",
+        "description": "The note label holding a task's recurrence rule. Read for the iCal feed and for grouping/filtering by recurrence frequency.",
+        "default": "recurrence",
+        "category": "Settings",
+        "tab": "Settings"
+    },
     "inboxNoteId": {
         "type": "note",
         "label": "Inbox Note",

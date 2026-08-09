@@ -1,16 +1,5 @@
 const libRecurrence = require("libRecurrence.js")
 
-function frequencyOf(recurrence) {
-    if (!recurrence) return "NONE"
-    try {
-        const recurrenceObj = libRecurrence.RRuleToObj(recurrence)
-        const hasFrequency = recurrenceObj && recurrenceObj.enabled && recurrenceObj.interval
-        return hasFrequency ? recurrenceObj.interval : "NONE"
-    } catch (error) {
-        return "NONE"
-    }
-}
-
 function durationStringToHMS(duration) {
     const parsed = api.dayjs.duration(duration)
     return {
@@ -47,20 +36,6 @@ async function markDone(noteId) {
     await api.runOnBackend((noteId) => {
         api.getNote(noteId).setLabel("archived")
     }, [noteId])
-}
-
-// Writes the human-readable duration/recurrence labels onto a note.
-// Backend-safe: takes already-humanized strings because the rrule humanizer
-// is not reachable inside a serialized runOnBackend closure.
-function writeDisplayLabelsOnBackend(noteId, durationDisplay, recurrenceDisplay) {
-    return api.runOnBackend((noteId, durationDisplay, recurrenceDisplay) => {
-        const note = api.getNote(noteId)
-        if (!note) return
-        if (durationDisplay) note.setLabel("durationDisplay", durationDisplay)
-        else note.removeLabel("durationDisplay")
-        if (recurrenceDisplay) note.setLabel("recurrenceDisplay", recurrenceDisplay)
-        else note.removeLabel("recurrenceDisplay")
-    }, [noteId, durationDisplay, recurrenceDisplay])
 }
 
 async function updateDependentAttributes(noteId, constants) {
@@ -202,36 +177,15 @@ async function rescheduleByOption(noteId, constants, option) {
     await rescheduleByDays(noteId, constants, option.days)
 }
 
-// Refreshes the display labels only when they are actually stale, to avoid
-// unnecessary backend writes.
-async function refreshDisplayLabels(noteId, constants) {
-    if (!noteId) return
-
-    const note = await api.getNote(noteId)
-    if (!note) return
-
-    const durationDisplay = humanizeDuration(note.getLabelValue(constants.DURATION_LABEL))
-    const durationUnchanged = (note.getLabelValue("durationDisplay") || "") === durationDisplay
-    
-    const recurrenceDisplay = libRecurrence.humanize(note.getLabelValue(constants.RECURRENCE_LABEL))
-    const recurrenceUnchanged = (note.getLabelValue("recurrenceDisplay") || "") === recurrenceDisplay
-    
-    if (durationUnchanged && recurrenceUnchanged) return
-
-    await writeDisplayLabelsOnBackend(noteId, durationDisplay, recurrenceDisplay)
-}
-
 module.exports = {
     durationStringToHMS,
     humanizeDuration,
-    frequencyOf,
     complete,
     markDone,
     markUndone,
     rescheduleByDays,
     rescheduleByOption,
     updateDependentAttributes,
-    refreshDisplayLabels,
     clearMyDayFlag,
     clearMyDayFlagIfNotToday,
     // Re-exported from libRecurrence so consumers that already require this

@@ -1,26 +1,16 @@
 {
     "id": "agenda-task@beatlink",
     "name": "Agenda Task",
-    "description": "The Task widget from agenda@beatlink, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Each section is collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig \u2014 the label-name overrides and the reschedule buttons' option registry \u2014 independent of agenda@beatlink's own #agendaConfig. Exports its recurrence picker, task-completion/reschedule library, and settings-editor panels (Reschedule Options, label overrides) so agenda@beatlink's Overview and Agenda Editor can clone them in without a hard cross-addon dependency.",
+    "description": "The Task widget from agenda@beatlink, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Each section is collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which agenda declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "task-settings",
-        "exports": {
-            "task": "task",
-            "lib-task": "lib-task",
-            "lib-recurrence": "lib-recurrence",
-            "recurrence-picker": "recurrence-picker",
-            "togglebutton": "togglebutton",
-            "lib-task-settings": "lib-task-settings",
-            "reschedule-options": "reschedule-options",
-            "task-labels-panel": "task-labels-panel"
-        },
         "notes": [
             {
                 "id": "task",

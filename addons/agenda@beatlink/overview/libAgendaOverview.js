@@ -2,16 +2,15 @@ const notifications = require("libNotification.js")
 const { generateCalendar } = require("libCalendar.js")
 const query = require("libAgendaQuery.js")
 
-// Everything from the config and task layers is reached through libAgendaQuery,
-// which re-exports it. libAgendaOverview requires only libAgendaQuery (plus the
-// notification and calendar helpers) so each widget bundles config/task once.
+// Everything from the config layer is reached through libAgendaQuery, which
+// re-exports it. libAgendaOverview requires only libAgendaQuery (plus the
+// notification and calendar helpers) so each widget bundles config once.
 const {
     loadData, saveProfile, getAllProfiles, getActiveProfile, setActiveProfile,
     getMatchingProfile, getSectionState, saveSectionState,
     getNotesForSearchGroups, getFilteredNotes, sortNoteIds,
     getPrefixes, getColors, getGroups, getGroupColumns, setGroupForNote,
-    getTaskList, getSortedTaskList,
-    refreshDisplayLabels, rescheduleByDays
+    getTaskList, getSortedTaskList
 } = query
 
 // Materializes the sorted task list as children of the overview note: attaches
@@ -129,6 +128,9 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
 // Promoted attribute definitions shown on the overview's cards/rows: the fixed
 // date/display columns, then one per registered dimension (so a dimension the
 // user adds gets its own column with no code change).
+// durationDisplay/recurrenceDisplay are declared as columns but written by
+// agenda-task@beatlink, which keeps them current on every task edit. Without
+// that addon installed the two columns simply stay empty.
 function promotedAttributesForConstants(constants = {}, dimensions = []) {
     const specs = [
         [constants.START_DATETIME_LABEL, "promoted,single,datetime", "Start"],
@@ -184,10 +186,6 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
             ({ statusByNote, columns: boardColumns } = await computeStatuses(data.dateRules, grouping, sortedNotes))
         }
 
-        for (const noteId of sortedNotes) {
-            await refreshDisplayLabels(noteId, constants)
-        }
-
         const promotedAttributes = promotedAttributesForConstants(constants, data.dimensions)
         await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes)
 
@@ -215,14 +213,6 @@ async function sendNotificationForDueTasks(profileContext, constants) {
             notifications.sendNotification(taskNote.title, "", taskId)
         }
     }
-}
-
-async function rescheduleAllTasks(profileContext, constants, icalNoteId, days = 0) {
-    const taskIds = await getTaskList(profileContext)
-    for (const taskId of taskIds) {
-        rescheduleByDays(taskId, constants, days)
-    }
-    await updateTaskLists(profileContext, constants, icalNoteId)
 }
 
 async function setCalendarEvents(profileContext, constants, icalNoteId) {
@@ -288,7 +278,6 @@ module.exports = {
     saveSectionState,
     updateTaskLists,
     sendNotificationForDueTasks,
-    rescheduleAllTasks,
     setCalendarEvents,
     addTaskToAgendaNow,
     addDueTasksToAgendaNow
