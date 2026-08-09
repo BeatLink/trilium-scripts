@@ -1,11 +1,11 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and, as of 1.6.0, the AreaCollection container template that agenda-structure@beatlink used to ship - agenda-structure still instantiates it, resolving it live by title, so moving it here means the picker owns every bundled template in one place. Existing agenda-structure installs must run migrate-areacollection-from-structure.js once before updating either addon.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.2",
+    "latestVersion": "1.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
@@ -19,7 +19,8 @@
             "tpl-task": "tpl-task",
             "tpl-future": "tpl-future",
             "tpl-project": "tpl-project",
-            "tpl-note": "tpl-note"
+            "tpl-note": "tpl-note",
+            "tpl-area": "tpl-area"
         },
         "notes": [
             {
@@ -190,6 +191,13 @@
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templates/note.html"
+            },
+            {
+                "id": "tpl-area",
+                "title": "AreaCollection",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templates/areaCollection.html"
             }
         ],
         "children": [
@@ -320,6 +328,10 @@
             {
                 "parent": "templates-root",
                 "child": "tpl-note"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-area"
             }
         ],
         "relations": [
@@ -579,6 +591,31 @@
                 "note": "tpl-note",
                 "name": "type",
                 "value": "note"
+            },
+            {
+                "note": "tpl-area",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-area",
+                "name": "iconClass",
+                "value": "bx bxs-circle"
+            },
+            {
+                "note": "tpl-area",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "tpl-area",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-area",
+                "name": "type",
+                "value": "areacollection"
             }
         ],
         "readmeNote": "readme"
