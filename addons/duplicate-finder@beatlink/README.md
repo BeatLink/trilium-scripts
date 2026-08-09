@@ -81,6 +81,15 @@ aborting the scan.
 Search notes and launchers are always skipped. The scan walks down from the tree root, so the hidden
 subtree is never visited.
 
+### What updates do to your settings
+
+Anything shipped with the addon (the two exclude filters, and every default in the tables above)
+keeps tracking future versions for as long as you leave it alone: if a later version changes one,
+the change reaches your install on the next update without asking. Once you edit a filter or change
+a default it is yours, and is never overwritten. Should a later version change that same setting,
+TAM's **Update Review** asks which version you want rather than deciding for you. A filter you
+deleted stays deleted.
+
 ## Notes
 
 - The scan walks the subtree directly rather than issuing a search, so **Scan Under** is exact and a

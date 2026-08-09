@@ -507,6 +507,104 @@ Useful for frontend library code that needs to persist a programmatic edit itsel
 into a shared library function that reads, patches, and writes settings, not just edits made through
 `SettingsForm` directly.
 
+## TAM lifecycle hook
+
+`config.json` is a persistent note, so TAM never overwrites it — which is the point, but it also
+means a default you change in a later version only ever reaches *new* installs. `schema.json` is
+structural and does get overwritten, so both versions of the truth are already on disk; what was
+missing is a moment to compare them. [`libsettings-hook.js`](libsettings-hook.js) is that moment: a
+ready-made [TAM lifecycle hook](../../addons/trilium-addon-manager@beatlink/README.md#hooks-optional)
+a consumer points its `manifest.hooks` at, needing no per-addon code.
+
+### Wiring
+
+Ship the hook as a structural note of your own, give it the same `schemaNote` / `configNote`
+relations a settings note carries, and wire `libSettingsUI.jsx` as its **direct** child (that is
+what `require()` resolves against):
+
+```json
+{
+    "notes": [
+        {
+            "id": "settings-hook",
+            "title": "libSettingsHook.js",
+            "type": "code",
+            "mime": "application/javascript;env=frontend",
+            "sourceUrl": ".../libs/libsettings/libsettings-hook.js"
+        }
+    ],
+    "children": [
+        {"parent": "root", "child": "settings-hook"},
+        {"parent": "settings-hook", "child": "libsettings-ui"}
+    ],
+    "relations": [
+        {"from": "settings-hook", "type": "schemaNote", "to": "schema"},
+        {"from": "settings-hook", "type": "configNote", "to": "config"}
+    ],
+    "hooks": {
+        "postInstall": "settings-hook",
+        "postUpdate": "settings-hook",
+        "updateReview": "settings-hook"
+    }
+}
+```
+
+All three phases point at the same note — it dispatches on `phase` itself. `preUninstall` is not
+implemented: the phase is read-only by contract and TAM already asks the user about deleting stored
+data. See [`duplicate-finder@beatlink`](../../addons/duplicate-finder@beatlink/) for the full
+wiring in a real manifest.
+
+### `_shipped` — the baseline that makes this work
+
+Once a config has been saved even once it holds a value for *every* scalar key, so "stored differs
+from the current default" cannot tell a deliberate user choice apart from a default that moved
+upstream. So the hook keeps a snapshot of the defaults it last saw under a `_shipped` key of
+`config.json`:
+
+```json
+{
+    "_shipped": {"caseInsensitiveTitle": false, "excludeFilters": {"tamNotes": {"name": "Addon-owned notes", "query": "#TAMFILEID"}}},
+    "caseInsensitiveTitle": true,
+    "excludeFilters": {"entries": {}, "removedIds": []}
+}
+```
+
+`_` marks it as schema-level metadata the same way `_categories` does, so it never appears in the
+merged runtime values — `mergeDefaults` skips it, and consumers never see it. It *is* deliberately
+preserved across saves (`filterBySchema` rebuilds the document from schema keys alone, so both
+`saveSettings` implementations copy `_`-prefixed keys across explicitly).
+
+### What each phase does
+
+| Phase | Behaviour |
+|-------|-----------|
+| `postInstall` | Records the baseline. A fresh install has customized nothing, so its first update has nothing to review. |
+| `postUpdate` | **Silently adopts** every scalar whose stored value is still exactly the default it shipped with — the user never touched it, so a changed default is theirs for free. The baseline deliberately survives this phase; the collect pass runs next and still needs the old defaults. |
+| `updateReview` `collect` | Returns one prompt entry, `Settings`, with one item per genuine conflict (below). Empty means nothing changed upstream, and the baseline advances. |
+| `updateReview` `apply` | *Use New Default* takes the shipped value for a scalar, or drops a registry entry's override so it goes back to tracking the shipped one; *Keep Mine* leaves the stored value alone. Either way the baseline advances, so the same question is never asked twice. |
+
+An item is only raised when the **shipped** side changed since the baseline *and* the user's stored
+value differs from where it landed. Everything else stays silent: a key the user has never saved (it
+already tracks the default), a value that happens to equal the new default, a customization made
+against a default that hasn't moved, and any field that is new in this version (no baseline to diff
+against). Registry entries add three more: an entry the user added themselves, one they deleted
+(`removedIds` — a removal is never resurrected), and one the addon no longer ships.
+
+An install predating the hook has no baseline at all, so its first hooked update records one and
+reviews nothing — there is genuinely no way to know which of its stored values were deliberate.
+
+`list` fields are excluded entirely: a stored list replaces its default wholesale rather than
+reconciling per entry, so "use the new default" could only mean discarding the user's entries.
+`checklist` stores nothing of its own. Both are skipped by every phase.
+
+### `runSettingsHook(note, context)`
+
+The exported function `libsettings-hook.js` is a shim around, if you need to call it from a hook of
+your own that does other work too. `note` is the hook note (it carries the relations); `context` is
+TAM's `#tamHookContext` payload, parsed. Read the label from the backend rather than off
+`api.startNote` — TAM writes it immediately before invoking the hook, and froca has no guarantee of
+having caught up.
+
 ## See it in use
 
 [`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and

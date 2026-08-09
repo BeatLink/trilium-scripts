@@ -107,10 +107,22 @@ function loadSettings(schemaNoteId, configNoteId) {
     return mergeDefaults(schema, null, stored)
 }
 
+// `_`-prefixed keys of the *stored* document are the library's own bookkeeping
+// (currently only `_shipped`, the baseline the TAM lifecycle hook diffs shipped
+// defaults against — see libsettings-ui.jsx), not schema fields: `mergeDefaults`
+// never surfaces them in the runtime values and `filterBySchema` rebuilds the
+// document from schema keys alone, so they have to be carried across explicitly
+// or a save would erase them. Kept in lockstep with libsettings-ui.js.
+function storedMeta(stored) {
+    return Object.fromEntries(Object.entries(stored).filter(([key]) => key.startsWith("_")))
+}
+
 function saveSettings(schemaNoteId, configNoteId, values) {
     const schema = JSON.parse(api.getNote(schemaNoteId).getContent() || "{}")
+    const note = api.getNote(configNoteId)
+    const stored = JSON.parse(note.getContent() || "{}")
     const filtered = filterBySchema(schema, values, null)
-    api.getNote(configNoteId).setContent(JSON.stringify(filtered, null, 4))
+    note.setContent(JSON.stringify({ ...storedMeta(stored), ...filtered }, null, 4))
 }
 
 module.exports = { loadSettings, saveSettings }

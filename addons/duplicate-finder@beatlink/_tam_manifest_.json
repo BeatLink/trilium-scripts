@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/duplicate-finder@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/_tam_manifest_.json",
@@ -67,6 +67,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/config.json"
+            },
+            {
+                "id": "settings-hook",
+                "title": "libSettingsHook.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-hook.js"
             },
             {
                 "id": "libsettings-ui",
@@ -159,6 +166,14 @@
                 "child": "libsettings-ui"
             },
             {
+                "parent": "root",
+                "child": "settings-hook"
+            },
+            {
+                "parent": "settings-hook",
+                "child": "libsettings-ui"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -197,6 +212,16 @@
                 "from": "settings",
                 "type": "configNote",
                 "to": "config"
+            },
+            {
+                "from": "settings-hook",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings-hook",
+                "type": "configNote",
+                "to": "config"
             }
         ],
         "labels": [
@@ -226,6 +251,11 @@
                 "value": "bx bx-duplicate"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "hooks": {
+            "postInstall": "settings-hook",
+            "postUpdate": "settings-hook",
+            "updateReview": "settings-hook"
+        }
     }
 }
