@@ -649,7 +649,7 @@ function SettingsView({
                 <h3>Maintenance</h3>
                 <div className="TAM-maintenance-actions">
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
-                    {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
+                    {anyUpdateAvailable && <TamButton className="btn-ghost" icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Invalid Addon Tree Notes" onClick={onSweepInvalidTree} />
