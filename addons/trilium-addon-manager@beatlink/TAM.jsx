@@ -1119,11 +1119,11 @@ export default function RepoManager() {
                 <div className="hdr-right">
                     <div className="hdr-links">
                         <a onClick={() => dispatch({ command: "check-updates" })}>Check for Updates</a>
+                        {anyUpdateAvailable && (
+                            <a onClick={() => dispatch({ command: "update-all" })}>Update All</a>
+                        )}
                         <a onClick={() => setView({ type: "settings" })}>Settings</a>
                     </div>
-                    {anyUpdateAvailable && (
-                        <TamButton icon="bx bx-sync" text="Update All" onClick={() => dispatch({ command: "update-all" })} />
-                    )}
                 </div>
             </div>
         )
