@@ -75,7 +75,7 @@ const COMMAND_LABELS = {
     "visit-catalog-website": "Opening website",
     "install-addon": "Installing addon",
     "install-by-url": "Installing addon",
-    "request-uninstall": "Checking for external references",
+    "request-uninstall": "Preparing uninstall",
     "delete-addon": "Uninstalling addon",
     "update-addon": "Updating addon",
     "resolve-prompts": "Applying update",
@@ -170,38 +170,78 @@ function useAddonFilter(items) {
 }
 
 // =========================================================================
-// Dialogs: full-screen overlays — the promptOnUpdate keep-mine/use-new review,
-// and the external-references-would-dangle warning shown before an uninstall.
+// Dialogs: full-screen overlays — the update keep-mine/use-new review, and the
+// dangling-references/delete-my-data questions asked before an uninstall.
 // =========================================================================
+
+// A hook-produced item's values are arbitrary JSON, not necessarily strings.
+function formatPromptValue(value) {
+    return typeof value === "string" ? value : JSON.stringify(value, null, 2)
+}
+
+// One prompt is either a whole-note content diff (TAM's built-in producer, one
+// boolean decision) or a list of items an addon's own updateReview hook produced
+// (one boolean per item key). Both render as the same Keep Mine / Use New pair.
+function PromptChoice({ selected, onSelect, current, incoming }) {
+    return (
+        <div className="TAM-prompt-options">
+            <div
+                className={`TAM-prompt-option${!selected ? " TAM-prompt-selected" : ""}`}
+                onClick={() => onSelect(false)}
+            >
+                <label>Keep Mine</label>
+                <pre className="TAM-prompt-content">{current}</pre>
+            </div>
+            <div
+                className={`TAM-prompt-option${selected ? " TAM-prompt-selected" : ""}`}
+                onClick={() => onSelect(true)}
+            >
+                <label>Use New Default</label>
+                <pre className="TAM-prompt-content">{incoming}</pre>
+            </div>
+        </div>
+    )
+}
 
 function PromptReview({ prompts, onResolve }) {
     const [decisions, setDecisions] = useState(
-        Object.fromEntries(prompts.map(p => [p.noteLocalId, false]))
+        Object.fromEntries(prompts.map(p => [
+            p.noteLocalId,
+            p.items ? Object.fromEntries(p.items.map(item => [item.key, false])) : false
+        ]))
     )
 
     return (
         <div className="TAM-prompt-review">
             <h3>Update Review</h3>
-            <p>The following files were updated. Choose which version to keep for each:</p>
+            <p>The following changed upstream. Choose which version to keep for each:</p>
             {prompts.map(prompt => (
                 <div key={prompt.noteLocalId} className="TAM-prompt-item">
                     <h4>{prompt.title}</h4>
-                    <div className="TAM-prompt-options">
-                        <div
-                            className={`TAM-prompt-option${!decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
-                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: false })}
-                        >
-                            <label>Keep Mine</label>
-                            <pre className="TAM-prompt-content">{prompt.currentContent}</pre>
+                    {prompt.items ? prompt.items.map(item => (
+                        <div key={item.key} className="TAM-prompt-field">
+                            <h5>{item.label ?? item.key}</h5>
+                            <PromptChoice
+                                selected={decisions[prompt.noteLocalId][item.key]}
+                                onSelect={value => setDecisions({
+                                    ...decisions,
+                                    [prompt.noteLocalId]: {
+                                        ...decisions[prompt.noteLocalId],
+                                        [item.key]: value
+                                    }
+                                })}
+                                current={formatPromptValue(item.current)}
+                                incoming={formatPromptValue(item.incoming)}
+                            />
                         </div>
-                        <div
-                            className={`TAM-prompt-option${decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
-                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: true })}
-                        >
-                            <label>Use New Default</label>
-                            <pre className="TAM-prompt-content">{prompt.newContent}</pre>
-                        </div>
-                    </div>
+                    )) : (
+                        <PromptChoice
+                            selected={decisions[prompt.noteLocalId]}
+                            onSelect={value => setDecisions({ ...decisions, [prompt.noteLocalId]: value })}
+                            current={prompt.currentContent}
+                            incoming={prompt.newContent}
+                        />
+                    )}
                 </div>
             ))}
             <TamButton icon="bx bx-check" text="Apply" onClick={() => onResolve(decisions)} />
@@ -209,27 +249,47 @@ function PromptReview({ prompts, onResolve }) {
     )
 }
 
-function ExternalReferenceWarning({ addonId, references, onProceed, onCancel }) {
+// Shown before an uninstall only when there's something to decide: dangling
+// references, stored data, or both. With neither, the uninstall runs unprompted
+// exactly as it always has.
+function UninstallDialog({ addonId, references, hasData, onProceed, onCancel }) {
+    const [deleteData, setDeleteData] = useState(false)
+
     return (
         <div className="TAM-prompt-review">
-            <h3>External References Found</h3>
-            <p>
-                The following note(s) outside of <strong>{addonId}</strong> reference note(s) that will
-                be deleted. Uninstalling anyway will leave those relations pointing at a note that no
-                longer exists.
-            </p>
-            <ul className="TAM-external-ref-list">
-                {references.map((ref, i) => (
-                    <li key={i}>
-                        <strong>{ref.sourceTitle}</strong> —{" "}
-                        <code>~{ref.relationName}</code> →{" "}
-                        <strong>{ref.targetTitle}</strong>
-                    </li>
-                ))}
-            </ul>
+            <h3>Uninstall {addonId}</h3>
+            {references.length > 0 && (
+                <>
+                    <p>
+                        The following note(s) outside of <strong>{addonId}</strong> reference note(s) that will
+                        be deleted. Uninstalling anyway will leave those relations pointing at a note that no
+                        longer exists.
+                    </p>
+                    <ul className="TAM-external-ref-list">
+                        {references.map((ref, i) => (
+                            <li key={i}>
+                                <strong>{ref.sourceTitle}</strong> —{" "}
+                                <code>~{ref.relationName}</code> →{" "}
+                                <strong>{ref.targetTitle}</strong>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
+            {hasData && (
+                <label className="TAM-uninstall-data">
+                    <input
+                        type="checkbox"
+                        checked={deleteData}
+                        onChange={e => setDeleteData(e.target.checked)}
+                    />
+                    Also delete this addon's stored data. Left unchecked, its settings and saved
+                    content stay under Addon Data and are picked up again if you reinstall it.
+                </label>
+            )}
             <div className="TAM-validation-buttons">
                 <TamButton className="btn-ghost" icon="bx bx-x" text="Cancel" onClick={onCancel} />
-                <TamButton icon="bx bx-trash" text="Uninstall Anyway" onClick={onProceed} />
+                <TamButton icon="bx bx-trash" text="Uninstall" onClick={() => onProceed(deleteData)} />
             </div>
         </div>
     )
@@ -623,11 +683,11 @@ function SettingsView({
 // reading them itself:
 // - resolveDisplayNote(): currentNote only resolves correctly in the note it physically
 //   executes in (this note), so RepoManager owns that read and injects it in.
-// - dialogActions: the handful of setters (setExternalRefWarning/setView/setValidationTitle/
+// - dialogActions: the handful of setters (setUninstallPrompt/setView/setValidationTitle/
 //   setValidationIssues) that a few commands need to update — these are pure UI-dialog state
 //   that belongs to RepoManager, not to this data layer.
 function useTamCommands(resolveDisplayNote, dialogActions) {
-    const { setExternalRefWarning, setView, setValidationTitle, setValidationIssues } = dialogActions
+    const { setUninstallPrompt, setView, setValidationTitle, setValidationIssues } = dialogActions
 
     const [command, setCommand] = useState(null)
     const [addons, setAddons] = useState(null)
@@ -740,15 +800,16 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleRequestUninstall(command) {
         const references = await libTAMjs.findExternalReferences(command.addon)
-        if (references.length > 0) {
-            setExternalRefWarning({ addonId: command.addon, references })
+        const hasData = await libTAMjs.hasPersistentData(command.addon)
+        if (references.length > 0 || hasData) {
+            setUninstallPrompt({ addonId: command.addon, references, hasData })
         } else {
             setCommand({ command: "delete-addon", addon: command.addon })
         }
     }
 
     async function handleDeleteAddon(command) {
-        await libTAMjs.uninstallAddon(command.addon)
+        await libTAMjs.uninstallAddon(command.addon, { deleteData: !!command.deleteData })
         await reload()
         setView({ type: "list" })
         await activateNote(await resolveDisplayNote())
@@ -770,8 +831,8 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleResolvePrompts(command) {
         const { addonId, decisions } = command
-        for (const [noteLocalId, useNew] of Object.entries(decisions)) {
-            await libTAMjs.resolvePrompt(addonId, noteLocalId, useNew)
+        for (const [noteLocalId, decision] of Object.entries(decisions)) {
+            await libTAMjs.resolvePrompt(addonId, noteLocalId, decision)
         }
         await libTAMjs.clearPendingPrompts(addonId)
         await advancePromptQueue(promptQueue)
@@ -900,13 +961,13 @@ export default function RepoManager() {
     const [view, setView] = useState({ type: "list" })
     const [validationIssues, setValidationIssues] = useState(null)
     const [validationTitle, setValidationTitle] = useState("Database Validation")
-    const [externalRefWarning, setExternalRefWarning] = useState(null) // { addonId, references }
+    const [uninstallPrompt, setUninstallPrompt] = useState(null) // { addonId, references, hasData }
 
     const {
         addons, catalogs, catalogBrowse, catalogAddons,
         pendingPrompts, promptAddonId, promptQueue,
         pendingCommand, progressDetail, dispatch
-    } = useTamCommands(resolveDisplayNote, { setExternalRefWarning, setView, setValidationTitle, setValidationIssues })
+    } = useTamCommands(resolveDisplayNote, { setUninstallPrompt, setView, setValidationTitle, setValidationIssues })
 
     // Trigger loading of addons on page load.
     useEffect(() => {
@@ -918,7 +979,7 @@ export default function RepoManager() {
         return <div>Loading addons...</div>
     }
 
-    if (externalRefWarning) {
+    if (uninstallPrompt) {
         return (
             <div className="TAM-body">
                 <header>
@@ -927,15 +988,16 @@ export default function RepoManager() {
                     </div>
                 </header>
                 <main>
-                    <ExternalReferenceWarning
-                        addonId={externalRefWarning.addonId}
-                        references={externalRefWarning.references}
-                        onProceed={() => {
-                            const addonId = externalRefWarning.addonId
-                            setExternalRefWarning(null)
-                            dispatch({ command: "delete-addon", addon: addonId })
+                    <UninstallDialog
+                        addonId={uninstallPrompt.addonId}
+                        references={uninstallPrompt.references}
+                        hasData={uninstallPrompt.hasData}
+                        onProceed={deleteData => {
+                            const addonId = uninstallPrompt.addonId
+                            setUninstallPrompt(null)
+                            dispatch({ command: "delete-addon", addon: addonId, deleteData })
                         }}
-                        onCancel={() => setExternalRefWarning(null)}
+                        onCancel={() => setUninstallPrompt(null)}
                     />
                 </main>
             </div>

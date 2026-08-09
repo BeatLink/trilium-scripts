@@ -239,7 +239,8 @@ re-fetches to check for a newer version, and what a catalog's `tam-addons[]` lis
     "relations": [...],
     "labels": [...],
     "dependencies": [...],
-    "exports": {...}
+    "exports": {...},
+    "hooks": {...}
   }
 }
 ```
@@ -277,6 +278,83 @@ whether you click the addon's root in the tree or the Settings button in TAM.
 Notes that must survive updates and uninstalls (user settings, cached data, customized content)
 are attached under the reserved `"persistence"` parent keyword in `children[]`, the same way
 `"root"` works for the structural tree. See [Persistence](#persistence) for the full behaviour.
+
+#### `hooks` *(optional)*
+
+Lifecycle scripts TAM runs on this addon's behalf at four points it can't otherwise reach:
+
+```json
+"hooks": {
+  "postInstall":  "hook-install",
+  "postUpdate":   "hook-update",
+  "updateReview": "hook-review",
+  "preUninstall": "hook-uninstall"
+}
+```
+
+Each value is the local ID of a **structural** note (never one under `"persistence"` — hook code has
+to be replaced on update like any other code) that is a **frontend** script: `text/jsx` or
+`application/javascript;env=frontend`. `validate` enforces both. Backend work is still reachable from
+inside a hook through its own `api.runOnBackend`.
+
+TAM executes a hook with `FNote.executeScript()`, which takes no arguments and only hands back a
+return value for a frontend note — hence the frontend-only rule. Context is passed in on a temporary
+`#tamHookContext` label (JSON), written immediately before the call and removed immediately after:
+
+```js
+const ctx = JSON.parse(api.startNote.getLabelValue("tamHookContext"))
+// { addonId, phase, previousVersion, newVersion }  — or, for preUninstall,
+// { addonId, phase, version, deleteData }
+```
+
+`executeScript()` is independent of the `#run` labels TAM's enable/disable system toggles, so **a
+hook runs even when its addon is disabled** — which `postInstall` (a fresh install is always left
+disabled) and `preUninstall` both depend on. This is a deliberate exception to "disabled means none
+of this addon's code runs."
+
+A hook that throws is caught by Trilium's own bundle error handling — the user gets Trilium's
+script-error toast, and the call comes back to TAM as `undefined`, which TAM logs and moves past. A
+hook never aborts, and can never roll back, the operation that triggered it: there is no transaction
+around any of this, so a hook that fails halfway leaves whatever it already wrote in place.
+
+| Phase | When | Return value |
+|-------|------|--------------|
+| `postInstall` | After a first install completes, with the addon still disabled. | ignored |
+| `postUpdate` | After an update's notes are resolved and the record is bumped. Non-interactive migrations belong here. | ignored |
+| `updateReview` | Twice: `phase: "collect"` right after `postUpdate`, then `phase: "apply"` once the user submits the Update Review screen. | see below |
+| `preUninstall` | Before anything is torn down, while every note the addon owns still exists. Read-only by contract — TAM asks the user about deleting stored data itself and reports the answer as `deleteData`. | ignored |
+
+**`updateReview`** replaces TAM's built-in whole-file diff with per-item review (see
+[`promptOnUpdate`](#promptonupdate)). On `collect` it returns the same shape TAM's own producer
+does, except each entry carries `items[]` instead of two content blobs:
+
+```js
+return [{
+    noteLocalId: "config",           // any stable key; groups the items under one heading
+    title: "Agenda Configuration",
+    items: [
+        { key: "dimensions.area", label: "Area dimension", current: {...}, incoming: {...} }
+    ]
+}]
+```
+
+Returning `[]` means "nothing to review" and clears the built-in diff. Returning anything that isn't
+an array (including a hook that threw) leaves the built-in diff in place as the fallback, so a broken
+hook degrades to the old behaviour rather than losing the safety net. Non-string `current`/`incoming`
+values are JSON-formatted for display.
+
+On `apply`, TAM calls the same hook once per entry with the user's choices, and writes nothing
+itself — only the addon knows what an item key means:
+
+```js
+// ctx = { addonId, phase: "apply", noteLocalId: "config", selections: { "dimensions.area": true } }
+```
+
+`true` means "use the new default" for that item; `false` means "keep mine".
+
+Because `collect` runs *after* the sync, a hook reads its own updated code and any note the sync just
+refreshed. The usual shape is a `defaults` note shipped structurally (overwritten every update) next
+to the persistent config note (never overwritten), with the hook diffing one against the other.
 
 #### `readmeNote` *(optional)*
 
@@ -409,14 +487,14 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
   "manuallyInstalled": true,
   "enabled": true,
   "meta": { "name": "...", "description": "...", "author": "...", "license": "...", "type": "...", "homepage": "..." },
-  "manifest": { "settingsNote": "...", "readmeNote": "...", "allowExternalReferences": false, "children": [...] },
+  "manifest": { "settingsNote": "...", "readmeNote": "...", "hooks": {...}, "allowExternalReferences": false, "children": [...] },
   "persistence": { "pendingPrompts": [...] }
 }
 ```
 
 `manifest` is trimmed down to just the fields TAM still needs once the fetched manifest itself is
-gone (`settingsNote`/`readmeNote`/`allowExternalReferences`, plus `children[]` for walking
-`persistentLocalIds`) — see `stripManifestForStorage`. `root` is stored too, but only ever set for
+gone (`settingsNote`/`readmeNote`/`allowExternalReferences`, `hooks` for the uninstall/apply phases
+that run without a fetched manifest in hand, plus `children[]` for walking `persistentLocalIds`) — see `stripManifestForStorage`. `root` is stored too, but only ever set for
 TAM's own record (its self-bootstrap exception — see [`root`](#root-tam-only)); every other addon's
 `manifest.root` is absent, and `rootNoteId` falls back to the reserved TAM-owned anchor local id
 instead (see [Note Identity](#note-identity-tamfileid)). `notes[]`/`relations[]`/`labels[]`
@@ -450,7 +528,8 @@ sync. Used by `checkForAddonUpdates`'s update-propagation and `uninstallAddon`'s
 cascade-uninstall-if-unused check.
 
 `persistence` holds only transient **`pendingPrompts`** — the update-review diffs collected during a
-sync, cleared once the user applies them. The persistent *notes* themselves survive uninstall by living
+sync (or the item list an `updateReview` hook returned in their place), cleared once the user applies
+them. The persistent *notes* themselves survive uninstall by living
 under the Addon Data anchor, not by anything stored in this record — see [Persistence](#persistence).
 
 ### Hidden libraries, resolved lazily and rootlessly
@@ -556,6 +635,7 @@ for a clean slate.
 6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
 7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
 8. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
+9. The addon's own lifecycle hooks run last, if it declares any (see [`hooks`](#hooks-optional)): `postInstall` on a first install, or `postUpdate` followed by the `updateReview` collect pass on an update. TAM's own record is exempt — a hook for TAM would run mid-self-replacement. Hooks only run on this top-level call, never for a dependency resolved along the way by `ensureDependencyExport`, which only ever resolves the exports a consumer asked for rather than the whole addon.
 
 There is no cascade to a dependent when its own dependency updates: a dependency's notes resolve in
 place (the real note id a dependent's clone points at never changes across a version bump), so there's
@@ -623,7 +703,12 @@ addon's *persistent* notes; everything else is *structural*.
 The rule is placement, not per-note flags: a note is persistent because it's reachable from the
 reserved `"persistence"` parent, full stop. Persistent notes are **created once and never
 overwritten on update** (they are implicitly prompt-on-update — see
-[`promptOnUpdate`](#promptonupdate)), and they are **never deleted**, on update *or* uninstall.
+[`promptOnUpdate`](#promptonupdate)), and they are **never deleted on update**. An uninstall keeps
+them too unless the user explicitly asks otherwise: for an addon that owns any persistent note, the
+uninstall dialog offers **"Also delete this addon's stored data"**, off by default, which drops the
+protected-id list so the same sweep takes the persistent notes and their anchor along with everything
+else. An addon's own `preUninstall` hook is told which way that went via `deleteData`, but does not
+make the decision (see [`hooks`](#hooks-optional)).
 
 ### Two anchors, two passes
 
@@ -663,7 +748,8 @@ TAM-owned template**, which are not TAM notes at all but inherit the template's 
 therefore invisible to this protection. That is a read-side concern: the sweeps must resolve ownership
 with the owned accessors, per
 [Note Identity: `#TAMFILEID`](#note-identity-tamfileid). A sweep that reads the inherited value will
-delete those user notes and their whole subtrees regardless of what the persistent set contains.
+delete those user notes and their whole subtrees regardless of what the persistent set contains. Deleting stored data on uninstall is opt-in per uninstall for exactly
+this reason.
 
 ---
 
@@ -698,6 +784,17 @@ After reinstallation, if there are pending prompts, TAM shows the **Update Revie
 - Choosing "Use New Default" writes the new content to the persistent note. Choosing "Keep Mine" leaves it untouched.
 - Once all choices are applied, the review is dismissed and the addon UI reloads.
 
+### Replacing the diff with per-item review
+
+Whole-file diffing is only the **default** producer. An addon that declares an `updateReview` hook
+(see [`hooks`](#hooks-optional)) supplies its own list of reviewable items instead — an option-level
+"which of these new settings do you want" rather than two walls of JSON — and applies the chosen ones
+itself. TAM renders both shapes on the same Update Review screen and, on the hook path, writes
+nothing itself.
+
+The built-in diff is still collected before every sync, so an addon whose hook throws or returns
+something unusable falls back to it rather than losing the prompt entirely.
+
 Setting `promptOnUpdate` or `skipOnUpdate` on a note that is already reachable from the reserved
 `"persistence"` parent is redundant (the placement already governs it) and `validate` warns about it.
 
@@ -719,6 +816,7 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 - Every relative `sourceUrl` resolves to a real file on disk (a local-dev-only check — absolute URLs are exempt).
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
 - `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
+- Every `manifest.hooks` entry names a known phase, points at a note that exists in `manifest.notes`, is a frontend script (`text/jsx` or `env=frontend`), and is not attached under the reserved `"persistence"` parent. An `updateReview` hook on an addon with no persistent notes is a warning.
 
 Run in CI before every publish. Exits with code 1 if any errors are found.
 

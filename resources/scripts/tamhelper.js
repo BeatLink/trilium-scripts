@@ -264,6 +264,7 @@ function loadAddons() {
 
 const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
+const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
 
 
 async function cmdValidate(args) {
@@ -400,6 +401,30 @@ async function cmdValidate(args) {
         const settingsNote = byId[m.settingsNote];
         if (settingsNote && settingsNote.type === "code") {
             warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
+        }
+
+        // TAM runs a hook via FNote.executeScript(), which only hands back a return
+        // value for a frontend note, and hook code has to be replaced on update, so
+        // it can never live under "persistence".
+        for (const [phase, localId] of Object.entries(m.hooks || {})) {
+            if (!HOOK_PHASES.has(phase)) {
+                error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
+                continue;
+            }
+            if (!noteIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
+                continue;
+            }
+            const mime = byId[localId].mime || "";
+            if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
+            }
+            if (persistentIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
+            }
+        }
+        if (m.hooks?.updateReview && persistentIds.size === 0) {
+            warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
         }
 
         // Notes served as static HTTP resources are exempt from the env check.

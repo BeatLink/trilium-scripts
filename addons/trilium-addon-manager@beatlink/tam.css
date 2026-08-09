@@ -835,6 +835,19 @@
         }
     }
 
+    /* One reviewable item inside a hook-produced prompt */
+    & .TAM-prompt-field {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+
+        & h5 {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+        }
+    }
+
     & .TAM-prompt-options {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
@@ -904,6 +917,21 @@
             font-family: "SFMono-Regular", Consolas, monospace !important;
             font-size: 12px !important;
             color: #64748b !important;
+        }
+    }
+
+    & .TAM-uninstall-data {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        font-size: 13px !important;
+        color: #0f172a !important;
+        cursor: pointer !important;
+
+        & input {
+            margin-top: 2px !important;
+            flex-shrink: 0 !important;
         }
     }
 }
