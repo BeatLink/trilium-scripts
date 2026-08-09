@@ -113,80 +113,6 @@ async function updateDependentAttributes(noteId, constants) {
     }, [noteId, constants, durationDisplay, recurrenceDisplay])
 }
 
-// Dependencies are stored as one multi-valued relation on the *blocked* note,
-// pointing at each task it waits on. "Blocking" is that same relation read
-// backwards (getTargetRelations), so there is a single source of truth and no
-// mirrored relation to drift out of sync. A relation only exists while the
-// dependency is unmet - completing a task drops the edges pointing at it - so
-// "is this task blocked?" is exactly "does it still carry the relation?", which
-// is what the Blocked/Unblocked search filters in agenda@beatlink test.
-
-// The notes this task waits on.
-async function getBlockers(noteId, constants) {
-    if (!noteId || !constants.BLOCKED_BY_RELATION) return []
-    return api.runOnBackend((noteId, relationName) => {
-        const note = api.getNote(noteId)
-        if (!note) return []
-        return note.getOwnedRelations(relationName)
-            .map(relation => api.getNote(relation.value))
-            .filter(Boolean)
-            .map(target => ({ noteId: target.noteId, title: target.title }))
-    }, [noteId, constants.BLOCKED_BY_RELATION])
-}
-
-// The notes waiting on this task.
-async function getBlocking(noteId, constants) {
-    if (!noteId || !constants.BLOCKED_BY_RELATION) return []
-    return api.runOnBackend((noteId, relationName) => {
-        const note = api.getNote(noteId)
-        if (!note) return []
-        return note.getTargetRelations()
-            .filter(relation => relation.name === relationName)
-            .map(relation => api.getNote(relation.noteId))
-            .filter(Boolean)
-            .map(source => ({ noteId: source.noteId, title: source.title }))
-    }, [noteId, constants.BLOCKED_BY_RELATION])
-}
-
-// `blockedNoteId` waits on `blockerNoteId`. Both sides of the picker write
-// through here - adding to "Blocking" just swaps the arguments.
-async function addBlockedBy(blockedNoteId, blockerNoteId, constants) {
-    if (!blockedNoteId || !blockerNoteId) return
-    if (blockedNoteId === blockerNoteId) return
-    if (!constants.BLOCKED_BY_RELATION) return
-    await api.runOnBackend((blockedNoteId, blockerNoteId, relationName) => {
-        const note = api.getNote(blockedNoteId)
-        if (!note || !api.getNote(blockerNoteId)) return
-        if (note.hasOwnedRelation(relationName, blockerNoteId)) return
-        note.addRelation(relationName, blockerNoteId)
-    }, [blockedNoteId, blockerNoteId, constants.BLOCKED_BY_RELATION])
-}
-
-async function removeBlockedBy(blockedNoteId, blockerNoteId, constants) {
-    if (!blockedNoteId || !blockerNoteId || !constants.BLOCKED_BY_RELATION) return
-    await api.runOnBackend((blockedNoteId, blockerNoteId, relationName) => {
-        const note = api.getNote(blockedNoteId)
-        if (note) note.removeRelation(relationName, blockerNoteId)
-    }, [blockedNoteId, blockerNoteId, constants.BLOCKED_BY_RELATION])
-}
-
-// Drops every dependency edge pointing at this task, because a completed task
-// no longer blocks anything.
-async function clearBlockedByPointingHere(noteId, constants) {
-    if (!noteId || !constants.BLOCKED_BY_RELATION) return
-    await api.runOnBackend((noteId, relationName) => {
-        const note = api.getNote(noteId)
-        if (!note) return
-        // Filtered into a new array first: getTargetRelations() hands back the
-        // note's internal list, which the removals below mutate.
-        const inbound = note.getTargetRelations().filter(relation => relation.name === relationName)
-        for (const relation of inbound) {
-            const source = api.getNote(relation.noteId)
-            if (source) source.removeRelation(relationName, noteId)
-        }
-    }, [noteId, constants.BLOCKED_BY_RELATION])
-}
-
 // Marks a task complete. Recurring tasks advance to their next occurrence
 // and are reset to undone; one-off tasks are archived.
 async function complete(noteId, constants) {
@@ -195,11 +121,11 @@ async function complete(noteId, constants) {
     const recurrence = note.getLabelValue(constants.RECURRENCE_LABEL)
 
     const nextOccurrence = (startDatetime && recurrence)
-        ? libRecurrence.nextOccurrence(recurrence, api.dayjs(startDatetime).utc().toDate())
+        ? libRecurrence.nextOccurrence(recurrence, api.dayjs(startDatetime).toDate())
         : null
 
     if (nextOccurrence) {
-        const nextStartDatetime = api.dayjs(nextOccurrence.nextDate).local().format("YYYY-MM-DDTHH:mm")
+        const nextStartDatetime = api.dayjs(nextOccurrence.nextDate).format("YYYY-MM-DDTHH:mm")
         await api.runOnBackend((noteId, recurrence, startDatetime, constants) => {
             const note = api.getNote(noteId)
             note.setLabel(constants.START_DATETIME_LABEL, startDatetime)
@@ -215,10 +141,6 @@ async function complete(noteId, constants) {
         // check would wrongly hold the flag - clear it outright.
         await clearMyDayFlag(noteId)
     }
-
-    // Whether it recurred or was archived, this occurrence is done, so anything
-    // waiting on it is released.
-    await clearBlockedByPointingHere(noteId, constants)
 
     await updateDependentAttributes(noteId, constants)
 }
@@ -269,7 +191,7 @@ async function rescheduleByOption(noteId, constants, option) {
     if (option.mode === "recurrence") {
         const nextDate = libRecurrence.nextFromNow(option.recurrence)
         if (!nextDate) return
-        const newStart = api.dayjs(nextDate).local().format("YYYY-MM-DDTHH:mm")
+        const newStart = api.dayjs(nextDate).format("YYYY-MM-DDTHH:mm")
         await api.runOnBackend((noteId, startDatetimeLabel, newStart) => {
             api.getNote(noteId).setLabel(startDatetimeLabel, newStart)
         }, [noteId, constants.START_DATETIME_LABEL, newStart])
@@ -308,11 +230,6 @@ module.exports = {
     markUndone,
     rescheduleByDays,
     rescheduleByOption,
-    getBlockers,
-    getBlocking,
-    addBlockedBy,
-    removeBlockedBy,
-    clearBlockedByPointingHere,
     updateDependentAttributes,
     refreshDisplayLabels,
     clearMyDayFlag,

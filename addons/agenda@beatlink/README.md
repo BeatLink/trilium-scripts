@@ -85,11 +85,7 @@ per-field `category`, plus `extraPanels` for the non-schema panels):
 - **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
   `#agendaConfig` so collection addons can file into the same place).
 - **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
-  shows). The shipped **Blocking** filter group is how task dependencies reach the Overview: its
-  Unblocked (`~!blockedBy`) child is enabled and Blocked (`~blockedBy`) is not, so tasks waiting on
-  another task drop out of the list until it's completed. Enable both for "all", or Blocked alone to
-  review just what's stuck. The relation itself is written by
-  [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)'s Blocking section.
+  shows).
 - **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
   profile references by name. Split out of Review because they're a shared library, not per-profile
   config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).

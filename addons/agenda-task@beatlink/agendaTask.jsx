@@ -8,7 +8,6 @@ import {
     useState,
     FormDropdownList,
     FormTextBox,
-    NoteAutocomplete,
     Button
 } from "trilium:preact";
 
@@ -18,11 +17,7 @@ const {
     complete,
     rescheduleByOption,
     updateDependentAttributes,
-    clearMyDayFlagIfNotToday,
-    getBlockers,
-    getBlocking,
-    addBlockedBy,
-    removeBlockedBy
+    clearMyDayFlagIfNotToday
 } = require("libAgendaTask.js")
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 
@@ -120,81 +115,6 @@ function NoteRecurrencePicker({ constants, onAfterChange }){
     )
 }
 
-// One side of the dependency pair: each linked note as a click-to-remove button
-// (the stacked full-width button idiom the Actions section already uses, so no
-// new stylesheet), plus an autocomplete to add another. The autocomplete is
-// remounted by key after every pick so it clears itself for the next one.
-function RelationList({ label, notes, placeholder, onAdd, onRemove }) {
-    const [pickerKey, setPickerKey] = useState(0)
-
-    return (
-        <div>
-            <label>{label}</label>
-            {notes.map(({ noteId, title }) => (
-                <Button
-                    key={noteId}
-                    icon="bx bx-x"
-                    text={title}
-                    title={`Remove ${title}`}
-                    onClick={() => onRemove(noteId)}
-                />
-            ))}
-            <NoteAutocomplete
-                key={pickerKey}
-                noteId=""
-                placeholder={placeholder}
-                noteIdChanged={pickedNoteId => {
-                    if (!pickedNoteId) return
-                    setPickerKey(pickerKey + 1)
-                    onAdd(pickedNoteId)
-                }}
-            />
-        </div>
-    )
-}
-
-// Both lists are the same stored relation seen from opposite ends, so adding to
-// "Blocking" writes the relation onto the picked note instead of this one.
-function BlockingPicker({ constants, onAfterChange }) {
-    const { note } = useActiveNoteContext();
-    const noteId = useNoteProperty(note, "noteId");
-    const [blockers, setBlockers] = useState([])
-    const [blocking, setBlocking] = useState([])
-
-    async function reload() {
-        if (!noteId) return
-        setBlockers(await getBlockers(noteId, constants))
-        setBlocking(await getBlocking(noteId, constants))
-    }
-
-    useEffect(() => { reload() }, [noteId])
-
-    async function apply(write) {
-        await write()
-        await reload()
-        await onAfterChange()
-    }
-
-    return (
-        <div>
-            <RelationList
-                label="Blocked By"
-                notes={blockers}
-                placeholder="Add a task this waits on"
-                onAdd={blockerNoteId => apply(() => addBlockedBy(noteId, blockerNoteId, constants))}
-                onRemove={blockerNoteId => apply(() => removeBlockedBy(noteId, blockerNoteId, constants))}
-            />
-            <RelationList
-                label="Blocking"
-                notes={blocking}
-                placeholder="Add a task that waits on this"
-                onAdd={blockedNoteId => apply(() => addBlockedBy(blockedNoteId, noteId, constants))}
-                onRemove={blockedNoteId => apply(() => removeBlockedBy(blockedNoteId, noteId, constants))}
-            />
-        </div>
-    )
-}
-
 function MainWidget(){
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
@@ -239,10 +159,6 @@ function MainWidget(){
                 <details open>
                     <summary>Recurrence</summary>
                     <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
-                </details>
-                <details open>
-                    <summary>Blocking</summary>
-                    <BlockingPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </details>
                 <details open>
                     <summary>Actions</summary>

@@ -11,8 +11,7 @@ const FIELDS = [
     { key: "dueDateLabel", label: "Due Date Label" },
     { key: "dueTimeLabel", label: "Due Time Label" },
     { key: "durationLabel", label: "Duration Label" },
-    { key: "recurrenceLabel", label: "Recurrence Label" },
-    { key: "blockedByRelation", label: "Blocked By Relation" }
+    { key: "recurrenceLabel", label: "Recurrence Label" }
 ]
 
 // The label-name overrides for Task's own settings note (#agendaTaskConfig),

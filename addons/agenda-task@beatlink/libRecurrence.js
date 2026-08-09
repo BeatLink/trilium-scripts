@@ -20,6 +20,24 @@ function firstOf(value) {
     return Array.isArray(value) ? value[0] : value
 }
 
+// rrule reads and writes only a date's UTC fields, so BYHOUR/BYMINUTE and
+// UNTIL are UTC clock values. Carrying the local clock through those UTC
+// fields on the way in, and reading it back the same way on the way out, makes
+// recurrence times mean local time and keeps them fixed across DST.
+function toRRuleDate(date) {
+    return new Date(Date.UTC(
+        date.getFullYear(), date.getMonth(), date.getDate(),
+        date.getHours(), date.getMinutes()
+    ))
+}
+
+function fromRRuleDate(date) {
+    return new Date(
+        date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(),
+        date.getUTCHours(), date.getUTCMinutes()
+    )
+}
+
 function createDefaultRecurrenceState() {
     return {
         enabled: false,
@@ -82,7 +100,7 @@ function applyTimeOptions(state, options) {
 function applyStopOptions(state, options) {
     if (options.until) {
         state.stop.type = "date"
-        state.stop.date = dayjs(options.until).format("YYYY-MM-DDTHH:mm")
+        state.stop.date = dayjs(fromRRuleDate(options.until)).format("YYYY-MM-DDTHH:mm")
     } else if (options.count) {
         state.stop.type = "number"
         state.stop.count = options.count
@@ -140,7 +158,7 @@ function buildRRuleOptions(state) {
     if (state.time.minute !== "" && state.time.minute != null) options.byminute = Number(state.time.minute)
 
     if (state.stop.type === "number") options.count = Number(state.stop.count)
-    if (state.stop.type === "date" && state.stop.date) options.until = dayjs(state.stop.date).utc().toDate()
+    if (state.stop.type === "date" && state.stop.date) options.until = toRRuleDate(dayjs(state.stop.date).toDate())
 
     return options
 }
@@ -152,11 +170,12 @@ function ObjToRRule(state) {
     return rruleString || null
 }
 
+// Takes and returns local dates.
 function nextOccurrence(recurrenceString, startDate) {
     const options = libRRule.RRule.parseString(recurrenceString)
-    options.dtstart = startDate
+    options.dtstart = toRRuleDate(startDate)
     const rule = new libRRule.RRule(options)
-    const nextDate = rule.after(startDate, false)
+    const nextDate = rule.after(options.dtstart, false)
     if (!nextDate) return null
 
     // Rebuild the recurrence with a decremented count so a bounded series
@@ -165,19 +184,21 @@ function nextOccurrence(recurrenceString, startDate) {
     if (remainingOptions.count) remainingOptions.count -= 1
     const recurrence = cleanRRuleString(libRRule.RRule.optionsToString(remainingOptions))
 
-    return { nextDate, recurrence }
+    return { nextDate: fromRRuleDate(nextDate), recurrence }
 }
 
 // The next occurrence of a recurrence rule computed from now, for a
 // Reschedule Options entry (unlike `nextOccurrence`, which advances a task's
-// own recurrence from its current start date). Returns null when the rule
-// yields nothing after now (e.g. an already-exhausted count/until).
+// own recurrence from its current start date). Returns a local date, or null
+// when the rule yields nothing after now (e.g. an already-exhausted
+// count/until).
 function nextFromNow(recurrenceString) {
     const options = libRRule.RRule.parseString(recurrenceString)
-    const now = dayjs().utc().toDate()
+    const now = toRRuleDate(new Date())
     options.dtstart = now
     const rule = new libRRule.RRule(options)
-    return rule.after(now, true)
+    const nextDate = rule.after(now, true)
+    return nextDate ? fromRRuleDate(nextDate) : null
 }
 
 function humanize(recurrenceString) {
