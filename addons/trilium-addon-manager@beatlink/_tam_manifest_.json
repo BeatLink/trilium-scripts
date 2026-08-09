@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "6.4.0",
+    "latestVersion": "6.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -73,6 +73,13 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/marked.min.js"
             },
             {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+            },
+            {
                 "id": "tam-css",
                 "title": "TAM.css",
                 "type": "code",
@@ -120,6 +127,10 @@
             {
                 "parent": "lib-tam",
                 "child": "marked"
+            },
+            {
+                "parent": "lib-tam",
+                "child": "libsettings-core"
             },
             {
                 "parent": "root",

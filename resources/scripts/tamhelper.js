@@ -403,6 +403,41 @@ async function cmdValidate(args) {
             warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
         }
 
+        // manifest.settings hands TAM the schema/config pair it reviews per setting
+        // instead of whole-file diffing the config. The schema has to be structural
+        // (it ships the new defaults each update); the config has to be persistent
+        // (it holds the user's answers) and must ship no content of its own, or the
+        // note would still be offered for whole-file replacement on every update.
+        if (m.settings) {
+            for (const role of ["schema", "config"]) {
+                const localId = m.settings[role];
+                if (!localId) {
+                    error(manifestFile, `manifest.settings.${role} is missing`);
+                    continue;
+                }
+                if (!noteIds.has(localId)) {
+                    error(manifestFile, `manifest.settings.${role} '${localId}' not found in notes`);
+                    continue;
+                }
+                const note = byId[localId];
+                const isPersistent = persistentIds.has(localId);
+                if (role === "schema" && isPersistent) {
+                    error(manifestFile, `manifest.settings.schema '${localId}' is attached under the reserved "persistence" parent -- the schema ships new defaults on every update, so it has to be structural`);
+                }
+                if (role === "config") {
+                    if (!isPersistent) {
+                        error(manifestFile, `manifest.settings.config '${localId}' is not attached under the reserved "persistence" parent -- the user's settings would be overwritten on every update`);
+                    }
+                    if (note.sourceUrl || note.content) {
+                        error(manifestFile, `manifest.settings.config '${localId}' ships content (sourceUrl/content) -- declare it empty so TAM reviews it per setting instead of offering to replace the whole file`);
+                    }
+                }
+                if (note.mime && note.mime !== "application/json") {
+                    warn(manifestFile, `manifest.settings.${role} '${localId}' has mime '${note.mime}' -- expected application/json`);
+                }
+            }
+        }
+
         // TAM runs a hook via FNote.executeScript(), which only hands back a return
         // value for a frontend note, and hook code has to be replaced on update, so
         // it can never live under "persistence".

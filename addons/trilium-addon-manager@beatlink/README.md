@@ -183,6 +183,26 @@ export being referenced), the same "look it up by TAMFILEID, then clone or creat
   and resolved under the shared **Addon Data** anchor, which no uninstall/prune sweep ever touches.
   See [Persistence](#persistence).
 
+### `#TAMSOURCEURL`: one note per URL, shared across addons
+
+Alongside `#TAMFILEID`, every resolved note carries `#TAMSOURCEURL` with the URL its content came
+from — and `resolveNotes` uses it as a second lookup: a note that doesn't exist yet under *this*
+addon's `#TAMFILEID`, but whose `sourceUrl` already exists somewhere, is **cloned into place rather
+than copied**. Two addons vendoring the same library file therefore share one note in the database,
+which is what keeps a shared library from being duplicated N times.
+
+The consequence is an authoring rule worth stating outright:
+
+> A note shared by `sourceUrl` may not carry per-addon labels or relations.
+
+Only the first addon to install it gets its `#TAMFILEID` — every later addon's
+`resolveStoredNoteId` for that local id returns nothing — and the manifest `relations` of *every*
+addon declaring it are applied to the same note, so the last sync wins. A pure library module (no
+attributes of its own, everything passed in by its caller) shares perfectly; anything that needs to
+know which addon it belongs to must ship as that addon's own file, at its own URL. Uninstall is
+already safe either way: `detachAddonOwnedBranches` only detaches a shared note from the departing
+addon's parents, and deletes it only once nothing else parents it.
+
 ---
 
 ## The `_tam_manifest_.json` Format
@@ -240,6 +260,7 @@ re-fetches to check for a newer version, and what a catalog's `tam-addons[]` lis
     "labels": [...],
     "dependencies": [...],
     "exports": {...},
+    "settings": {...},
     "hooks": {...}
   }
 }
@@ -278,6 +299,33 @@ whether you click the addon's root in the tree or the Settings button in TAM.
 Notes that must survive updates and uninstalls (user settings, cached data, customized content)
 are attached under the reserved `"persistence"` parent keyword in `children[]`, the same way
 `"root"` works for the structural tree. See [Persistence](#persistence) for the full behaviour.
+
+#### `settings` *(optional)*
+
+Names the pair of notes that make up a [libsettings](../../libs/libsettings/README.md)-style
+settings pair, so TAM reviews the addon's settings **per setting** on update instead of diffing the
+config note as a wall of JSON:
+
+```json
+"settings": {
+  "schema": "schema",
+  "config": "config"
+}
+```
+
+* `schema` is the local ID of the addon's `schema.json` — **structural**, so every update replaces it
+  and ships whatever the defaults have become.
+* `config` is the local ID of its `config.json` — attached under the reserved `"persistence"` parent,
+  so it holds the user's answers and is never overwritten. It must ship **no content of its own**
+  (`"sourceUrl": null`, no `content`); TAM creates it empty, which libsettings reads as `{}`.
+  `validate` enforces all of this.
+
+Declaring it changes three things, all described under
+[per-setting review](#per-setting-review-manifestsettings): the config note stops being whole-file
+diffed, TAM adopts changed defaults the user never diverged from without asking, and anything left
+over becomes one Update Review entry with a Keep Mine / Use New Default choice per setting.
+
+An addon that stores settings some other way simply leaves this out, and nothing changes for it.
 
 #### `hooks` *(optional)*
 
@@ -353,8 +401,12 @@ itself — only the addon knows what an item key means:
 `true` means "use the new default" for that item; `false` means "keep mine".
 
 Because `collect` runs *after* the sync, a hook reads its own updated code and any note the sync just
-refreshed. The usual shape is a `defaults` note shipped structurally (overwritten every update) next
-to the persistent config note (never overwritten), with the hook diffing one against the other.
+refreshed.
+
+Reach for `updateReview` only for review TAM cannot do itself. Schema-driven settings do **not**
+need it: declaring [`settings`](#settings-optional) gets the same per-item screen natively, without
+a hook note, and the two compose — TAM appends its settings entry to whatever a hook returned rather
+than replacing it.
 
 #### `readmeNote` *(optional)*
 
@@ -487,8 +539,8 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
   "manuallyInstalled": true,
   "enabled": true,
   "meta": { "name": "...", "description": "...", "author": "...", "license": "...", "type": "...", "homepage": "..." },
-  "manifest": { "settingsNote": "...", "readmeNote": "...", "hooks": {...}, "allowExternalReferences": false, "children": [...] },
-  "persistence": { "pendingPrompts": [...] }
+  "manifest": { "settingsNote": "...", "readmeNote": "...", "settings": {...}, "hooks": {...}, "allowExternalReferences": false, "children": [...] },
+  "persistence": { "pendingPrompts": [...], "settingsBaseline": {...} }
 }
 ```
 
@@ -527,9 +579,15 @@ addon's own record — nothing is pushed or maintained as edges change, so nothi
 sync. Used by `checkForAddonUpdates`'s update-propagation and `uninstallAddon`'s
 cascade-uninstall-if-unused check.
 
-`persistence` holds only transient **`pendingPrompts`** — the update-review diffs collected during a
-sync (or the item list an `updateReview` hook returned in their place), cleared once the user applies
-them. The persistent *notes* themselves survive uninstall by living
+`persistence` holds **`pendingPrompts`** — the update-review diffs collected during a
+sync (plus any settings entry, and the item list an `updateReview` hook returned in their place),
+cleared once the user applies them — and, for an addon declaring
+[`settings`](#settings-optional), **`settingsBaseline`**: the shipped defaults as of the last review,
+which is what makes a per-setting review able to tell "the user chose this" from "this default moved
+upstream" (see [per-setting review](#per-setting-review-manifestsettings)). The baseline lives here
+rather than inside the user's own `config.json` because it is TAM's bookkeeping, not their data:
+nothing in the addon has to know it exists, a settings save cannot drop it, and it is discarded with
+the record on uninstall. The persistent *notes* themselves survive uninstall by living
 under the Addon Data anchor, not by anything stored in this record — see [Persistence](#persistence).
 
 ### Hidden libraries, resolved lazily and rootlessly
@@ -635,7 +693,8 @@ for a clean slate.
 6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
 7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
 8. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
-9. The addon's own lifecycle hooks run last, if it declares any (see [`hooks`](#hooks-optional)): `postInstall` on a first install, or `postUpdate` followed by the `updateReview` collect pass on an update. TAM's own record is exempt — a hook for TAM would run mid-self-replacement. Hooks only run on this top-level call, never for a dependency resolved along the way by `ensureDependencyExport`, which only ever resolves the exports a consumer asked for rather than the whole addon.
+9. The addon's own lifecycle hooks run, if it declares any (see [`hooks`](#hooks-optional)): `postInstall` on a first install, or `postUpdate` followed by the `updateReview` collect pass on an update. TAM's own record is exempt — a hook for TAM would run mid-self-replacement. Hooks only run on this top-level call, never for a dependency resolved along the way by `ensureDependencyExport`, which only ever resolves the exports a consumer asked for rather than the whole addon.
+10. The settings review runs last for an addon declaring [`settings`](#settings-optional): on a first install it just records the shipped defaults as the `settingsBaseline`; on an update it adopts defaults the user never diverged from, then appends one per-setting entry to the pending prompts if anything is left to decide (see [per-setting review](#per-setting-review-manifestsettings)). Being last and additive is what lets it coexist with both the whole-file diff and an `updateReview` hook.
 
 There is no cascade to a dependent when its own dependency updates: a dependency's notes resolve in
 place (the real note id a dependent's clone points at never changes across a version bump), so there's
@@ -784,16 +843,52 @@ After reinstallation, if there are pending prompts, TAM shows the **Update Revie
 - Choosing "Use New Default" writes the new content to the persistent note. Choosing "Keep Mine" leaves it untouched.
 - Once all choices are applied, the review is dismissed and the addon UI reloads.
 
+### Per-setting review: `manifest.settings`
+
+Whole-file diffing is the right shape for a note whose *content* is the thing the user edited (a
+bundled template, a seeded page). It is the wrong shape for a settings document: `config.json` is
+one blob holding dozens of unrelated answers, so a whole-file prompt asks a question nobody can
+answer well, and "Use New Default" replaces every setting at once.
+
+An addon that declares [`settings`](#settings-optional) gets a per-setting review instead, produced
+by TAM itself — no hook note, no code in the addon:
+
+1. Its config note is **excluded** from whole-file diffing (a config note ships empty, so diffing it
+   would offer to replace everything the user ever saved with `{}`).
+2. On a **first install**, TAM records the shipped defaults as that addon's `settingsBaseline`.
+3. On an **update**, TAM compares the schema's defaults against that baseline. A scalar whose stored
+   value still equals the default it shipped with is one the user never touched, so the new default
+   is adopted **silently**.
+4. Anything left over becomes one Update Review entry with a row per setting: **Keep Mine** against
+   the user's value, **Use New Default** against the new shipped one. Choosing the new default takes
+   the shipped value for a scalar, or drops a registry entry's override so it tracks the shipped
+   entry again. Either way the baseline advances, so the same question is never asked twice.
+
+An item is only raised when the **shipped** side changed since the baseline *and* the user's stored
+value differs from where it landed. Everything else stays silent: a setting never saved, a value
+that already equals the new default, a customization made against a default that has not moved, a
+field new in this version (no baseline to diff), and — for registries — entries the user added
+themselves, deleted (a removal is never resurrected), or that the addon no longer ships. An install
+predating this feature has no baseline, so its first update records one and reviews nothing: there
+is genuinely no way to know which of its stored values were deliberate.
+
+`list` fields are skipped entirely: a stored list replaces its default wholesale rather than
+reconciling per entry, so "use the new default" could only mean discarding the user's entries.
+
+TAM reads all of this through the very same `libSettingsCore.js` note that libsettings' own frontend
+half uses, wired under `lib-tam.js` in TAM's manifest, so "the user changed this" means exactly what
+the settings form that wrote the file meant by it.
+
 ### Replacing the diff with per-item review
 
-Whole-file diffing is only the **default** producer. An addon that declares an `updateReview` hook
-(see [`hooks`](#hooks-optional)) supplies its own list of reviewable items instead — an option-level
-"which of these new settings do you want" rather than two walls of JSON — and applies the chosen ones
-itself. TAM renders both shapes on the same Update Review screen and, on the hook path, writes
+An addon that declares an `updateReview` hook (see [`hooks`](#hooks-optional)) supplies its own list
+of reviewable items instead of the whole-file diff, and applies the chosen ones itself. TAM renders
+whole-file, hook and settings entries on the same Update Review screen; on the hook path it writes
 nothing itself.
 
 The built-in diff is still collected before every sync, so an addon whose hook throws or returns
-something unusable falls back to it rather than losing the prompt entirely.
+something unusable falls back to it rather than losing the prompt entirely. The settings entry is
+**additive** — it is appended after the hook has had its say, so an addon can have both.
 
 Setting `promptOnUpdate` or `skipOnUpdate` on a note that is already reachable from the reserved
 `"persistence"` parent is redundant (the placement already governs it) and `validate` warns about it.
@@ -816,6 +911,7 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 - Every relative `sourceUrl` resolves to a real file on disk (a local-dev-only check — absolute URLs are exempt).
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
 - `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
+- `manifest.settings`, when present, names a `schema` and a `config` that both exist in `manifest.notes`. The schema must not be attached under the reserved `"persistence"` parent (it ships new defaults every update); the config must be, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). A mime other than `application/json` on either is a warning.
 - Every `manifest.hooks` entry names a known phase, points at a note that exists in `manifest.notes`, is a frontend script (`text/jsx` or `env=frontend`), and is not attached under the reserved `"persistence"` parent. An `updateReview` hook on an addon with no persistent notes is a warning.
 
 Run in CI before every publish. Exits with code 1 if any errors are found.

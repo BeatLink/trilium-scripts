@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.6.0",
+    "latestVersion": "1.8.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
@@ -63,7 +63,7 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -100,6 +100,13 @@
                 "mime": "text/markdown",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
@@ -260,6 +267,10 @@
             {
                 "parent": "missing-page",
                 "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -618,6 +629,10 @@
                 "value": "areacollection"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "config": "config"
+        }
     }
 }

@@ -25,6 +25,8 @@ Before implementing:
 - Skip files over 100KB unless required.
 - No sycophantic openers or closing fluff.
 - No emojis or em-dashes.
+- Comments: one sentence on one line, max. The only exception is a module's top-level overview
+  comment, which may be longer.
 - Do not guess APIs, versions, flags, commit SHAs, or package names. Verify by reading code or docs before asserting.
 
 ## Token/context management

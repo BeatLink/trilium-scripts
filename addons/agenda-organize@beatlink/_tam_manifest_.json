@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.0.0",
+    "latestVersion": "3.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/_tam_manifest_.json",
@@ -66,7 +66,7 @@
                 "title": "organizeConfig.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeConfig.json"
+                "sourceUrl": null
             },
             {
                 "id": "organize-settings-note",
@@ -103,6 +103,13 @@
                 "mime": "text/markdown",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
@@ -228,6 +235,10 @@
             },
             {
                 "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
                 "child": "libsettings-style"
             },
             {
@@ -343,6 +354,10 @@
                 "value": ""
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "organize-schema",
+            "config": "organize-config"
+        }
     }
 }

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.2",
+    "latestVersion": "1.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/_tam_manifest_.json",
@@ -53,7 +53,7 @@
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -68,6 +68,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=backend",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
@@ -126,6 +133,10 @@
             {
                 "parent": "launcher",
                 "child": "readme"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -212,6 +223,10 @@
             }
         ],
         "readmeNote": "readme",
-        "allowExternalReferences": true
+        "allowExternalReferences": true,
+        "settings": {
+            "schema": "schema",
+            "config": "config"
+        }
     }
 }

@@ -1,18 +1,23 @@
-// Schema-driven settings engine for backend (customRequestHandler) scripts.
-// Stateless: callers pass in the noteIds of their own schema.json and config.json notes.
+// The schema semantics of libsettings: how a schema's defaults, an addon's
+// shipped entries and a user's stored config.json combine into the runtime
+// values everything else works with, and how they come apart again on save.
 //
-// The merge helpers below are duplicated from libsettings-core.js, which the
-// frontend half and TAM share as a single note. Trilium only bundles a child
-// module whose script env matches its parent's, so a backend script can never
-// require that frontend note however the notes are wired — the two copies have
-// to be changed together.
+// This is a frontend module (`env=frontend`), shared as one note by every
+// consumer's libSettingsUI.jsx *and* by TAM's own lib-tam.js — TAM produces the
+// settings half of the Update Review itself and needs the identical reading of
+// what "the user changed this" means. libsettings-backend.js still carries its
+// own copy: Trilium only bundles a child module whose script env matches its
+// parent's, so a backend script cannot require a frontend note however the
+// notes are wired. Those two must stay in lockstep by hand; this file and TAM
+// do not.
 
 function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value)
 }
 
 // A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (under addonRoot, not persistenceRoot), so it gets fully
+// normal addon-shipped note (structural, never under the reserved
+// "persistence" parent), so it gets fully
 // overwritten on every TAM update just like the rest of the addon, meaning a
 // newly-added shipped entry reaches existing installs for free. The
 // persisted (config.json) shape for a registry field is therefore not the
@@ -27,15 +32,15 @@ function isPlainObject(value) {
 // is the inverse, run on save.
 // A registry field can itself nest further `list`/`registry` fields in its
 // `itemSchema` (e.g. a colour/prefix variant's `children`, one flat
-// label-value map per variant — see libsettings@beatlink's README "Nesting"
-// section). The shipped baseline for such a nested field lives inside its
+// label-value map per variant — see this library's README, "Nesting"). The shipped baseline for such a nested field lives inside its
 // *parent item's own* shipped default (`shippedItem[key]`, e.g.
 // `colors.default.priority.children`), never in the nested field's own
 // schema `default` (which is only the blank starting point for a brand-new
 // item added through the UI, always `{}`) — so `mergeDefaults`/
 // `filterBySchema` thread a `shippedNode` parameter through every level of
 // recursion instead of re-deriving "shipped" from `def.default` past the
-// top level.
+// top level. Kept in exact lockstep with the identically-named functions in
+// libsettings-backend.js.
 function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
     const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
     const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
@@ -107,16 +112,24 @@ function filterBySchema(schema, values, shippedNode) {
     return filtered
 }
 
-function loadSettings(schemaNoteId, configNoteId) {
-    const schema = JSON.parse(api.getNote(schemaNoteId).getContent() || "{}")
-    const stored = JSON.parse(api.getNote(configNoteId).getContent() || "{}")
-    return mergeDefaults(schema, null, stored)
+// An item's collapsed-summary title prefers an itemSchema field literally
+// named `name` (matching the convention every consumer's item schema already
+// uses for its display name — also what a `reference` field pointing at this
+// registry shows in its own dropdown); otherwise it falls back to the first
+// field's value — resolved through a `reference` field to the *referenced*
+// entry's own name (rather than showing a raw reference id) when that first
+// field is itself a `reference`. TAM names a reviewed entry the same way, so
+// the Update Review and the form the user then opens agree on what to call it.
+function titleFor(itemSchema, item, registries) {
+    if ("name" in itemSchema) return item.name || "Untitled"
+    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
+    if (!firstKey) return "Untitled"
+    const rawValue = item[firstKey]
+    if (firstDef.type === "reference") {
+        const referenced = registries?.[firstDef.registry]?.[rawValue]
+        return referenced?.name || rawValue || "Untitled"
+    }
+    return rawValue || "Untitled"
 }
 
-function saveSettings(schemaNoteId, configNoteId, values) {
-    const schema = JSON.parse(api.getNote(schemaNoteId).getContent() || "{}")
-    const filtered = filterBySchema(schema, values, null)
-    api.getNote(configNoteId).setContent(JSON.stringify(filtered, null, 4))
-}
-
-module.exports = { loadSettings, saveSettings }
+module.exports = { isPlainObject, mergeRegistryDefaults, filterRegistryBySchema, mergeDefaults, filterBySchema, titleFor }

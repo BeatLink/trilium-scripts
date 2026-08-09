@@ -1,6 +1,10 @@
 // TAM's entire backend/data layer, in one require()-able JS note; section banners below group functions by domain.
 
 const marked = require("marked.min.js")
+// The same note libsettings' own frontend half requires, so TAM's settings
+// review reads a schema, a config and a registry's shipped-vs-stored delta
+// exactly the way the settings form that wrote them does.
+const { isPlainObject, mergeDefaults, titleFor } = require("libSettingsCore.js")
 
 const addonRootLabel = "addonRoot"
 
@@ -221,6 +225,9 @@ function stripManifestForStorage(m) {
         root: m.root,
         settingsNote: m.settingsNote,
         readmeNote: m.readmeNote,
+        // Kept because resolvePrompt needs to find the schema and config notes
+        // again, long after the sync that produced the prompt has finished.
+        settings: m.settings || null,
         hooks: m.hooks || null,
         allowExternalReferences: m.allowExternalReferences,
         children: m.children || []
@@ -240,7 +247,8 @@ function normalizeManifest(manifestFetched) {
         children: [],
         relations: manifestFetched.relations ?? [],
         labels: manifestFetched.labels ?? [],
-        root: null
+        root: null,
+        settings: null
     }
 }
 
@@ -502,6 +510,10 @@ async function collectPendingPrompts(addonId, m) {
     const prompts = []
     for (const noteDef of (m.notes || [])) {
         if (!persistentIds.has(noteDef.id)) continue
+        // A declared settings config note is reviewed per setting instead (see
+        // collectSettingsPrompt) — diffing it whole would offer to replace the
+        // user's entire config with the blank document the addon ships.
+        if (noteDef.id === m.settings?.config) continue
         let newContent = noteDef.content ?? null
         if (newContent === null && noteDef.sourceUrl) {
             try {
@@ -535,14 +547,19 @@ async function getPendingPrompts(addonId) {
 }
 
 // `decision` is a plain boolean for a built-in whole-content prompt, or a
-// { [itemKey]: boolean } map for a hook-produced one — in which case the addon's
-// own hook does the writing, since only it knows what an item means.
+// { [itemKey]: boolean } map for an item-level one — settings items TAM applies
+// itself, hook-produced items the addon's own hook applies, since only it knows
+// what an item means.
 async function resolvePrompt(addonId, noteLocalId, decision) {
     const database = await loadDatabase()
     const record = database.installedAddons?.[addonId]
     const prompt = (record?.persistence?.pendingPrompts || [])
         .find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
+    if (prompt.source === settingsPromptSource) {
+        await applySettingsSelections(addonId, record.manifest, decision || {})
+        return
+    }
     if (prompt.items) {
         await runHook(addonId, record.manifest?.hooks?.updateReview, {
             phase: "apply",
@@ -563,6 +580,219 @@ async function clearPendingPrompts(addonId) {
         delete database.installedAddons[addonId].persistence.pendingPrompts
     }
     await saveDatabase(database)
+}
+
+// =========================================================================
+// Settings review: the per-setting half of the Update Review, for addons declaring `manifest.settings`.
+// =========================================================================
+
+// An addon's schema.json is structural (replaced on every update) while its
+// config.json is persistent (never overwritten), so both versions of "what this
+// setting should be" are already on disk. What is missing is what the defaults
+// looked like *last* time: a config that has ever been saved holds a value for
+// every scalar key, so "stored differs from the current default" cannot tell a
+// deliberate user choice from a default that moved upstream. `settingsBaseline`
+// on the addon's own database record is that missing side — the shipped defaults
+// as of the last review — which keeps this review down to what actually changed
+// upstream instead of re-asking about every customization on every update.
+//
+// It lives here rather than inside config.json because it is TAM's bookkeeping,
+// not the user's data: nothing in the addon has to know it exists, a settings
+// save can't accidentally drop it, and it goes away with the addon's record.
+const settingsPromptSource = "settings"
+
+const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+// `list` is excluded from the review entirely: a stored list replaces its
+// default wholesale rather than reconciling per entry, so "use the new default"
+// could only mean discarding the user's entries. `checklist` stores nothing of
+// its own.
+function isReviewableField(key, def) {
+    return !key.startsWith("_") && def.type !== "list" && def.type !== "checklist"
+}
+
+// The shipped baseline of every reviewable field, in the shape the schema
+// declares: a plain value for a scalar, the shipped entry map for a registry.
+function shippedDefaults(schema) {
+    const shipped = {}
+    for (const [key, def] of Object.entries(schema)) {
+        if (isReviewableField(key, def)) shipped[key] = def.default
+    }
+    return shipped
+}
+
+// Registry entries are compared in their *runtime* (merged, flat) shape rather
+// than as stored: a shipped entry may omit any itemSchema key it is happy to
+// default, and a nested registry is stored as an `{ entries, removedIds }` delta
+// but shipped as a flat map — only after mergeDefaults are the two comparable.
+function registrySettingsItems(key, def, storedField, shippedNow, shippedThen) {
+    const items = []
+    const storedEntries = isPlainObject(storedField?.entries) ? storedField.entries : {}
+    const removedIds = Array.isArray(storedField?.removedIds) ? storedField.removedIds : []
+    for (const [id, storedItem] of Object.entries(storedEntries)) {
+        if (removedIds.includes(id)) continue
+        // Only ids the addon still ships are reviewable — an entry the user
+        // added themselves, or one dropped from the schema since, has no
+        // upstream version to offer. An id shipped for the first time in this
+        // version while the user already had one under it does, hence no
+        // matching guard on `then`.
+        const now = shippedNow[id]
+        if (!now) continue
+        const nowMerged = mergeDefaults(def.itemSchema, now, null)
+        const then = shippedThen[id]
+        if (then && sameJson(mergeDefaults(def.itemSchema, then, null), nowMerged)) continue
+        const currentMerged = mergeDefaults(def.itemSchema, now, storedItem)
+        if (sameJson(currentMerged, nowMerged)) continue
+        items.push({
+            key: `${key}.${id}`,
+            label: `${def.label ?? key}: ${titleFor(def.itemSchema, currentMerged, null)}`,
+            current: currentMerged,
+            incoming: nowMerged,
+            field: key,
+            id
+        })
+    }
+    return items
+}
+
+// Everything the user would have to decide about, given what shipped last time.
+// `field`/`id` are internal: the prompt strips them, and applySettingsSelections
+// recomputes this list to get them back rather than parsing them out of `key`.
+function settingsReviewItems(schema, stored, baseline) {
+    const items = []
+    for (const [key, def] of Object.entries(schema)) {
+        // A field with no baseline is new in this version: nothing to diff.
+        if (!isReviewableField(key, def) || !(key in baseline)) continue
+        if (def.type === "registry") {
+            items.push(...registrySettingsItems(key, def, stored[key], def.default || {}, baseline[key] || {}))
+        } else if (key in stored && !sameJson(def.default, baseline[key]) && !sameJson(stored[key], def.default)) {
+            // A key absent from stored has never been persisted, so it already
+            // tracks whatever the schema currently defaults to.
+            items.push({ key, label: def.label ?? key, current: stored[key], incoming: def.default, field: key, id: null })
+        }
+    }
+    return items
+}
+
+// A scalar still holding exactly the default it shipped with is one the user
+// never touched, so a changed default is theirs for free — no review. Registry
+// entries need no equivalent: an untouched shipped entry is never copied into
+// config.json in the first place, so it already tracks its shipped version.
+// Mutates `stored`; returns whether anything moved.
+function adoptUnchangedDefaults(schema, stored, baseline) {
+    let changed = false
+    for (const [key, def] of Object.entries(schema)) {
+        if (!isReviewableField(key, def) || def.type === "registry") continue
+        if (!(key in stored) || !(key in baseline)) continue
+        if (sameJson(def.default, baseline[key]) || !sameJson(stored[key], baseline[key])) continue
+        stored[key] = def.default
+        changed = true
+    }
+    return changed
+}
+
+async function readJsonNote(noteId) {
+    const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [noteId])
+    try {
+        return JSON.parse(content || "{}")
+    } catch (e) {
+        console.error(`TAM: note ${noteId} does not hold valid JSON`, e)
+        return {}
+    }
+}
+
+async function writeJsonNote(noteId, value) {
+    await api.runOnBackend(
+        (id, content) => api.getNote(id).setContent(content),
+        [noteId, JSON.stringify(value, null, 4)]
+    )
+}
+
+// Everything the settings phases need, or null when the addon declares no
+// settings (or its notes can't be resolved, which is not worth failing a sync over).
+async function loadSettingsState(addonId, m) {
+    if (!m?.settings?.schema || !m?.settings?.config) return null
+    const schemaNoteId = await resolveStoredNoteId(addonId, m.settings.schema)
+    const configNoteId = await resolveStoredNoteId(addonId, m.settings.config)
+    if (!schemaNoteId || !configNoteId) {
+        console.error(`TAM: settings notes of ${addonId} did not resolve (schema '${m.settings.schema}', config '${m.settings.config}')`)
+        return null
+    }
+    const schema = await readJsonNote(schemaNoteId)
+    return { configNoteId, schema, stored: await readJsonNote(configNoteId), shipped: shippedDefaults(schema) }
+}
+
+async function saveSettingsBaseline(addonId, shipped) {
+    const database = await loadDatabase()
+    const record = database.installedAddons?.[addonId]
+    if (!record) return
+    record.persistence = record.persistence || {}
+    record.persistence.settingsBaseline = shipped
+    await saveDatabase(database)
+}
+
+// First install: the user has customized nothing, so record where the defaults
+// stand and leave the first update with nothing to review.
+async function recordSettingsBaseline(addonId, m) {
+    const state = await loadSettingsState(addonId, m)
+    if (state) await saveSettingsBaseline(addonId, state.shipped)
+}
+
+// Runs after an update's notes are in place, so it reads the *new* schema
+// against the config and baseline the update left alone. Returns a prompt entry
+// for the Update Review, or null when there is nothing to decide — in which
+// case the baseline advances straight away.
+async function collectSettingsPrompt(addonId, m, title) {
+    const state = await loadSettingsState(addonId, m)
+    if (!state) return null
+    const database = await loadDatabase()
+    const baseline = database.installedAddons?.[addonId]?.persistence?.settingsBaseline
+    // No baseline means this install predates the settings review: there is
+    // genuinely no way to know which of its stored values were deliberate, so
+    // record where things stand and review nothing this once.
+    if (!isPlainObject(baseline)) {
+        await saveSettingsBaseline(addonId, state.shipped)
+        return null
+    }
+    if (adoptUnchangedDefaults(state.schema, state.stored, baseline)) {
+        await writeJsonNote(state.configNoteId, state.stored)
+    }
+    const items = settingsReviewItems(state.schema, state.stored, baseline)
+    if (items.length === 0) {
+        await saveSettingsBaseline(addonId, state.shipped)
+        return null
+    }
+    // The baseline deliberately does not move here: it advances only once the
+    // user has answered, so an update they never applied is asked about again
+    // rather than silently forgotten.
+    return {
+        noteLocalId: m.settings.config,
+        source: settingsPromptSource,
+        title,
+        items: items.map(({ key, label, current, incoming }) => ({ key, label, current, incoming }))
+    }
+}
+
+// `true` for an item means "use the new default": a scalar takes the shipped
+// value, a registry entry drops its override so it goes back to tracking the
+// shipped one. `false` (or absent) leaves the user's version exactly as is.
+async function applySettingsSelections(addonId, m, selections) {
+    const state = await loadSettingsState(addonId, m)
+    if (!state) return
+    const database = await loadDatabase()
+    const baseline = database.installedAddons?.[addonId]?.persistence?.settingsBaseline
+    if (isPlainObject(baseline)) {
+        for (const item of settingsReviewItems(state.schema, state.stored, baseline)) {
+            if (!selections[item.key]) continue
+            if (item.id === null) {
+                state.stored[item.field] = item.incoming
+            } else if (isPlainObject(state.stored[item.field]?.entries)) {
+                delete state.stored[item.field].entries[item.id]
+            }
+        }
+        await writeJsonNote(state.configNoteId, state.stored)
+    }
+    await saveSettingsBaseline(addonId, state.shipped)
 }
 
 // =========================================================================
@@ -737,6 +967,7 @@ async function syncAddon(addonId, options = {}) {
     if (isSelf) return
     const hookContext = { previousVersion, newVersion: manifest.latestVersion }
     if (!wasInstalled) {
+        await recordSettingsBaseline(addonId, m)
         await runHook(addonId, m.hooks?.postInstall, { phase: "postInstall", ...hookContext })
         return
     }
@@ -760,6 +991,19 @@ async function syncAddon(addonId, options = {}) {
             database.installedAddons[addonId].persistence = persistence
             await saveDatabase(database)
         }
+    }
+    // Settings review runs last, against notes the sync has already replaced, and
+    // is *additive*: it appends its own entry to whatever prompts are pending
+    // rather than replacing them, so an addon that also ships persistent content
+    // notes keeps their whole-file diffs alongside it.
+    const settingsPrompt = await collectSettingsPrompt(addonId, m, meta.name || addonId)
+    if (settingsPrompt) {
+        database = await loadDatabase()
+        const persistence = database.installedAddons[addonId].persistence || {}
+        const others = (persistence.pendingPrompts || []).filter(p => p.source !== settingsPromptSource)
+        persistence.pendingPrompts = [...others, settingsPrompt]
+        database.installedAddons[addonId].persistence = persistence
+        await saveDatabase(database)
     }
 }
 
@@ -891,6 +1135,11 @@ async function validateDatabase() {
                 }
                 if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
                     found.push(`settings note ('${manifest.settingsNote}') is missing`)
+                }
+                // The config note is covered by the persistent-note check below;
+                // a missing schema would silently disable the settings review.
+                if (manifest.settings?.schema && !resolveLocal(manifest.settings.schema)) {
+                    found.push(`settings schema note ('${manifest.settings.schema}') is missing`)
                 }
             }
             for (const localId of persistentIds) {
