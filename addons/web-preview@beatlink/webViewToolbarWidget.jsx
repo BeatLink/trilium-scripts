@@ -6,65 +6,61 @@
 */
 import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect } from "trilium:preact"
 
-// Locates the Electron <webview> element Trilium renders for the given note.
-// Selector specifics can vary across Trilium versions — adjust if this
-// doesn't find it in yours (see README "Known caveats").
-function getWebviewEl(noteId) {
-    let el = document.querySelector(
-        `[data-note-id="${noteId}"] webview, .note-detail-web-view[data-note-id="${noteId}"] webview`
-    )
-    if (!el) {
-        // Fallback: grab the first visible webview on the page.
-        const candidates = Array.from(document.querySelectorAll("webview"))
-        el = candidates.find((w) => w.offsetParent !== null) || candidates[0]
-    }
-    return el || null
+// Locates the Electron <webview> Trilium renders for a Web View note. Browser
+// Trilium renders an <iframe> instead, so this returns null there.
+function getWebviewEl() {
+    const candidates = Array.from(document.querySelectorAll("webview.note-detail-web-view-content"))
+    return candidates.find((w) => w.offsetParent !== null) || candidates[0] || null
 }
 
 function WebViewToolbar({ noteId }) {
-    const [state, setState] = useState({ canGoBack: false, canGoForward: false, url: "" })
+    const [state, setState] = useState({ found: false, canGoBack: false, canGoForward: false, url: "" })
     const [saveStatus, setSaveStatus] = useState(null)
 
     useEffect(() => {
-        let cancelled = false
+        let wv = null
+        let onRefresh = null
+        let attempts = 0
 
-        function refresh(wv) {
-            if (cancelled) return
-            setState({ canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL() })
-        }
-
-        // Webview element may not exist yet the instant the note switches in;
-        // a short delay lets Trilium finish rendering it.
-        const timer = setTimeout(() => {
-            const wv = getWebviewEl(noteId)
-            if (!wv || wv.__wvToolbarBound) return
-            wv.__wvToolbarBound = true
-
-            const onRefresh = () => refresh(wv)
+        // Trilium mounts the <webview> after this widget re-renders for the new note.
+        const poll = setInterval(() => {
+            const found = getWebviewEl()
+            if (!found) {
+                if (++attempts > 30) clearInterval(poll)
+                return
+            }
+            clearInterval(poll)
+            wv = found
+            onRefresh = () => setState({ found: true, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL() })
             wv.addEventListener("did-navigate", onRefresh)
             wv.addEventListener("did-navigate-in-page", onRefresh)
             wv.addEventListener("dom-ready", onRefresh)
             onRefresh()
-        }, 150)
+        }, 100)
 
         return () => {
-            cancelled = true
-            clearTimeout(timer)
+            clearInterval(poll)
+            if (wv && onRefresh) {
+                wv.removeEventListener("did-navigate", onRefresh)
+                wv.removeEventListener("did-navigate-in-page", onRefresh)
+                wv.removeEventListener("dom-ready", onRefresh)
+            }
+            setState({ found: false, canGoBack: false, canGoForward: false, url: "" })
         }
     }, [noteId])
 
-    async function handleBack() {
-        const wv = getWebviewEl(noteId)
+    function handleBack() {
+        const wv = getWebviewEl()
         if (wv?.canGoBack()) wv.goBack()
     }
 
-    async function handleForward() {
-        const wv = getWebviewEl(noteId)
+    function handleForward() {
+        const wv = getWebviewEl()
         if (wv?.canGoForward()) wv.goForward()
     }
 
     async function handleSave() {
-        const wv = getWebviewEl(noteId)
+        const wv = getWebviewEl()
         if (!wv) return
         const url = wv.getURL()
         const title = wv.getTitle() || url
@@ -82,12 +78,15 @@ function WebViewToolbar({ noteId }) {
         }
     }
 
-    async function handleExternal() {
-        const wv = getWebviewEl(noteId)
+    function handleExternal() {
+        const wv = getWebviewEl()
         if (!wv) return
         const lib = require("libWebPreview.js")
-        await lib.openExternal(wv.getURL())
+        lib.openExternal(wv.getURL())
     }
+
+    // No <webview> means browser Trilium (an <iframe>), where none of these controls apply.
+    if (!state.found) return null
 
     const saveLabel = saveStatus === "saving" ? "Saving…"
         : saveStatus === "saved" ? "Saved ✓"
@@ -129,14 +128,18 @@ function WebViewToolbar({ noteId }) {
 
 export default defineWidget({
     parent: "center-pane",
-    position: 90, // above the note content area
+    position: -10, // before the note content, which the layout adds at position 0
     render() {
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         const noteType = useNoteProperty(note, "type")
 
-        if (noteType !== "webView") return null
-
-        return <WebViewToolbar noteId={noteId} />
+        // The host snapshots this widget's DOM children exactly once, so the root element
+        // must exist on the very first render — returning null leaves it permanently empty.
+        return (
+            <div className="web-view-toolbar-host">
+                {noteType === "webView" && <WebViewToolbar noteId={noteId} />}
+            </div>
+        )
     }
 })

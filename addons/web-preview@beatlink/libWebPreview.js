@@ -41,14 +41,12 @@ async function saveUrlToInbox(url, title) {
 }
 
 // ---------------------------------------------------------------------------
-// Opens a URL in the system's default browser via Electron's shell module.
-// Runs on the backend because the frontend script context doesn't have
-// direct Node/Electron access.
+// Opens a URL in the system's default browser. Uses the renderer's electronApi
+// bridge — backend scripts can't require("electron"), it isn't on the allowed
+// module list.
 // ---------------------------------------------------------------------------
-async function openExternal(url) {
-    return api.runOnBackend((url) => {
-        require("electron").shell.openExternal(url);
-    }, [url]);
+function openExternal(url) {
+    window.electronApi?.shell?.openExternal(url);
 }
 
 module.exports = { getInboxNoteId, saveUrlToInbox, openExternal };
