@@ -55,13 +55,30 @@ function compile(text) {
     return { version: CACHE_VERSION, fetchedAt: Date.now(), generic, specific };
 }
 
+// The renderer may only fetch hosts that send an Access-Control-Allow-Origin header. GitHub and
+// uBO's uAssets mirror do; several lists uBO can be pointed at (Peter Lowe's, Fanboy's) do not,
+// and a CORS rejection is indistinguishable from a network failure here — so either sends the
+// request to the backend instead, where neither restriction applies.
+async function fetchList(url) {
+    let response;
+    try {
+        response = await fetch(url);
+    } catch (error) {
+        if (!api.isBackendScriptingEnabled()) throw error;
+        return api.runAsyncOnBackendWithManualTransactionHandling(async (url) => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+            return response.text();
+        }, [url]);
+    }
+
+    if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+    return response.text();
+}
+
 async function download(synced) {
     const urls = synced ? synced.listUrls : FILTER_LISTS;
-    const texts = await Promise.all(urls.map(async (url) => {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`${url} returned ${response.status}`);
-        return response.text();
-    }));
+    const texts = await Promise.all(urls.map(fetchList));
     if (synced?.userFilters) texts.push(synced.userFilters);
 
     const filters = compile(texts.join("\n"));
@@ -155,9 +172,7 @@ async function syncFromUboBackup(backupPath, syncedNoteId) {
     const backup = JSON.parse(raw);
     if (!Array.isArray(backup.selectedFilterLists)) throw new Error(`${backupPath} is not a uBlock Origin backup`);
 
-    const response = await fetch(UBO_ASSETS_URL);
-    if (!response.ok) throw new Error(`uBO's assets.json returned ${response.status}`);
-    const catalogue = await response.json();
+    const catalogue = JSON.parse(await fetchList(UBO_ASSETS_URL));
 
     // A token's contentURL is a string or a list whose later entries are paths inside uBO's
     // own repo; only the http ones are fetchable from here. "user-filters" has no entry at
