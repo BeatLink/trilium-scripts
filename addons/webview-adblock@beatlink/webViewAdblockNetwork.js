@@ -50,6 +50,10 @@ const RESOURCE_TYPES = {
 
 const HOSTNAME_RULE = /^\|\|([a-z0-9.-]+)\^$/i;
 
+// Some lists uBlock Origin can be pointed at (Peter Lowe's, for one) ship in hosts-file format
+// rather than ABP syntax.
+const HOSTS_LINE = /^(?:0\.0\.0\.0|127\.0\.0\.1|::1)\s+([a-z0-9.-]+)\s*$/i;
+
 // Translates an ABP URL pattern into regular expression source: "||" anchors at the scheme with
 // any subdomain, "|" anchors at either end, "^" is ABP's separator class, "*" is a wildcard.
 function patternToSource(pattern) {
@@ -114,6 +118,12 @@ function compile(text, compiled) {
     for (const raw of text.split("\n")) {
         const line = raw.trim();
         if (!line || line.startsWith("!") || line.startsWith("[") || line.includes("#")) continue;
+
+        const hosts = HOSTS_LINE.exec(line);
+        if (hosts) {
+            if (hosts[1].toLowerCase() !== "localhost") compiled.always.hosts.add(hosts[1].toLowerCase());
+            continue;
+        }
 
         const allow = line.startsWith("@@");
         const parsed = parseRule(allow ? line.slice(2) : line);
@@ -238,6 +248,42 @@ function buildMatcher(compiled) {
     };
 }
 
+// The frontend half owns the uBlock Origin sync (it has the settings UI); this side just reads
+// what it left in the shared note. Absent or empty means the built-in lists apply.
+function readSyncedConfig() {
+    const syncedNoteId = api.startNote.getRelationValue("uboConfigNote");
+    if (!syncedNoteId) return null;
+
+    try {
+        const synced = JSON.parse(api.getNote(syncedNoteId).getContent() || "null");
+        return synced?.listUrls?.length ? synced : null;
+    } catch (error) {
+        api.log("webview-adblock: the synced uBO config is unreadable, falling back to the built-in lists");
+        return null;
+    }
+}
+
+// uBO trusted-site entries are a hostname, which also covers its subdomains, optionally
+// followed by a path prefix.
+function isTrusted(pageUrl, trusted) {
+    if (!trusted.length || !pageUrl) return false;
+
+    let url;
+    try {
+        url = new URL(pageUrl);
+    } catch (error) {
+        return false;
+    }
+
+    for (const entry of trusted) {
+        const slash = entry.indexOf("/");
+        const host = slash < 0 ? entry : entry.slice(0, slash);
+        if (url.hostname !== host && !url.hostname.endsWith(`.${host}`)) continue;
+        if (slash < 0 || `${url.pathname}${url.search}`.startsWith(entry.slice(slash))) return true;
+    }
+    return false;
+}
+
 async function install() {
     if (!process.versions.electron) {
         api.log("webview-adblock: not running under Electron, network blocking skipped");
@@ -249,29 +295,39 @@ async function install() {
     // deprecated in Node and would disappear if Trilium's desktop bundle ever moved to ESM.
     const { session } = process.mainModule.require("electron");
 
-    const texts = await Promise.all([...AD_LISTS, ...TRACKER_LISTS, ...ALLOW_LISTS].map(async (url) => {
+    // What the frontend last synced out of a uBlock Origin backup, if anything. Its list
+    // selection replaces the built-in one wholesale — the point of syncing is to block what
+    // Firefox blocks, not the union of that and this addon's own defaults.
+    const synced = readSyncedConfig();
+    const urls = synced ? synced.listUrls : [...AD_LISTS, ...TRACKER_LISTS, ...ALLOW_LISTS];
+
+    const texts = await Promise.all(urls.map(async (url) => {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`${url} returned ${response.status}`);
         return response.text();
     }));
+    if (synced?.userFilters) texts.push(synced.userFilters);
 
     const compiled = { always: emptyBucket(), thirdParty: emptyBucket(), allow: emptyBucket() };
     for (const text of texts) compile(text, compiled);
 
     const shouldBlock = buildMatcher(compiled);
+    const trusted = synced ? synced.trusted : [];
 
     session.fromPartition(WEBVIEW_PARTITION).webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
         try {
             // A guest page must always be able to load itself, so main-frame navigation is never
             // cancelled. The top frame's URL is what makes a request first- or third-party.
             const pageUrl = details.resourceType === "mainFrame" ? null : (details.frame && details.frame.top && details.frame.top.url);
-            callback({ cancel: details.resourceType !== "mainFrame" && shouldBlock(details.url, details.resourceType, pageUrl) });
+            const filtered = details.resourceType !== "mainFrame" && !isTrusted(pageUrl, trusted);
+            callback({ cancel: filtered && shouldBlock(details.url, details.resourceType, pageUrl) });
         } catch (error) {
             callback({ cancel: false });
         }
     });
 
-    api.log(`webview-adblock: filtering ${WEBVIEW_PARTITION} with ${countRules(compiled.always)} unconditional and ${countRules(compiled.thirdParty)} third-party rules, ${countRules(compiled.allow)} exceptions`);
+    const source = synced ? `uBO backup (${urls.length} lists, ${trusted.length} trusted sites)` : "built-in lists";
+    api.log(`webview-adblock: filtering ${WEBVIEW_PARTITION} from ${source} with ${countRules(compiled.always)} unconditional and ${countRules(compiled.thirdParty)} third-party rules, ${countRules(compiled.allow)} exceptions`);
 }
 
 install().catch((error) => api.log(`webview-adblock: network blocking failed to start -- ${error.message}`));

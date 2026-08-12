@@ -12,8 +12,12 @@ const FILTER_LISTS = [
     "https://raw.githubusercontent.com/easylist/easylist/master/easylist/easylist_specific_hide.txt"
 ];
 
+// uBlock Origin's own catalogue, mapping the filter-list tokens a backup records
+// ("easylist", "ublock-filters", ...) to the URLs they are fetched from.
+const UBO_ASSETS_URL = "https://raw.githubusercontent.com/gorhill/uBlock/master/assets/assets.json";
+
 const CACHE_KEY = "webViewAdblock.filters";
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 // A selector the CSS parser rejects kills the entire rule it sits in, so selectors go out
@@ -51,13 +55,18 @@ function compile(text) {
     return { version: CACHE_VERSION, fetchedAt: Date.now(), generic, specific };
 }
 
-async function download() {
-    const texts = await Promise.all(FILTER_LISTS.map(async (url) => {
+async function download(synced) {
+    const urls = synced ? synced.listUrls : FILTER_LISTS;
+    const texts = await Promise.all(urls.map(async (url) => {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`${url} returned ${response.status}`);
         return response.text();
     }));
-    return compile(texts.join("\n"));
+    if (synced?.userFilters) texts.push(synced.userFilters);
+
+    const filters = compile(texts.join("\n"));
+    filters.syncedAt = synced ? synced.syncedAt : 0;
+    return filters;
 }
 
 function readCache() {
@@ -69,18 +78,20 @@ function readCache() {
     }
 }
 
-// Returns the compiled filter set, refreshing it from upstream once the cache is missing
-// or a week old. A failed refresh falls back to the stale cache when there is one.
-function loadFilters() {
+// Returns the compiled filter set, refreshing it from upstream once the cache is missing, a
+// week old, or built from a different uBO sync than the one now in force. A failed refresh
+// falls back to the stale cache when there is one.
+function loadFilters(synced) {
     if (loading) return loading;
 
     const cached = readCache();
-    if (cached && Date.now() - cached.fetchedAt < MAX_AGE_MS) {
+    const fresh = cached && Date.now() - cached.fetchedAt < MAX_AGE_MS;
+    if (fresh && cached.syncedAt === (synced ? synced.syncedAt : 0)) {
         loading = Promise.resolve(cached);
         return loading;
     }
 
-    loading = download().then((filters) => {
+    loading = download(synced).then((filters) => {
         try {
             localStorage.setItem(CACHE_KEY, JSON.stringify(filters));
         } catch (error) {
@@ -98,10 +109,10 @@ function loadFilters() {
 
 // Builds the stylesheet for one hostname: every generic rule, plus the rules registered
 // for the hostname itself or any of its parent domains.
-async function cssForHostname(hostname) {
+async function cssForHostname(hostname, synced) {
     let filters;
     try {
-        filters = await loadFilters();
+        filters = await loadFilters(synced);
     } catch (error) {
         console.warn("webview-adblock: no filter lists available", error);
         return "";
@@ -121,4 +132,95 @@ async function cssForHostname(hostname) {
     return rules.join("\n");
 }
 
-module.exports = { loadFilters, cssForHostname };
+// ---------------------------------------------------------------------------
+// uBlock Origin sync
+//
+// Reads a backup exported from uBO's dashboard (Settings -> Backup to file) and
+// distils it into the three things this addon can actually act on: the URLs of the
+// filter lists that were selected, the user's own filters, and the trusted sites.
+// uBO's dynamic filtering rules, hostname switches, per-site switches and scriptlets
+// have no equivalent here and are dropped.
+//
+// The result is written to a persistent note so both halves of the addon can read it
+// — the backend network layer included, which has no other way to see this config.
+// ---------------------------------------------------------------------------
+async function syncFromUboBackup(backupPath, syncedNoteId) {
+    if (!syncedNoteId) throw new Error("this script has no uboConfigNote relation");
+
+    // readFileSync keeps the backend function synchronous, which runOnBackend requires.
+    const raw = await api.runOnBackend(
+        (path) => process.mainModule.require("fs").readFileSync(path, "utf8"),
+        [backupPath]
+    );
+    const backup = JSON.parse(raw);
+    if (!Array.isArray(backup.selectedFilterLists)) throw new Error(`${backupPath} is not a uBlock Origin backup`);
+
+    const response = await fetch(UBO_ASSETS_URL);
+    if (!response.ok) throw new Error(`uBO's assets.json returned ${response.status}`);
+    const catalogue = await response.json();
+
+    // A token's contentURL is a string or a list whose later entries are paths inside uBO's
+    // own repo; only the http ones are fetchable from here. "user-filters" has no entry at
+    // all — those rules arrive as backup.userFilters instead.
+    const listUrls = [];
+    for (const token of backup.selectedFilterLists) {
+        const asset = catalogue[token];
+        if (!asset || asset.content !== "filters") continue;
+        const url = [].concat(asset.contentURL).find((candidate) => candidate.startsWith("http"));
+        if (url) listUrls.push(url);
+    }
+
+    const synced = {
+        syncedAt: Date.now(),
+        source: backupPath,
+        uboVersion: backup.version || "",
+        listUrls,
+        userFilters: backup.userFilters || "",
+        // Entries like "about-scheme" cover browser-internal pages, which never reach a web view.
+        trusted: (backup.whitelist || []).filter((entry) => entry && !entry.startsWith("#") && !entry.endsWith("-scheme"))
+    };
+
+    await api.runOnBackend(
+        (id, content) => api.getNote(id).setContent(content),
+        [syncedNoteId, JSON.stringify(synced, null, 4)]
+    );
+    return synced;
+}
+
+// Returns the last synced config, or null when nothing has been synced yet — in which case
+// callers fall back to this addon's built-in lists.
+async function loadSyncedConfig(syncedNoteId) {
+    if (!syncedNoteId) return null;
+
+    try {
+        const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [syncedNoteId]);
+        const synced = JSON.parse(content || "null");
+        return synced?.listUrls?.length ? synced : null;
+    } catch (error) {
+        console.warn("webview-adblock: could not read the synced uBO config", error);
+        return null;
+    }
+}
+
+// uBO trusted-site entries are a hostname, which also covers its subdomains, optionally
+// followed by a path prefix.
+function isTrusted(pageUrl, trusted) {
+    if (!trusted || !trusted.length || !pageUrl) return false;
+
+    let url;
+    try {
+        url = new URL(pageUrl);
+    } catch (error) {
+        return false;
+    }
+
+    for (const entry of trusted) {
+        const slash = entry.indexOf("/");
+        const host = slash < 0 ? entry : entry.slice(0, slash);
+        if (url.hostname !== host && !url.hostname.endsWith(`.${host}`)) continue;
+        if (slash < 0 || `${url.pathname}${url.search}`.startsWith(entry.slice(slash))) return true;
+    }
+    return false;
+}
+
+module.exports = { loadFilters, cssForHostname, syncFromUboBackup, loadSyncedConfig, isTrusted };

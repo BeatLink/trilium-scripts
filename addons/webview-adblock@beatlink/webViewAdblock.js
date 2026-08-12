@@ -14,7 +14,8 @@ To use:
     - Open any Web View note in Trilium Desktop.
 */
 
-const { cssForHostname } = require("libWebViewAdblock.js");
+const { cssForHostname, syncFromUboBackup, loadSyncedConfig, isTrusted } = require("libWebViewAdblock.js");
+const { resolveConfigNotes, loadSettings } = require("libSettingsUI.jsx");
 
 // Trilium's own class on the <webview> element. Browser Trilium renders an <iframe> with the
 // same class instead, which has no insertCSS() — the tag name in the selector skips it.
@@ -22,17 +23,42 @@ const WEBVIEW_SELECTOR = "webview.note-detail-web-view-content";
 
 const wired = new WeakSet();
 
+// Resolved once, then shared by every injection. Null means nothing has been synced from
+// uBlock Origin and the addon's built-in lists apply.
+let synced = null;
+
+// Re-reading the backup at startup is what makes the sync feel automatic: export from uBO
+// whenever its settings change and the next Trilium start picks it up. The backend network
+// layer reads the same note at its own startup, so a fresh export reaches it one restart later.
+const ready = (async () => {
+    const syncedNoteId = await api.currentNote.getRelationValue("uboConfigNote");
+    try {
+        const { schemaNoteId, configNoteId } = await resolveConfigNotes(api.currentNote);
+        const { backupPath, syncOnStartup } = await loadSettings(schemaNoteId, configNoteId);
+        if (backupPath && syncOnStartup) await syncFromUboBackup(backupPath, syncedNoteId);
+    } catch (error) {
+        console.warn("webview-adblock: uBO sync on startup failed, using the last synced config", error);
+    }
+    synced = await loadSyncedConfig(syncedNoteId);
+})();
+
 // insertCSS only affects the document currently loaded in the guest, so this reruns for every
-// page the user navigates to.
+// page the user navigates to. Awaiting `ready` keeps the first page from compiling filters
+// before the sync has said which lists to use.
 async function applyFilters(webview) {
+    await ready;
+
+    const url = webview.getURL();
+    if (isTrusted(url, synced?.trusted)) return;
+
     let hostname;
     try {
-        hostname = new URL(webview.getURL()).hostname;
+        hostname = new URL(url).hostname;
     } catch (error) {
         return;
     }
 
-    const css = await cssForHostname(hostname);
+    const css = await cssForHostname(hostname, synced);
     if (css) await webview.insertCSS(css);
 }
 

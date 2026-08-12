@@ -18,6 +18,9 @@ element Trilium already renders for that note type.
   you save is itself immediately re-browsable with the same toolbar. You can chain: open a bookmark
   → click through to another page → save it → open that saved note later → click through again →
   save again.
+- **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
+  Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
+  browsing builds a tree of the pages you visited. The link's text becomes the note title.
 - **Delete Note** is the other end of that loop: it deletes the Web View note you are currently
   reading, for clearing saved links once you're done with them. It asks for confirmation first,
   and Trilium's delete is soft, so the note stays recoverable from Recent Changes. The note's
@@ -52,5 +55,11 @@ Block / Unblock button.
   `<webview>`, so the toolbar hides itself there.
 - `getWebviewEl()` matches `webview.note-detail-web-view-content`, preferring the visible one. With
   split panes open on two Web View notes it can pick the wrong split.
+- Link interception is a script injected into the page on every load, which reports clicks back
+  through the guest console (`<webview>` has no preload script, and its `will-navigate` event can't
+  be cancelled). It only covers real `<a href="http(s):…">` links — pages that navigate from
+  JavaScript still move the current note's page as before.
+- Every intercepted click creates a note, so a long browsing session leaves a long trail of child
+  notes. Use **Delete Note** to prune them.
 - `saveUrlToInbox` looks for an Inbox note via a `#inbox` label first, falling back to a note titled
   "Inbox" directly under root. Edit `getInboxNoteId()` in `libWebPreview.js` if your setup differs.

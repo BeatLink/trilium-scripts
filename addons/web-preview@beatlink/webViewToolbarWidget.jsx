@@ -26,8 +26,11 @@ function WebViewToolbar({ noteId }) {
     const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
+        const lib = require("libWebPreview.js")
         let wv = null
         let onRefresh = null
+        let onDomReady = null
+        let onConsole = null
         let attempts = 0
 
         // Trilium mounts the <webview> after this widget re-renders for the new note.
@@ -40,10 +43,28 @@ function WebViewToolbar({ noteId }) {
             clearInterval(poll)
             wv = found
             onRefresh = () => setState({ found: true, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL() })
+            // Injection only works once the guest document exists, so the first pass
+            // (before dom-ready has fired) is expected to fail and is left to the event.
+            onDomReady = () => {
+                onRefresh()
+                try {
+                    wv.executeJavaScript(lib.LINK_INTERCEPT_SCRIPT).catch(() => {})
+                } catch {}
+            }
+            onConsole = async (event) => {
+                const link = lib.parseLinkMessage(event.message)
+                if (!link) return
+                try {
+                    await api.activateNote(await lib.createWebViewNote(noteId, link.url, link.title))
+                } catch (err) {
+                    console.error("web-preview: could not open the clicked link as a note", err)
+                }
+            }
             wv.addEventListener("did-navigate", onRefresh)
             wv.addEventListener("did-navigate-in-page", onRefresh)
-            wv.addEventListener("dom-ready", onRefresh)
-            onRefresh()
+            wv.addEventListener("dom-ready", onDomReady)
+            wv.addEventListener("console-message", onConsole)
+            onDomReady()
         }, 100)
 
         return () => {
@@ -51,7 +72,8 @@ function WebViewToolbar({ noteId }) {
             if (wv && onRefresh) {
                 wv.removeEventListener("did-navigate", onRefresh)
                 wv.removeEventListener("did-navigate-in-page", onRefresh)
-                wv.removeEventListener("dom-ready", onRefresh)
+                wv.removeEventListener("dom-ready", onDomReady)
+                wv.removeEventListener("console-message", onConsole)
             }
             setState({ found: false, canGoBack: false, canGoForward: false, url: "" })
         }

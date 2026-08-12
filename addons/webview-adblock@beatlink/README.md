@@ -47,12 +47,45 @@ cosmetic-only lists, cached in the renderer's `localStorage` and refreshed weekl
 falls back to the stale cache. Selectors go out in chunks of 200, so one selector the CSS parser
 rejects costs a chunk rather than the whole stylesheet.
 
+## Syncing with Firefox's uBlock Origin
+
+Out of the box the addon uses its own EasyList/EasyPrivacy defaults. Point it at uBO instead from
+the addon's settings page (TAM → Web View Adblock → Settings, **uBO Sync** tab):
+
+1. In Firefox, open uBO's dashboard → **Settings** → **Backup to file**.
+2. Put that file's full path in **uBlock Origin backup file** and save.
+3. Press **Sync Now**, or leave *Re-read the backup on every start* on and restart.
+
+What comes across:
+
+| uBO backup field | Effect here |
+|---|---|
+| `selectedFilterLists` | Resolved to URLs through [uBO's own `assets.json`](https://raw.githubusercontent.com/gorhill/uBlock/master/assets/assets.json), then used **instead of** the built-in lists — both layers read them, since a full list carries network and cosmetic rules together. Hosts-file lists (Peter Lowe's) are understood too. |
+| `userFilters` | Your "My filters", appended to both layers. |
+| `whitelist` | Trusted sites: neither layer touches a page whose host matches. `*-scheme` entries are dropped, as they name browser-internal pages a web view never loads. |
+
+What does **not** come across, because this addon has no equivalent: `dynamicFilteringString`,
+`urlFilteringString`, `hostnameSwitchesString`, `hiddenSettings`, `userSettings`, and any
+scriptlet (`##+js(…)`) or procedural-cosmetic rule in the lists.
+
+The sync runs on the frontend, since that is where the settings live, and writes its result to a
+persistent `uboConfig.json` note. The backend network layer reads that same note at its own
+startup — so a fresh export reaches the cosmetic layer immediately and the network layer on the
+**next** restart.
+
+Live reading of uBO's config straight out of the Firefox profile was considered and rejected: it
+lives in `storage/default/moz-extension+++<uuid>^userContextId=…/idb/*.sqlite` as
+snappy-compressed structured clone, which would mean vendoring both a snappy decoder and a
+Firefox structured-clone reader, against an undocumented format, for a copy that is stale while
+Firefox is running.
+
 ## Requirements
 
 - **Trilium Desktop.** Browser Trilium renders a sandboxed `<iframe>` with no `insertCSS()`, and
   has no Electron session to filter. Both layers no-op there.
-- **Backend scripting enabled** (Options → Security) for the network layer. The cosmetic layer
-  needs nothing — it fetches its lists straight from the renderer.
+- **Backend scripting enabled** (Options → Security) for the network layer, and for the uBO sync,
+  which reads the backup file through `process.mainModule.require("fs")`. Without it the cosmetic
+  layer still works on its built-in lists, which it fetches straight from the renderer.
 
 ## Which rules are honoured
 

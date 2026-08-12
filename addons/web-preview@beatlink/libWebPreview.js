@@ -24,20 +24,24 @@ async function getInboxNoteId() {
 // creation API differs — see README "Known caveats".
 // ---------------------------------------------------------------------------
 async function saveUrlToInbox(url, title) {
-    const inboxNoteId = await getInboxNoteId();
+    return createWebViewNote(await getInboxNoteId(), url, title);
+}
 
-    return api.runOnBackend((inboxNoteId, url, title) => {
+// ---------------------------------------------------------------------------
+// Creates a Web View note for `url` under `parentNoteId` and returns its noteId.
+// ---------------------------------------------------------------------------
+async function createWebViewNote(parentNoteId, url, title) {
+    return api.runOnBackend((parentNoteId, url, title) => {
         const { note } = api.createNewNote({
-            parentNoteId: inboxNoteId,
+            parentNoteId,
             title: title || url,
             type: "webView",
             content: "",
             mime: "text/html"
         });
         note.setLabel("webViewSrc", url);
-        note.setLabel("url", url);
         return note.noteId;
-    }, [inboxNoteId, url, title]);
+    }, [parentNoteId, url, title]);
 }
 
 // ---------------------------------------------------------------------------
@@ -65,4 +69,38 @@ async function deleteWebViewNote(noteId) {
     if (parentNoteId) await api.activateNote(parentNoteId);
 }
 
-module.exports = { getInboxNoteId, saveUrlToInbox, openExternal, deleteWebViewNote };
+// ---------------------------------------------------------------------------
+// Guest-page script, injected on every page load, that swallows link clicks and
+// reports them to the toolbar. Trilium's <webview> has no preload script, so the
+// guest's console is the only channel back to the host; the host's `will-navigate`
+// can't be cancelled, hence intercepting the click instead of the navigation.
+// ---------------------------------------------------------------------------
+const LINK_MESSAGE_PREFIX = "web-preview:link:";
+
+const LINK_INTERCEPT_SCRIPT = `(() => {
+    if (window.__webPreviewLinkIntercept) return;
+    window.__webPreviewLinkIntercept = true;
+    document.addEventListener("click", (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const anchor = event.target && event.target.closest && event.target.closest("a[href]");
+        if (!anchor || !/^https?:/i.test(anchor.href)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        console.log(${JSON.stringify(LINK_MESSAGE_PREFIX)} + JSON.stringify({ url: anchor.href, title: (anchor.textContent || "").trim() }));
+    }, true);
+})()`;
+
+// ---------------------------------------------------------------------------
+// Reads one console message from the guest page, returning {url, title} for a
+// clicked link and null for the page's own console output.
+// ---------------------------------------------------------------------------
+function parseLinkMessage(message) {
+    if (typeof message !== "string" || !message.startsWith(LINK_MESSAGE_PREFIX)) return null;
+    try {
+        return JSON.parse(message.slice(LINK_MESSAGE_PREFIX.length));
+    } catch {
+        return null;
+    }
+}
+
+module.exports = { getInboxNoteId, saveUrlToInbox, createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage };
