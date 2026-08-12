@@ -1,0 +1,77 @@
+{
+    "id": "webview-adblock@beatlink",
+    "name": "Web View Adblock",
+    "description": "Ad and tracker blocking for Trilium Desktop's built-in Web View note type. Cancels ad requests with an EasyList/EasyPrivacy filter on the webview's Electron session, and injects EasyList's element-hiding rules into each page to collapse the ad slots that DNS-level blockers can't touch.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/webview-adblock@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/webview-adblock@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/webview-adblock@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "script",
+                "title": "webViewAdblock.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/webview-adblock@beatlink/webViewAdblock.js"
+            },
+            {
+                "id": "lib",
+                "title": "libWebViewAdblock.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/webview-adblock@beatlink/libWebViewAdblock.js"
+            },
+            {
+                "id": "network",
+                "title": "webViewAdblockNetwork.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/webview-adblock@beatlink/webViewAdblockNetwork.js"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "script",
+                "child": "lib"
+            },
+            {
+                "parent": "root",
+                "child": "network"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "network",
+                "name": "run",
+                "value": "backendStartup"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
