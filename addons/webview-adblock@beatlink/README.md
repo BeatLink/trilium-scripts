@@ -84,11 +84,11 @@ Firefox is running.
 - **Trilium Desktop.** Browser Trilium renders a sandboxed `<iframe>` with no `insertCSS()`, and
   has no Electron session to filter. Both layers no-op there.
 - **Backend scripting enabled** (Options → Security) for the network layer, for the uBO sync
-  (which reads the backup file through `process.mainModule.require("fs")`), and for any filter
-  list whose host sends no `Access-Control-Allow-Origin` header. The renderer can only fetch
-  CORS-permissive hosts — GitHub and uBO's uAssets mirror qualify, Peter Lowe's and Fanboy's do
-  not — so the cosmetic layer retries those through the backend. Without backend scripting it
-  still works, but only on lists the renderer is allowed to fetch.
+  (which reads the backup file through `process.mainModule.require("fs")`), and for fetching
+  filter lists. The renderer may only fetch hosts that send an `Access-Control-Allow-Origin`
+  header — GitHub and uBO's uAssets mirror do, Peter Lowe's, Fanboy's and someonewhocares.org do
+  not — so the cosmetic layer downloads through the backend whenever it can. Without backend
+  scripting it still works, but only on lists the renderer is allowed to fetch.
 
 ## Which rules are honoured
 

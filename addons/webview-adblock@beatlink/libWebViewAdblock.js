@@ -55,16 +55,12 @@ function compile(text) {
     return { version: CACHE_VERSION, fetchedAt: Date.now(), generic, specific };
 }
 
-// The renderer may only fetch hosts that send an Access-Control-Allow-Origin header. GitHub and
-// uBO's uAssets mirror do; several lists uBO can be pointed at (Peter Lowe's, Fanboy's) do not,
-// and a CORS rejection is indistinguishable from a network failure here — so either sends the
-// request to the backend instead, where neither restriction applies.
+// Fetched from the backend whenever that is available, because the renderer may only fetch hosts
+// that send an Access-Control-Allow-Origin header and several lists uBO can be pointed at
+// (Peter Lowe's, Fanboy's, someonewhocares.org) send none. Trying the renderer first and falling
+// back would still log a CORS error per list on every refresh, which reads as a broken addon.
 async function fetchList(url) {
-    let response;
-    try {
-        response = await fetch(url);
-    } catch (error) {
-        if (!api.isBackendScriptingEnabled()) throw error;
+    if (api.isBackendScriptingEnabled()) {
         return api.runAsyncOnBackendWithManualTransactionHandling(async (url) => {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`${url} returned ${response.status}`);
@@ -72,6 +68,7 @@ async function fetchList(url) {
         }, [url]);
     }
 
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`${url} returned ${response.status}`);
     return response.text();
 }
