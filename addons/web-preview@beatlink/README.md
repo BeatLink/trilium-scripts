@@ -3,7 +3,38 @@
 Browsing toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
 separate popup window, this adds a small toolbar (Back / Forward / Open in Browser /
 Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
-element Trilium already renders for that note type.
+element Trilium already renders for that note type. A **New Tab** button in the launchbar starts
+a browsing session from an address or a web search.
+
+## New Tab
+
+The addon registers a **New Tab** launcher in the launchbar on every start. Pressing it opens the
+addon's New Tab page, which is one box:
+
+- Type an address (`example.com`, `https://example.com/path`, `localhost:8080`) and it goes straight
+  there.
+- Type anything else and it becomes a search on the provider selected in the dropdown beside the
+  box.
+- Either way the result opens as a new **Web View** note, so the toolbar and its link-interception
+  browsing tree work from there exactly as they do for a manually created bookmark note.
+
+Where that note is filed is a setting, defaulting to **the note you were on when you pressed the
+button** — so a new tab continues the tree you were already browsing. Set it to a specific note
+instead to collect every new tab in one place. Opening the New Tab page from the tree rather than
+from the launchbar leaves no note to file under, so those land at the tree root.
+
+## Settings
+
+Open them from TAM's **Settings** button on this addon's row, or by clicking the
+`web-preview@beatlink` note in the tree.
+
+- **Search Providers** — the engines the New Tab box offers. DuckDuckGo, Google, Wikipedia and
+  YouTube ship by default; add your own with a URL template where `%s` marks the query, e.g.
+  `https://searx.example/search?q=%s`. Removing a shipped provider sticks — updates won't bring it
+  back.
+- **Default Search Provider** — which one the box starts on. The dropdown still lets you pick
+  another per search.
+- **New Tab Location** / **Specific Note** — where a new tab's Web View note is created.
 
 ## How it works
 
@@ -56,3 +87,6 @@ Block / Unblock button.
   JavaScript still move the current note's page as before.
 - Every intercepted click creates a note, so a long browsing session leaves a long trail of child
   notes. Use **Delete Note** to prune them.
+- The New Tab launcher is re-registered on every start, so moving it to *Available Launchers* is
+  undone the next time Trilium loads. Disable the addon in TAM to be rid of the button. Uninstalling
+  leaves the button behind as a dead entry — delete it from the launchbar yourself.

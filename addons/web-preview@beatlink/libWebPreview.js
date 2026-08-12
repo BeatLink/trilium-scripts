@@ -79,4 +79,36 @@ function parseLinkMessage(message) {
     }
 }
 
-module.exports = { createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage };
+// ---------------------------------------------------------------------------
+// Turns what was typed into the New Tab box into the URL to open and a note title.
+// A full URL or a bare host goes straight there; anything else is a query for
+// `urlTemplate`, whose `%s` placeholder receives it URL-encoded. Returns null for
+// a query when no template was given, so the caller can say no provider is set up.
+// ---------------------------------------------------------------------------
+const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
+const LOCAL_HOST_RE = /^(?:localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?(?:[/?#]|$)/i;
+const BARE_HOST_RE = /^[^\s/?#]+\.[a-z]{2,}(?:[:/?#]|$)/i;
+
+function buildNewTabTarget(text, urlTemplate) {
+    const trimmed = text.trim();
+    let url = null;
+    if (SCHEME_RE.test(trimmed)) url = trimmed;
+    // A bare host or IP is nearly always a server on the LAN, which rarely speaks TLS.
+    else if (LOCAL_HOST_RE.test(trimmed)) url = `http://${trimmed}`;
+    else if (BARE_HOST_RE.test(trimmed)) url = `https://${trimmed}`;
+
+    if (url) return { url, title: hostnameOf(url) };
+    if (!urlTemplate) return null;
+    return { url: urlTemplate.replace(/%s/g, encodeURIComponent(trimmed)), title: trimmed };
+}
+
+// Hostname of a URL, falling back to the URL itself when it can't be parsed.
+function hostnameOf(url) {
+    try {
+        return new URL(url).hostname || url;
+    } catch {
+        return url;
+    }
+}
+
+module.exports = { createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };
