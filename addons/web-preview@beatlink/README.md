@@ -1,9 +1,9 @@
 # Web Preview
 
 Browse-and-save toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
-separate popup window, this adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser)
-directly above any note of type "Web View" — driving the actual Electron `<webview>` element
-Trilium already renders for that note type.
+separate popup window, this adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser /
+Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
+element Trilium already renders for that note type.
 
 ## How it works
 
@@ -18,6 +18,12 @@ Trilium already renders for that note type.
   you save is itself immediately re-browsable with the same toolbar. You can chain: open a bookmark
   → click through to another page → save it → open that saved note later → click through again →
   save again.
+- **Delete Note** is the other end of that loop: it deletes the Web View note you are currently
+  reading, for clearing saved links once you're done with them. It asks for confirmation first,
+  and Trilium's delete is soft, so the note stays recoverable from Recent Changes. The note's
+  parent is activated afterwards, since the tab would otherwise be left on a note that no longer
+  exists. This deletes the *note* — it has nothing to do with `blockurl@beatlink`'s Block button,
+  which acts on the page's URL instead.
 
 ## Creating a bookmark note manually
 
@@ -25,6 +31,20 @@ Trilium already renders for that note type.
    dropdown at the top of the note).
 2. Add label `#webViewSrc` with the URL as its value.
 3. Open the note — the page loads inline, and the toolbar should appear above it.
+
+## Extension point
+
+Another addon can add its own control to this toolbar instead of stacking a second row above the
+page. Both sides share one global, created by whichever widget's module loads first:
+
+```js
+const toolbar = (window.webViewToolbar ||= { extras: [] })
+toolbar.extras.push(MyControl)   // a preact component, rendered as <MyControl noteId={noteId} />
+```
+
+`toolbar.host` is set to `true` by this addon, so a registering addon can tell whether this toolbar
+is installed and skip its own fallback UI when it is. `blockurl@beatlink` uses this for its
+Block / Unblock button.
 
 ## Known caveats
 

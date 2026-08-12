@@ -1,11 +1,20 @@
 /*
-    Adds a Block / Unblock button above any note of type "Web View", the
+    Adds a Block / Unblock button for any note of type "Web View", the
     equivalent of the BlockURL extension's toolbar button: it toggles the page
     currently loaded in the Electron <webview> on the sync server's block list,
     then reloads so blockUrl.js applies the change immediately.
+
+    With web-preview@beatlink installed the button joins that addon's toolbar
+    rather than adding a second row of its own; without it, this widget renders
+    a minimal row to hold the button.
 */
 import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect } from "trilium:preact"
 import { currentNote } from "trilium:api"
+
+// Shared with web-preview@beatlink: whichever widget's module loads first creates the object, the
+// other finds it. `host` is set by web-preview's toolbar, and is only read at render time — long
+// after both modules have evaluated — so neither addon depends on the other's load order.
+const toolbar = (window.webViewToolbar ||= { extras: [] })
 
 // Locates the Electron <webview> Trilium renders for a Web View note. Browser
 // Trilium renders an <iframe> instead, so this returns null there.
@@ -14,7 +23,7 @@ function getWebviewEl() {
     return candidates.find((w) => w.offsetParent !== null) || candidates[0] || null
 }
 
-function BlockUrlToolbar({ noteId }) {
+function BlockUrlControl({ noteId, standalone }) {
     const [state, setState] = useState({ found: false, url: "" })
     const [blocked, setBlocked] = useState(null)
     const [busy, setBusy] = useState(false)
@@ -97,6 +106,16 @@ function BlockUrlToolbar({ noteId }) {
 
     const label = busy ? "Working…" : blocked ? "Unblock This Page" : "Block This Page"
 
+    const button = (
+        <button
+            disabled={busy || blocked === null}
+            style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: blocked ? "#eee" : "#d64545", color: blocked ? "#222" : "white", fontSize: "12px" }}
+            onClick={handleToggle}
+        >{label}</button>
+    )
+
+    if (!standalone) return button
+
     return (
         <div
             className="blockurl-toolbar"
@@ -105,14 +124,13 @@ function BlockUrlToolbar({ noteId }) {
             <div style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {state.url}
             </div>
-            <button
-                disabled={busy || blocked === null}
-                style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: blocked ? "#eee" : "#d64545", color: blocked ? "#222" : "white", fontSize: "12px" }}
-                onClick={handleToggle}
-            >{label}</button>
+            {button}
         </div>
     )
 }
+
+// Registered unconditionally — web-preview's toolbar only renders this if it is itself installed.
+toolbar.extras.push((props) => <BlockUrlControl {...props} standalone={false} />)
 
 export default defineWidget({
     parent: "center-pane",
@@ -126,7 +144,7 @@ export default defineWidget({
         // must exist on the very first render — returning null leaves it permanently empty.
         return (
             <div className="blockurl-toolbar-host">
-                {noteType === "webView" && <BlockUrlToolbar noteId={noteId} />}
+                {noteType === "webView" && !toolbar.host && <BlockUrlControl noteId={noteId} standalone={true} />}
             </div>
         )
     }

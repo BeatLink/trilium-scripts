@@ -49,4 +49,20 @@ function openExternal(url) {
     window.electronApi?.shell?.openExternal(url);
 }
 
-module.exports = { getInboxNoteId, saveUrlToInbox, openExternal };
+// ---------------------------------------------------------------------------
+// Deletes the Web View note itself — the counterpart to saveUrlToInbox, for
+// clearing out saved links once you're done with them. Trilium's delete is soft,
+// so the note stays recoverable from Recent Changes. The parent is read before
+// the delete and activated after, since the tab would otherwise be left sitting
+// on a note that no longer exists.
+// ---------------------------------------------------------------------------
+async function deleteWebViewNote(noteId) {
+    const note = await api.getNote(noteId);
+    const parentNoteId = note?.getParentNoteIds()[0];
+
+    await api.runOnBackend((noteId) => api.getNote(noteId).deleteNote(), [noteId]);
+
+    if (parentNoteId) await api.activateNote(parentNoteId);
+}
+
+module.exports = { getInboxNoteId, saveUrlToInbox, openExternal, deleteWebViewNote };

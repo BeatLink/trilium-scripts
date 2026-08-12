@@ -6,7 +6,9 @@ list your Firefox extension uses, applied to the pages you browse inside Trilium
 
 - A page you have blocked is replaced with BlockURL's block screen, with its Unblock button.
 - Links and images pointing at blocked URLs are hidden on every page you browse.
-- A toolbar button above Web View notes blocks or unblocks the page you are looking at.
+- A button blocks or unblocks the page you are looking at. With
+  [web-preview@beatlink](../web-preview@beatlink/) installed it joins that addon's toolbar; without
+  it, this addon renders a minimal row of its own above the page.
 
 ## Requirements
 
@@ -42,6 +44,10 @@ list your Firefox extension uses, applied to the pages you browse inside Trilium
   read the same way, via the same poll.
 - Requests go through `api.runAsyncOnBackendWithManualTransactionHandling()`, so the `fetch` runs in
   the Trilium server's Node process rather than the renderer.
+- The Block button registers itself on `window.webViewToolbar.extras`, web-preview's extension
+  point, and is rendered by that toolbar when it is present. Whichever of the two widgets loads
+  first creates the shared object, and `toolbar.host` is only read at render time, so the two
+  addons work in either load order and either one alone.
 
 ## Known caveats
 

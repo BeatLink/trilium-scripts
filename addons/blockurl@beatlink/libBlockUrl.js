@@ -72,8 +72,15 @@ async function request(note, method, endpoint, payload) {
         // A missing or wrong API key redirects to the server's login page instead of failing, so
         // redirects are left unfollowed — otherwise that arrives as an HTML body and fails as a
         // JSON parse error several steps away from the actual cause.
-        const response = await fetch(url, { method: verb, headers, body, redirect: "manual" });
-        if (!response.ok) throw new Error(`sync server returned ${response.status}`);
+        let response;
+        try {
+            response = await fetch(url, { method: verb, headers, body, redirect: "manual" });
+        } catch (error) {
+            // Trilium reports a backend throw as its message alone, so the URL and the errno have
+            // to be in the message or all that reaches the console is "fetch failed".
+            throw new Error(`${url} unreachable (${error.cause?.code || error.message})`);
+        }
+        if (!response.ok) throw new Error(`${url} returned ${response.status}`);
         return response.json();
     }, [`${base}/${endpoint}`, config.apiKey || "", method, payload ? JSON.stringify(payload) : null]);
 }

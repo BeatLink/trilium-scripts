@@ -1,11 +1,11 @@
 {
     "id": "web-preview@beatlink",
     "name": "Web Preview",
-    "description": "Browse-and-save toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type.",
+    "description": "Browse-and-save toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
