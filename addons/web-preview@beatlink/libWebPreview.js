@@ -4,30 +4,6 @@
 // Library only — no #run attribute. require()'d by webViewToolbarWidget.js
 
 // ---------------------------------------------------------------------------
-// Finds the Inbox note (looks for #inbox label first, falls back to a note
-// titled "Inbox" directly under root). Adjust to taste.
-// ---------------------------------------------------------------------------
-async function getInboxNoteId() {
-    let results = await api.searchForNotes("#inbox");
-    if (results.length > 0) return results[0].noteId;
-
-    results = await api.searchForNotes('note.title = "Inbox" AND note.parents.noteId = "root"');
-    if (results.length > 0) return results[0].noteId;
-
-    throw new Error("Couldn't find an Inbox note. Add a #inbox label to one, or edit getInboxNoteId().");
-}
-
-// ---------------------------------------------------------------------------
-// Saves a URL to the Inbox as a new Web View note (so opening it later shows
-// the embedded page directly, toolbar and all — same as the note you're
-// browsing from). Falls back gracefully if your Trilium version's note
-// creation API differs — see README "Known caveats".
-// ---------------------------------------------------------------------------
-async function saveUrlToInbox(url, title) {
-    return createWebViewNote(await getInboxNoteId(), url, title);
-}
-
-// ---------------------------------------------------------------------------
 // Creates a Web View note for `url` under `parentNoteId` and returns its noteId.
 // ---------------------------------------------------------------------------
 async function createWebViewNote(parentNoteId, url, title) {
@@ -54,8 +30,8 @@ function openExternal(url) {
 }
 
 // ---------------------------------------------------------------------------
-// Deletes the Web View note itself — the counterpart to saveUrlToInbox, for
-// clearing out saved links once you're done with them. Trilium's delete is soft,
+// Deletes the Web View note itself, for clearing out saved links once you're
+// done with them. Trilium's delete is soft,
 // so the note stays recoverable from Recent Changes. The parent is read before
 // the delete and activated after, since the tab would otherwise be left sitting
 // on a note that no longer exists.
@@ -103,4 +79,4 @@ function parseLinkMessage(message) {
     }
 }
 
-module.exports = { getInboxNoteId, saveUrlToInbox, createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage };
+module.exports = { createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage };

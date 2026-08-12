@@ -1,7 +1,7 @@
 # Web Preview
 
-Browse-and-save toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
-separate popup window, this adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser /
+Browsing toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
+separate popup window, this adds a small toolbar (Back / Forward / Open in Browser /
 Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
 element Trilium already renders for that note type.
 
@@ -12,12 +12,7 @@ element Trilium already renders for that note type.
 - The widget finds that page's `<webview>` DOM element and calls its built-in `goBack()` /
   `goForward()` / `getURL()` / `getTitle()` methods directly — no IPC needed for navigation, since
   those methods are exposed on the element itself.
-- **Save to Inbox** creates the note through `api.runOnBackend()`; **Open in Browser** uses the
-  renderer's `window.electronApi.shell` bridge.
-- Saving creates a **new Web View note** in your Inbox (not just a plain text link) — so anything
-  you save is itself immediately re-browsable with the same toolbar. You can chain: open a bookmark
-  → click through to another page → save it → open that saved note later → click through again →
-  save again.
+- **Open in Browser** uses the renderer's `window.electronApi.shell` bridge.
 - **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.
@@ -61,5 +56,3 @@ Block / Unblock button.
   JavaScript still move the current note's page as before.
 - Every intercepted click creates a note, so a long browsing session leaves a long trail of child
   notes. Use **Delete Note** to prune them.
-- `saveUrlToInbox` looks for an Inbox note via a `#inbox` label first, falling back to a note titled
-  "Inbox" directly under root. Edit `getInboxNoteId()` in `libWebPreview.js` if your setup differs.

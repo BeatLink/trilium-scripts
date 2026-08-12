@@ -1,6 +1,6 @@
 /*
-    Shows a small toolbar (Back / Forward / Save to Inbox / Open in Browser /
-    Delete Note) above any note of type "Web View". Drives the *actual* Electron <webview>
+    Shows a small toolbar (Back / Forward / Open in Browser / Delete Note)
+    above any note of type "Web View". Drives the *actual* Electron <webview>
     element that Trilium's built-in Web View note type already renders —
     no separate popup window needed.
 */
@@ -22,7 +22,6 @@ function getWebviewEl() {
 
 function WebViewToolbar({ noteId }) {
     const [state, setState] = useState({ found: false, canGoBack: false, canGoForward: false, url: "" })
-    const [saveStatus, setSaveStatus] = useState(null)
     const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
@@ -89,25 +88,6 @@ function WebViewToolbar({ noteId }) {
         if (wv?.canGoForward()) wv.goForward()
     }
 
-    async function handleSave() {
-        const wv = getWebviewEl()
-        if (!wv) return
-        const url = wv.getURL()
-        const title = wv.getTitle() || url
-
-        setSaveStatus("saving")
-        try {
-            const lib = require("libWebPreview.js")
-            await lib.saveUrlToInbox(url, title)
-            setSaveStatus("saved")
-        } catch (err) {
-            setSaveStatus("failed")
-            console.error(err)
-        } finally {
-            setTimeout(() => setSaveStatus(null), 1500)
-        }
-    }
-
     function handleExternal() {
         const wv = getWebviewEl()
         if (!wv) return
@@ -132,11 +112,6 @@ function WebViewToolbar({ noteId }) {
     // No <webview> means browser Trilium (an <iframe>), where none of these controls apply.
     if (!state.found) return null
 
-    const saveLabel = saveStatus === "saving" ? "Saving…"
-        : saveStatus === "saved" ? "Saved ✓"
-        : saveStatus === "failed" ? "Save failed"
-        : "Save to Inbox"
-
     return (
         <div
             className="web-view-toolbar"
@@ -157,11 +132,6 @@ function WebViewToolbar({ noteId }) {
             <div style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {state.url}
             </div>
-            <button
-                disabled={saveStatus === "saving"}
-                style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#4b6fff", color: "white", fontSize: "12px" }}
-                onClick={handleSave}
-            >{saveLabel}</button>
             <button
                 style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#eee", fontSize: "12px" }}
                 onClick={handleExternal}
