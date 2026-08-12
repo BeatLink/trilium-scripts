@@ -160,6 +160,21 @@ function sanitizeRequestHeaders(headers) {
     return clean
 }
 
+// Node reports every transport failure as a bare "fetch failed" and puts the
+// reason -- DNS, refused connection, TLS trust -- in the cause chain, so the
+// chain is unwrapped here rather than thrown away.
+function describeFetchError(error) {
+    const parts = []
+    let current = error
+    while (current && parts.length < 4) {
+        const code = current.code ? ` (${current.code})` : ""
+        const described = `${current.message || current}${code}`
+        if (!parts.includes(described)) parts.push(described)
+        current = current.cause
+    }
+    return parts.join(" <- ")
+}
+
 // Forwards one request and returns it as JSON rather than streaming it back
 // verbatim, because the widget only needs the status, the content type and a
 // text body -- feeds are XML or JSON and the FreshRSS API answers in JSON or
@@ -181,13 +196,18 @@ async function forward(payload) {
     }
 
     const method = payload.method === "POST" ? "POST" : "GET"
-    const response = await fetch(target.href, {
-        method,
-        headers: sanitizeRequestHeaders(payload.headers),
-        body: method === "POST" ? payload.body : undefined,
-        redirect: "follow",
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-    })
+    let response
+    try {
+        response = await fetch(target.href, {
+            method,
+            headers: sanitizeRequestHeaders(payload.headers),
+            body: method === "POST" ? payload.body : undefined,
+            redirect: "follow",
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+        })
+    } catch (error) {
+        throw new Error(`Could not reach ${target.host}: ${describeFetchError(error)}`)
+    }
 
     const body = await response.text()
     if (body.length > MAX_RESPONSE_BYTES) throw new Error("Response is too large to read")
@@ -389,6 +409,9 @@ async function handle() {
                 return sendJson(400, { error: `Unknown action: ${action}` })
         }
     } catch (e) {
+        // Also logged server-side, so a failure is diagnosable from Trilium's
+        // own log rather than only from the browser's network tab.
+        api.log(`rss-reader: ${action} failed: ${e.message}`)
         return sendJson(500, { error: e.message })
     }
 }

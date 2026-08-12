@@ -496,7 +496,11 @@ export default function RssReader() {
 
         const article = data?.articles[articleId]
         if (data?.feeds[article?.feedId]?.source !== "freshrss") return
-        rss.pushState(data.settings, articleId, field, value).catch(() => {})
+        // Reported rather than swallowed: the change is safe either way, since
+        // it is already queued for the next sync, but a push that keeps failing
+        // is something to know about rather than a silent console error.
+        rss.pushState(data.settings, articleId, field, value)
+            .catch(error => setStatus({ text: "Saved here; still queued for FreshRSS.", error: error.message }))
     }, [data, reload])
 
     const markAllRead = useCallback(async articleIds => {
