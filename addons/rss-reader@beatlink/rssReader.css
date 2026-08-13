@@ -102,45 +102,27 @@
 
 /* --- reader -------------------------------------------------------------- */
 
+/* Expanded in place under its row, indented to line up with the row's title.
+   No border of its own: .rss-item provides it. */
 .rss-reader {
-    margin-bottom: 16px;
-    border: 1px solid var(--main-border-color);
-    border-radius: 8px;
-    overflow: hidden;
+    padding: 0 0 14px 30px;
 }
 
+/* Stuck to the top of the pane so Close stays reachable partway down a long
+   article, instead of scrolling away with the row it expanded from. */
 .rss-reader-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--main-border-color);
-    background: var(--accented-background-color, transparent);
-}
-
-.rss-reader-meta {
-    flex: 1;
-    min-width: 0;
-}
-
-.rss-reader-title {
-    font-weight: 600;
-}
-
-.rss-reader-sub {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--muted-text-color, gray);
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 8px;
+    background: var(--rss-open-bg, var(--main-background-color, #fff));
 }
 
-/* Capped so a long article scrolls inside the pane instead of pushing the
-   list it was opened from off the screen. */
 .rss-reader-body {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 12px 14px;
     line-height: 1.55;
 }
 
@@ -187,12 +169,25 @@
 
 /* --- article rows -------------------------------------------------------- */
 
+/* Wraps the row and, when it is expanded, the article body under it, so the
+   two read as one block. */
+.rss-item {
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+/* Held in a variable rather than set directly, because the sticky action bar
+   inside has to paint the same colour and has to be opaque: a translucent tint
+   there would let the article text scroll through it. */
+.rss-item-open {
+    --rss-open-bg: var(--accented-background-color, var(--main-background-color, #fff));
+    background: var(--rss-open-bg);
+}
+
 .rss-row {
     display: flex;
     align-items: flex-start;
     gap: 10px;
     padding: 10px 0;
-    border-bottom: 1px solid var(--main-border-color);
 }
 
 /* Read rows keep their place and only recede, so marking one does not make the

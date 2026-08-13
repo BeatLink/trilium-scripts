@@ -62,6 +62,12 @@ function folderOf(feed) {
 
 // --- reader -----------------------------------------------------------------
 
+// The body of an opened article, expanded in place under the row it belongs to.
+// It carries no title of its own, because the row it expands from is directly
+// above it.
+//
+// The action bar sticks to the top of the pane, so Close and Mark unread stay
+// reachable partway down a long article instead of scrolling away with the row.
 function Reader({ article, feed, read, starred, onClose, onToggle }) {
     const content = useMemo(
         () => rss.sanitizeHtml(article.content, article.url || feed?.siteUrl || ""),
@@ -71,14 +77,6 @@ function Reader({ article, feed, read, starred, onClose, onToggle }) {
     return (
         <div class="rss-reader">
             <div class="rss-reader-bar">
-                <div class="rss-reader-meta">
-                    <div class="rss-reader-title">{article.title}</div>
-                    <div class="rss-reader-sub">
-                        <span>{feed?.title || ""}</span>
-                        {article.author && <span>{article.author}</span>}
-                        <span>{formatAge(article.publishedAt)}</span>
-                    </div>
-                </div>
                 <button class="rss-btn" onClick={() => onToggle(article.id, "starred", !starred)}>
                     {starred ? "Unstar" : "Star"}
                 </button>
@@ -97,55 +95,81 @@ function Reader({ article, feed, read, starred, onClose, onToggle }) {
 
 // --- articles ---------------------------------------------------------------
 
-function ArticleRow({ article, feedTitle, read, starred, onOpen, onToggle }) {
+function ArticleRow({ article, feed, read, starred, open, onOpen, onToggle }) {
     // Parsing an article body is not free and the list re-renders on every
     // toggle, so the preview is built once per article rather than per render.
     const preview = useMemo(() => previewOf(article.content), [article.id])
 
     return (
-        <div class={`rss-row ${read ? "rss-row-read" : ""}`}>
-            <button
-                class={`rss-star ${starred ? "rss-star-on" : ""}`}
-                title={starred ? "Unstar" : "Star"}
-                onClick={() => onToggle(article.id, "starred", !starred)}>
-                {starred ? "★" : "☆"}
-            </button>
+        <div class={`rss-item ${open ? "rss-item-open" : ""}`}>
+            <div class={`rss-row ${read ? "rss-row-read" : ""}`}>
+                <button
+                    class={`rss-star ${starred ? "rss-star-on" : ""}`}
+                    title={starred ? "Unstar" : "Star"}
+                    onClick={() => onToggle(article.id, "starred", !starred)}>
+                    {starred ? "★" : "☆"}
+                </button>
 
-            <div class="rss-row-body">
-                <button class="rss-row-title" onClick={() => onOpen(article)}>{article.title}</button>
-                <div class="rss-row-meta">
-                    <span class="rss-row-feed">{feedTitle}</span>
-                    <span>{formatAge(article.publishedAt)}</span>
-                    {article.author && <span>{article.author}</span>}
+                <div class="rss-row-body">
+                    <button class="rss-row-title" aria-expanded={open ? "true" : "false"}
+                        onClick={() => onOpen(article)}>{article.title}</button>
+                    <div class="rss-row-meta">
+                        <span class="rss-row-feed">{feed?.title || ""}</span>
+                        <span>{formatAge(article.publishedAt)}</span>
+                        {article.author && <span>{article.author}</span>}
+                    </div>
+                    {/* The preview only says what the body would, so it steps
+                        aside once the body itself is on screen. */}
+                    {!open && <div class="rss-row-preview">{preview}</div>}
                 </div>
-                <div class="rss-row-preview">{preview}</div>
+
+                <button
+                    class={`rss-mark ${read ? "rss-mark-on" : ""}`}
+                    title={read ? "Mark unread" : "Mark read"}
+                    onClick={() => onToggle(article.id, "read", !read)}>
+                    {read ? "Read" : "Mark read"}
+                </button>
             </div>
 
-            <button
-                class={`rss-mark ${read ? "rss-mark-on" : ""}`}
-                title={read ? "Mark unread" : "Mark read"}
-                onClick={() => onToggle(article.id, "read", !read)}>
-                {read ? "Read" : "Mark read"}
-            </button>
+            {open && (
+                <Reader
+                    article={article}
+                    feed={feed}
+                    read={read}
+                    starred={starred}
+                    onToggle={onToggle}
+                    onClose={() => onOpen(article)}
+                />
+            )}
         </div>
     )
 }
 
 function ArticlesTab({ data, view, setView, onToggle, onMarkAllRead, busy }) {
-    const [open, setOpen] = useState(null)
+    // Id of the article expanded in place, or null. One at a time, so opening
+    // an article collapses whichever was open.
+    const [openId, setOpenId] = useState(null)
     const [search, setSearch] = useState("")
 
     const { feeds, read, starred } = data
 
     // Filters compose, and each is applied to the same base list so no single
     // choice silently empties the others.
+    //
+    // The expanded article is exempt from the read/starred filter, because
+    // opening it usually marks it read: without this it would drop out of the
+    // Unread list and close itself under the cursor the moment it was opened.
+    // It is not exempt from the feed or search filters, which the reader has to
+    // act on deliberately.
     const visible = useMemo(() => {
         const term = search.trim().toLowerCase()
         const rows = Object.values(data.articles).filter(article => {
             if (view.feed !== "all" && article.feedId !== view.feed) return false
-            if (view.filter === "unread" && read[article.id]) return false
-            if (view.filter === "read" && !read[article.id]) return false
-            if (view.filter === "starred" && !starred[article.id]) return false
+            if (article.id !== openId) {
+                if (view.filter === "unread" && read[article.id]) return false
+                if (view.filter === "read" && !read[article.id]) return false
+                if (view.filter === "starred" && !starred[article.id]) return false
+            }
             if (term && !article.title.toLowerCase().includes(term)) return false
             return true
         })
@@ -154,7 +178,7 @@ function ArticlesTab({ data, view, setView, onToggle, onMarkAllRead, busy }) {
             return view.sortDesc ? diff : -diff
         })
         return rows
-    }, [data.articles, read, starred, view, search])
+    }, [data.articles, read, starred, view, search, openId])
 
     // Scoped by everything except the read filter itself, so it still reports a
     // useful number while looking at the Read list rather than showing 0.
@@ -177,10 +201,12 @@ function ArticlesTab({ data, view, setView, onToggle, onMarkAllRead, busy }) {
     }, [feeds])
 
     // Opening an article is the strongest signal there is that it was read, so
-    // this is on by default, unlike the equivalent for a video.
+    // this is on by default, unlike the equivalent for a video. Clicking the
+    // same article again collapses it, and collapsing marks nothing.
     const openArticle = article => {
-        setOpen(article)
-        if (data.settings.markReadOnOpen && !read[article.id]) onToggle(article.id, "read", true)
+        const opening = openId !== article.id
+        setOpenId(opening ? article.id : null)
+        if (opening && data.settings.markReadOnOpen && !read[article.id]) onToggle(article.id, "read", true)
     }
 
     if (!Object.keys(feeds).length) {
@@ -194,17 +220,6 @@ function ArticlesTab({ data, view, setView, onToggle, onMarkAllRead, busy }) {
 
     return (
         <div class="rss-articles">
-            {open && (
-                <Reader
-                    article={data.articles[open.id] || open}
-                    feed={feeds[open.feedId]}
-                    read={!!read[open.id]}
-                    starred={!!starred[open.id]}
-                    onToggle={onToggle}
-                    onClose={() => setOpen(null)}
-                />
-            )}
-
             <div class="rss-toolbar">
                 <input
                     class="rss-search"
@@ -253,9 +268,10 @@ function ArticlesTab({ data, view, setView, onToggle, onMarkAllRead, busy }) {
                 <ArticleRow
                     key={article.id}
                     article={article}
-                    feedTitle={feeds[article.feedId]?.title || ""}
+                    feed={feeds[article.feedId]}
                     read={!!read[article.id]}
                     starred={!!starred[article.id]}
+                    open={openId === article.id}
                     onOpen={openArticle}
                     onToggle={onToggle}
                 />

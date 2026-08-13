@@ -61,8 +61,13 @@ filter silently hiding most of the list on load reads as data loss.
 
 ### Reading an article
 
-Clicking a title opens the article **inside the widget**, with the list still below it. The bar
-carries **Star**, **Mark read/unread**, **Open original**, and **Close**.
+Clicking a title expands the article **in place, under its own row**, so the list keeps its shape
+and the rows around it stay where they were. Clicking the same title again collapses it, and only
+one article is expanded at a time.
+
+The action bar at the top of the expanded body carries **Star**, **Mark read/unread**, **Open
+original**, and **Close**, and sticks to the top while you scroll, so it is still reachable partway
+down a long article.
 
 **Mark Read When Opened** is on by default, since opening an article is a much stronger signal than
 starting a video is.
