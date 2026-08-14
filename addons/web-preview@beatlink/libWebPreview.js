@@ -21,6 +21,18 @@ async function createWebViewNote(parentNoteId, url, title) {
 }
 
 // ---------------------------------------------------------------------------
+// The note a saved page is filed under: the one configured in settings, else
+// whichever note carries an #inbox label.
+// ---------------------------------------------------------------------------
+async function resolveSaveParentNoteId(saveParentNoteId) {
+    if (saveParentNoteId) return saveParentNoteId;
+
+    const results = await api.searchForNotes("#inbox");
+    if (results.length === 0) throw new Error("no Save Location is set and no note is labelled #inbox");
+    return results[0].noteId;
+}
+
+// ---------------------------------------------------------------------------
 // Opens a URL in the system's default browser. Uses the renderer's electronApi
 // bridge — backend scripts can't require("electron"), it isn't on the allowed
 // module list.
@@ -111,4 +123,4 @@ function hostnameOf(url) {
     }
 }
 
-module.exports = { createWebViewNote, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };
+module.exports = { createWebViewNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };

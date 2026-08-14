@@ -1,11 +1,11 @@
 {
     "id": "web-preview@beatlink",
     "name": "Web Preview",
-    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address or searches it with a configured provider.",
+    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address or searches it with a configured provider.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.6.0",
+    "latestVersion": "1.7.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
@@ -140,6 +140,10 @@
                 "child": "lib"
             },
             {
+                "parent": "widget",
+                "child": "libsettings-ui"
+            },
+            {
                 "parent": "root",
                 "child": "newtab"
             },
@@ -205,6 +209,16 @@
                 "from": "newtab",
                 "type": "renderNote",
                 "to": "newtab-page"
+            },
+            {
+                "from": "widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "configNote",
+                "to": "config"
             },
             {
                 "from": "newtab-page",

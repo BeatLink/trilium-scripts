@@ -5,6 +5,8 @@
     no separate popup window needed.
 */
 import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect } from "trilium:preact"
+import { currentNote } from "trilium:api"
+import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
 // Extension point. Another addon (blockurl@beatlink) pushes a preact component into `extras` to
 // have its control rendered as part of this toolbar rather than stacking a second toolbar row
@@ -23,6 +25,16 @@ function getWebviewEl() {
 function WebViewToolbar({ noteId }) {
     const [state, setState] = useState({ found: false, canGoBack: false, canGoForward: false, url: "" })
     const [deleting, setDeleting] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [settings, setSettings] = useState(null)
+
+    useEffect(() => {
+        (async () => {
+            const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
+            if (!schemaNoteId || !configNoteId) return
+            setSettings(await loadSettings(schemaNoteId, configNoteId))
+        })()
+    }, [])
 
     useEffect(() => {
         const lib = require("libWebPreview.js")
@@ -95,6 +107,25 @@ function WebViewToolbar({ noteId }) {
         lib.openExternal(wv.getURL())
     }
 
+    // Files the page being read as a Web View note of its own, outside the browsing
+    // tree the clicked-link notes build up, so it survives pruning that tree.
+    async function handleSave() {
+        const wv = getWebviewEl()
+        if (!wv) return
+
+        setSaving(true)
+        try {
+            const lib = require("libWebPreview.js")
+            const parentNoteId = await lib.resolveSaveParentNoteId(settings?.saveParentNoteId)
+            await lib.createWebViewNote(parentNoteId, wv.getURL(), wv.getTitle() || wv.getURL())
+            api.showMessage("Page saved.")
+        } catch (err) {
+            api.showError(`Could not save this page: ${err.message}`)
+            console.error("web-preview: could not save the page", err)
+        }
+        setSaving(false)
+    }
+
     async function handleDelete() {
         const lib = require("libWebPreview.js")
         if (!await api.showConfirmDialog("Delete this Web View note?")) return
@@ -132,6 +163,14 @@ function WebViewToolbar({ noteId }) {
             <div style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {state.url}
             </div>
+            {settings?.showSaveButton && (
+                <button
+                    title="Save this page as a note"
+                    disabled={saving}
+                    style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#4b6fff", color: "white", fontSize: "12px" }}
+                    onClick={handleSave}
+                >{saving ? "Saving…" : "Save"}</button>
+            )}
             <button
                 style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#eee", fontSize: "12px" }}
                 onClick={handleExternal}

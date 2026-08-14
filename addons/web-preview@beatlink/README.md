@@ -1,7 +1,7 @@
 # Web Preview
 
 Browsing toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
-separate popup window, this adds a small toolbar (Back / Forward / Open in Browser /
+separate popup window, this adds a small toolbar (Back / Forward / Save / Open in Browser /
 Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
 element Trilium already renders for that note type. A **New Tab** button in the launchbar starts
 a browsing session from an address or a web search.
@@ -35,6 +35,9 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Default Search Provider** — which one the box starts on. The dropdown still lets you pick
   another per search.
 - **New Tab Location** / **Specific Note** — where a new tab's Web View note is created.
+- **Save Button** — off by default; turning it on adds the Save button to the toolbar.
+- **Save Location** — the note Save files pages under. Left empty it uses whichever note carries an
+  `#inbox` label, and Save reports an error if there is none.
 
 ## How it works
 
@@ -47,6 +50,9 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.
+- **Save** files the page you are currently reading as a Web View note under the Save Location,
+  taking the page's own title. It is the way to keep a page you found while browsing, since the
+  child notes link interception creates live inside the browsing tree and get pruned with it.
 - **Delete Note** is the other end of that loop: it deletes the Web View note you are currently
   reading, for clearing saved links once you're done with them. It asks for confirmation first,
   and Trilium's delete is soft, so the note stays recoverable from Recent Changes. The note's

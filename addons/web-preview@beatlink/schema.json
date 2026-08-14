@@ -36,5 +36,17 @@
         "label": "Specific Note",
         "description": "Used when New Tab Location is set to \"Under a specific note\".",
         "default": ""
+    },
+    "showSaveButton": {
+        "type": "boolean",
+        "label": "Save Button",
+        "description": "Adds a Save button to the toolbar that files the page you are reading as a Web View note somewhere permanent.",
+        "default": false
+    },
+    "saveParentNoteId": {
+        "type": "note",
+        "label": "Save Location",
+        "description": "Where Save files the note. Left empty, it uses the note labelled #inbox.",
+        "default": ""
     }
 }
