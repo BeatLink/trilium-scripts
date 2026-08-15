@@ -3,7 +3,7 @@
 Stateless, schema-driven settings engine for TriliumNext addons — inspired by Cinnamon's
 `settings-schema.json` model. An addon defines its own `schema.json` (what fields exist, their type,
 label and description), ships their values in a `defaults.json`, and keeps its own persisted
-`config.json` (a [persistent note](../../addons/trilium-addon-manager@beatlink/README.md#persistence));
+`config.json` (a [persistent note](../../addons/trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence));
 this library merges that chain of **sources** into the runtime values, writes the user's changes back
 to the last one, and can render a settings form from the same schema.
 
@@ -533,7 +533,7 @@ into a shared library function that reads, patches, and writes settings, not jus
 
 `config.json` is persistent, so TAM never overwrites it; `defaults.json` is structural, so every
 update replaces it with whatever the shipped values have become. Reconciling those two on update is
-**[TAM's](../../addons/trilium-addon-manager@beatlink/README.md#per-setting-review-manifestsettings)
+**[TAM's](../../addons/trilium-addon-manager@beatlink/ARCHITECTURE.md#per-setting-review-manifestsettings)
 job, not this library's**, and needs no code in your addon. Declare the trio in your manifest, and
 link the config note to its defaults source:
 
