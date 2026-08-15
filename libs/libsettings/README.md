@@ -458,7 +458,7 @@ category/tab nav as the schema fields, so it doesn't need a second page or a sec
     schemaNoteId={schemaNoteId}
     configNoteId={configNoteId}
     extraPanels={[
-        { category: "Settings", tab: "Workflow Setup", render: () => <MySetupPanel /> }
+        { category: "Settings", tab: "Maintenance", render: () => <MyMaintenancePanel /> }
     ]}
 />
 ```
@@ -469,8 +469,8 @@ joins the given `category`'s tab row (after the schema tabs already there); when
 falls under the first declared category, exactly as a field would. Give each panel its own `tab` label
 — a panel sharing a label with a schema tab would collide. `extraPanels` is purely additive: omit it
 (the default `[]`) and the form behaves exactly as documented above. See
-[`agenda@beatlink`](../agenda@beatlink/)'s `profileEditor.jsx` for a real consumer (Workflow Setup +
-the Organize-note picker injected as a Settings tab).
+[`agenda-organize@beatlink`](../../addons/agenda-organize@beatlink/)'s `organizeEditor.jsx` for a
+real consumer (the Organize-note picker injected as a Settings tab).
 
 #### `only` — embedding a single tab
 
