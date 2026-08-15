@@ -699,9 +699,9 @@
        nothing on screen indicating work was happening. */
     /* Activity log ------------------------------------------------------------ */
     /* A page over the whole widget rather than a docked panel: it opens itself
-       whenever something is running, and is dismissed from its own header, Esc,
-       or the Close in its footer once the work is done. Only the body scrolls -
-       the header and footer stay put, so the way out is always on screen. */
+       whenever something is running, and is dismissed from its header or Esc.
+       Only the body scrolls - the header stays put, so the way out and the
+       "nothing is running" state are always on screen. */
     & .TAM-log {
         position: absolute !important;
         inset: 0 !important;
@@ -731,7 +731,9 @@
         margin-right: auto !important;
     }
 
-    & .TAM-log-clear {
+    /* Clear and Close are the same kind of thing - both live in the header, both
+       styled alike. */
+    & .TAM-log-action {
         cursor: pointer !important;
         border: 1px solid #334155 !important;
         border-radius: 6px !important;
@@ -744,32 +746,6 @@
             color: #e2e8f0 !important;
             border-color: #64748b !important;
         }
-    }
-
-    & .TAM-log-close {
-        cursor: pointer !important;
-        border: none !important;
-        background: transparent !important;
-        color: #94a3b8 !important;
-        padding: 0 4px !important;
-        font-size: 20px !important;
-        line-height: 1 !important;
-
-        &:hover {
-            color: #e2e8f0 !important;
-        }
-    }
-
-    & .TAM-log-foot {
-        flex: 0 0 auto !important;
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        gap: 14px !important;
-        padding: 12px 16px !important;
-        border-top: 1px solid #1e293b !important;
-        color: #94a3b8 !important;
-        font-size: 13px !important;
     }
 
     & .TAM-log-body {

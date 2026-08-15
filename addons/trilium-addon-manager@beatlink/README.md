@@ -77,9 +77,9 @@ itself would risk taking down the one thing that could otherwise fix it.
   data. See [Diagnostics](ARCHITECTURE.md#diagnostics).
 - **Activity log** — a full-screen page recording every operation, in place of the old blocking
   spinner overlay: each note installed, each prompt queued, each update check, each repair. It
-  **opens itself whenever something starts running** so you can watch it work, and once nothing is
-  running it prompts you to close it. Dismiss with the ✕, **Esc**, or the footer's Close — dismissing
-  never cancels anything, and the log keeps filling up behind it. Reopen any time with **Show
+  **opens itself whenever something starts running** so you can watch it work, and says so in its
+  header once nothing is running. Clear and Close both sit in that header, and **Esc** closes too —
+  dismissing never cancels anything, and the log keeps filling up behind it. Reopen any time with **Show
   Activity Log** in the Settings view. Only the log scrolls, never the page.
 
 ---

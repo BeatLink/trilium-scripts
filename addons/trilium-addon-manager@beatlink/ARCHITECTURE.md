@@ -652,13 +652,14 @@ It renders as a **full-screen page over the widget**, and it is **dismissable**:
   runs, so dismissing it mid-run sticks until the next thing you press. Dismissing never cancels
   anything; the log keeps filling up behind it. (`browse-catalog` is excluded, since
   `CatalogBrowseView` draws its own inline spinner.)
-- While work is in flight the header carries the spinner and the current command. **Once nothing is
-  running, a footer appears prompting you to close it** — a page that opened itself has to say when
+- While work is in flight the header carries the spinner and the current command; once nothing is
+  running it reads **"Activity log — nothing is running"**. A page that opened itself has to say when
   it's done, or it just sits over the UI looking like something is still happening.
-- Close from the header ✕, **Esc**, or the footer's Close. Reopen any time from **Show Activity Log**
-  in the Settings view's maintenance actions.
+- The header carries both actions, **Clear** and **Close**, styled alike. **Esc** also closes.
+  Reopen any time from **Show Activity Log** in the Settings view's maintenance actions.
 
-Only the log's body scrolls — its header and footer stay put, so the way out is always on screen.
+Only the log's body scrolls — the header stays put, so the way out and the idle state are always on
+screen.
 `.TAM-body` is a flex column (header, scrolling `main`) so the page itself never scrolls either; the
 `min-height: 0` on `main` is what makes that work, since a flex item defaults to `min-height: auto`
 and would otherwise grow the column past the viewport.

@@ -183,14 +183,15 @@ function ActivityLog({ busyLabel, onDismiss }) {
 
     return (
         <div className="TAM-log">
+            {/* Everything lives in the header: the page opens itself when work
+                starts, so it has to say when it's finished too - otherwise it
+                sits over the UI looking like something is still happening. */}
             <div className="TAM-log-head">
                 {busyLabel
                     ? <><Spinner /><span>{busyLabel}…</span></>
-                    : <span>Activity log</span>}
-                <button className="TAM-log-clear" onClick={() => libTAMjs.clearLog()}>Clear</button>
-                <button className="TAM-log-close" title="Dismiss (Esc)" onClick={onDismiss}>
-                    <i className="bx bx-x"></i>
-                </button>
+                    : <span>Activity log — nothing is running</span>}
+                <button className="TAM-log-action" onClick={() => libTAMjs.clearLog()}>Clear</button>
+                <button className="TAM-log-action" title="Dismiss (Esc)" onClick={onDismiss}>Close</button>
             </div>
             <div className="TAM-log-body" ref={bodyRef}>
                 {entries.length === 0
@@ -202,15 +203,6 @@ function ActivityLog({ busyLabel, onDismiss }) {
                         </div>
                     ))}
             </div>
-            {/* The page opens itself when work starts, so it also has to say when
-                it's finished - otherwise it just sits there over the UI looking
-                like something is still happening. */}
-            {!busyLabel && (
-                <div className="TAM-log-foot">
-                    <span>Finished — nothing is running.</span>
-                    <TamButton icon="bx bx-check" text="Close" onClick={onDismiss} />
-                </div>
-            )}
         </div>
     )
 }
