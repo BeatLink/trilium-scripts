@@ -635,11 +635,24 @@ debugging.
 
 `ActivityLog` subscribes to the bus rather than receiving entries as props, so a line written deep
 inside `resolveNotes` appears the moment it is written without every caller threading progress state
-back out. The panel is docked at the bottom of the widget at a fixed `30vh`, and `.TAM-body` is a
-flex column — header, scrolling `main`, log — so the page itself never scrolls: `main` and the log
-each scroll inside their own box, and the log stays visible while a long run writes into it. The
-`min-height: 0` on `main` is what makes that work; a flex item defaults to `min-height: auto` and
-would otherwise push the log off-screen.
+back out.
+
+It renders as a **full-screen page over the widget**, and it is **dismissable**:
+
+- It **opens itself whenever activity starts** — on the transition into a command, not while one
+  runs, so dismissing it mid-run sticks until the next thing you press. Dismissing never cancels
+  anything; the log keeps filling up behind it. (`browse-catalog` is excluded, since
+  `CatalogBrowseView` draws its own inline spinner.)
+- While work is in flight the header carries the spinner and the current command. **Once nothing is
+  running, a footer appears prompting you to close it** — a page that opened itself has to say when
+  it's done, or it just sits over the UI looking like something is still happening.
+- Close from the header ✕, **Esc**, or the footer's Close. Reopen any time from **Show Activity Log**
+  in the Settings view's maintenance actions.
+
+Only the log's body scrolls — its header and footer stay put, so the way out is always on screen.
+`.TAM-body` is a flex column (header, scrolling `main`) so the page itself never scrolls either; the
+`min-height: 0` on `main` is what makes that work, since a flex item defaults to `min-height: auto`
+and would otherwise grow the column past the viewport.
 
 ---
 

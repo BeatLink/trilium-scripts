@@ -36,10 +36,9 @@
         padding: 0 !important;
     }
 
-    /* A column the height of the viewport: the header and the log keep to their
-       own size and the content between them takes the rest. Nothing scrolls the
-       page itself - main and the log each scroll inside their own box, so the
-       log stays put and visible while a long run writes into it. */
+    /* A column the height of the viewport: the header keeps to its own size and
+       the content takes the rest. The page itself never scrolls - main scrolls
+       inside its own box, as does the activity log when it's open over the top. */
     display: flex !important;
     flex-direction: column !important;
     position: relative !important;
@@ -173,7 +172,8 @@
     /* Main --------------------------------------------------------------- */
     & main {
         /* min-height:0 is what actually lets this shrink and scroll - a flex item
-           defaults to min-height:auto and would otherwise push the log off-screen. */
+           defaults to min-height:auto, which would grow the column past the
+           viewport and hand the scrolling back to the page. */
         flex: 1 1 auto !important;
         min-height: 0 !important;
         overflow-y: auto !important;
@@ -667,16 +667,17 @@
        reload, but the gap before that (or before a lighter refresh) had
        nothing on screen indicating work was happening. */
     /* Activity log ------------------------------------------------------------ */
+    /* A page over the whole widget rather than a docked panel: it opens itself
+       whenever something is running, and is dismissed from its own header, Esc,
+       or the Close in its footer once the work is done. Only the body scrolls -
+       the header and footer stay put, so the way out is always on screen. */
     & .TAM-log {
-        flex: 0 0 auto !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 100 !important;
         display: flex !important;
         flex-direction: column !important;
-        /* A slice of the viewport, never a share of the content: the log is the
-           same size whether it holds two lines or five hundred. */
-        height: 30vh !important;
-        min-height: 120px !important;
         overflow: hidden !important;
-        border-top: 1px solid #cbd5e1 !important;
         background: #0f172a !important;
     }
 
@@ -686,15 +687,20 @@
         flex-direction: row !important;
         align-items: center !important;
         gap: 10px !important;
-        padding: 8px 16px !important;
+        padding: 14px 16px !important;
         border-bottom: 1px solid #1e293b !important;
         color: #e2e8f0 !important;
-        font-size: 13px !important;
+        font-size: 14px !important;
         font-weight: 600 !important;
     }
 
+    /* Whatever the head is showing - the busy label or the idle title - sits
+       left and pushes the buttons to the right edge. */
+    & .TAM-log-head > span {
+        margin-right: auto !important;
+    }
+
     & .TAM-log-clear {
-        margin-left: auto !important;
         cursor: pointer !important;
         border: 1px solid #334155 !important;
         border-radius: 6px !important;
@@ -707,6 +713,32 @@
             color: #e2e8f0 !important;
             border-color: #64748b !important;
         }
+    }
+
+    & .TAM-log-close {
+        cursor: pointer !important;
+        border: none !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        padding: 0 4px !important;
+        font-size: 20px !important;
+        line-height: 1 !important;
+
+        &:hover {
+            color: #e2e8f0 !important;
+        }
+    }
+
+    & .TAM-log-foot {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 14px !important;
+        padding: 12px 16px !important;
+        border-top: 1px solid #1e293b !important;
+        color: #94a3b8 !important;
+        font-size: 13px !important;
     }
 
     & .TAM-log-body {

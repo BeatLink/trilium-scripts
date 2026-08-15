@@ -75,11 +75,12 @@ itself would risk taking down the one thing that could otherwise fix it.
   An addon whose source has gone unreachable offers **Uninstall** alongside the repoint, and that
   goes through the normal uninstall flow, so you're still asked about dangling references and saved
   data. See [Diagnostics](ARCHITECTURE.md#diagnostics).
-- **Activity log** — a log panel docked at the bottom of the widget, in place of the old blocking
-  spinner overlay. Every operation writes to it — each note installed, each prompt queued, each
-  repair — so a long update-all says what it is doing rather than covering the screen. The widget
-  fits the viewport: the log keeps to its own slice of it and scrolls inside itself, as does the
-  content above it, so the page never scrolls as a whole.
+- **Activity log** — a full-screen page recording every operation, in place of the old blocking
+  spinner overlay: each note installed, each prompt queued, each update check, each repair. It
+  **opens itself whenever something starts running** so you can watch it work, and once nothing is
+  running it prompts you to close it. Dismiss with the ✕, **Esc**, or the footer's Close — dismissing
+  never cancels anything, and the log keeps filling up behind it. Reopen any time with **Show
+  Activity Log** in the Settings view. Only the log scrolls, never the page.
 
 ---
 

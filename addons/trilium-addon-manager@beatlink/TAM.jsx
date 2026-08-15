@@ -157,18 +157,29 @@ function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
 // It subscribes to lib-tam's log bus rather than being handed entries as props,
 // so a line written deep inside a sync appears the moment it is written, without
 // every caller having to thread progress state back out.
-function ActivityLog({ busyLabel }) {
+function ActivityLog({ busyLabel, onDismiss }) {
     const [entries, setEntries] = useState(() => libTAMjs.getLogEntries())
     const bodyRef = useRef(null)
 
     useEffect(() => libTAMjs.subscribeToLog(() => setEntries(libTAMjs.getLogEntries())), [])
 
-    // Follow the tail as lines arrive. Scrolling the log's own box, never the
-    // page: the panel is a fixed slice of the viewport.
+    // Follow the tail as lines arrive, scrolling the log's own box rather than
+    // the page.
     useEffect(() => {
         const body = bodyRef.current
         if (body) body.scrollTop = body.scrollHeight
     }, [entries])
+
+    // Dismissable while work is still running: closing the page only stops you
+    // watching it, it never cancels the command, and the log keeps filling up
+    // behind it.
+    useEffect(() => {
+        function onKeyDown(e) {
+            if (e.key === "Escape") onDismiss()
+        }
+        document.addEventListener("keydown", onKeyDown)
+        return () => document.removeEventListener("keydown", onKeyDown)
+    }, [onDismiss])
 
     return (
         <div className="TAM-log">
@@ -177,6 +188,9 @@ function ActivityLog({ busyLabel }) {
                     ? <><Spinner /><span>{busyLabel}…</span></>
                     : <span>Activity log</span>}
                 <button className="TAM-log-clear" onClick={() => libTAMjs.clearLog()}>Clear</button>
+                <button className="TAM-log-close" title="Dismiss (Esc)" onClick={onDismiss}>
+                    <i className="bx bx-x"></i>
+                </button>
             </div>
             <div className="TAM-log-body" ref={bodyRef}>
                 {entries.length === 0
@@ -188,6 +202,15 @@ function ActivityLog({ busyLabel }) {
                         </div>
                     ))}
             </div>
+            {/* The page opens itself when work starts, so it also has to say when
+                it's finished - otherwise it just sits there over the UI looking
+                like something is still happening. */}
+            {!busyLabel && (
+                <div className="TAM-log-foot">
+                    <span>Finished — nothing is running.</span>
+                    <TamButton icon="bx bx-check" text="Close" onClick={onDismiss} />
+                </div>
+            )}
         </div>
     )
 }
@@ -732,7 +755,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onDiagnose, onReinitialize, anyUpdateAvailable
+    onDiagnose, onShowLog, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -786,6 +809,7 @@ function SettingsView({
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton className="btn-ghost" icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-first-aid" text="Run Diagnostics" onClick={onDiagnose} />
+                    <TamButton className="btn-ghost" icon="bx bx-terminal" text="Show Activity Log" onClick={onShowLog} />
                     <TamButton
                         className="btn-ghost"
                         icon="bx bx-trash"
@@ -1078,6 +1102,11 @@ async function resolveDisplayNote() {
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
     const [view, setView] = useState({ type: "list" })
+    // The log is a page rather than a permanent panel: it opens itself when a
+    // command starts, so pressing something still shows you what it's doing, and
+    // is dismissable at any point - including mid-run, which only stops you
+    // watching. Reopen it from the header any time.
+    const [logOpen, setLogOpen] = useState(false)
     // null until diagnostics have been run at least once; [] means a clean run.
     const [diagnostics, setDiagnostics] = useState(null)
     const [reloadRequired, setReloadRequired] = useState(false)
@@ -1094,6 +1123,18 @@ export default function RepoManager() {
         if (!note) return
         dispatch({ command: "load-addons" })
     }, [note])
+
+    // browse-catalog draws its own inline spinner, so it isn't "activity" for
+    // this purpose; everything else is.
+    const isBusy = Boolean(pendingCommand && pendingCommand.command !== "browse-catalog")
+
+    // Opens on the transition into activity rather than while it runs, so a
+    // dismissal mid-run sticks until the next thing you press.
+    const wasBusyRef = useRef(false)
+    useEffect(() => {
+        if (isBusy && !wasBusyRef.current) setLogOpen(true)
+        wasBusyRef.current = isBusy
+    }, [isBusy])
 
     if (!addons) {
         return <div>Loading addons...</div>
@@ -1176,6 +1217,7 @@ export default function RepoManager() {
                 onCheckUpdates={() => dispatch({ command: "check-updates" })}
                 onUpdateAll={() => dispatch({ command: "update-all" })}
                 onDiagnose={() => dispatch({ command: "run-diagnostics" })}
+                onShowLog={() => setLogOpen(true)}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />
         )
@@ -1269,9 +1311,7 @@ export default function RepoManager() {
 
     // browse-catalog shows its own inline Spinner in CatalogBrowseView; for
     // everything else the log's header is what says work is in flight.
-    const busyLabel = pendingCommand && pendingCommand.command !== "browse-catalog"
-        ? (progressDetail || commandLabel(pendingCommand))
-        : null
+    const busyLabel = isBusy ? (progressDetail || commandLabel(pendingCommand)) : null
 
     return (
         <div className="TAM-body">
@@ -1293,7 +1333,7 @@ export default function RepoManager() {
                 )}
                 {bodyContent}
             </main>
-            <ActivityLog busyLabel={busyLabel} />
+            {logOpen && <ActivityLog busyLabel={busyLabel} onDismiss={() => setLogOpen(false)} />}
         </div>
     )
 }
