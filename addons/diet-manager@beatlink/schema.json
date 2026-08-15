@@ -1,4 +1,11 @@
 {
+    "renderNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Render Note",
+        "description": "An existing note to turn into a second view of the diet manager. Selecting it converts that note into a render note pointing at the widget; clearing it reverts the previously-chosen note to a text note.",
+        "tab": "Render Note"
+    },
     "usdaApiKey": {
         "type": "string",
         "label": "USDA FoodData Central API Key",

@@ -18,7 +18,7 @@ const {
     shiftDateKey,
     exportDatabase,
     importDatabase
-} = require("libRecipes.js")
+} = require("libDietManager.js")
 const { searchFoods: searchUsda } = require("libUsda.js")
 const { searchFoods: searchOpenFoodFacts } = require("libOpenFoodFacts.js")
 
@@ -28,9 +28,9 @@ const { searchFoods: searchOpenFoodFacts } = require("libOpenFoodFacts.js")
 // ---------------------------------------------------------------------------
 function NutrientInputs({ nutrients, onChange }) {
     return (
-        <div className="recipes-nutrient-grid">
+        <div className="diet-manager-nutrient-grid">
             {NUTRIENTS.map(n => (
-                <label className="recipes-nutrient-field" key={n.key}>
+                <label className="diet-manager-nutrient-field" key={n.key}>
                     <span>{n.label} ({n.unit})</span>
                     <input
                         type="number"
@@ -99,10 +99,10 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
     }, [])
 
     return (
-        <div className="recipes-form">
+        <div className="diet-manager-form">
             <h3>{initial ? "Edit Food" : "Add Food"}</h3>
 
-            <div className="recipes-usda-search">
+            <div className="diet-manager-usda-search">
                 <input
                     type="text"
                     placeholder={usdaApiKey ? "Search USDA and Open Food Facts..." : "Search Open Food Facts... (set a USDA API key in Settings to also search USDA)"}
@@ -112,25 +112,25 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
                 />
                 <Button text={searching ? "Searching..." : "Search"} disabled={searching} onClick={runSearch} />
             </div>
-            {error && <div className="recipes-error">{error}</div>}
+            {error && <div className="diet-manager-error">{error}</div>}
             {results && (
-                <ul className="recipes-usda-results">
-                    {results.length === 0 && <li className="recipes-usda-empty">No results.</li>}
+                <ul className="diet-manager-usda-results">
+                    {results.length === 0 && <li className="diet-manager-usda-empty">No results.</li>}
                     {results.map(result => (
                         <li key={result.key}>
-                            <span>{result.name} <span className="recipes-usda-source">{result.source}</span></span>
+                            <span>{result.name} <span className="diet-manager-usda-source">{result.source}</span></span>
                             <Button text="Use" onClick={() => applyResult(result)} />
                         </li>
                     ))}
                 </ul>
             )}
 
-            <label className="recipes-field">
+            <label className="diet-manager-field">
                 <span>Name</span>
                 <input type="text" value={food.name} onInput={e => setFood(c => ({ ...c, name: e.target.value }))} />
             </label>
-            <div className="recipes-field-row">
-                <label className="recipes-field">
+            <div className="diet-manager-field-row">
+                <label className="diet-manager-field">
                     <span>Serving Size</span>
                     <input
                         type="number"
@@ -139,7 +139,7 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
                         onInput={e => setFood(c => ({ ...c, servingSize: parseFloat(e.target.value) || 0 }))}
                     />
                 </label>
-                <label className="recipes-field">
+                <label className="diet-manager-field">
                     <span>Serving Unit</span>
                     <input type="text" value={food.servingUnit} onInput={e => setFood(c => ({ ...c, servingUnit: e.target.value }))} />
                 </label>
@@ -147,7 +147,7 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
 
             <NutrientInputs nutrients={food.nutrients} onChange={setNutrient} />
 
-            <div className="recipes-form-actions">
+            <div className="diet-manager-form-actions">
                 <Button text="Save" onClick={() => onSave(food)} disabled={!food.name.trim()} />
                 <Button text="Cancel" onClick={onCancel} />
             </div>
@@ -176,11 +176,11 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
     }
 
     return (
-        <div className="recipes-tab">
-            <div className="recipes-toolbar">
+        <div className="diet-manager-tab">
+            <div className="diet-manager-toolbar">
                 <Button icon="bx-plus" text="Add Food" onClick={() => setAdding(true)} />
             </div>
-            <table className="recipes-table">
+            <table className="diet-manager-table">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -201,13 +201,13 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
                             <td>{food.nutrients.protein}g</td>
                             <td>{food.nutrients.carbs}g</td>
                             <td>{food.nutrients.fat}g</td>
-                            <td className="recipes-cell-actions">
-                                <button className="recipes-action bx bx-edit" title="Edit" onClick={() => setEditingId(food.id)} />
-                                <button className="recipes-action recipes-action-remove bx bx-trash" title="Delete" onClick={() => onDeleteFood(food.id)} />
+                            <td className="diet-manager-cell-actions">
+                                <button className="diet-manager-action bx bx-edit" title="Edit" onClick={() => setEditingId(food.id)} />
+                                <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Delete" onClick={() => onDeleteFood(food.id)} />
                             </td>
                         </tr>
                     ))}
-                    {list.length === 0 && <tr><td colSpan={7} className="recipes-empty">No foods yet.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={7} className="diet-manager-empty">No foods yet.</td></tr>}
                 </tbody>
             </table>
         </div>
@@ -239,13 +239,13 @@ function RecipeForm({ initial, foods, onSave, onCancel }) {
     }, [])
 
     return (
-        <div className="recipes-form">
+        <div className="diet-manager-form">
             <h3>{initial ? "Edit Recipe" : "Add Recipe"}</h3>
-            <label className="recipes-field">
+            <label className="diet-manager-field">
                 <span>Name</span>
                 <input type="text" value={recipe.name} onInput={e => setRecipe(c => ({ ...c, name: e.target.value }))} />
             </label>
-            <label className="recipes-field">
+            <label className="diet-manager-field">
                 <span>Servings</span>
                 <input
                     type="number"
@@ -257,10 +257,10 @@ function RecipeForm({ initial, foods, onSave, onCancel }) {
             </label>
 
             <h4>Ingredients</h4>
-            <ul className="recipes-ingredient-list">
+            <ul className="diet-manager-ingredient-list">
                 {recipe.ingredients.map((ing, index) => (
-                    <li key={index} className="recipes-ingredient-row">
-                        <span className="recipes-ingredient-name">{foods[ing.foodId]?.name || "(deleted food)"}</span>
+                    <li key={index} className="diet-manager-ingredient-row">
+                        <span className="diet-manager-ingredient-name">{foods[ing.foodId]?.name || "(deleted food)"}</span>
                         <input
                             type="number"
                             step="0.01"
@@ -268,12 +268,12 @@ function RecipeForm({ initial, foods, onSave, onCancel }) {
                             onInput={e => updateIngredient(index, parseFloat(e.target.value) || 0)}
                         />
                         <span>{foods[ing.foodId]?.servingUnit || ""}</span>
-                        <button className="recipes-action recipes-action-remove bx bx-trash" onClick={() => removeIngredient(index)} />
+                        <button className="diet-manager-action diet-manager-action-remove bx bx-trash" onClick={() => removeIngredient(index)} />
                     </li>
                 ))}
-                {recipe.ingredients.length === 0 && <li className="recipes-empty">No ingredients yet.</li>}
+                {recipe.ingredients.length === 0 && <li className="diet-manager-empty">No ingredients yet.</li>}
             </ul>
-            <div className="recipes-add-ingredient">
+            <div className="diet-manager-add-ingredient">
                 <select value={addFoodId} onChange={e => setAddFoodId(e.target.value)}>
                     <option value="">Add ingredient...</option>
                     {foodList.map(food => <option value={food.id} key={food.id}>{food.name}</option>)}
@@ -281,14 +281,14 @@ function RecipeForm({ initial, foods, onSave, onCancel }) {
                 <Button text="Add" onClick={addIngredient} disabled={!addFoodId} />
             </div>
 
-            <div className="recipes-preview">
+            <div className="diet-manager-preview">
                 <strong>Per serving:</strong> {perServing.calories.toFixed(0)} kcal,
                 {" "}{perServing.protein.toFixed(1)}g protein,
                 {" "}{perServing.carbs.toFixed(1)}g carbs,
                 {" "}{perServing.fat.toFixed(1)}g fat
             </div>
 
-            <div className="recipes-form-actions">
+            <div className="diet-manager-form-actions">
                 <Button text="Save" onClick={() => onSave(recipe)} disabled={!recipe.name.trim()} />
                 <Button text="Cancel" onClick={onCancel} />
             </div>
@@ -317,11 +317,11 @@ function RecipesTab({ recipes, foods, onSaveRecipe, onDeleteRecipe }) {
     }
 
     return (
-        <div className="recipes-tab">
-            <div className="recipes-toolbar">
+        <div className="diet-manager-tab">
+            <div className="diet-manager-toolbar">
                 <Button icon="bx-plus" text="Add Recipe" onClick={() => setAdding(true)} />
             </div>
-            <table className="recipes-table">
+            <table className="diet-manager-table">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -340,14 +340,14 @@ function RecipesTab({ recipes, foods, onSaveRecipe, onDeleteRecipe }) {
                                 <td>{recipe.servings}</td>
                                 <td>{perServing.calories.toFixed(0)}</td>
                                 <td>{perServing.protein.toFixed(1)}g</td>
-                                <td className="recipes-cell-actions">
-                                    <button className="recipes-action bx bx-edit" title="Edit" onClick={() => setEditingId(recipe.id)} />
-                                    <button className="recipes-action recipes-action-remove bx bx-trash" title="Delete" onClick={() => onDeleteRecipe(recipe.id)} />
+                                <td className="diet-manager-cell-actions">
+                                    <button className="diet-manager-action bx bx-edit" title="Edit" onClick={() => setEditingId(recipe.id)} />
+                                    <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Delete" onClick={() => onDeleteRecipe(recipe.id)} />
                                 </td>
                             </tr>
                         )
                     })}
-                    {list.length === 0 && <tr><td colSpan={5} className="recipes-empty">No recipes yet.</td></tr>}
+                    {list.length === 0 && <tr><td colSpan={5} className="diet-manager-empty">No recipes yet.</td></tr>}
                 </tbody>
             </table>
         </div>
@@ -377,23 +377,23 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
     }, [date, kind, refId, servings, onAddEntry])
 
     return (
-        <div className="recipes-tab">
-            <div className="recipes-diary-nav">
-                <button className="recipes-action bx bx-chevron-left" onClick={() => setDate(d => shiftDateKey(d, -1))} title="Previous day" />
+        <div className="diet-manager-tab">
+            <div className="diet-manager-diary-nav">
+                <button className="diet-manager-action bx bx-chevron-left" onClick={() => setDate(d => shiftDateKey(d, -1))} title="Previous day" />
                 <input type="date" value={date} onInput={e => setDate(e.target.value)} />
-                <button className="recipes-action bx bx-chevron-right" onClick={() => setDate(d => shiftDateKey(d, 1))} title="Next day" />
+                <button className="diet-manager-action bx bx-chevron-right" onClick={() => setDate(d => shiftDateKey(d, 1))} title="Next day" />
                 <Button text="Today" onClick={() => setDate(todayKey())} />
             </div>
 
-            <div className="recipes-diary-totals">
+            <div className="diet-manager-diary-totals">
                 {NUTRIENTS.map(n => {
                     const target = settings[targetKeyFor(n.key)]
                     const value = totals[n.key]
                     const overTarget = target > 0 && value > target
                     return (
-                        <div className={overTarget ? "recipes-target recipes-target-over" : "recipes-target"} key={n.key}>
-                            <span className="recipes-target-label">{n.label}</span>
-                            <span className="recipes-target-value">
+                        <div className={overTarget ? "diet-manager-target diet-manager-target-over" : "diet-manager-target"} key={n.key}>
+                            <span className="diet-manager-target-label">{n.label}</span>
+                            <span className="diet-manager-target-value">
                                 {value.toFixed(n.key === "calories" ? 0 : 1)}
                                 {target > 0 && ` / ${target}`} {n.unit}
                             </span>
@@ -402,21 +402,21 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
                 })}
             </div>
 
-            <ul className="recipes-diary-entries">
+            <ul className="diet-manager-diary-entries">
                 {entries.map(entry => {
                     const item = entry.kind === "food" ? foods[entry.refId] : recipes[entry.refId]
                     return (
-                        <li key={entry.id} className="recipes-diary-entry">
+                        <li key={entry.id} className="diet-manager-diary-entry">
                             <span>{item?.name || "(deleted)"}</span>
-                            <span className="recipes-diary-entry-servings">{entry.servings}x</span>
-                            <button className="recipes-action recipes-action-remove bx bx-trash" onClick={() => onRemoveEntry(date, entry.id)} />
+                            <span className="diet-manager-diary-entry-servings">{entry.servings}x</span>
+                            <button className="diet-manager-action diet-manager-action-remove bx bx-trash" onClick={() => onRemoveEntry(date, entry.id)} />
                         </li>
                     )
                 })}
-                {entries.length === 0 && <li className="recipes-empty">Nothing logged for this day.</li>}
+                {entries.length === 0 && <li className="diet-manager-empty">Nothing logged for this day.</li>}
             </ul>
 
-            <div className="recipes-add-ingredient">
+            <div className="diet-manager-add-ingredient">
                 <select value={kind} onChange={e => { setKind(e.target.value); setRefId("") }}>
                     <option value="food">Food</option>
                     <option value="recipe">Recipe</option>
@@ -442,7 +442,7 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
 // ---------------------------------------------------------------------------
 // Root widget
 // ---------------------------------------------------------------------------
-function RecipesWidget() {
+function DietManagerWidget() {
     const [tab, setTab] = useState("diary")
     const [database, setDatabase] = useState(null)
     const [settings, setSettings] = useState(null)
@@ -512,7 +512,7 @@ function RecipesWidget() {
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url
-        link.download = "recipes-database.json"
+        link.download = "diet-manager-database.json"
         link.click()
         URL.revokeObjectURL(url)
     }, [database])
@@ -555,15 +555,15 @@ function RecipesWidget() {
         input.click()
     }, [persist])
 
-    if (!database || !settings) return <div className="recipes-widget">Loading...</div>
+    if (!database || !settings) return <div className="diet-manager-widget">Loading...</div>
 
     return (
-        <div className="recipes-widget">
-            <div className="recipes-tabs">
-                <button className={tab === "diary" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("diary")}>Diary</button>
-                <button className={tab === "foods" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
-                <button className={tab === "recipes" ? "recipes-tab-btn recipes-tab-btn-active" : "recipes-tab-btn"} onClick={() => setTab("recipes")}>Recipes</button>
-                <span className="recipes-tabs-spacer" />
+        <div className="diet-manager-widget">
+            <div className="diet-manager-tabs">
+                <button className={tab === "diary" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("diary")}>Diary</button>
+                <button className={tab === "foods" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
+                <button className={tab === "recipes" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("recipes")}>Recipes</button>
+                <span className="diet-manager-tabs-spacer" />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
                 <Button icon="bx-export" text="Export JSON" onClick={onExport} />
             </div>
@@ -587,4 +587,4 @@ function RecipesWidget() {
     )
 }
 
-export default RecipesWidget
+export default DietManagerWidget
