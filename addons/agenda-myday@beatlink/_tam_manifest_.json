@@ -1,11 +1,11 @@
 {
     "id": "agenda-myday@beatlink",
     "name": "Agenda My Day",
-    "description": "A right-pane panel shown only while your My Day note is active, modelled on Microsoft To Do's My Day page. It lists recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note you nominate and clones the task under it; tasks already on your day drop off the list. It also carries a countdown timer with selectable durations and start/select/end sounds, optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today (or unfiled, link and clone together) without going to the My Day note first. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a note of your own, and the panel appears while that note is active.",
+    "description": "A right-pane panel shown on every note, modelled on Microsoft To Do's My Day page. Your My Day note is edited in place at the top of the panel as rich text, so today's list is always on screen and never has to be navigated to. Below it sits a countdown timer with selectable durations and start/select/end sounds, and a collapsible Suggestions section listing recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note and clones the task under it; tasks already on your day drop off the list. It optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today (or unfiled, link and clone together) without going to the My Day note first. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a text note of your own and the panel edits it. Editing in the panel reuses the CKEditor instance Trilium builds for the note detail, so until a text note has been opened once in the session the panel shows the note read-only.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "12.3.0",
+    "latestVersion": "13.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-myday@beatlink/_tam_manifest_.json",
@@ -25,6 +25,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "myDayTaskWidget.jsx"
+            },
+            {
+                "id": "my-day-note",
+                "title": "myDayNote.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "myDayNote.jsx"
             },
             {
                 "id": "timer",
@@ -203,6 +210,10 @@
             },
             {
                 "parent": "my-day",
+                "child": "my-day-note"
+            },
+            {
+                "parent": "my-day",
                 "child": "timer"
             },
             {
@@ -338,6 +349,11 @@
             },
             {
                 "note": "my-day-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "my-day-note",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
