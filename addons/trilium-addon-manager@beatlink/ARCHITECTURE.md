@@ -599,7 +599,16 @@ is excluded rather than reported as drift:
 Note lookup mirrors `resolveNotes()`, including the shared-vendored-file path: a file two addons both
 vendor is installed **once**, under whichever addon got there first, so a note that doesn't answer to
 this addon's `#TAMFILEID` is still installed if one carries its `#TAMSOURCEURL`. Matching on the id
-alone reports every shared library note as missing. The `#TAMSOURCEURL` identity is likewise
+alone reports every shared library note as missing.
+
+That adoption is only correct for a **different** addon's copy, and both the sync and the audit check
+it. A manifest may legitimately ship one file twice under two local ids — agenda declares
+`libs/libical/ical.min.js` as both `ical-lib` and `ical-resource` (the latter carrying
+`#customResourceProvider`) — and both carry the same `sourceId`. Adopting this addon's own note there
+collapses two local ids onto one: the second note is never created, its labels land on the first, and
+a declared parenting between them becomes "parent this note under itself", which
+`ensureNoteIsPresentInParent` refuses as a cycle. The result is a `broken-wiring` row that **no
+re-sync can clear**, because every sync reproduces the aliasing. The `#TAMSOURCEURL` identity is likewise
 reconstructed exactly as the sync records it — absent for a `renderAsHTML` note, since that stores a
 rendering rather than the fetched file.
 

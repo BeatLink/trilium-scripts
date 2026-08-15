@@ -14,9 +14,38 @@
    copied rules above via the same palette/spacing/radii. */
 
 
-/*div:has(.TAM-body) {
-    height: 100% !important;
-}*/
+/* Give TAM a bounded height to fill.
+   `height: 100%` only resolves if every ancestor has a definite height, and a
+   `render` note has none: unlike canvas/mermaid/etc, "render" carries no
+   `isFullHeight` in Trilium's TYPE_MAPPINGS, so `.note-detail` never gets the
+   `full-height` class, the scrolling container is never made a flex column, and
+   the render wrapper is left at `height: auto`. TAM would then grow with its
+   content and hand the scrolling back to the page.
+   So the chain is built here instead, mirroring what Trilium's own
+   `.note-detail.full-height` rule does. Every selector is `:has(.TAM-body)`-gated
+   — this file is loaded globally as #appCss, so it must touch the note hosting
+   TAM and nothing else. */
+.scrolling-container:has(.TAM-body),
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    display: flex !important;
+    flex-direction: column !important;
+    /* Flex items default to min-height:auto, which lets content grow the box past
+       its parent instead of scrolling inside it. This is what actually confines
+       the scrolling to TAM. */
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* The scrolling container is sized by the split above it and stays the anchor;
+   everything below it takes the height that's left. */
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    flex: 1 1 auto !important;
+    height: auto !important;
+}
 
 .TAM-body {
 
@@ -51,9 +80,11 @@
     line-height: 1.6 !important;
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
-    height: 100% !important;
+    /* Fills the height established above rather than asking for 100% of an
+       auto-height parent. */
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     overflow: hidden !important;
-    max-height: 100% !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */

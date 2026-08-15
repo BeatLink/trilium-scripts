@@ -464,7 +464,22 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     if (existing && existing.isDeleted) existing = null
                     if (!existing && sourceIdentity) {
                         const shared = api.getNoteWithLabel(sourceUrlLabel, sourceIdentity)
-                        if (shared && !shared.isDeleted) {
+                        // Adopting the shared copy is only right when it belongs to
+                        // a *different* addon. A manifest may legitimately ship one
+                        // file twice - agenda's ical.min.js is declared once as a
+                        // library and once as a customResourceProvider - and both
+                        // carry the same sourceId. Adopting this addon's own note
+                        // there collapses the two local ids onto one note: the
+                        // second one is never created, its labels land on the
+                        // first, and a declared parenting between them becomes
+                        // "parent this note under itself", which is refused as a
+                        // cycle and can never be repaired by re-syncing.
+                        const sharedOwner = shared && !shared.isDeleted
+                            ? (shared.getOwnedLabelValue(tamFileIdLabel) || "")
+                            : null
+                        const ownedByThisAddon = sharedOwner !== null
+                            && sharedOwner.startsWith(`${tamFileId.slice(0, tamFileId.indexOf("/"))}/`)
+                        if (shared && !shared.isDeleted && !ownedByThisAddon) {
                             if (!skipParenting) api.ensureNoteIsPresentInParent(shared.noteId, parentRealId)
                             return shared.noteId
                         }
@@ -1583,7 +1598,14 @@ async function readLiveAddon(addonId, noteDefs, contentIds) {
             if (note && note.isDeleted) note = null
             if (!note && sourceId) {
                 const shared = api.getNoteWithLabel(sourceUrlLabel, sourceId)
-                if (shared && !shared.isDeleted) note = shared
+                // Same guard resolveNotes() applies: only a *different* addon's
+                // copy is this note. Adopting one of this addon's own would alias
+                // two local ids to one note and report nonsense - a manifest that
+                // ships one file twice would look like it was wired to itself.
+                const owner = shared && !shared.isDeleted
+                    ? (shared.getOwnedLabelValue(tamFileIdLabel) || "")
+                    : null
+                if (owner !== null && !owner.startsWith(`${addonId}/`)) note = shared
             }
             if (!note) continue
             const attributes = note.getOwnedAttributes() || []
