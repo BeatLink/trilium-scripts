@@ -201,56 +201,56 @@
             },
             {
                 "id": "tpl-area",
-                "title": "AreaCollection",
+                "title": "Area",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templates/areaCollection.html"
             },
             {
                 "id": "root-idea",
-                "title": "Ideas Root",
+                "title": "Ideas",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-goal",
-                "title": "Goal Root",
+                "title": "Goals",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-routine",
-                "title": "Routine Root",
+                "title": "Routines",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-task",
-                "title": "Task Root",
+                "title": "Tasks",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-future",
-                "title": "Future Root",
+                "title": "Future",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-project",
-                "title": "Project Root",
+                "title": "Projects",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "root-note",
-                "title": "Note Root",
+                "title": "Notes",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
