@@ -403,13 +403,14 @@ async function cmdValidate(args) {
             warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
         }
 
-        // manifest.settings hands TAM the schema/config pair it reviews per setting
-        // instead of whole-file diffing the config. The schema has to be structural
-        // (it ships the new defaults each update); the config has to be persistent
-        // (it holds the user's answers) and must ship no content of its own, or the
-        // note would still be offered for whole-file replacement on every update.
+        // manifest.settings hands TAM the schema/defaults/config trio it reviews per
+        // setting instead of whole-file diffing the config. The schema (fields) and
+        // the defaults (their shipped values) have to be structural, since both ship
+        // anew each update; the config has to be persistent (it holds the user's own
+        // divergences) and must ship no content of its own, or the note would still
+        // be offered for whole-file replacement on every update.
         if (m.settings) {
-            for (const role of ["schema", "config"]) {
+            for (const role of ["schema", "defaults", "config"]) {
                 const localId = m.settings[role];
                 if (!localId) {
                     error(manifestFile, `manifest.settings.${role} is missing`);
@@ -421,8 +422,11 @@ async function cmdValidate(args) {
                 }
                 const note = byId[localId];
                 const isPersistent = persistentIds.has(localId);
-                if (role === "schema" && isPersistent) {
-                    error(manifestFile, `manifest.settings.schema '${localId}' is attached under the reserved "persistence" parent -- the schema ships new defaults on every update, so it has to be structural`);
+                if (role !== "config" && isPersistent) {
+                    error(manifestFile, `manifest.settings.${role} '${localId}' is attached under the reserved "persistence" parent -- it ships anew on every update, so it has to be structural`);
+                }
+                if (role === "defaults" && !note.sourceUrl && !note.content) {
+                    error(manifestFile, `manifest.settings.defaults '${localId}' ships no content (sourceUrl/content) -- it holds every setting's shipped value, which the schema no longer carries`);
                 }
                 if (role === "config") {
                     if (!isPersistent) {
@@ -435,6 +439,14 @@ async function cmdValidate(args) {
                 if (note.mime && note.mime !== "application/json") {
                     warn(manifestFile, `manifest.settings.${role} '${localId}' has mime '${note.mime}' -- expected application/json`);
                 }
+            }
+            // libsettings reads a config note's sources off its own `sourceConfig`
+            // relations, so an unlinked defaults note is simply never merged in.
+            const linksDefaults = (m.relations || []).some(
+                (r) => r.from === m.settings.config && r.type === "sourceConfig" && r.to === m.settings.defaults
+            );
+            if (m.settings.defaults && m.settings.config && !linksDefaults) {
+                error(manifestFile, `manifest.settings.config '${m.settings.config}' has no sourceConfig relation to the defaults note '${m.settings.defaults}' -- libsettings would read no defaults at all`);
             }
         }
 

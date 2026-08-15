@@ -2,13 +2,11 @@
     "syncServerUrl": {
         "type": "string",
         "label": "Sync Server URL",
-        "description": "Base URL of your BlockURL sync server, e.g. http://127.0.0.1:8000",
-        "default": "http://127.0.0.1:8000"
+        "description": "Base URL of your BlockURL sync server, e.g. http://127.0.0.1:8000"
     },
     "apiKey": {
         "type": "string",
         "label": "API Key",
-        "description": "The server's BLOCKURL_API_KEY, if it was started with one. Leave empty otherwise.",
-        "default": ""
+        "description": "The server's BLOCKURL_API_KEY, if it was started with one. Leave empty otherwise."
     }
 }

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/media-tracker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/_tam_manifest_.json",
@@ -53,6 +53,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -167,6 +174,10 @@
                 "child": "schema"
             },
             {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -265,6 +276,11 @@
                 "from": "settings",
                 "type": "trackerPageNote",
                 "to": "launcher"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -352,6 +368,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

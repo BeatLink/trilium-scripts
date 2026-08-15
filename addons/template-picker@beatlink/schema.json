@@ -3,7 +3,6 @@
         "type": "registry",
         "label": "Templates",
         "description": "The templates offered by the picker dropdown, in display order. Run Scan to pull in every #template note you have; each row's Enabled flag controls whether it appears, and the row move controls set the dropdown order.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -53,7 +52,6 @@
         "type": "registry",
         "label": "Exclude Filters",
         "description": "Notes matching any enabled filter's search query are hidden from the Template picker widget and skipped by the Missing Templates triage list.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",

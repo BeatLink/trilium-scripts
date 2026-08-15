@@ -22,7 +22,7 @@ End of Month (`FREQ=MONTHLY;BYMONTHDAY=-1`).
 
 ## Configuration
 
-Task owns its own settings note (`schema.json`/`config.json`) tagged `#agendaTaskConfig` — the label
+Task owns its own settings note (`taskSchema.json`/`taskDefaults.json`/`taskConfig.json`) tagged `#agendaTaskConfig` — the label
 names it reads/writes (start/due date/time, duration, recurrence) and the reschedule buttons' option
 registry. Its own **Task Settings** page (TAM's "Addon Settings" button) is the only place that edits
 it.

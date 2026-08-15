@@ -1,0 +1,96 @@
+{
+    "selected": "moscow",
+    "profiles": {
+        "standard": {
+            "name": "Standard",
+            "label": "priority",
+            "priorities": {
+                "4-critical": {
+                    "key": "4-critical",
+                    "title": "Critical",
+                    "color": "red",
+                    "enabled": true
+                },
+                "3-high": {
+                    "key": "3-high",
+                    "title": "High",
+                    "color": "darkorange",
+                    "enabled": true
+                },
+                "2-medium": {
+                    "key": "2-medium",
+                    "title": "Medium",
+                    "color": "gold",
+                    "enabled": true
+                },
+                "1-low": {
+                    "key": "1-low",
+                    "title": "Low",
+                    "color": "cyan",
+                    "enabled": true
+                }
+            }
+        },
+        "moscow": {
+            "name": "MoSCoW",
+            "label": "priority",
+            "priorities": {
+                "4-critical": {
+                    "key": "4-critical",
+                    "title": "Must Do",
+                    "color": "red",
+                    "enabled": true
+                },
+                "3-high": {
+                    "key": "3-high",
+                    "title": "Should Do",
+                    "color": "darkorange",
+                    "enabled": true
+                },
+                "2-medium": {
+                    "key": "2-medium",
+                    "title": "Could Do",
+                    "color": "gold",
+                    "enabled": true
+                },
+                "1-low": {
+                    "key": "1-low",
+                    "title": "Want To Do",
+                    "color": "cyan",
+                    "enabled": true
+                }
+            }
+        },
+        "color": {
+            "name": "Color",
+            "label": "color",
+            "priorities": {
+                "red": {
+                    "key": "red",
+                    "title": "Critical",
+                    "color": "",
+                    "enabled": true
+                },
+                "darkorange": {
+                    "key": "darkorange",
+                    "title": "High",
+                    "color": "",
+                    "enabled": true
+                },
+                "gold": {
+                    "key": "gold",
+                    "title": "Medium",
+                    "color": "",
+                    "enabled": true
+                },
+                "cyan": {
+                    "key": "cyan",
+                    "title": "Low",
+                    "color": "",
+                    "enabled": true
+                }
+            }
+        }
+    },
+    "excludeFilters": {}
+}

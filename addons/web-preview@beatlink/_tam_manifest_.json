@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.7.0",
+    "latestVersion": "1.8.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
@@ -82,6 +82,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -164,7 +171,7 @@
                 "child": "newtab-startup"
             },
             {
-                "parent": "newtab-startup",
+                "parent": "root",
                 "child": "newtab-launcher"
             },
             {
@@ -182,6 +189,10 @@
             {
                 "parent": "settings-launcher",
                 "child": "schema"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "defaults"
             },
             {
                 "parent": "libsettings-ui",
@@ -254,6 +265,11 @@
                 "from": "settings",
                 "type": "configNote",
                 "to": "config"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -291,6 +307,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

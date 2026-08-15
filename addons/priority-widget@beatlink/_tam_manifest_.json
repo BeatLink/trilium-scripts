@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.1.1",
+    "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/_tam_manifest_.json",
@@ -49,6 +49,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -151,6 +158,10 @@
                 "child": "schema"
             },
             {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -185,6 +196,10 @@
             {
                 "parent": "missing-page",
                 "child": "schema"
+            },
+            {
+                "parent": "missing-page",
+                "child": "defaults"
             },
             {
                 "parent": "missing-page",
@@ -259,6 +274,11 @@
                 "from": "missing-launcher",
                 "type": "renderNote",
                 "to": "missing-page"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -296,6 +316,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

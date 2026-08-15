@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/video-speed-controller@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/_tam_manifest_.json",
@@ -54,6 +54,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -110,6 +117,10 @@
             {
                 "parent": "script",
                 "child": "schema"
+            },
+            {
+                "parent": "script",
+                "child": "defaults"
             },
             {
                 "parent": "root",
@@ -173,6 +184,11 @@
                 "from": "settings",
                 "type": "configNote",
                 "to": "config"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -200,6 +216,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

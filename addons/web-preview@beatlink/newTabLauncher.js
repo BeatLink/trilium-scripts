@@ -2,6 +2,7 @@
 // Title: newTabLauncher.js
 // Type: Code -> JS Frontend
 // Run by the New Tab launchbar button, not by an attribute.
+// Must not be a child of a #run=frontendStartup note: children are bundled with it and run at startup.
 
 // ---------------------------------------------------------------------------
 // Records the note the button was pressed from before navigating away from it,

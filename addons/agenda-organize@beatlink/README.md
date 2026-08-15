@@ -56,7 +56,7 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 
 ## 2. Dimensions
 
-Agenda owns one open-ended **`dimensions`** registry in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json),
+Agenda owns one open-ended **`dimensions`** registry, declared in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json) and shipped in its [`common/defaults.json`](../agenda@beatlink/common/defaults.json),
 loaded by [`dimensions.js`](../agenda@beatlink/common/dimensions.js) → `getDimensions()`. A dimension is one
 note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
 priority ship as defaults, but the set is open-ended. Triage queues, sort ordinals, and the derived

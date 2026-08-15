@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-first-child@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.0",
+    "latestVersion": "1.5.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/_tam_manifest_.json",
@@ -32,6 +32,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -112,6 +119,10 @@
                 "child": "schema"
             },
             {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -173,6 +184,11 @@
                 "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -195,6 +211,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

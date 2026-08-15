@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.1.0",
+    "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
@@ -60,6 +60,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskSchema.json"
+            },
+            {
+                "id": "task-defaults",
+                "title": "taskDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskDefaults.json"
             },
             {
                 "id": "task-config",
@@ -159,6 +166,10 @@
             {
                 "parent": "root",
                 "child": "task-schema"
+            },
+            {
+                "parent": "root",
+                "child": "task-defaults"
             },
             {
                 "parent": "persistence",
@@ -272,6 +283,11 @@
                 "from": "settings-source",
                 "type": "schemaNote",
                 "to": "task-schema"
+            },
+            {
+                "from": "task-config",
+                "type": "sourceConfig",
+                "to": "task-defaults"
             }
         ],
         "labels": [
@@ -364,6 +380,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "task-schema",
+            "defaults": "task-defaults",
             "config": "task-config"
         }
     }
