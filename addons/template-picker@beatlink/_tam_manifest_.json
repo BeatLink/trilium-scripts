@@ -716,6 +716,11 @@
                 "value": "list"
             },
             {
+                "note": "root-idea",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
                 "note": "root-goal",
                 "name": "iconClass",
                 "value": "bx bxs-star-half"
@@ -724,6 +729,11 @@
                 "note": "root-goal",
                 "name": "viewType",
                 "value": "list"
+            },
+            {
+                "note": "root-goal",
+                "name": "label:area",
+                "value": "single"
             },
             {
                 "note": "root-routine",
@@ -736,6 +746,11 @@
                 "value": "list"
             },
             {
+                "note": "root-routine",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
                 "note": "root-task",
                 "name": "iconClass",
                 "value": "bx bx-check"
@@ -744,6 +759,11 @@
                 "note": "root-task",
                 "name": "viewType",
                 "value": "list"
+            },
+            {
+                "note": "root-task",
+                "name": "label:area",
+                "value": "single"
             },
             {
                 "note": "root-future",
@@ -756,6 +776,11 @@
                 "value": "list"
             },
             {
+                "note": "root-future",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
                 "note": "root-project",
                 "name": "iconClass",
                 "value": "bx bx-check-double"
@@ -766,6 +791,11 @@
                 "value": "list"
             },
             {
+                "note": "root-project",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
                 "note": "root-note",
                 "name": "iconClass",
                 "value": "bx bx-notepad"
@@ -774,6 +804,11 @@
                 "note": "root-note",
                 "name": "viewType",
                 "value": "list"
+            },
+            {
+                "note": "root-note",
+                "name": "label:area",
+                "value": "single"
             }
         ],
         "readmeNote": "readme",

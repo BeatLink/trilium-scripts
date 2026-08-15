@@ -67,8 +67,9 @@ own copy of the whole set. Trilium deep-duplicates a template's children into th
 Area comes out already holding its Ideas / Goal / Routine / Task / Future / Project / Note roots,
 ready to file into.
 
-Each root is an empty text note carrying only the matching template's `#iconClass` plus
-`#viewType=list`; nothing files notes into them automatically.
+Each root is an empty text note carrying the matching template's `#iconClass`, `#viewType=list`, and
+a `#label:area=single` promoted-attribute definition (the same one the templates carry), so `#area`
+is a settable field on the root itself. Nothing files notes into them automatically.
 
 Two consequences of how Trilium templates work:
 
