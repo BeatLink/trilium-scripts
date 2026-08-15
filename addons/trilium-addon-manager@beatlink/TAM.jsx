@@ -39,6 +39,17 @@ const TYPE_COLORS = {
 
 const TAM_ID = "trilium-addon-manager@beatlink"
 
+// Commands the activity log does not open itself for. These are either the page
+// doing its own housekeeping (load-addons runs on every mount, so treating it as
+// activity pops the log open every time TAM is selected), navigation, or a step
+// that only prepares a dialog. Everything else is real work worth watching.
+const QUIET_COMMANDS = new Set([
+    "load-addons",
+    "browse-catalog",
+    "visit-catalog-website",
+    "request-uninstall"
+])
+
 // What each diagnosis code means in one line, shown in the table's Issue column
 // so a row explains itself without a trip to the docs.
 const ISSUE_TITLES = {
@@ -1116,9 +1127,7 @@ export default function RepoManager() {
         dispatch({ command: "load-addons" })
     }, [note])
 
-    // browse-catalog draws its own inline spinner, so it isn't "activity" for
-    // this purpose; everything else is.
-    const isBusy = Boolean(pendingCommand && pendingCommand.command !== "browse-catalog")
+    const isBusy = Boolean(pendingCommand && !QUIET_COMMANDS.has(pendingCommand.command))
 
     // Opens on the transition into activity rather than while it runs, so a
     // dismissal mid-run sticks until the next thing you press.
@@ -1301,8 +1310,8 @@ export default function RepoManager() {
         )
     }
 
-    // browse-catalog shows its own inline Spinner in CatalogBrowseView; for
-    // everything else the log's header is what says work is in flight.
+    // The log's header is what says work is in flight; CatalogBrowseView draws
+    // its own inline spinner for the one command that needs it.
     const busyLabel = isBusy ? (progressDetail || commandLabel(pendingCommand)) : null
 
     return (
