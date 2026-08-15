@@ -31,7 +31,7 @@
                 "id": "setupRoot",
                 "title": "setupRoot.js",
                 "type": "code",
-                "mime": "application/javascript;env=backend",
+                "mime": "application/javascript;env=frontend",
                 "sourceUrl": "setupRoot.js"
             },
             {
@@ -165,7 +165,7 @@
             },
             {
                 "parent": "setupRoot",
-                "child": "expandedConfig"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "updateExpanded",
@@ -207,6 +207,16 @@
                 "to": "updateExpanded"
             },
             {
+                "from": "setupRoot",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "setupRoot",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
                 "from": "updateExpanded",
                 "type": "expandScript",
                 "to": "expandBranches"
@@ -246,7 +256,7 @@
             {
                 "note": "setupRoot",
                 "name": "run",
-                "value": "backendStartup"
+                "value": "frontendStartup"
             },
             {
                 "note": "libsettings-style",

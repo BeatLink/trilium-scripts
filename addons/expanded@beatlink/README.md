@@ -10,7 +10,7 @@ Trilium collapses note trees when you restart or navigate away. This addon adds 
 
 Three backend scripts, each with one job:
 
-- **setupRoot.js** (`#run=backendStartup`) writes the inheritable `#label:alwaysExpanded="promoted,alias=Always Expanded,single,boolean"` definition onto the root note, so the checkbox shows up on every note, along with the inheritable `~runOnAttributeCreation` / `~runOnAttributeChange` hooks pointing at updateExpanded.js
+- **setupRoot.js** (`#run=frontendStartup`, doing the note writes through `api.runOnBackend`) writes the inheritable `#label:alwaysExpanded="promoted,alias=Always Expanded,single,boolean"` definition onto the root note, so the checkbox shows up on every note, along with the inheritable `~runOnAttributeCreation` / `~runOnAttributeChange` hooks pointing at updateExpanded.js
 - **updateExpanded.js** runs on any attribute change in the tree and ignores everything but the configured label. Ticked (`true`) gives the note a `runOnBranchChange` relation to expandBranches.js and runs it once; unticked (`false`, or the label deleted) takes that relation away
 - **expandBranches.js** is what the `runOnBranchChange` relation points at: it expands the parent branches of every note flagged `true`, so a change anywhere in the tree re-opens all of them
 
@@ -18,12 +18,12 @@ See [Events](https://docs.triliumnotes.org/user-guide/scripts/backend-basics/eve
 
 ## Settings
 
-`expandedConfig.js` is the one place the values are read from — all three scripts require it — and it reads them from the addon's settings (in the Trilium Addon Manager detail page):
+The two backend scripts read the values through `expandedConfig.js`, and setupRoot.js reads the same schema and config notes from the frontend; both come from the addon's settings (in the Trilium Addon Manager detail page):
 
 - **Label Name** — the label marking a note as always expanded (default `alwaysExpanded`)
 - **Promoted Definition** — the definition written to root for that label (default `promoted,alias=Always Expanded,single,boolean`)
 
-Renaming the label takes effect on the next restart, when setupRoot.js removes the definition it wrote for the old name and writes the new one. Notes flagged under the old name keep the old label; re-tick them under the new checkbox.
+Renaming the label takes effect on the next reload, when setupRoot.js removes the definition it wrote for the old name and writes the new one. Notes flagged under the old name keep the old label; re-tick them under the new checkbox.
 
 ## Installation
 
