@@ -1431,79 +1431,35 @@ async function checkForAddonUpdates() {
     await saveDatabase(database)
 }
 
-// Read-only audit of the installed-addon graph against the real Trilium note tree.
-async function validateDatabase() {
-    const database = await loadDatabase()
-    const issues = []
-    const duplicateIds = await api.runOnBackend((tamFileIdLabel) => {
-        const byValue = {}
-        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
-            if (note.isDeleted) continue
-            const value = note.getOwnedLabelValue(tamFileIdLabel)
-            if (!value) continue
-            byValue[value] = byValue[value] || []
-            byValue[value].push(note.noteId)
-        }
-        return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
-    }, [tamFileIdLabel])
-    for (const [tamFileId, noteIds] of duplicateIds) {
-        issues.push({
-            addonId: tamFileId.split("/")[0],
-            message: `TAMFILEID '${tamFileId}' is duplicated across notes ${noteIds.join(", ")}`
-        })
-    }
-    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
-        const isInstalled = !!addon.installedVersion
-        const manifest = addon.manifest || {}
-        const persistentIds = isInstalled ? [...persistentLocalIds(manifest)] : []
-        const rootLocalId = manifest.root ?? addonAnchorRootLocalId
-        const backendIssues = await api.runOnBackend((tamFileIdLabel, addonId, manifest, rootLocalId, persistentIds, isInstalled) => {
-            const found = []
-            function resolveLocal(localId) {
-                if (!localId) return null
-                const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
-                return (note && !note.isDeleted) ? note.noteId : null
-            }
-            if (isInstalled) {
-                if (!resolveLocal(rootLocalId)) {
-                    found.push(`root note ('${rootLocalId}') is missing`)
-                }
-                if (manifest.settingsNote && !resolveLocal(manifest.settingsNote)) {
-                    found.push(`settings note ('${manifest.settingsNote}') is missing`)
-                }
-                // The config note is covered by the persistent-note check below;
-                // a missing schema would silently disable the settings review.
-                if (manifest.settings?.schema && !resolveLocal(manifest.settings.schema)) {
-                    found.push(`settings schema note ('${manifest.settings.schema}') is missing`)
-                }
-            }
-            for (const localId of persistentIds) {
-                if (!resolveLocal(localId)) {
-                    found.push(`persistent note ('${localId}') is missing — user data may have been lost`)
-                }
-            }
-            return found
-        }, [tamFileIdLabel, addonId, manifest, rootLocalId, persistentIds, isInstalled])
-        for (const message of backendIssues) {
-            issues.push({ addonId, message })
-        }
-    }
-    return issues
-}
+// =========================================================================
+// Diagnostics: the single audit behind TAM's maintenance page. It checks TAM's
+// own bookkeeping, the addon-owned note tree, and every installed addon against
+// its live manifest, and returns one row per problem with the repair for it.
+//
+// The audit is read-only: nothing is deleted, re-synced or repointed until
+// repairIssue() is called with a row. The database validation and the two note
+// sweeps used to be three separate buttons, and the sweeps deleted first and
+// reported after; they're folded in here as findings you see before anything
+// goes.
+//
+// The reason this is worth having at all: syncAddon() advances installedVersion
+// unconditionally but records a contentHash only once every note resolved, so a
+// note whose fetch failed leaves the addon reporting itself up to date while
+// still running the previous version's code.
+// =========================================================================
 
-// =========================================================================
-// Diagnostics: audits every installed addon against its live manifest, and
-// repairs what it finds.
-//
-// validateDatabase() above answers "is TAM's own bookkeeping intact?" and checks
-// only the notes it can't function without. This answers the wider question "is
-// what's installed actually what the manifest says?", which is what catches a
-// sync that half-failed: syncAddon() advances installedVersion unconditionally
-// but only records a contentHash once every note resolved, so a note whose fetch
-// failed leaves the addon reporting itself up to date while running old code.
-//
-// diagnoseAddons() is read-only. Every repair is applied by healAddons().
-// =========================================================================
+// One row of the diagnosis. `fix` is what repairIssue() dispatches on, and null
+// for a finding TAM can't act on unattended. `fix.self` marks a repair to TAM's
+// own notes, which needs a reload before it has actually taken effect.
+function issueRow(addonId, code, target, detail, fix = null) {
+    const FIX_LABELS = {
+        resync: "Re-sync",
+        repoint: "Repoint & re-sync",
+        delete: "Delete note"
+    }
+    const fixLabel = fix ? `${FIX_LABELS[fix.kind]}${fix.self ? " & reload" : ""}` : ""
+    return { addonId, code, target, detail, fix, fixLabel }
+}
 
 // sha256 of a string as lowercase hex - the digest a published manifest's `sha`
 // carries for that note's source file. Needs a secure context for crypto.subtle,
@@ -1563,27 +1519,70 @@ async function readLiveAddon(addonId, noteDefs, contentIds) {
     }, [tamFileIdLabel, sourceUrlLabel, addonId, noteDefs, contentIds])
 }
 
-// Audits every installed addon against its live manifest. Each issue carries a
-// `repair`: "resync" (syncAddon fixes it), "repoint" (its source has to be
-// replaced first), or null (nothing TAM can do unattended).
-async function diagnoseAddons() {
+// The whole audit, as one flat list of rows. Read-only: nothing is deleted,
+// re-synced or repointed until repairIssue() is called with a row.
+async function diagnose() {
     const database = await loadDatabase()
     const catalogSources = await catalogSourceIndex()
-    const issues = []
+    const rows = []
 
+    // TAM's own bookkeeping. A duplicate is the one thing a live-lookup design
+    // can't self-correct - getNoteWithLabel() just returns whichever match it
+    // finds first - and TAM can't tell which copy is the real one, so this is
+    // reported without a repair.
+    const duplicateIds = await api.runOnBackend((tamFileIdLabel) => {
+        const byValue = {}
+        for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
+            if (note.isDeleted) continue
+            const value = note.getOwnedLabelValue(tamFileIdLabel)
+            if (!value) continue
+            byValue[value] = byValue[value] || []
+            byValue[value].push(note.noteId)
+        }
+        return Object.entries(byValue).filter(([, noteIds]) => noteIds.length > 1)
+    }, [tamFileIdLabel])
+    for (const [tamFileId, noteIds] of duplicateIds) {
+        rows.push(issueRow(tamFileId.split("/")[0], "duplicate-id", tamFileId,
+            `claimed by ${noteIds.length} notes at once (${noteIds.join(", ")}) - delete the wrong one by hand`))
+    }
+
+    // Notes the tree is holding that nothing owns any more.
+    for (const note of await findOrphanedNotes()) {
+        rows.push(issueRow(note.tamFileId.split("/")[0], "orphaned-note", note.title,
+            "has no parents left, so nothing in the tree reaches it",
+            { kind: "delete", noteId: note.noteId }))
+    }
+    for (const note of await findInvalidAddonTreeNotes()) {
+        rows.push(issueRow(note.tamFileId ? note.tamFileId.split("/")[0] : "(none)", "unclaimed-note", note.title,
+            note.tamFileId
+                ? `is tagged for '${note.tamFileId}', which isn't installed`
+                : "sits under the addon root carrying no #TAMFILEID",
+            { kind: "delete", noteId: note.noteId }))
+    }
+
+    // Each installed addon against its live manifest.
     for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
         if (!addon.installedVersion) continue
-        const issue = (code, message, repair = null) => issues.push({ addonId, code, message, repair })
+
+        // TAM audits itself like anything else, but its repairs are marked
+        // `self`. Rewriting a script note doesn't disturb the already-loaded
+        // instance - the running copy lives in memory - so the repair is safe to
+        // apply from inside TAM; what isn't safe is treating it as done, since
+        // every note would be repaired while the old code kept running. `self`
+        // is what makes the UI demand a reload instead.
+        const isSelf = addonId === TAM_ID
         const canRepoint = !!catalogSources[addonId]
+        const resyncFix = { kind: "resync", self: isSelf }
+        const sourceFix = canRepoint ? { kind: "repoint", self: isSelf } : null
 
         let manifestFetched
         try {
             manifestFetched = await fetchManifest(addon.manifestSourceUrl)
         } catch (e) {
-            issue("dead-source",
-                `its manifest can no longer be fetched (${addon.manifestSourceUrl})`
-                + (canRepoint ? "" : ", and no catalog offers a replacement - uninstall it or add a catalog that carries it"),
-                canRepoint ? "repoint" : null)
+            rows.push(issueRow(addonId, "dead-source", addon.manifestSourceUrl,
+                "its manifest can no longer be fetched"
+                + (canRepoint ? "" : ", and no catalog offers a replacement - uninstall it, or add a catalog that carries it"),
+                sourceFix))
             continue
         }
 
@@ -1592,25 +1591,33 @@ async function diagnoseAddons() {
         const hashedNotes = notes.filter(noteDef => noteDef.sha)
 
         if (!manifestFetched.contentHash && hashedNotes.length === 0) {
-            issue("unverifiable-source",
-                "its manifest carries no contentHash and no per-note hashes, so update detection falls back to comparing "
+            rows.push(issueRow(addonId, "unverifiable-source", addon.manifestSourceUrl,
+                "carries no contentHash and no per-note hashes, so update detection falls back to comparing "
                 + "version numbers and installed content can't be checked at all"
                 + (canRepoint ? "" : ", and no catalog offers a hashed replacement"),
-                canRepoint ? "repoint" : null)
+                sourceFix))
         } else if (manifestFetched.contentHash && !addon.contentHash) {
-            issue("partial-sync",
-                "the last sync never recorded a contentHash, so at least one note failed to install while the version was still advanced",
-                "resync")
+            rows.push(issueRow(addonId, "partial-sync", `v${addon.installedVersion}`,
+                "the last sync never recorded a contentHash, so at least one note failed to install "
+                + "while the version was still advanced",
+                resyncFix))
         }
 
         // What can meaningfully be compared against a manifest `sha`, which is
-        // the digest of the *source file*. Persistent notes hold the user's own
-        // data and are meant to diverge; a renderAsHTML note stores marked.parse()
-        // output rather than the markdown that was hashed; a binary note isn't
-        // worth shipping over the wire to hash.
+        // the digest of the *source file*. A note the sync itself never rewrites
+        // is meant to diverge - persistent notes hold the user's own data, and a
+        // skipOnUpdate note (TAM's own live database among them) keeps whatever
+        // it has - so comparing either against the shipped default reports drift
+        // forever. Same pairing resolveNotes() makes when it decides to write.
+        // A renderAsHTML note stores marked.parse() output rather than the
+        // markdown that was hashed, and a binary note isn't worth shipping over
+        // the wire to hash.
         const persistentIds = persistentLocalIds(m)
         const contentIds = hashedNotes
-            .filter(noteDef => !noteDef.binary && !noteDef.renderAsHTML && !persistentIds.has(noteDef.id))
+            .filter(noteDef => !noteDef.binary
+                && !noteDef.renderAsHTML
+                && !noteDef.skipOnUpdate
+                && !persistentIds.has(noteDef.id))
             .map(noteDef => noteDef.id)
         const live = await readLiveAddon(
             addonId,
@@ -1626,30 +1633,35 @@ async function diagnoseAddons() {
         )
 
         for (const noteDef of notes) {
-            if (!live[noteDef.id]) {
-                issue("missing-note", `declared note '${noteDef.id}' (${noteDef.title}) is not installed`, "resync")
-            }
+            if (live[noteDef.id]) continue
+            rows.push(issueRow(addonId, "missing-note", noteDef.title,
+                persistentIds.has(noteDef.id)
+                    ? `persistent note '${noteDef.id}' is not installed - saved data for it may have been lost`
+                    : `declared note '${noteDef.id}' is not installed`,
+                resyncFix))
         }
 
         for (const noteDef of notes) {
             const entry = live[noteDef.id]
             if (!entry || entry.content === null) continue
             if (await sha256Hex(entry.content) !== noteDef.sha) {
-                issue("content-drift",
-                    `'${noteDef.title}' does not match the manifest - the installed copy is stale or was edited by hand`,
-                    "resync")
+                rows.push(issueRow(addonId, "content-drift", noteDef.title,
+                    "the installed copy doesn't match the manifest - stale bytes, or edited by hand",
+                    resyncFix))
             }
         }
 
-        // A note missing entirely is already reported above; these only look at
-        // wiring between notes that both exist, so one failure reads as one issue.
+        // A note missing entirely is already a row above; these only look at
+        // wiring between notes that both exist, so one failure reads as one row.
         for (const link of (m.children || [])) {
             if (link.parent === "root" || link.parent === "persistence") continue
             const parent = live[link.parent]
             const child = live[link.child]
             if (!parent || !child) continue
             if (!child.parentIds.includes(parent.noteId)) {
-                issue("broken-wiring", `'${link.child}' is not parented under '${link.parent}' as the manifest declares`, "resync")
+                rows.push(issueRow(addonId, "broken-wiring", link.child,
+                    `is not parented under '${link.parent}' as the manifest declares`,
+                    resyncFix))
             }
         }
         for (const relation of (m.relations || [])) {
@@ -1661,7 +1673,9 @@ async function diagnoseAddons() {
             const present = from.relations.some(attr =>
                 (attr.name === relation.type || attr.name === `disabled:${relation.type}`) && attr.value === to.noteId)
             if (!present) {
-                issue("broken-wiring", `relation ~${relation.type} from '${relation.from}' to '${relation.to}' is missing`, "resync")
+                rows.push(issueRow(addonId, "broken-wiring", `~${relation.type}`,
+                    `from '${relation.from}' to '${relation.to}' is missing`,
+                    resyncFix))
             }
         }
         for (const label of (m.labels || [])) {
@@ -1672,54 +1686,44 @@ async function diagnoseAddons() {
             const present = entry.labels.some(attr =>
                 (attr.name === name || attr.name === `disabled:${name}`) && attr.value === value)
             if (!present) {
-                issue("broken-wiring", `label #${name} on '${label.note}' is missing or holds the wrong value`, "resync")
+                rows.push(issueRow(addonId, "broken-wiring", `#${name}`,
+                    `on '${label.note}' is missing or holds the wrong value`,
+                    resyncFix))
             }
         }
     }
 
-    return issues
+    return rows
 }
 
-// Applies a diagnosis: repoints every record whose source went dead or
-// unverifiable, then re-syncs each affected addon.
+// Applies one row's repair, and only that row's.
 //
-// syncAddon() is the only repair. A sync already re-creates missing notes,
-// rewrites drifted content, re-applies wiring and records the hashes, so there
-// is no second repair path to keep correct - and it still routes persistent
-// notes through the prompt system, so healing can't silently overwrite settings.
-async function healAddons(issues) {
-    const catalogSources = await catalogSourceIndex()
-    const database = await loadDatabase()
-    const repointed = []
-
-    for (const issue of issues.filter(i => i.repair === "repoint")) {
+// Everything an addon owns is repaired by a re-sync: syncAddon() already
+// re-creates missing notes, rewrites drifted content, re-applies wiring and
+// records the hashes, so there is no second repair path to keep correct. It also
+// still routes persistent notes through the prompt system, so a repair can never
+// silently overwrite settings.
+// Returns { requiresReload } - true once TAM has rewritten its own notes, whose
+// repaired code only starts running on the next load.
+async function repairIssue(issue) {
+    if (!issue || !issue.fix) return { requiresReload: false }
+    if (issue.fix.kind === "delete") {
+        await deleteTamNote(issue.fix.noteId)
+        return { requiresReload: false }
+    }
+    if (issue.fix.kind === "repoint") {
+        const catalogSources = await catalogSourceIndex()
         const url = catalogSources[issue.addonId]
+        const database = await loadDatabase()
         const record = database.installedAddons[issue.addonId]
-        if (!url || !record || record.manifestSourceUrl === url) continue
+        if (!url || !record) return { requiresReload: false }
         record.manifestSourceUrl = url
-        repointed.push(issue.addonId)
+        await saveDatabase(database)
     }
-    if (repointed.length) await saveDatabase(database)
-
-    // Re-synced as maintenance, not as a manual install: healing an addon the
-    // user never installed by hand must not start claiming they did.
-    const addonIds = [...new Set(issues.filter(i => i.repair).map(i => i.addonId))]
-    const failed = []
-    for (const addonId of addonIds) {
-        try {
-            await syncAddon(addonId, { manual: false })
-        } catch (e) {
-            console.error(`TAM: heal failed to re-sync ${addonId}`, e)
-            failed.push(addonId)
-        }
-    }
-
-    return {
-        repointed,
-        resynced: addonIds.filter(addonId => !failed.includes(addonId)),
-        failed,
-        unfixable: issues.filter(issue => !issue.repair).length
-    }
+    // Maintenance, not a manual install: a repaired addon must not start
+    // claiming the user installed it by hand.
+    await syncAddon(issue.addonId, { manual: false })
+    return { requiresReload: !!issue.fix.self }
 }
 
 // =========================================================================
@@ -1772,23 +1776,25 @@ async function fetchCatalogAddons(catalogUrl) {
 // =========================================================================
 
 // User-triggered maintenance sweep: deletes any #TAMFILEID-tagged note with zero parents.
-async function sweepOrphanedNotes() {
+// Read-only: every #TAMFILEID-tagged note with no parents left. Deleting one is
+// deleteTamNote() below, so the diagnosis can list them before anything goes.
+async function findOrphanedNotes() {
     return await api.runOnBackend((tamFileIdLabel) => {
-        const removed = []
+        const found = []
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
             if (note.isDeleted) continue
             if (note.getParentNotes().length > 0) continue
             const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
             if (!tamFileId) continue
-            removed.push(tamFileId)
-            note.deleteNote()
+            found.push({ noteId: note.noteId, title: note.title, tamFileId })
         }
-        return removed
+        return found
     }, [tamFileIdLabel])
 }
 
-// User-triggered maintenance sweep: deletes any note under the global Addons root with no #TAMFILEID or an addonId that isn't currently installed.
-async function sweepInvalidAddonTreeNotes() {
+// Read-only: every note under the addon root that no installed addon claims -
+// either untagged, or tagged for an addon that isn't installed any more.
+async function findInvalidAddonTreeNotes() {
     const database = await loadDatabase()
     const installedIds = Object.keys(database.installedAddons || {})
     const addonsRootId = await getAddonRootNoteId()
@@ -1797,7 +1803,7 @@ async function sweepInvalidAddonTreeNotes() {
         const installedSet = new Set(installedIds)
         const rootNote = api.getNote(addonsRootId)
         if (!rootNote) return []
-        const removed = []
+        const found = []
         for (const noteId of rootNote.getSubtreeNoteIds()) {
             if (noteId === addonsRootId) continue
             const note = api.getNote(noteId)
@@ -1805,11 +1811,18 @@ async function sweepInvalidAddonTreeNotes() {
             const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
             const addonId = tamFileId ? tamFileId.split("/")[0] : null
             if (tamFileId && installedSet.has(addonId)) continue
-            removed.push({ noteId: note.noteId, title: note.title, tamFileId })
-            note.deleteNote()
+            found.push({ noteId: note.noteId, title: note.title, tamFileId })
         }
-        return removed
+        return found
     }, [tamFileIdLabel, addonsRootId, installedIds])
+}
+
+// The repair behind every "Delete note" row.
+async function deleteTamNote(noteId) {
+    await api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId)
+        if (note && !note.isDeleted) note.deleteNote()
+    }, [noteId])
 }
 
 // Removes every branch this addon owns, never a blanket note-level delete.
@@ -1966,9 +1979,6 @@ module.exports.enableAddon = enableAddon
 module.exports.getPendingPrompts = getPendingPrompts
 module.exports.resolvePrompt = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
-module.exports.validateDatabase = validateDatabase
-module.exports.diagnoseAddons = diagnoseAddons
-module.exports.healAddons = healAddons
 module.exports.fetchReadmeHtml = fetchReadmeHtml
-module.exports.sweepOrphanedNotes = sweepOrphanedNotes
-module.exports.sweepInvalidAddonTreeNotes = sweepInvalidAddonTreeNotes
+module.exports.diagnose = diagnose
+module.exports.repairIssue = repairIssue

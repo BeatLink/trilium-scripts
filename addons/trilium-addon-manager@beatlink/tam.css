@@ -792,19 +792,58 @@
         }
     }
 
-    & .TAM-validation-content {
-        display: block !important;
-        font-family: "SFMono-Regular", Consolas, monospace !important;
-        font-size: 13px !important;
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        max-height: 300px !important;
-        overflow-y: auto !important;
-        padding: 12px !important;
-        background: #f1f5f9 !important;
+    & .TAM-diagnostics-reload {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+        border: 1px solid #fcd34d !important;
+        background: #fffbeb !important;
         border-radius: 6px !important;
+        font-size: 13px !important;
+        color: #78350f !important;
+    }
+
+    & .TAM-diagnostics-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 13px !important;
         color: #1a1a2e !important;
-        user-select: all !important;
+
+        & th,
+        & td {
+            text-align: left !important;
+            vertical-align: top !important;
+            padding: 8px 10px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        & th {
+            font-weight: 600 !important;
+            color: #64748b !important;
+            white-space: nowrap !important;
+        }
+
+        /* The repair column keeps to its button; Details takes what's left. */
+        & td:last-child {
+            width: 1% !important;
+            white-space: nowrap !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            padding: 1px 5px !important;
+            background: #f1f5f9 !important;
+            border-radius: 4px !important;
+            word-break: break-all !important;
+        }
+    }
+
+    & .TAM-diagnostics-manual {
+        font-size: 12px !important;
+        color: #64748b !important;
     }
 
     & .TAM-validation-buttons {

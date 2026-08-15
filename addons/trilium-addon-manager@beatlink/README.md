@@ -60,16 +60,19 @@ itself would risk taking down the one thing that could otherwise fix it.
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
   data, addons with an update available), catalog management (each catalog's row has **Browse**,
   **Visit Website**, and **Delete** actions, plus adding a new catalog by URL), a single-addon
-  "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons, Validate
-  Database, **Diagnose Installed Addons**, Sweep Orphaned Notes, Sweep Invalid Addon Tree Notes,
-  Reinitialize Database).
-- **Diagnose Installed Addons** — checks every installed addon against its live manifest and reports
-  what doesn't match: missing notes, content that has drifted from the manifest's hash, wiring the
-  manifest declares but the tree doesn't have, sources that have gone dead or carry no hashes, and
-  records left behind by a sync that half-failed. Nothing changes until you press **Repair All**,
-  which repoints dead sources and re-syncs the affected addons. Your settings are never overwritten
+  "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons,
+  **Run Diagnostics**, Reinitialize Database).
+- **Diagnostics** — one audit covering TAM's own bookkeeping, the addon-owned note tree, and every
+  installed addon against its live manifest. Results are a table, one row per problem, each with the
+  repair for that row: missing notes, content that has drifted from the manifest's hash, wiring the
+  manifest declares but the tree doesn't have, orphaned and unclaimed notes, sources that have gone
+  dead or carry no hashes, and records left by a sync that half-failed. **Nothing changes until you
+  press a row's button** — the audit is read-only, and each repair acts on its row alone. This
+  replaced the old Validate Database and the two Sweep actions, which deleted first and reported
+  after. TAM audits itself too; repairing its own notes reads "… & reload", since the running copy
+  lives in memory and only the next load picks up the repair. Your settings are never overwritten
   silently — a persistent note that differs still goes through the usual Keep Mine / Use New prompt.
-  See [Diagnosing and Repairing Addons](ARCHITECTURE.md#diagnosing-and-repairing-addons).
+  See [Diagnostics](ARCHITECTURE.md#diagnostics).
 
 ---
 

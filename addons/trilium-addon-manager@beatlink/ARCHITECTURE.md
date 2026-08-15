@@ -547,70 +547,70 @@ TAM scans the entire subtree of the addon's root note, so activation labels on a
 
 ---
 
-## Validating the Database
+## Diagnostics
 
-The **Validate Database** button runs `libTAMjs.validateDatabase()`, which audits every installed
-addon against the live Trilium note tree — read-only, never fixes anything:
+**Run Diagnostics** (`libTAMjs.diagnose()`) is the single maintenance action. It replaced three
+separate buttons — Validate Database, Sweep Orphaned Notes, Sweep Invalid Addon Tree Notes — the
+latter two of which *deleted first and reported after*. Everything is folded into one read-only
+audit that returns a flat list of rows, and **nothing changes until a row's own repair button is
+pressed** (`repairIssue(issue)`).
 
-- **Duplicate `#TAMFILEID`s** — no two live notes claim the same `{addonId}/{localId}` id (the one thing
-  a live-lookup design can't self-correct, since `getNoteWithLabel` just returns whichever match it finds
-  first).
-- **Missing dependency** — a declared `manifest.dependencies` entry that isn't actually installed.
-- **Note existence** — the addon's root note (the stored `manifest.root` local id for TAM itself,
-  or the reserved TAM-owned anchor local id for every other addon) and the stored
-  `manifest.settingsNote` local id still resolve, checked only for an addon that's both installed
-  *and* `manuallyInstalled` — a lazily-resolved dependency's root is never forced into existence at
-  all (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)), so a missing one
-  there is expected, not an issue.
-- **Persistence integrity** — for an addon whose manifest attaches anything under the reserved
-  `"persistence"` parent keyword, every persistent note still resolves by its `#TAMFILEID` under
-  that addon's own persistence anchor (a child of Addon Data). A missing one means the note was
-  lost and a re-sync is needed.
+The reason this is worth having: `syncAddon` advances `installedVersion` **unconditionally**, but
+records a `contentHash` only once *every* note resolved. A note whose fetch failed is logged and
+`continue`d, so the addon ends up reporting itself up to date while still running old code.
 
-Returns a flat list of `{ addonId, message }` issues, rendered as a dismissible panel. It fixes
-nothing itself. Related but separate: **Sweep Orphaned Notes** (`sweepOrphanedNotes`) deletes any
-`#TAMFILEID`-tagged note with zero parents, a safety net for a partial sync failure.
+Each row is `{ addonId, code, target, detail, fix, fixLabel }`:
 
----
-
-## Diagnosing and Repairing Addons
-
-Validation above answers *"is TAM's own bookkeeping intact?"* and checks only the notes TAM can't
-function without. **Diagnose Installed Addons** (`diagnoseAddons()`) answers the wider question —
-*"is what's installed actually what the manifest says?"* — by fetching every installed addon's live
-manifest and comparing it against the tree.
-
-This exists because of a specific hole in `syncAddon`: it advances `installedVersion`
-**unconditionally**, but records a `contentHash` only once *every* note resolved. A note whose fetch
-failed is logged and `continue`d, so the addon ends up reporting itself up to date while still
-running the previous version's code.
-
-| Issue code | What it means | `repair` |
+| Issue code | What it means | Repair |
 |---|---|---|
-| `dead-source` | The record's `manifestSourceUrl` can no longer be fetched. | `repoint`, or none if no catalog carries it |
-| `unverifiable-source` | The manifest has no `contentHash` and no per-note `sha`, so updates fall back to comparing version numbers and installed content can't be checked at all. | `repoint`, or none |
-| `partial-sync` | The manifest has a `contentHash` but the record doesn't — the fingerprint of a sync that half-failed. | `resync` |
-| `missing-note` | A declared note isn't installed. | `resync` |
-| `content-drift` | The installed note's sha256 doesn't match the manifest's `sha` — stale bytes or a hand edit. | `resync` |
-| `broken-wiring` | A declared `children[]` parenting, `relations[]` entry, or `labels[]` entry isn't applied in the tree. Catches the require-needs-a-*direct*-child case that `validate` can't see at build time. | `resync` |
+| `duplicate-id` | Two live notes claim one `#TAMFILEID`. The one thing a live-lookup design can't self-correct, and TAM can't tell which copy is real. | none — by hand |
+| `orphaned-note` | A `#TAMFILEID`-tagged note with no parents left. | Delete note |
+| `unclaimed-note` | A note under the addon root that no installed addon claims. | Delete note |
+| `dead-source` | The record's `manifestSourceUrl` no longer fetches. | Repoint & re-sync, or none if no catalog carries it |
+| `unverifiable-source` | The manifest has no `contentHash` and no per-note `sha`, so updates fall back to comparing version numbers and content can't be checked at all. | Repoint & re-sync, or none |
+| `partial-sync` | The manifest has a `contentHash` but the record doesn't — the fingerprint of a sync that half-failed. | Re-sync |
+| `missing-note` | A declared note isn't installed. Says so louder for a persistent note, where it means saved data may be gone. | Re-sync |
+| `content-drift` | The installed note's sha256 doesn't match the manifest's `sha`. | Re-sync |
+| `broken-wiring` | A declared `children[]` parenting, `relations[]` or `labels[]` entry isn't applied in the tree. Catches the require-needs-a-*direct*-child case `validate` can't see at build time. | Re-sync |
 
-Three exclusions keep the content check honest, since a manifest `sha` is the digest of the *source
-file*: **persistent** notes hold the user's own data and are meant to diverge, a **`renderAsHTML`**
-note stores `marked.parse()` output rather than the markdown that was hashed, and a **binary** note
-isn't worth shipping over the wire to hash.
+`repairIssue` re-runs the audit afterwards rather than striking the row out, because one fix
+routinely settles several rows — a re-sync clears every finding for that addon at once.
 
-Note resolution mirrors `resolveNotes()` exactly, including the shared-vendored-file path: a file two
-addons both vendor is installed **once**, under whichever addon got there first, so a note that
-doesn't answer to this addon's `#TAMFILEID` is still installed if one carries its `#TAMSOURCEURL`.
-Matching on the id alone would report every shared library note as missing.
+### What the content check deliberately skips
 
-**Repair All** (`healAddons(issues)`) repoints every record whose source went dead or unverifiable —
-to a hashed manifest from an added catalog — then calls `syncAddon(addonId, { manual: false })` for
-each affected addon. `syncAddon` is the *only* repair: it already re-creates missing notes, rewrites
-drifted content, re-applies wiring and records the hashes, so there is no second repair path to keep
-correct. It also still routes persistent notes through the prompt system, so healing can never
-silently overwrite settings. `manual: false` keeps a healed addon from starting to claim the user
-installed it by hand.
+A manifest `sha` is the digest of the **source file**, so a note whose stored content isn't that file
+is excluded rather than reported as drift:
+
+- **Persistent** and **`skipOnUpdate`** notes — the two `resolveNotes()` itself refuses to rewrite
+  (`!!noteDef.skipOnUpdate || persistentIds.has(localId)`). They hold live state: the user's settings,
+  and TAM's own database note. Comparing either against the shipped default reports drift forever.
+- **`renderAsHTML`** notes — the note stores `marked.parse()` output, not the markdown that was hashed.
+- **binary** notes — not worth shipping over the wire to hash.
+
+### Resolving a note the same way the sync does
+
+Note lookup mirrors `resolveNotes()`, including the shared-vendored-file path: a file two addons both
+vendor is installed **once**, under whichever addon got there first, so a note that doesn't answer to
+this addon's `#TAMFILEID` is still installed if one carries its `#TAMSOURCEURL`. Matching on the id
+alone reports every shared library note as missing. The `#TAMSOURCEURL` identity is likewise
+reconstructed exactly as the sync records it — absent for a `renderAsHTML` note, since that stores a
+rendering rather than the fetched file.
+
+### TAM diagnosing itself
+
+TAM is audited like any other addon. Rewriting a script note doesn't disturb the already-loaded
+instance — the running copy lives in memory — so a self-repair is safe to apply from inside TAM. What
+would *not* be safe is treating it as finished: every note would be repaired while the old code kept
+running, and the next diagnosis would be produced by the pre-repair build.
+
+So a repair to TAM's own notes carries `fix.self`, which does two things: the button reads
+**"… & reload"**, and `repairIssue` returns `{ requiresReload: true }`, which pins a banner above the
+table until Trilium is reloaded. Nothing is deferred or staged — the notes really are written — the
+reload is what makes the repaired code the code that runs.
+
+Repairs never silently overwrite settings: a re-sync still routes persistent notes through the
+[`promptOnUpdate`](#promptonupdate) review, and runs as `syncAddon(addonId, { manual: false })` so a
+repaired addon doesn't start claiming the user installed it by hand.
 
 ---
 
