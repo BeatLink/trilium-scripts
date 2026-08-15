@@ -1,7 +1,7 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in two widgets sharing one
-configuration. The Task widget (start/due dates, duration, recurrence,
+A schema-driven, multi-profile task/agenda system for TriliumNext, built around the Overview widget.
+The Task widget (start/due dates, duration, recurrence,
 Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 — install it alongside this one for the full Task pane. The two are fully independent: this addon ships
 none of that addon's code and reads none of its settings, and vice versa. They interoperate only through
@@ -9,14 +9,16 @@ note-label conventions and the `agenda:tasksChanged` event. The My Day focus pan
 [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md), and the GTD Organize workflow is
 [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md).
 
-## Widgets
+## Widget
 
 - **Overview** — a right-pane widget whose per-profile search/filter/sort/prefix/color rules re-file
   the active profile's matching notes under a single shared overview note, shown as a built-in
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
-- **Note Actions** — a right-pane widget shown on every note with two quick actions, Zen Mode and
-  Hoist Note, independent of the Task widget's actionable-note gating.
+
+The **Note Actions** widget (Zen Mode / Hoist Note quick actions) moved to
+[`hoist-note@beatlink`](../hoist-note@beatlink/README.md), which already owned the hoist toggle.
+
 My Day (the note-detail countdown timer, and the optional loops that append due tasks and send due
 notifications) moved to [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md). It clones this
 addon's overview/query libraries to resolve which tasks are due from the active profile.
