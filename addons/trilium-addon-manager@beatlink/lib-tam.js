@@ -1492,6 +1492,237 @@ async function validateDatabase() {
 }
 
 // =========================================================================
+// Diagnostics: audits every installed addon against its live manifest, and
+// repairs what it finds.
+//
+// validateDatabase() above answers "is TAM's own bookkeeping intact?" and checks
+// only the notes it can't function without. This answers the wider question "is
+// what's installed actually what the manifest says?", which is what catches a
+// sync that half-failed: syncAddon() advances installedVersion unconditionally
+// but only records a contentHash once every note resolved, so a note whose fetch
+// failed leaves the addon reporting itself up to date while running old code.
+//
+// diagnoseAddons() is read-only. Every repair is applied by healAddons().
+// =========================================================================
+
+// sha256 of a string as lowercase hex - the digest a published manifest's `sha`
+// carries for that note's source file. Needs a secure context for crypto.subtle,
+// which Trilium always is (trilium-app:// is registered as a secure scheme).
+async function sha256Hex(text) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("")
+}
+
+// addonId -> a catalog's manifest URL for it, used to repoint a record whose own
+// source has gone dead or carries nothing to verify against. Only hashed
+// manifests are indexed: repointing at another unverifiable one fixes nothing.
+async function catalogSourceIndex() {
+    const index = {}
+    for (const catalogUrl of await getCatalogs()) {
+        try {
+            const { addons } = await fetchCatalogAddons(catalogUrl)
+            for (const entry of addons) {
+                if (entry.id && entry.contentHash && !index[entry.id]) index[entry.id] = entry.manifestSourceUrl
+            }
+        } catch (e) {
+            console.error(`TAM: couldn't read catalog ${catalogUrl} while diagnosing`, e)
+        }
+    }
+    return index
+}
+
+// Everything the audit needs about one addon's live notes, in a single backend
+// round trip. Content comes back only for `contentIds`, so a 1MB binary or a
+// note with nothing to compare against isn't serialized for nothing.
+//
+// Resolution mirrors resolveNotes(): a file vendored by two addons is installed
+// once, under whichever addon got there first, so a note that doesn't answer to
+// this addon's #TAMFILEID is still installed if one carries its #TAMSOURCEURL.
+// Matching on the id alone would report every shared library note as missing.
+async function readLiveAddon(addonId, noteDefs, contentIds) {
+    return await api.runOnBackend((tamFileIdLabel, sourceUrlLabel, addonId, noteDefs, contentIds) => {
+        const live = {}
+        for (const { id: localId, sourceId } of noteDefs) {
+            let note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
+            if (note && note.isDeleted) note = null
+            if (!note && sourceId) {
+                const shared = api.getNoteWithLabel(sourceUrlLabel, sourceId)
+                if (shared && !shared.isDeleted) note = shared
+            }
+            if (!note) continue
+            const attributes = note.getOwnedAttributes() || []
+            live[localId] = {
+                noteId: note.noteId,
+                parentIds: note.getParentNotes().map(parent => parent.noteId),
+                labels: attributes.filter(a => a.type === "label").map(a => ({ name: a.name, value: a.value })),
+                relations: attributes.filter(a => a.type === "relation").map(a => ({ name: a.name, value: a.value })),
+                content: contentIds.includes(localId) ? note.getContent() : null
+            }
+        }
+        return live
+    }, [tamFileIdLabel, sourceUrlLabel, addonId, noteDefs, contentIds])
+}
+
+// Audits every installed addon against its live manifest. Each issue carries a
+// `repair`: "resync" (syncAddon fixes it), "repoint" (its source has to be
+// replaced first), or null (nothing TAM can do unattended).
+async function diagnoseAddons() {
+    const database = await loadDatabase()
+    const catalogSources = await catalogSourceIndex()
+    const issues = []
+
+    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+        if (!addon.installedVersion) continue
+        const issue = (code, message, repair = null) => issues.push({ addonId, code, message, repair })
+        const canRepoint = !!catalogSources[addonId]
+
+        let manifestFetched
+        try {
+            manifestFetched = await fetchManifest(addon.manifestSourceUrl)
+        } catch (e) {
+            issue("dead-source",
+                `its manifest can no longer be fetched (${addon.manifestSourceUrl})`
+                + (canRepoint ? "" : ", and no catalog offers a replacement - uninstall it or add a catalog that carries it"),
+                canRepoint ? "repoint" : null)
+            continue
+        }
+
+        const m = normalizeManifest(manifestFetched)
+        const notes = m.notes || []
+        const hashedNotes = notes.filter(noteDef => noteDef.sha)
+
+        if (!manifestFetched.contentHash && hashedNotes.length === 0) {
+            issue("unverifiable-source",
+                "its manifest carries no contentHash and no per-note hashes, so update detection falls back to comparing "
+                + "version numbers and installed content can't be checked at all"
+                + (canRepoint ? "" : ", and no catalog offers a hashed replacement"),
+                canRepoint ? "repoint" : null)
+        } else if (manifestFetched.contentHash && !addon.contentHash) {
+            issue("partial-sync",
+                "the last sync never recorded a contentHash, so at least one note failed to install while the version was still advanced",
+                "resync")
+        }
+
+        // What can meaningfully be compared against a manifest `sha`, which is
+        // the digest of the *source file*. Persistent notes hold the user's own
+        // data and are meant to diverge; a renderAsHTML note stores marked.parse()
+        // output rather than the markdown that was hashed; a binary note isn't
+        // worth shipping over the wire to hash.
+        const persistentIds = persistentLocalIds(m)
+        const contentIds = hashedNotes
+            .filter(noteDef => !noteDef.binary && !noteDef.renderAsHTML && !persistentIds.has(noteDef.id))
+            .map(noteDef => noteDef.id)
+        const live = await readLiveAddon(
+            addonId,
+            // Same identity resolveNotes() records in #TAMSOURCEURL: none for a
+            // renderAsHTML note (it stores a rendering, not the fetched file).
+            notes.map(noteDef => ({
+                id: noteDef.id,
+                sourceId: (!noteDef.renderAsHTML && noteDef.sourceUrl)
+                    ? (noteDef.sourceId || noteDef.sourceUrl)
+                    : null
+            })),
+            contentIds
+        )
+
+        for (const noteDef of notes) {
+            if (!live[noteDef.id]) {
+                issue("missing-note", `declared note '${noteDef.id}' (${noteDef.title}) is not installed`, "resync")
+            }
+        }
+
+        for (const noteDef of notes) {
+            const entry = live[noteDef.id]
+            if (!entry || entry.content === null) continue
+            if (await sha256Hex(entry.content) !== noteDef.sha) {
+                issue("content-drift",
+                    `'${noteDef.title}' does not match the manifest - the installed copy is stale or was edited by hand`,
+                    "resync")
+            }
+        }
+
+        // A note missing entirely is already reported above; these only look at
+        // wiring between notes that both exist, so one failure reads as one issue.
+        for (const link of (m.children || [])) {
+            if (link.parent === "root" || link.parent === "persistence") continue
+            const parent = live[link.parent]
+            const child = live[link.child]
+            if (!parent || !child) continue
+            if (!child.parentIds.includes(parent.noteId)) {
+                issue("broken-wiring", `'${link.child}' is not parented under '${link.parent}' as the manifest declares`, "resync")
+            }
+        }
+        for (const relation of (m.relations || [])) {
+            const from = live[relation.from]
+            const to = live[relation.to]
+            if (!from || !to) continue
+            // A disabled addon carries its activation attributes under a
+            // `disabled:` prefix, which is still the wiring the manifest declared.
+            const present = from.relations.some(attr =>
+                (attr.name === relation.type || attr.name === `disabled:${relation.type}`) && attr.value === to.noteId)
+            if (!present) {
+                issue("broken-wiring", `relation ~${relation.type} from '${relation.from}' to '${relation.to}' is missing`, "resync")
+            }
+        }
+        for (const label of (m.labels || [])) {
+            const entry = live[label.note]
+            if (!entry) continue
+            const { name } = parseInheritableName(label.name)
+            const value = String(label.value ?? "")
+            const present = entry.labels.some(attr =>
+                (attr.name === name || attr.name === `disabled:${name}`) && attr.value === value)
+            if (!present) {
+                issue("broken-wiring", `label #${name} on '${label.note}' is missing or holds the wrong value`, "resync")
+            }
+        }
+    }
+
+    return issues
+}
+
+// Applies a diagnosis: repoints every record whose source went dead or
+// unverifiable, then re-syncs each affected addon.
+//
+// syncAddon() is the only repair. A sync already re-creates missing notes,
+// rewrites drifted content, re-applies wiring and records the hashes, so there
+// is no second repair path to keep correct - and it still routes persistent
+// notes through the prompt system, so healing can't silently overwrite settings.
+async function healAddons(issues) {
+    const catalogSources = await catalogSourceIndex()
+    const database = await loadDatabase()
+    const repointed = []
+
+    for (const issue of issues.filter(i => i.repair === "repoint")) {
+        const url = catalogSources[issue.addonId]
+        const record = database.installedAddons[issue.addonId]
+        if (!url || !record || record.manifestSourceUrl === url) continue
+        record.manifestSourceUrl = url
+        repointed.push(issue.addonId)
+    }
+    if (repointed.length) await saveDatabase(database)
+
+    // Re-synced as maintenance, not as a manual install: healing an addon the
+    // user never installed by hand must not start claiming they did.
+    const addonIds = [...new Set(issues.filter(i => i.repair).map(i => i.addonId))]
+    const failed = []
+    for (const addonId of addonIds) {
+        try {
+            await syncAddon(addonId, { manual: false })
+        } catch (e) {
+            console.error(`TAM: heal failed to re-sync ${addonId}`, e)
+            failed.push(addonId)
+        }
+    }
+
+    return {
+        repointed,
+        resynced: addonIds.filter(addonId => !failed.includes(addonId)),
+        failed,
+        unfixable: issues.filter(issue => !issue.repair).length
+    }
+}
+
+// =========================================================================
 // Catalog: catalog CRUD + browsing. A "catalog" is a URL serving {"tam-addons": [manifestSourceUrl, ...]}.
 // =========================================================================
 
@@ -1736,6 +1967,8 @@ module.exports.getPendingPrompts = getPendingPrompts
 module.exports.resolvePrompt = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.validateDatabase = validateDatabase
+module.exports.diagnoseAddons = diagnoseAddons
+module.exports.healAddons = healAddons
 module.exports.fetchReadmeHtml = fetchReadmeHtml
 module.exports.sweepOrphanedNotes = sweepOrphanedNotes
 module.exports.sweepInvalidAddonTreeNotes = sweepInvalidAddonTreeNotes

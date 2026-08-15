@@ -61,7 +61,15 @@ itself would risk taking down the one thing that could otherwise fix it.
   data, addons with an update available), catalog management (each catalog's row has **Browse**,
   **Visit Website**, and **Delete** actions, plus adding a new catalog by URL), a single-addon
   "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons, Validate
-  Database, Clean Up Empty Persistence Roots).
+  Database, **Diagnose Installed Addons**, Sweep Orphaned Notes, Sweep Invalid Addon Tree Notes,
+  Reinitialize Database).
+- **Diagnose Installed Addons** — checks every installed addon against its live manifest and reports
+  what doesn't match: missing notes, content that has drifted from the manifest's hash, wiring the
+  manifest declares but the tree doesn't have, sources that have gone dead or carry no hashes, and
+  records left behind by a sync that half-failed. Nothing changes until you press **Repair All**,
+  which repoints dead sources and re-syncs the affected addons. Your settings are never overwritten
+  silently — a persistent note that differs still goes through the usual Keep Mine / Use New prompt.
+  See [Diagnosing and Repairing Addons](ARCHITECTURE.md#diagnosing-and-repairing-addons).
 
 ---
 

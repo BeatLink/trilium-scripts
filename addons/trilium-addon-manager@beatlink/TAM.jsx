@@ -38,6 +38,10 @@ const TYPE_COLORS = {
 
 const TAM_ID = "trilium-addon-manager@beatlink"
 
+// The results panel is shared by validate, the two sweeps and the diagnosis;
+// this title is what marks the run that Repair All can act on.
+const DIAGNOSIS_TITLE = "Addon Diagnosis"
+
 function typeColor(type) {
     return TYPE_COLORS[type] || "#6b7280"
 }
@@ -83,6 +87,8 @@ const COMMAND_LABELS = {
     "enable-addon": "Updating addon",
     "check-updates": "Checking for updates",
     "validate-database": "Validating database",
+    "diagnose-addons": "Diagnosing installed addons",
+    "heal-addons": "Repairing installed addons",
     "sweep-orphans": "Sweeping orphaned notes",
     "sweep-invalid-tree": "Sweeping invalid addon tree notes",
     "reinitialize-database": "Reinitializing database"
@@ -600,7 +606,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onSweepOrphans, onSweepInvalidTree, onReinitialize, anyUpdateAvailable
+    onValidate, onDiagnose, onSweepOrphans, onSweepInvalidTree, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -654,6 +660,7 @@ function SettingsView({
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton className="btn-ghost" icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
                     <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
+                    <TamButton className="btn-ghost" icon="bx bx-first-aid" text="Diagnose Installed Addons" onClick={onDiagnose} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
                     <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Invalid Addon Tree Notes" onClick={onSweepInvalidTree} />
                     <TamButton
@@ -875,6 +882,27 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         setValidationIssues(await libTAMjs.validateDatabase())
     }
 
+    async function handleDiagnose() {
+        setValidationTitle(DIAGNOSIS_TITLE)
+        setValidationIssues(await libTAMjs.diagnoseAddons())
+    }
+
+    // Reports what healing actually did rather than clearing the panel: an addon
+    // whose re-sync failed, or that nothing could be done for, has to stay visible.
+    async function handleHealAddons(command) {
+        const result = await libTAMjs.healAddons(command.issues)
+        const lines = []
+        for (const addonId of result.repointed) lines.push({ addonId, message: "repointed at a hashed manifest" })
+        for (const addonId of result.resynced) lines.push({ addonId, message: "re-synced from its manifest" })
+        for (const addonId of result.failed) lines.push({ addonId, message: "re-sync FAILED - see the console for why" })
+        if (result.unfixable) {
+            lines.push({ addonId: "(none)", message: `${result.unfixable} issue(s) need attention by hand` })
+        }
+        setValidationTitle("Repair Results")
+        setValidationIssues(lines)
+        await reload()
+    }
+
     async function handleSweepOrphans() {
         const removedTamFileIds = await libTAMjs.sweepOrphanedNotes()
         setValidationTitle("Orphaned Notes")
@@ -921,6 +949,8 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "enable-addon": handleEnableAddon,
         "check-updates": handleCheckUpdates,
         "validate-database": handleValidateDatabase,
+        "diagnose-addons": handleDiagnose,
+        "heal-addons": handleHealAddons,
         "sweep-orphans": handleSweepOrphans,
         "sweep-invalid-tree": handleSweepInvalidTree,
         "reinitialize-database": handleReinitializeDatabase
@@ -971,6 +1001,11 @@ export default function RepoManager() {
         pendingPrompts, promptAddonId, promptQueue,
         pendingCommand, progressDetail, dispatch
     } = useTamCommands(resolveDisplayNote, { setUninstallPrompt, setView, setValidationTitle, setValidationIssues })
+
+    // Addons, not issues: one addon with six broken labels is one re-sync.
+    const repairableAddonCount = new Set(
+        (validationIssues || []).filter(issue => issue.repair).map(issue => issue.addonId)
+    ).size
 
     // Trigger loading of addons on page load.
     useEffect(() => {
@@ -1059,6 +1094,7 @@ export default function RepoManager() {
                 onCheckUpdates={() => dispatch({ command: "check-updates" })}
                 onUpdateAll={() => dispatch({ command: "update-all" })}
                 onValidate={() => dispatch({ command: "validate-database" })}
+                onDiagnose={() => dispatch({ command: "diagnose-addons" })}
                 onSweepOrphans={() => dispatch({ command: "sweep-orphans" })}
                 onSweepInvalidTree={() => dispatch({ command: "sweep-invalid-tree" })}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
@@ -1180,7 +1216,11 @@ export default function RepoManager() {
                                 <p className="no-readme">
                                     {validationTitle === "Orphaned Notes"
                                         ? "Already removed — nothing further to do."
-                                        : "There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these."}
+                                        : validationTitle === DIAGNOSIS_TITLE
+                                            ? `Repair All re-syncs the ${repairableAddonCount} affected addon(s) from their manifests, `
+                                                + "repointing any dead or unverifiable source first. Your settings aren't touched: a "
+                                                + "persistent note that differs is reviewed through the usual Keep Mine / Use New prompt."
+                                            : "There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these."}
                                 </p>
                                 <pre className="TAM-validation-content">
                                     {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
@@ -1188,6 +1228,11 @@ export default function RepoManager() {
                             </>
                         )}
                         <div className="TAM-validation-buttons">
+                            {validationTitle === DIAGNOSIS_TITLE && repairableAddonCount > 0 && <TamButton
+                                icon="bx bx-first-aid"
+                                text={`Repair All (${repairableAddonCount})`}
+                                onClick={() => dispatch({ command: "heal-addons", issues: validationIssues })}
+                            />}
                             {validationIssues.length > 0 && <TamButton
                                 className="btn-ghost"
                                 icon="bx bx-copy"
