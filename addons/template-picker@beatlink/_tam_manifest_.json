@@ -1,11 +1,11 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. As of 1.9.0 it also ships one persisted, empty root container note per bundled template (Ideas Root / Goal Root / Routine Root / Task Root / Future Root / Project Root / Note Root / Area Root), carrying only the template's icon and #viewType=list, standing in for the type roots that used to be provisioned automatically; nothing is filed into them.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. As of 1.9.0 it also ships one empty root container note per bundled item template (Ideas Root / Goal Root / Routine Root / Task Root / Future Root / Project Root / Note Root), carrying only the template's icon and #viewType=list. They are children of the AreaCollection template, so Trilium deep-duplicates the whole set into every note created from it and a new Area comes out already holding its type roots - standing in for the roots that used to be provisioned automatically. Each registry row gained a Root Note field so other addons can resolve a template's root.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.9.0",
+    "latestVersion": "1.10.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
@@ -254,13 +254,6 @@
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
-            },
-            {
-                "id": "root-area",
-                "title": "Area Root",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
             }
         ],
         "children": [
@@ -401,36 +394,32 @@
                 "child": "tpl-area"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-idea"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-goal"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-routine"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-task"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-future"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-project"
             },
             {
-                "parent": "persistence",
+                "parent": "tpl-area",
                 "child": "root-note"
-            },
-            {
-                "parent": "persistence",
-                "child": "root-area"
             }
         ],
         "relations": [
@@ -783,16 +772,6 @@
             },
             {
                 "note": "root-note",
-                "name": "viewType",
-                "value": "list"
-            },
-            {
-                "note": "root-area",
-                "name": "iconClass",
-                "value": "bx bxs-circle"
-            },
-            {
-                "note": "root-area",
                 "name": "viewType",
                 "value": "list"
             }
