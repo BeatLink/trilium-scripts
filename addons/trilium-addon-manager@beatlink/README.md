@@ -72,7 +72,14 @@ itself would risk taking down the one thing that could otherwise fix it.
   after. TAM audits itself too; repairing its own notes reads "… & reload", since the running copy
   lives in memory and only the next load picks up the repair. Your settings are never overwritten
   silently — a persistent note that differs still goes through the usual Keep Mine / Use New prompt.
-  See [Diagnostics](ARCHITECTURE.md#diagnostics).
+  An addon whose source has gone unreachable offers **Uninstall** alongside the repoint, and that
+  goes through the normal uninstall flow, so you're still asked about dangling references and saved
+  data. See [Diagnostics](ARCHITECTURE.md#diagnostics).
+- **Activity log** — a log panel docked at the bottom of the widget, in place of the old blocking
+  spinner overlay. Every operation writes to it — each note installed, each prompt queued, each
+  repair — so a long update-all says what it is doing rather than covering the screen. The widget
+  fits the viewport: the log keeps to its own slice of it and scrolls inside itself, as does the
+  content above it, so the page never scrolls as a whole.
 
 ---
 

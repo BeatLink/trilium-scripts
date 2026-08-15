@@ -36,7 +36,12 @@
         padding: 0 !important;
     }
 
-    display: block !important;
+    /* A column the height of the viewport: the header and the log keep to their
+       own size and the content between them takes the rest. Nothing scrolls the
+       page itself - main and the log each scroll inside their own box, so the
+       log stays put and visible while a long run writes into it. */
+    display: flex !important;
+    flex-direction: column !important;
     position: relative !important;
     font-family: -apple-system,
     BlinkMacSystemFont,
@@ -48,7 +53,7 @@
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
     height: 100% !important;
-    overflow: auto !important;
+    overflow: hidden !important;
     max-height: 100% !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
@@ -84,6 +89,7 @@
 
     /* Header --------------------------------------------------------------- */
     & header {
+        flex: 0 0 auto !important;
         background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
         color: #fff !important;
         padding: 28px 0 !important;
@@ -166,6 +172,12 @@
 
     /* Main --------------------------------------------------------------- */
     & main {
+        /* min-height:0 is what actually lets this shrink and scroll - a flex item
+           defaults to min-height:auto and would otherwise push the log off-screen. */
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        width: 100% !important;
         max-width: 1100px !important;
         margin: 0 auto !important;
         padding: 28px 24px !important;
@@ -654,24 +666,85 @@
        (install/update/uninstall/etc.) — most of these end in a full page
        reload, but the gap before that (or before a lighter refresh) had
        nothing on screen indicating work was happening. */
-    & .TAM-progress-overlay {
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 100 !important;
+    /* Activity log ------------------------------------------------------------ */
+    & .TAM-log {
+        flex: 0 0 auto !important;
         display: flex !important;
         flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 14px !important;
-        background: rgba(255, 255, 255, 0.85) !important;
-        backdrop-filter: blur(1px) !important;
+        /* A slice of the viewport, never a share of the content: the log is the
+           same size whether it holds two lines or five hundred. */
+        height: 30vh !important;
+        min-height: 120px !important;
+        overflow: hidden !important;
+        border-top: 1px solid #cbd5e1 !important;
+        background: #0f172a !important;
+    }
 
-        & p {
-            color: #334155 !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
+    & .TAM-log-head {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 8px 16px !important;
+        border-bottom: 1px solid #1e293b !important;
+        color: #e2e8f0 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
+    & .TAM-log-clear {
+        margin-left: auto !important;
+        cursor: pointer !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+
+        &:hover {
+            color: #e2e8f0 !important;
+            border-color: #64748b !important;
         }
     }
+
+    & .TAM-log-body {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        padding: 8px 16px 12px !important;
+        font-family: "SFMono-Regular", Consolas, monospace !important;
+        font-size: 12px !important;
+        line-height: 1.7 !important;
+    }
+
+    & .TAM-log-empty {
+        color: #64748b !important;
+    }
+
+    & .TAM-log-line {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        word-break: break-word !important;
+    }
+
+    & .TAM-log-time {
+        flex: 0 0 auto !important;
+        color: #475569 !important;
+    }
+
+    & .TAM-log-message {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    & .TAM-log-info .TAM-log-message { color: #cbd5e1 !important; }
+    & .TAM-log-step .TAM-log-message { color: #60a5fa !important; font-weight: 600 !important; }
+    & .TAM-log-done .TAM-log-message { color: #4ade80 !important; }
+    & .TAM-log-warn .TAM-log-message { color: #fbbf24 !important; }
+    & .TAM-log-error .TAM-log-message { color: #f87171 !important; }
 
     & .addon-content {
         min-width: 0 !important;
@@ -844,6 +917,15 @@
     & .TAM-diagnostics-manual {
         font-size: 12px !important;
         color: #64748b !important;
+    }
+
+    /* Stacked rather than inline: a row offering both a repoint and an uninstall
+       shouldn't widen the column past the details it belongs to. */
+    & .TAM-diagnostics-fixes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
     }
 
     & .TAM-validation-buttons {

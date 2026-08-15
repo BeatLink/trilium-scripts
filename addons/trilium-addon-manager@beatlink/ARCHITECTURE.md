@@ -566,12 +566,19 @@ Each row is `{ addonId, code, target, detail, fix, fixLabel }`:
 | `duplicate-id` | Two live notes claim one `#TAMFILEID`. The one thing a live-lookup design can't self-correct, and TAM can't tell which copy is real. | none — by hand |
 | `orphaned-note` | A `#TAMFILEID`-tagged note with no parents left. | Delete note |
 | `unclaimed-note` | A note under the addon root that no installed addon claims. | Delete note |
-| `dead-source` | The record's `manifestSourceUrl` no longer fetches. | Repoint & re-sync, or none if no catalog carries it |
-| `unverifiable-source` | The manifest has no `contentHash` and no per-note `sha`, so updates fall back to comparing version numbers and content can't be checked at all. | Repoint & re-sync, or none |
+| `dead-source` | The record's `manifestSourceUrl` no longer fetches. | Repoint & re-sync (if a catalog carries it), **and** Uninstall |
+| `unverifiable-source` | The manifest has no `contentHash` and no per-note `sha`, so updates fall back to comparing version numbers and content can't be checked at all. | Repoint & re-sync (if a catalog carries it), **and** Uninstall |
 | `partial-sync` | The manifest has a `contentHash` but the record doesn't — the fingerprint of a sync that half-failed. | Re-sync |
 | `missing-note` | A declared note isn't installed. Says so louder for a persistent note, where it means saved data may be gone. | Re-sync |
 | `content-drift` | The installed note's sha256 doesn't match the manifest's `sha`. | Re-sync |
 | `broken-wiring` | A declared `children[]` parenting, `relations[]` or `labels[]` entry isn't applied in the tree. Catches the require-needs-a-*direct*-child case `validate` can't see at build time. | Re-sync |
+
+A row carries `fixes[]`, not one fix, because an unreachable source is a genuine choice: point it at
+a catalog's copy, or accept it's gone and remove it. Each entry renders as its own button and
+`repairIssue(issue, fix)` applies the one that was pressed. **Uninstall is the exception** — it
+doesn't go through `repairIssue` at all, but dispatches TAM's normal `request-uninstall` command, so
+the dangling-reference and delete-my-data questions are still asked. TAM never offers itself for
+uninstall: there'd be nothing left running to perform it, let alone to manage addons afterwards.
 
 `repairIssue` re-runs the audit afterwards rather than striking the row out, because one fix
 routinely settles several rows — a re-sync clears every finding for that addon at once.
@@ -611,6 +618,28 @@ reload is what makes the repaired code the code that runs.
 Repairs never silently overwrite settings: a re-sync still routes persistent notes through the
 [`promptOnUpdate`](#promptonupdate) review, and runs as `syncAddon(addonId, { manual: false })` so a
 repaired addon doesn't start claiming the user installed it by hand.
+
+---
+
+## The activity log
+
+`lib-tam.js` owns an in-memory log (`log(level, message)`, `subscribeToLog`, `getLogEntries`,
+`clearLog`) that every operation writes to: sync start and finish, each note installed, prompts
+queued, update checks, catalog reads, diagnostics, and each repair. It is capped at 500 entries and
+starts empty on every load — nothing is persisted.
+
+This replaced the blocking spinner overlay. The overlay covered the screen and said only which
+command was running; a long update-all or a repair now names the addon and the note it is on. Errors
+still reach `console.error` as well, since a stack trace outlives the panel and is worth more when
+debugging.
+
+`ActivityLog` subscribes to the bus rather than receiving entries as props, so a line written deep
+inside `resolveNotes` appears the moment it is written without every caller threading progress state
+back out. The panel is docked at the bottom of the widget at a fixed `30vh`, and `.TAM-body` is a
+flex column — header, scrolling `main`, log — so the page itself never scrolls: `main` and the log
+each scroll inside their own box, and the log stays visible while a long run writes into it. The
+`min-height: 0` on `main` is what makes that work; a flex item defaults to `min-height: auto` and
+would otherwise push the log off-screen.
 
 ---
 

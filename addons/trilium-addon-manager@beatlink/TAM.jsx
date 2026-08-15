@@ -10,7 +10,8 @@
 import {
     useActiveNoteContext,
     useState,
-    useEffect
+    useEffect,
+    useRef
 } from "trilium:preact"
 
 import {
@@ -113,9 +114,21 @@ function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
                                     <td><code>{issue.target}</code></td>
                                     <td>{issue.detail}</td>
                                     <td>
-                                        {issue.fix
-                                            ? <TamButton icon="bx bx-wrench" text={issue.fixLabel} onClick={() => onRepair(issue)} />
-                                            : <span className="TAM-diagnostics-manual">by hand</span>}
+                                        {issue.fixes.length === 0
+                                            ? <span className="TAM-diagnostics-manual">by hand</span>
+                                            : (
+                                                <div className="TAM-diagnostics-fixes">
+                                                    {issue.fixes.map(fix => (
+                                                        <TamButton
+                                                            key={fix.kind}
+                                                            className={fix.kind === "uninstall" ? "btn-ghost" : ""}
+                                                            icon={fix.kind === "uninstall" ? "bx bx-trash" : "bx bx-wrench"}
+                                                            text={fix.label}
+                                                            onClick={() => onRepair(issue, fix)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
                                     </td>
                                 </tr>
                             ))}
@@ -133,6 +146,47 @@ function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
                     )}
                 />}
                 <TamButton className="btn-ghost" icon="bx bx-x" text="Dismiss" onClick={onDismiss} />
+            </div>
+        </div>
+    )
+}
+
+// TAM's activity log, shown in place of a blocking spinner overlay: a long
+// update-all or repair says what it is doing rather than covering the screen.
+//
+// It subscribes to lib-tam's log bus rather than being handed entries as props,
+// so a line written deep inside a sync appears the moment it is written, without
+// every caller having to thread progress state back out.
+function ActivityLog({ busyLabel }) {
+    const [entries, setEntries] = useState(() => libTAMjs.getLogEntries())
+    const bodyRef = useRef(null)
+
+    useEffect(() => libTAMjs.subscribeToLog(() => setEntries(libTAMjs.getLogEntries())), [])
+
+    // Follow the tail as lines arrive. Scrolling the log's own box, never the
+    // page: the panel is a fixed slice of the viewport.
+    useEffect(() => {
+        const body = bodyRef.current
+        if (body) body.scrollTop = body.scrollHeight
+    }, [entries])
+
+    return (
+        <div className="TAM-log">
+            <div className="TAM-log-head">
+                {busyLabel
+                    ? <><Spinner /><span>{busyLabel}…</span></>
+                    : <span>Activity log</span>}
+                <button className="TAM-log-clear" onClick={() => libTAMjs.clearLog()}>Clear</button>
+            </div>
+            <div className="TAM-log-body" ref={bodyRef}>
+                {entries.length === 0
+                    ? <div className="TAM-log-empty">Nothing logged yet.</div>
+                    : entries.map((entry, index) => (
+                        <div key={index} className={`TAM-log-line TAM-log-${entry.level}`}>
+                            <span className="TAM-log-time">{entry.time}</span>
+                            <span className="TAM-log-message">{entry.message}</span>
+                        </div>
+                    ))}
             </div>
         </div>
     )
@@ -954,7 +1008,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     // fix routinely settles several rows (a re-sync clears every finding for that
     // addon at once), so anything else would leave the table lying.
     async function handleRepairIssue(command) {
-        const { requiresReload } = await libTAMjs.repairIssue(command.issue)
+        const { requiresReload } = await libTAMjs.repairIssue(command.issue, command.fix)
         if (requiresReload) setReloadRequired(true)
         setDiagnostics(await libTAMjs.diagnose())
         await reload()
@@ -1213,31 +1267,33 @@ export default function RepoManager() {
         )
     }
 
-    // browse-catalog already shows its own inline Spinner in CatalogBrowseView —
-    // the blocking overlay is for everything else, where nothing on screen
-    // otherwise indicates a long-running mutation is in flight.
-    const showProgressOverlay = pendingCommand && pendingCommand.command !== "browse-catalog"
+    // browse-catalog shows its own inline Spinner in CatalogBrowseView; for
+    // everything else the log's header is what says work is in flight.
+    const busyLabel = pendingCommand && pendingCommand.command !== "browse-catalog"
+        ? (progressDetail || commandLabel(pendingCommand))
+        : null
 
     return (
         <div className="TAM-body">
             <header>{headerContent}</header>
-            {showProgressOverlay && (
-                <div className="TAM-progress-overlay">
-                    <Spinner />
-                    <p>{progressDetail || commandLabel(pendingCommand)}…</p>
-                </div>
-            )}
             <main>
                 {diagnostics !== null && (
                     <DiagnosticsTable
                         issues={diagnostics}
                         reloadRequired={reloadRequired}
-                        onRepair={issue => dispatch({ command: "repair-issue", issue })}
+                        onRepair={(issue, fix) => dispatch(
+                            // Uninstall goes through TAM's normal uninstall flow, so the
+                            // dangling-reference and delete-my-data questions still get asked.
+                            fix.kind === "uninstall"
+                                ? { command: "request-uninstall", addon: issue.addonId }
+                                : { command: "repair-issue", issue, fix }
+                        )}
                         onDismiss={() => setDiagnostics(null)}
                     />
                 )}
                 {bodyContent}
             </main>
+            <ActivityLog busyLabel={busyLabel} />
         </div>
     )
 }
