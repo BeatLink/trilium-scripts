@@ -4,7 +4,7 @@
     ],
     "installedAddons": {
         "trilium-addon-manager@beatlink": {
-            "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json"
+            "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json"
         }
     }
 }

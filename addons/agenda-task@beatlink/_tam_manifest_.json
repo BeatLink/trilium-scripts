@@ -8,7 +8,7 @@
     "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "task-settings",
         "notes": [
@@ -17,56 +17,56 @@
                 "title": "agendaTask.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/agendaTask.jsx"
+                "sourceUrl": "agendaTask.jsx"
             },
             {
                 "id": "recurrence-picker",
                 "title": "recurrencePicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/recurrencePicker.jsx"
+                "sourceUrl": "recurrencePicker.jsx"
             },
             {
                 "id": "togglebutton",
                 "title": "FormToggleButton.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/FormToggleButton.jsx"
+                "sourceUrl": "FormToggleButton.jsx"
             },
             {
                 "id": "lib-task",
                 "title": "libAgendaTask.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libAgendaTask.js"
+                "sourceUrl": "libAgendaTask.js"
             },
             {
                 "id": "lib-recurrence",
                 "title": "libRecurrence.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libRecurrence.js"
+                "sourceUrl": "libRecurrence.js"
             },
             {
                 "id": "lib-task-settings",
                 "title": "agendaTaskSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/agendaTaskSettings.js"
+                "sourceUrl": "agendaTaskSettings.js"
             },
             {
                 "id": "task-schema",
                 "title": "taskSchema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskSchema.json"
+                "sourceUrl": "taskSchema.json"
             },
             {
                 "id": "task-defaults",
                 "title": "taskDefaults.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskDefaults.json"
+                "sourceUrl": "taskDefaults.json"
             },
             {
                 "id": "task-config",
@@ -87,28 +87,28 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "task-labels-panel",
                 "title": "taskLabelsPanel.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskLabelsPanel.jsx"
+                "sourceUrl": "taskLabelsPanel.jsx"
             },
             {
                 "id": "reschedule-options",
                 "title": "rescheduleOptions.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/rescheduleOptions.jsx"
+                "sourceUrl": "rescheduleOptions.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -116,42 +116,42 @@
                 "title": "libSettingsCore.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             },
             {
                 "id": "librrule-lib",
                 "title": "rrule.min.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
+                "sourceUrl": "../../libs/librrule/rrule.min.js"
             }
         ],
         "children": [

@@ -8,7 +8,7 @@
     "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/youtube-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [
@@ -24,42 +24,42 @@
                 "title": "youtubeManager.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/youtubeManager.jsx"
+                "sourceUrl": "youtubeManager.jsx"
             },
             {
                 "id": "style",
                 "title": "youtubeManager.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/youtubeManager.css"
+                "sourceUrl": "youtubeManager.css"
             },
             {
                 "id": "lib-youtube",
                 "title": "libYouTube.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/libYouTube.js"
+                "sourceUrl": "libYouTube.js"
             },
             {
                 "id": "youtubei",
                 "title": "youtubei.js",
                 "type": "code",
                 "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libyoutubei/browser.js"
+                "sourceUrl": "../../libs/libyoutubei/browser.js"
             },
             {
                 "id": "backend",
                 "title": "youtubeManagerBackend.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/youtubeManagerBackend.js"
+                "sourceUrl": "youtubeManagerBackend.js"
             },
             {
                 "id": "lib-store",
                 "title": "libYouTubeStore.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/libYouTubeStore.js"
+                "sourceUrl": "libYouTubeStore.js"
             },
             {
                 "id": "settings-page",
@@ -73,21 +73,21 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/schema.json"
+                "sourceUrl": "schema.json"
             },
             {
                 "id": "defaults",
                 "title": "defaults.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/defaults.json"
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
@@ -108,7 +108,7 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/youtube-manager@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -116,42 +116,42 @@
                 "title": "libSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
             },
             {
                 "id": "libsettings-core",
                 "title": "libSettingsCore.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [

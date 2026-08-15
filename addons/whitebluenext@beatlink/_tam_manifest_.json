@@ -8,7 +8,7 @@
     "latestVersion": "0.0.6",
     "type": "theme",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/whitebluenext@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {
@@ -16,7 +16,7 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -24,7 +24,7 @@
                 "title": "theme.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/whitebluenext@beatlink/whitebluenext@beatlink.css"
+                "sourceUrl": "whitebluenext@beatlink.css"
             }
         ],
         "children": [
