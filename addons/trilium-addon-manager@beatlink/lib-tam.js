@@ -1542,6 +1542,7 @@ function issueRow(addonId, code, target, detail, fixes = []) {
         resync: "Re-sync",
         repoint: "Repoint & re-sync",
         delete: "Delete note",
+        detach: "Detach from parent",
         uninstall: "Uninstall"
     }
     return {
@@ -1612,6 +1613,7 @@ async function readLiveAddon(addonId, noteDefs, contentIds) {
             live[localId] = {
                 noteId: note.noteId,
                 parentIds: note.getParentNotes().map(parent => parent.noteId),
+                children: note.getChildNotes().map(child => ({ noteId: child.noteId, title: child.title })),
                 labels: attributes.filter(a => a.type === "label").map(a => ({ name: a.name, value: a.value })),
                 relations: attributes.filter(a => a.type === "relation").map(a => ({ name: a.name, value: a.value })),
                 content: contentIds.includes(localId) ? note.getContent() : null
@@ -1789,6 +1791,46 @@ async function diagnose() {
                     resyncFixes))
             }
         }
+        // Trilium builds a script bundle as
+        //   function(exports, module, require, api, <one param per required child>)
+        // naming each parameter after that child's *title*. Two children of one
+        // note sharing a title emit the same parameter name twice, and the whole
+        // bundle dies at parse time with "Duplicate parameter name not allowed in
+        // this context" - the note simply stops running, with nothing in the
+        // manifest to explain why.
+        //
+        // A stale copy gets there when two notes share a #TAMSOURCEURL: adoption
+        // picks whichever getNoteWithLabel() returns first, so successive syncs
+        // can parent two different copies of one file under the same note.
+        // reconcileNoteParenting() can't undo it - the stale copy isn't in this
+        // addon's noteMap, so it never looks at it.
+        for (const noteDef of notes) {
+            const entry = live[noteDef.id]
+            if (!entry) continue
+            const declaredChildIds = new Set((m.children || [])
+                .filter(link => link.parent === noteDef.id)
+                .map(link => live[link.child]?.noteId)
+                .filter(Boolean))
+            const byTitle = {}
+            for (const child of entry.children) {
+                (byTitle[child.title] = byTitle[child.title] || []).push(child)
+            }
+            for (const [title, sameTitle] of Object.entries(byTitle)) {
+                if (sameTitle.length < 2) continue
+                const stale = sameTitle.filter(child => !declaredChildIds.has(child.noteId))
+                // Only offer to detach when a declared copy is among them, so the
+                // one the manifest actually wants is the one left behind.
+                const canDetach = stale.length < sameTitle.length
+                for (const child of stale) {
+                    rows.push(issueRow(addonId, "duplicate-child-title", title,
+                        `'${noteDef.title}' has ${sameTitle.length} children named '${title}', which makes its `
+                        + "script bundle fail to parse and stops the note running"
+                        + (canDetach ? "" : " - none of them is the one this manifest declares, so detach the wrong one by hand"),
+                        canDetach ? [{ kind: "detach", noteId: child.noteId, parentNoteId: entry.noteId }] : []))
+                }
+            }
+        }
+
         for (const label of (m.labels || [])) {
             const entry = live[label.note]
             if (!entry) continue
@@ -1831,6 +1873,13 @@ async function repairIssue(issue, fix) {
         log("step", `deleting ${issue.target}`)
         await deleteTamNote(fix.noteId)
         log("done", `deleted ${issue.target}`)
+        return { requiresReload: false }
+    }
+
+    if (fix.kind === "detach") {
+        log("step", `detaching the duplicate '${issue.target}'`)
+        await detachNoteFromParent(fix.noteId, fix.parentNoteId)
+        log("done", `detached the duplicate '${issue.target}'`)
         return { requiresReload: false }
     }
 
@@ -1945,6 +1994,15 @@ async function findInvalidAddonTreeNotes() {
         }
         return found
     }, [tamFileIdLabel, addonsRootId, installedIds])
+}
+
+// The repair behind every "Detach from parent" row: removes one branch, never
+// the note. Trilium refuses to remove a note's last parent, so a note living
+// only here is left in place rather than deleted.
+async function detachNoteFromParent(noteId, parentNoteId) {
+    await api.runOnBackend((noteId, parentNoteId) => {
+        api.ensureNoteIsAbsentFromParent(noteId, parentNoteId)
+    }, [noteId, parentNoteId])
 }
 
 // The repair behind every "Delete note" row.

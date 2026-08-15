@@ -61,7 +61,8 @@ const ISSUE_TITLES = {
     "partial-sync": "Sync half-failed",
     "missing-note": "Note not installed",
     "content-drift": "Content doesn't match manifest",
-    "broken-wiring": "Wiring not applied"
+    "broken-wiring": "Wiring not applied",
+    "duplicate-child-title": "Duplicate child name breaks the script bundle"
 }
 
 function typeColor(type) {
