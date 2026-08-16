@@ -328,6 +328,16 @@
     flex: 1;
 }
 
+.diet-manager-textarea {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+}
+
 .diet-manager-form input[type="text"],
 .diet-manager-form input[type="number"],
 .diet-manager-form input[type="date"],

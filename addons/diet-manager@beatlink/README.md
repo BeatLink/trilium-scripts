@@ -84,7 +84,12 @@ Both the Foods and the Recipes tab use categories three ways:
   again to reverse.
 
 A food's brand is free text with a dropdown of brands already in use, and foods are listed as
-"Oats (Quaker)" wherever a food is picked, so two versions of the same thing stay apart.
+"Oats (Quaker)" wherever a food is picked, so two versions of the same thing stay apart. Each food
+also takes a free-text **comment** for notes that belong to the food itself — where you buy it, how
+the serving was measured, why the numbers differ from the packet. It shows as its own sortable
+column in the table. A grocery line keeps its own separate comment, specific to that shopping trip;
+turn on **Prefill grocery comments from the food** in Settings to have a new line start from the
+food's comment, which you can then edit without touching the food.
 
 Every picker of foods or recipes — the diary's, the grocery list's, and the recipe ingredient one —
 is the same control: grouped into one section per category, uncategorised items last, brands in the
@@ -170,6 +175,8 @@ Open the addon's launcher note for the settings screen:
 
 - **USDA Lookup** — paste a USDA FoodData Central API key to include USDA results in food search.
   Open Food Facts results appear regardless of this setting.
+- **Grocery** — **Prefill grocery comments from the food** starts a new grocery line's comment from
+  the food's own comment. Off by default; the line's copy is always independent once created.
 - **Daily Targets** — a target value per tracked nutrient, compared against each day's diary
   totals. A target of `0` is treated as "no target" and shown without a comparison.
 - **Render Note** — pick an existing note to become a second place the diet manager shows up.
@@ -202,6 +209,7 @@ The whole database is one JSON code note:
             "id": "a1b2c3d4",
             "name": "Chicken Breast",
             "brand": "",
+            "comment": "",
             "servingSize": 100,
             "servingUnit": "g",
             "portions": [{ "unit": "breast", "amount": 1, "size": 170, "sizeUnit": "g" }],

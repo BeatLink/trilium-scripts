@@ -4,7 +4,7 @@
  *   {
  *     categories: [ "Dairy", "Protein/Meat", ... ],
  *     units: [ "g", "cup", ... ],
- *     foods: { [id]: { id, name, brand, servingSize, servingUnit, portions: [{ unit, amount, size, sizeUnit }], tags: [...], nutrients: {...} } },
+ *     foods: { [id]: { id, name, brand, comment, servingSize, servingUnit, portions: [{ unit, amount, size, sizeUnit }], tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount, unit }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, unit, loggedAt }] },
  *     grocery: [ { id, foodId, brand, amount, unit, comment, done } ]
@@ -129,6 +129,7 @@ function normalizeFood(food) {
         id: typeof food?.id === "string" && food.id ? food.id : newId(),
         name: typeof food?.name === "string" ? food.name : "",
         brand: typeof food?.brand === "string" ? food.brand.trim() : "",
+        comment: typeof food?.comment === "string" ? food.comment.trim() : "",
         servingSize: Number.isFinite(Number(food?.servingSize)) ? Number(food.servingSize) : 100,
         servingUnit: typeof food?.servingUnit === "string" && food.servingUnit ? food.servingUnit : "g",
         portions: normalizePortions(food?.portions),

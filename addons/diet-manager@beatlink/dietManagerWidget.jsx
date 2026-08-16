@@ -428,6 +428,17 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, brandS
                 onDraftChange={setTagDraft}
             />
 
+            <label className="diet-manager-field">
+                <span>Comment</span>
+                <textarea
+                    className="diet-manager-textarea"
+                    rows={2}
+                    placeholder="Notes about this food"
+                    value={food.comment}
+                    onInput={e => setFood(c => ({ ...c, comment: e.target.value }))}
+                />
+            </label>
+
             <NutrientInputs nutrients={food.nutrients} onChange={setNutrient} />
 
             <div className="diet-manager-form-actions">
@@ -446,6 +457,7 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, brandS
 const FOOD_COLUMNS = [
     { key: "name", label: "Name", value: food => food.name, render: food => food.name },
     { key: "brand", label: "Brand", value: food => food.brand, render: food => food.brand },
+    { key: "comment", label: "Comment", value: food => food.comment, render: food => food.comment },
     { key: "tags", label: "Categories", value: food => food.tags.join(", "), render: food => food.tags.join(", ") },
     { key: "serving", label: "Serving", value: food => food.servingSize, render: food => `${food.servingSize} ${food.servingUnit}` },
     { key: "calories", label: "Calories", value: food => food.nutrients.calories, render: food => food.nutrients.calories },
@@ -1029,7 +1041,7 @@ function UnitsTab({ database, units, onCreate, onRename, onDelete }) {
 // typed in, never derived from recipes or the diary, and each line keeps its
 // own unit (prefilled from the food's serving unit, then editable).
 // ---------------------------------------------------------------------------
-function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate, onRemove, onClearDone }) {
+function GroceryTab({ grocery, foods, categories, units, brands, prefillComment, onAdd, onUpdate, onRemove, onClearDone }) {
     const [foodId, setFoodId] = useState("")
     const [amount, setAmount] = useState(1)
     const [unit, setUnit] = useState("")
@@ -1041,12 +1053,14 @@ function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate
     const onList = useMemo(() => new Set(grocery.map(item => item.foodId)), [grocery])
     const doneCount = grocery.filter(item => item.done).length
 
-    // Picking a food offers its own serving unit and brand until they are typed over.
+    // Picking a food offers its own serving unit, brand and (optionally) comment
+    // until they are typed over; the line keeps its own copy either way.
     const chooseFood = useCallback(id => {
         setFoodId(id)
         setUnit(foods[id]?.servingUnit || "")
         setBrand(foods[id]?.brand || "")
-    }, [foods])
+        if (prefillComment) setComment(foods[id]?.comment || "")
+    }, [foods, prefillComment])
 
     const add = useCallback(() => {
         if (!foodId) return
@@ -1542,6 +1556,7 @@ function DietManagerWidget() {
             {tab === "grocery" && (
                 <GroceryTab
                     grocery={database.grocery}
+                    prefillComment={settings.prefillGroceryComment}
                     foods={database.foods}
                     categories={categories}
                     units={units}
