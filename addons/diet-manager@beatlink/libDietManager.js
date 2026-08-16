@@ -4,10 +4,10 @@
  *   {
  *     categories: [ "Dairy", "Protein/Meat", ... ],
  *     units: [ "g", "cup", ... ],
- *     foods: { [id]: { id, name, servingSize, servingUnit, portions: [{ unit, amount, size }], tags: [...], nutrients: {...} } },
+ *     foods: { [id]: { id, name, brand, servingSize, servingUnit, portions: [{ unit, amount, size, sizeUnit }], tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount, unit }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, unit, loggedAt }] },
- *     grocery: [ { id, foodId, amount, unit, comment, done } ]
+ *     grocery: [ { id, foodId, brand, amount, unit, comment, done } ]
  *   }
  * `date` is an ISO "YYYY-MM-DD" string. All nutrient values are per the food's
  * own serving (servingSize/servingUnit), same convention Cronometer uses.
@@ -94,11 +94,13 @@ function isInCategory(tag, category) {
 
 /*
  * A portion is an alternative way to measure one food, written as an
- * equivalence: `amount` of `unit` equals `size` of the food's own serving unit.
- * "4 tray = 30 egg" is { unit: "tray", amount: 4, size: 30 }, so one tray is
- * 7.5 eggs. A portion with no amount is one of them, which is what every
- * portion meant before both sides could be counted. Nutrition is still stored
- * once, per the base serving; portions only ever convert into that base.
+ * equivalence: `amount` of `unit` equals `size` of `sizeUnit`. "4 tray = 30
+ * egg" is { unit: "tray", amount: 4, size: 30, sizeUnit: "egg" }, so one tray
+ * is 7.5 eggs. `sizeUnit` may be another portion's unit rather than the serving
+ * unit, which is how chains like "1 tray = 5 box" / "1 box = 6 egg" work; empty
+ * means the serving unit, and a missing `amount` is one of them -- what a
+ * portion meant before either could be varied. Nutrition is still stored once,
+ * per the base serving; portions only ever convert into that base.
  */
 function normalizePortion(portion) {
     const size = Number(portion?.size)
@@ -106,7 +108,9 @@ function normalizePortion(portion) {
     return {
         unit: typeof portion?.unit === "string" ? portion.unit.trim() : "",
         amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
-        size: Number.isFinite(size) && size > 0 ? size : 1
+        size: Number.isFinite(size) && size > 0 ? size : 1,
+        // Empty means the serving unit, which is what every portion was measured in before chaining.
+        sizeUnit: typeof portion?.sizeUnit === "string" ? portion.sizeUnit.trim() : ""
     }
 }
 
@@ -124,6 +128,7 @@ function normalizeFood(food) {
     return {
         id: typeof food?.id === "string" && food.id ? food.id : newId(),
         name: typeof food?.name === "string" ? food.name : "",
+        brand: typeof food?.brand === "string" ? food.brand.trim() : "",
         servingSize: Number.isFinite(Number(food?.servingSize)) ? Number(food.servingSize) : 100,
         servingUnit: typeof food?.servingUnit === "string" && food.servingUnit ? food.servingUnit : "g",
         portions: normalizePortions(food?.portions),
@@ -140,15 +145,53 @@ function normalizeFood(food) {
  */
 const SERVING_UNIT = "serving"
 
+/*
+ * A portion may be stated in another portion's unit rather than the serving
+ * unit ("1 tray = 5 box", "1 box = 6 egg"), so sizes are resolved by walking
+ * each chain down to the serving unit. A chain that references an unknown unit
+ * or loops back on itself resolves to null instead of hanging or guessing --
+ * `foodUnitProblems` names those rows so the form can flag them.
+ */
+function resolvePortionSizes(food) {
+    const sizes = new Map([[food.servingUnit, 1], [SERVING_UNIT, food.servingSize]])
+    const byUnit = new Map(food.portions.filter(p => p.unit).map(p => [p.unit, p]))
+
+    const resolve = (unit, visiting) => {
+        if (sizes.has(unit)) return sizes.get(unit)
+        const portion = byUnit.get(unit)
+        if (!portion || visiting.has(unit)) return null
+        visiting.add(unit)
+        const base = resolve(portion.sizeUnit || food.servingUnit, visiting)
+        visiting.delete(unit)
+        if (base === null) return null
+        const size = (portion.size / portion.amount) * base
+        sizes.set(unit, size)
+        return size
+    }
+
+    const resolved = new Map()
+    for (const portion of food.portions) {
+        if (!portion.unit || portion.unit === SERVING_UNIT || portion.unit === food.servingUnit) continue
+        const size = resolve(portion.unit, new Set())
+        if (size !== null) resolved.set(portion.unit, size)
+    }
+    return resolved
+}
+
 function foodUnits(food) {
     const units = [{ unit: SERVING_UNIT, size: food.servingSize }]
     if (food.servingUnit !== SERVING_UNIT) units.push({ unit: food.servingUnit, size: 1 })
-    for (const portion of food.portions) {
-        if (portion.unit !== SERVING_UNIT && portion.unit !== food.servingUnit) {
-            units.push({ unit: portion.unit, size: portion.size / portion.amount })
-        }
-    }
+    for (const [unit, size] of resolvePortionSizes(food)) units.push({ unit, size })
     return units
+}
+
+// Units this food declares but can't resolve to its serving unit: a loop, or a unit that isn't defined.
+function foodUnitProblems(food) {
+    const resolved = resolvePortionSizes(food)
+    return food.portions
+        .filter(portion => portion.unit && portion.unit !== SERVING_UNIT && portion.unit !== food.servingUnit)
+        .filter(portion => !resolved.has(portion.unit))
+        .map(portion => portion.unit)
 }
 
 // How much of the food's serving unit one `unit` is; unknown units fall back to `fallback`.
@@ -263,6 +306,7 @@ function normalizeGroceryItem(item, foods = {}) {
         id: typeof item?.id === "string" && item.id ? item.id : newId(),
         foodId,
         amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
+        brand: typeof item?.brand === "string" ? item.brand.trim() : (foods[foodId]?.brand || ""),
         unit: normalizeUnit(item?.unit, foods[foodId]?.servingUnit || "g"),
         comment: typeof item?.comment === "string" ? item.comment : "",
         done: item?.done === true
@@ -296,6 +340,25 @@ function unitsInUse(database) {
 
 function allUnits(database) {
     return normalizeUnits([...database.units, ...unitsInUse(database)])
+}
+
+// Every brand in use across foods and grocery lines, for the brand pickers.
+function allBrands(database) {
+    const used = [
+        ...Object.values(database.foods).map(food => food.brand),
+        ...database.grocery.map(item => item.brand)
+    ]
+    const byLower = new Map()
+    for (const brand of used) {
+        const trimmed = typeof brand === "string" ? brand.trim() : ""
+        if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed)
+    }
+    return [...byLower.values()].sort((a, b) => a.localeCompare(b))
+}
+
+// "Oats" or "Oats (Quaker)" -- what to call a food where it is listed by name alone.
+function foodLabel(food) {
+    return food.brand ? `${food.name} (${food.brand})` : food.name
 }
 
 function unitUsage(database, unit) {
@@ -484,6 +547,7 @@ module.exports = {
     normalizeFood,
     SERVING_UNIT,
     foodUnits,
+    foodUnitProblems,
     unitSize,
     servingsFor,
     CATEGORY_SEPARATOR,
@@ -500,6 +564,8 @@ module.exports = {
     normalizeGroceryItem,
     normalizeUnits,
     allUnits,
+    allBrands,
+    foodLabel,
     unitUsage,
     addUnit,
     renameUnit,

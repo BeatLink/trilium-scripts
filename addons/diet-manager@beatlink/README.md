@@ -14,8 +14,8 @@ persisted JSON note, so it's a single note you can back up, inspect, or migrate.
 
 ## Foods
 
-The **Foods** tab is your ingredient database. Each food has a name, a serving size/unit (e.g.
-"100 g" or "1 cup"), and nutrition facts *per that serving*: calories, protein, carbs, fat, fiber,
+The **Foods** tab is your ingredient database. Each food has a name, an optional brand, a serving
+size/unit (e.g. "100 g" or "1 cup"), and nutrition facts *per that serving*: calories, protein, carbs, fat, fiber,
 sugar, saturated fat, sodium, and cholesterol.
 
 **Add Food** opens a form with a search box at the top that queries two sources at once:
@@ -43,6 +43,18 @@ a tortilla recorded per `100 g`, `1 tortilla = 100 g` means logging *1 tortilla*
 lets you enter whatever's written on the packaging without doing the division yourself —
 `4 tray = 30 egg` records that a tray is 7.5 eggs.
 
+The right-hand side doesn't have to be the serving unit either: it can be another unit defined on
+the same food, so packaging that nests can be entered the way it's written —
+
+```
+1 tray = 5 box
+1 box  = 6 egg
+```
+
+— and a tray resolves to 30 eggs by following the chain down to the serving unit. If a chain loops
+(`1 box = 2 tray` alongside `1 tray = 3 box`) or points at a unit that isn't defined, the form says
+so and those units simply aren't offered until it's fixed; nothing else is affected.
+
 Everywhere an amount of a food is entered — a diary entry and a recipe ingredient — a unit
 dropdown offers that food's whole serving, its serving unit, and each of these extra units, and the
 nutrition is converted from whichever is picked. Nothing is duplicated: change the nutrition facts
@@ -68,8 +80,11 @@ Both the Foods and the Recipes tab use categories three ways:
   show the tree, each with its own count. An item in several categories appears in each of their
   sections, and a parent still gets a header when only its subcategories have items. The checkbox
   state is remembered across reloads (per browser/client, not synced), separately per tab.
-- **Sort** — click any column header (including **Categories**) to sort by it; click again to
-  reverse.
+- **Sort** — click any column header (including **Brand** and **Categories**) to sort by it; click
+  again to reverse.
+
+A food's brand is free text with a dropdown of brands already in use, and foods are listed as
+"Oats (Quaker)" wherever a food is picked, so two versions of the same thing stay apart.
 
 The Diary tab's food picker is also grouped by category.
 
@@ -90,7 +105,8 @@ database. Pick a food, type an amount, and set a unit; the unit prefills from th
 unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
 `2 loaf`.
 
-Each line also takes a free-text **comment** — "corn only", "brand X", "whatever's on offer" — set
+Each line carries its own **brand**, prefilled from the food's brand and editable per line — handy
+when you'll take whichever brand is cheapest. Each line also takes a free-text **comment** — "corn only", "brand X", "whatever's on offer" — set
 when adding the line or edited in place afterwards.
 
 Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
@@ -182,9 +198,10 @@ The whole database is one JSON code note:
         "a1b2c3d4": {
             "id": "a1b2c3d4",
             "name": "Chicken Breast",
+            "brand": "",
             "servingSize": 100,
             "servingUnit": "g",
-            "portions": [{ "unit": "breast", "amount": 1, "size": 170 }],
+            "portions": [{ "unit": "breast", "amount": 1, "size": 170, "sizeUnit": "g" }],
             "tags": ["Protein/Meat"],
             "nutrients": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6,
@@ -208,7 +225,7 @@ The whole database is one JSON code note:
         ]
     },
     "grocery": [
-        { "id": "m1n2o3p4", "foodId": "a1b2c3d4", "amount": 2, "unit": "pack", "comment": "corn only", "done": false }
+        { "id": "m1n2o3p4", "foodId": "a1b2c3d4", "brand": "Store own", "amount": 2, "unit": "pack", "comment": "corn only", "done": false }
     ]
 }
 ```
@@ -219,9 +236,10 @@ needs to hold categories nothing carries yet, since the tab shows the union of t
 implied parent, and it may be absent entirely in an older database. `grocery` is likewise optional
 and its lines are independent of the diary. `units` is the managed unit list, and like `categories`
 it only needs to hold units nothing uses yet.
-A food's `portions` are its extra units: `amount` of `unit` equals `size` of the food's own
-`servingUnit`, so one of that unit is `size / amount`. A portion with no `amount` is one of them,
-which is what portions meant when only the right side could be counted. A diary
+A food's `portions` are its extra units: `amount` of `unit` equals `size` of `sizeUnit`, so one of
+that unit is `size / amount` of `sizeUnit`. `sizeUnit` may name another portion (chains resolve down
+to the serving unit) and defaults to the serving unit when absent; a missing `amount` is one of them.
+Both defaults are what portions meant before either side could be varied. A diary
 entry's or ingredient's `unit` says which unit its amount is in; an entry with no `unit` counts whole
 servings and an ingredient with no `unit` is an amount in the serving unit, which is exactly what
 they meant before units existed, so older databases keep their totals.

@@ -231,6 +231,10 @@
     color: inherit;
 }
 
+.diet-manager-suggest-brand {
+    width: 130px;
+}
+
 .diet-manager-grocery-comment {
     flex: 1;
     min-width: 120px;
@@ -255,6 +259,7 @@
 
 .diet-manager-grocery-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding: 6px 0;

@@ -11,6 +11,7 @@ const {
     normalizeFood,
     SERVING_UNIT,
     foodUnits,
+    foodUnitProblems,
     CATEGORY_SEPARATOR,
     categoryDepth,
     categoryLeaf,
@@ -24,6 +25,8 @@ const {
     normalizeGroceryItem,
     normalizeUnits,
     allUnits,
+    allBrands,
+    foodLabel,
     unitUsage,
     addUnit,
     renameUnit,
@@ -190,7 +193,7 @@ function TagEditor({ tags, draft, suggestions, onChange, onDraftChange }) {
 // ---------------------------------------------------------------------------
 // Foods tab
 // ---------------------------------------------------------------------------
-function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave, onCancel }) {
+function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, brandSuggestions, onSave, onCancel }) {
     const [food, setFood] = useState(() => normalizeFood(initial))
     const [tagDraft, setTagDraft] = useState("")
     const [query, setQuery] = useState("")
@@ -201,6 +204,8 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
     const setNutrient = useCallback((key, value) => {
         setFood(current => ({ ...current, nutrients: { ...current.nutrients, [key]: value } }))
     }, [])
+
+    const unitProblems = useMemo(() => foodUnitProblems(food), [food])
 
     const setPortion = useCallback((index, changes) => {
         setFood(current => ({
@@ -276,10 +281,21 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                 </ul>
             )}
 
-            <label className="diet-manager-field">
-                <span>Name</span>
-                <input type="text" value={food.name} onInput={e => setFood(c => ({ ...c, name: e.target.value }))} />
-            </label>
+            <div className="diet-manager-field-row">
+                <label className="diet-manager-field">
+                    <span>Name</span>
+                    <input type="text" value={food.name} onInput={e => setFood(c => ({ ...c, name: e.target.value }))} />
+                </label>
+                <label className="diet-manager-field">
+                    <span>Brand</span>
+                    <SuggestInput
+                        value={food.brand}
+                        suggestions={brandSuggestions}
+                        placeholder="Optional"
+                        onChange={brand => setFood(c => ({ ...c, brand }))}
+                    />
+                </label>
+            </div>
             <div className="diet-manager-field-row">
                 <label className="diet-manager-field">
                     <span>Serving Size</span>
@@ -330,7 +346,18 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                                 value={portion.size}
                                 onInput={e => setPortion(index, { size: parseFloat(e.target.value) || 0 })}
                             />
-                            <span>{food.servingUnit}</span>
+                            <select
+                                className="diet-manager-unit-select"
+                                value={portion.sizeUnit || food.servingUnit}
+                                title="Measured in"
+                                onChange={e => setPortion(index, { sizeUnit: e.target.value })}
+                            >
+                                <option value={food.servingUnit}>{food.servingUnit}</option>
+                                <option value={SERVING_UNIT}>{`serving (${food.servingSize} ${food.servingUnit})`}</option>
+                                {food.portions
+                                    .filter(other => other.unit && other.unit !== portion.unit && other.unit !== food.servingUnit)
+                                    .map(other => <option value={other.unit} key={other.unit}>{other.unit}</option>)}
+                            </select>
                             <button
                                 className="diet-manager-action diet-manager-action-remove bx bx-trash"
                                 title="Remove unit"
@@ -341,14 +368,21 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                     {food.portions.length === 0 && (
                         <li className="diet-manager-hint">
                             Nutrition is per {food.servingSize} {food.servingUnit}. Add a unit to also log this food
-                            as whole pieces, packs or trays — both sides can be counted, so "4 tray = 30 {food.servingUnit}" works.
+                            as whole pieces, packs or trays. Both sides can be counted, and the right side can be another
+                            unit you define here, so "4 tray = 30 {food.servingUnit}" and "1 tray = 5 box" both work.
                         </li>
                     )}
                 </ul>
+                {unitProblems.length > 0 && (
+                    <div className="diet-manager-error">
+                        {unitProblems.join(", ")} can't be worked out in {food.servingUnit} — the chain loops or points at
+                        a unit that isn't defined here. Those units aren't offered until it's fixed.
+                    </div>
+                )}
                 <Button
                     icon="bx-plus"
                     text="Add Unit"
-                    onClick={() => setFood(c => ({ ...c, portions: [...c.portions, { unit: "", amount: 1, size: c.servingSize }] }))}
+                    onClick={() => setFood(c => ({ ...c, portions: [...c.portions, { unit: "", amount: 1, size: c.servingSize, sizeUnit: "" }] }))}
                 />
             </div>
 
@@ -377,6 +411,7 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
 // Sortable columns of the foods table: `value` sorts, `render` draws the cell.
 const FOOD_COLUMNS = [
     { key: "name", label: "Name", value: food => food.name, render: food => food.name },
+    { key: "brand", label: "Brand", value: food => food.brand, render: food => food.brand },
     { key: "tags", label: "Categories", value: food => food.tags.join(", "), render: food => food.tags.join(", ") },
     { key: "serving", label: "Serving", value: food => food.servingSize, render: food => `${food.servingSize} ${food.servingUnit}` },
     { key: "calories", label: "Calories", value: food => food.nutrients.calories, render: food => food.nutrients.calories },
@@ -520,7 +555,7 @@ function CategoryTable({ columns, view, onEdit, onDelete, emptyLabel }) {
     )
 }
 
-function FoodsTab({ foods, categories, units, usdaApiKey, onSaveFood, onDeleteFood }) {
+function FoodsTab({ foods, categories, units, brands, usdaApiKey, onSaveFood, onDeleteFood }) {
     const [editingId, setEditingId] = useState(null)
     const [adding, setAdding] = useState(false)
     const view = useCategoryView(foods, categories, FOOD_COLUMNS, "diet-manager-group-foods-by-category")
@@ -531,6 +566,7 @@ function FoodsTab({ foods, categories, units, usdaApiKey, onSaveFood, onDeleteFo
                 usdaApiKey={usdaApiKey}
                 tagSuggestions={categories}
                 unitSuggestions={units}
+                brandSuggestions={brands}
                 onSave={food => { onSaveFood(food); setAdding(false) }}
                 onCancel={() => setAdding(false)}
             />
@@ -543,6 +579,7 @@ function FoodsTab({ foods, categories, units, usdaApiKey, onSaveFood, onDeleteFo
                 usdaApiKey={usdaApiKey}
                 tagSuggestions={categories}
                 unitSuggestions={units}
+                brandSuggestions={brands}
                 onSave={food => { onSaveFood(food); setEditingId(null) }}
                 onCancel={() => setEditingId(null)}
             />
@@ -641,7 +678,9 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
             <ul className="diet-manager-ingredient-list">
                 {recipe.ingredients.map((ing, index) => (
                     <li key={index} className="diet-manager-ingredient-row">
-                        <span className="diet-manager-ingredient-name">{foods[ing.foodId]?.name || "(deleted food)"}</span>
+                        <span className="diet-manager-ingredient-name">
+                            {foods[ing.foodId] ? foodLabel(foods[ing.foodId]) : "(deleted food)"}
+                        </span>
                         <input
                             type="number"
                             step="0.01"
@@ -661,7 +700,7 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
             <div className="diet-manager-add-ingredient">
                 <select value={addFoodId} onChange={e => setAddFoodId(e.target.value)}>
                     <option value="">Add ingredient...</option>
-                    {foodList.map(food => <option value={food.id} key={food.id}>{food.name}</option>)}
+                    {foodList.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
                 </select>
                 <Button text="Add" onClick={addIngredient} disabled={!addFoodId} />
             </div>
@@ -850,7 +889,7 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
                         ? sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)
                         : foodGroups.map(([tag, members]) => (
                             <optgroup label={tag} key={tag}>
-                                {members.map(food => <option value={food.id} key={food.id}>{food.name}</option>)}
+                                {members.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
                             </optgroup>
                         ))}
                 </select>
@@ -971,30 +1010,33 @@ function UnitsTab({ database, units, onCreate, onRename, onDelete }) {
 // typed in, never derived from recipes or the diary, and each line keeps its
 // own unit (prefilled from the food's serving unit, then editable).
 // ---------------------------------------------------------------------------
-function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemove, onClearDone }) {
+function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate, onRemove, onClearDone }) {
     const [foodId, setFoodId] = useState("")
     const [amount, setAmount] = useState(1)
     const [unit, setUnit] = useState("")
+    const [brand, setBrand] = useState("")
     const [comment, setComment] = useState("")
     const [grouped, setGrouped] = useState(() => localStorage.getItem(GROCERY_GROUPED_PREF_KEY) === "true")
 
     const foodList = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
     const doneCount = grocery.filter(item => item.done).length
 
-    // Picking a food offers its own serving unit until the unit is typed over.
+    // Picking a food offers its own serving unit and brand until they are typed over.
     const chooseFood = useCallback(id => {
         setFoodId(id)
         setUnit(foods[id]?.servingUnit || "")
+        setBrand(foods[id]?.brand || "")
     }, [foods])
 
     const add = useCallback(() => {
         if (!foodId) return
-        onAdd({ foodId, amount, unit, comment })
+        onAdd({ foodId, amount, unit, brand, comment })
         setFoodId("")
         setAmount(1)
         setUnit("")
+        setBrand("")
         setComment("")
-    }, [foodId, amount, unit, comment, onAdd])
+    }, [foodId, amount, unit, brand, comment, onAdd])
 
     const toggleGrouped = useCallback(checked => {
         setGrouped(checked)
@@ -1028,6 +1070,13 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
                 onChange={e => onUpdate(item.id, { done: e.target.checked })}
             />
             <span className="diet-manager-grocery-name">{foods[item.foodId]?.name || "(deleted food)"}</span>
+            <SuggestInput
+                className="diet-manager-suggest-brand"
+                placeholder="Brand"
+                value={item.brand}
+                suggestions={brands}
+                onChange={value => onUpdate(item.id, { brand: value })}
+            />
             <input
                 type="number"
                 step="0.01"
@@ -1057,7 +1106,7 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
             <div className="diet-manager-toolbar">
                 <select value={foodId} onChange={e => chooseFood(e.target.value)}>
                     <option value="">Select food...</option>
-                    {foodList.map(food => <option value={food.id} key={food.id}>{food.name}</option>)}
+                    {foodList.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
                 </select>
                 <input
                     type="number"
@@ -1073,6 +1122,14 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
                     value={unit}
                     suggestions={foodId && foods[foodId] ? normalizeUnits([...units, ...foodUnits(foods[foodId]).map(u => u.unit)]) : units}
                     onChange={setUnit}
+                    onCommit={add}
+                />
+                <SuggestInput
+                    className="diet-manager-suggest-brand"
+                    placeholder="Brand"
+                    value={brand}
+                    suggestions={brands}
+                    onChange={setBrand}
                     onCommit={add}
                 />
                 <input
@@ -1399,6 +1456,7 @@ function DietManagerWidget() {
 
     const categories = useMemo(() => database ? allCategories(database) : [], [database])
     const units = useMemo(() => database ? allUnits(database) : [], [database])
+    const brands = useMemo(() => database ? allBrands(database) : [], [database])
 
     if (!database || !settings) return <div className="diet-manager-widget">Loading...</div>
 
@@ -1431,6 +1489,7 @@ function DietManagerWidget() {
                     foods={database.foods}
                     categories={categories}
                     units={units}
+                    brands={brands}
                     usdaApiKey={settings.usdaApiKey}
                     onSaveFood={onSaveFood}
                     onDeleteFood={onDeleteFood}
@@ -1461,6 +1520,7 @@ function DietManagerWidget() {
                     foods={database.foods}
                     categories={categories}
                     units={units}
+                    brands={brands}
                     onAdd={onAddGrocery}
                     onUpdate={onUpdateGrocery}
                     onRemove={onRemoveGrocery}
