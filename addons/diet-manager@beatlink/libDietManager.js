@@ -2,6 +2,7 @@
  * Diet Manager data model. Pure functions over the JSON document stored in the
  * addon's persisted Database note:
  *   {
+ *     categories: [ "Dairy", ... ],
  *     foods: { [id]: { id, name, servingSize, servingUnit, tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, ingredients: [{ foodId, amount }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] }
@@ -63,9 +64,37 @@ function normalizeFood(food) {
     }
 }
 
-// Every tag in use across the food database, sorted, for pickers and filters.
-function allTags(foods) {
-    return normalizeTags(Object.values(foods).flatMap(food => food.tags))
+/*
+ * The category list is the union of the explicitly managed `categories` array
+ * and whatever tags foods actually carry, so a category created but not yet
+ * used still shows up, and a tag that only exists on a food is never hidden.
+ */
+function allCategories(database) {
+    return normalizeTags([...database.categories, ...Object.values(database.foods).flatMap(food => food.tags)])
+}
+
+function categoryUsage(database, name) {
+    return Object.values(database.foods).filter(food => food.tags.includes(name)).length
+}
+
+function addCategory(database, name) {
+    return { ...database, categories: normalizeTags([...database.categories, name]) }
+}
+
+// Renaming onto a name that already exists merges the two: normalizeTags drops the duplicate.
+function renameCategory(database, from, to) {
+    const rename = tags => normalizeTags(tags.map(tag => tag === from ? to : tag))
+    const foods = {}
+    for (const [id, food] of Object.entries(database.foods)) foods[id] = { ...food, tags: rename(food.tags) }
+    return { ...database, categories: rename(database.categories), foods }
+}
+
+function deleteCategory(database, name) {
+    const foods = {}
+    for (const [id, food] of Object.entries(database.foods)) {
+        foods[id] = { ...food, tags: food.tags.filter(tag => tag !== name) }
+    }
+    return { ...database, categories: database.categories.filter(tag => tag !== name), foods }
 }
 
 function normalizeIngredient(ingredient) {
@@ -123,7 +152,7 @@ function parseDatabase(content) {
             if (Array.isArray(entries)) diary[date] = entries.map(normalizeDiaryEntry)
         }
     }
-    return { foods, recipes, diary }
+    return { categories: normalizeTags(parsed?.categories), foods, recipes, diary }
 }
 
 function serializeDatabase(database) {
@@ -218,7 +247,11 @@ module.exports = {
     emptyNutrients,
     normalizeTags,
     normalizeFood,
-    allTags,
+    allCategories,
+    categoryUsage,
+    addCategory,
+    renameCategory,
+    deleteCategory,
     normalizeRecipe,
     normalizeDiaryEntry,
     parseDatabase,

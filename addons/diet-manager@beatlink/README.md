@@ -53,6 +53,22 @@ The Foods tab uses them three ways:
 
 The Diary tab's food picker is also grouped by category.
 
+## Categories tab
+
+The **Categories** tab manages the category list itself:
+
+- **Add Category** creates one up front, before any food uses it, so it's offered in the food form
+  from the start.
+- The **Foods** column counts how many foods currently carry each category.
+- The edit icon renames a category **everywhere at once** — every food using it is updated in the
+  same save. Renaming onto a name that already exists **merges** the two categories.
+- The trash icon deletes a category, removing it from every food that carries it. It asks first,
+  naming how many foods are affected. The foods themselves are never deleted.
+
+The list is the union of categories created here and any category a food actually carries, so a
+category typed straight into a food form still appears here, and deleting a category used by no
+food simply drops it.
+
 ## Recipes
 
 The **Recipes** tab builds recipes out of foods already in your database. A recipe has a name, a
@@ -97,6 +113,7 @@ The whole database is one JSON code note:
 
 ```json
 {
+    "categories": ["Meat", "Protein", "Snack"],
     "foods": {
         "a1b2c3d4": {
             "id": "a1b2c3d4",
@@ -126,7 +143,9 @@ The whole database is one JSON code note:
 }
 ```
 
-A food's `tags` array is its categories; a food saved before categories existed simply has none.
+A food's `tags` array is its categories; a food saved before categories existed simply has none. The
+top-level `categories` array is the managed list — it only needs to hold categories no food carries
+yet, since the tab shows the union of the two, and it may be absent entirely in an older database.
 Diary entries are keyed by ISO date (`YYYY-MM-DD`). A recipe's own nutrition is never stored — it's
 always recomputed from its current ingredients at render time, same as a diary entry's contribution
 is always recomputed from the food or recipe it references.

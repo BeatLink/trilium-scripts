@@ -8,7 +8,11 @@ const {
     emptyNutrients,
     normalizeTags,
     normalizeFood,
-    allTags,
+    allCategories,
+    categoryUsage,
+    addCategory,
+    renameCategory,
+    deleteCategory,
     normalizeRecipe,
     normalizeDiaryEntry,
     parseDatabase,
@@ -290,15 +294,13 @@ function FoodRows({ list, onEdit, onDelete }) {
     ))
 }
 
-function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
+function FoodsTab({ foods, categories, usdaApiKey, onSaveFood, onDeleteFood }) {
     const [editingId, setEditingId] = useState(null)
     const [adding, setAdding] = useState(false)
     const [filterTag, setFilterTag] = useState("")
     const [grouped, setGrouped] = useState(() => localStorage.getItem(GROUPED_PREF_KEY) === "true")
     const [sortKey, setSortKey] = useState("name")
     const [ascending, setAscending] = useState(true)
-
-    const tags = useMemo(() => allTags(foods), [foods])
 
     const filtered = useMemo(() => {
         const list = Object.values(foods)
@@ -311,11 +313,11 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
 
     // A food with several categories appears under each of them.
     const groups = useMemo(() => {
-        const byTag = tags.map(tag => [tag, list.filter(food => food.tags.includes(tag))])
+        const byTag = categories.map(tag => [tag, list.filter(food => food.tags.includes(tag))])
         const untagged = list.filter(food => food.tags.length === 0)
         if (untagged.length > 0) byTag.push([UNTAGGED, untagged])
         return byTag.filter(([, members]) => members.length > 0)
-    }, [tags, list])
+    }, [categories, list])
 
     const toggleGrouped = useCallback(checked => {
         setGrouped(checked)
@@ -331,7 +333,7 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
         return (
             <FoodForm
                 usdaApiKey={usdaApiKey}
-                tagSuggestions={tags}
+                tagSuggestions={categories}
                 onSave={food => { onSaveFood(food); setAdding(false) }}
                 onCancel={() => setAdding(false)}
             />
@@ -342,7 +344,7 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
             <FoodForm
                 initial={foods[editingId]}
                 usdaApiKey={usdaApiKey}
-                tagSuggestions={tags}
+                tagSuggestions={categories}
                 onSave={food => { onSaveFood(food); setEditingId(null) }}
                 onCancel={() => setEditingId(null)}
             />
@@ -372,7 +374,7 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
                 <Button icon="bx-plus" text="Add Food" onClick={() => setAdding(true)} />
                 <select value={filterTag} onChange={e => setFilterTag(e.target.value)} title="Filter by category">
                     <option value="">All categories</option>
-                    {tags.map(tag => <option value={tag} key={tag}>{tag}</option>)}
+                    {categories.map(tag => <option value={tag} key={tag}>{tag}</option>)}
                     <option value={UNTAGGED}>{UNTAGGED}</option>
                 </select>
                 <label className="diet-manager-toolbar-check">
@@ -545,7 +547,7 @@ function RecipesTab({ recipes, foods, onSaveRecipe, onDeleteRecipe }) {
 // ---------------------------------------------------------------------------
 // Diary tab
 // ---------------------------------------------------------------------------
-function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }) {
+function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onRemoveEntry }) {
     const [date, setDate] = useState(() => todayKey())
     const [kind, setKind] = useState("food")
     const [refId, setRefId] = useState("")
@@ -560,11 +562,13 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
     // Foods are offered grouped by category; a food in several categories is listed under each.
     const foodGroups = useMemo(() => {
         if (kind !== "food") return []
-        const groups = allTags(foods).map(tag => [tag, sortedOptions.filter(food => food.tags.includes(tag))])
+        const groups = categories
+            .map(tag => [tag, sortedOptions.filter(food => food.tags.includes(tag))])
+            .filter(([, members]) => members.length > 0)
         const untagged = sortedOptions.filter(food => food.tags.length === 0)
         if (untagged.length > 0) groups.push([UNTAGGED, untagged])
         return groups
-    }, [kind, foods, sortedOptions])
+    }, [kind, categories, sortedOptions])
 
     const addEntry = useCallback(() => {
         if (!refId) return
@@ -643,6 +647,96 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
 }
 
 // ---------------------------------------------------------------------------
+// Categories tab — the category list itself: create, rename (across every food
+// at once), and delete.
+// ---------------------------------------------------------------------------
+function CategoriesTab({ database, categories, onCreate, onRename, onDelete }) {
+    const [draft, setDraft] = useState("")
+    const [editing, setEditing] = useState(null)
+    const [editDraft, setEditDraft] = useState("")
+
+    const create = useCallback(() => {
+        const trimmed = draft.trim()
+        if (!trimmed) return
+        onCreate(trimmed)
+        setDraft("")
+    }, [draft, onCreate])
+
+    const startRename = useCallback(name => {
+        setEditing(name)
+        setEditDraft(name)
+    }, [])
+
+    const commitRename = useCallback(() => {
+        const trimmed = editDraft.trim()
+        if (trimmed && trimmed !== editing) onRename(editing, trimmed)
+        setEditing(null)
+    }, [editing, editDraft, onRename])
+
+    return (
+        <div className="diet-manager-tab">
+            <div className="diet-manager-toolbar">
+                <input
+                    type="text"
+                    className="diet-manager-category-new"
+                    placeholder="New category..."
+                    value={draft}
+                    onInput={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); create() } }}
+                />
+                <Button icon="bx-plus" text="Add Category" onClick={create} disabled={!draft.trim()} />
+            </div>
+            <table className="diet-manager-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Foods</th>
+                        <th />
+                    </tr>
+                </thead>
+                <tbody>
+                    {categories.map(name => {
+                        const usage = categoryUsage(database, name)
+                        return (
+                            <tr key={name}>
+                                <td>
+                                    {editing === name
+                                        ? <input
+                                            type="text"
+                                            value={editDraft}
+                                            autoFocus
+                                            onInput={e => setEditDraft(e.target.value)}
+                                            onBlur={commitRename}
+                                            onKeyDown={e => {
+                                                if (e.key === "Enter") { e.preventDefault(); commitRename() }
+                                                if (e.key === "Escape") setEditing(null)
+                                            }}
+                                        />
+                                        : name}
+                                </td>
+                                <td>{usage}</td>
+                                <td className="diet-manager-cell-actions">
+                                    <button className="diet-manager-action bx bx-edit" title="Rename" onClick={() => startRename(name)} />
+                                    <button
+                                        className="diet-manager-action diet-manager-action-remove bx bx-trash"
+                                        title="Delete"
+                                        onClick={() => onDelete(name, usage)}
+                                    />
+                                </td>
+                            </tr>
+                        )
+                    })}
+                    {categories.length === 0 && <tr><td colSpan={3} className="diet-manager-empty">No categories yet.</td></tr>}
+                </tbody>
+            </table>
+            <p className="diet-manager-hint">
+                Renaming updates every food using the category. Renaming onto an existing category merges the two.
+            </p>
+        </div>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Root widget
 // ---------------------------------------------------------------------------
 function DietManagerWidget() {
@@ -686,6 +780,20 @@ function DietManagerWidget() {
             delete foods[id]
             return { ...current, foods }
         })
+    }, [persist])
+
+    const onCreateCategory = useCallback(name => {
+        persist(current => addCategory(current, name))
+    }, [persist])
+
+    const onRenameCategory = useCallback((from, to) => {
+        persist(current => renameCategory(current, from, to))
+    }, [persist])
+
+    const onDeleteCategory = useCallback((name, usage) => {
+        const scope = usage > 0 ? ` It is removed from ${usage} food(s).` : ""
+        if (!confirm(`Delete category "${name}"?${scope} The foods themselves are kept.`)) return
+        persist(current => deleteCategory(current, name))
     }, [persist])
 
     const onSaveRecipe = useCallback(recipe => {
@@ -752,6 +860,7 @@ function DietManagerWidget() {
                     diary[date] = [...(diary[date] || []), ...newEntries]
                 }
                 return {
+                    categories: normalizeTags([...current.categories, ...imported.categories]),
                     foods: { ...current.foods, ...imported.foods },
                     recipes: { ...current.recipes, ...imported.recipes },
                     diary
@@ -764,14 +873,17 @@ function DietManagerWidget() {
         input.click()
     }, [persist])
 
+    const categories = useMemo(() => database ? allCategories(database) : [], [database])
+
     if (!database || !settings) return <div className="diet-manager-widget">Loading...</div>
 
     return (
         <div className="diet-manager-widget">
             <div className="diet-manager-tabs">
                 <button className={tab === "diary" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("diary")}>Diary</button>
-                <button className={tab === "foods" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
                 <button className={tab === "recipes" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("recipes")}>Recipes</button>
+                <button className={tab === "foods" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
+                <button className={tab === "categories" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("categories")}>Categories</button>
                 <span className="diet-manager-tabs-spacer" />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
                 <Button icon="bx-export" text="Export JSON" onClick={onExport} />
@@ -781,16 +893,32 @@ function DietManagerWidget() {
                     diary={database.diary}
                     foods={database.foods}
                     recipes={database.recipes}
+                    categories={categories}
                     settings={settings}
                     onAddEntry={onAddEntry}
                     onRemoveEntry={onRemoveEntry}
                 />
             )}
             {tab === "foods" && (
-                <FoodsTab foods={database.foods} usdaApiKey={settings.usdaApiKey} onSaveFood={onSaveFood} onDeleteFood={onDeleteFood} />
+                <FoodsTab
+                    foods={database.foods}
+                    categories={categories}
+                    usdaApiKey={settings.usdaApiKey}
+                    onSaveFood={onSaveFood}
+                    onDeleteFood={onDeleteFood}
+                />
             )}
             {tab === "recipes" && (
                 <RecipesTab recipes={database.recipes} foods={database.foods} onSaveRecipe={onSaveRecipe} onDeleteRecipe={onDeleteRecipe} />
+            )}
+            {tab === "categories" && (
+                <CategoriesTab
+                    database={database}
+                    categories={categories}
+                    onCreate={onCreateCategory}
+                    onRename={onRenameCategory}
+                    onDelete={onDeleteCategory}
+                />
             )}
         </div>
     )
