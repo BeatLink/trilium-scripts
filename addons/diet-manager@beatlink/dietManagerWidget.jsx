@@ -20,7 +20,12 @@ const {
     deleteCategory,
     normalizeRecipe,
     normalizeGroceryItem,
+    normalizeUnits,
     allUnits,
+    unitUsage,
+    addUnit,
+    renameUnit,
+    deleteUnit,
     normalizeDiaryEntry,
     parseDatabase,
     serializeDatabase,
@@ -766,6 +771,101 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
 }
 
 // ---------------------------------------------------------------------------
+// Units tab — the unit vocabulary shared by foods, recipes and grocery lines:
+// create, rename (across everything using it), and delete.
+// ---------------------------------------------------------------------------
+function UnitsTab({ database, units, onCreate, onRename, onDelete }) {
+    const [draft, setDraft] = useState("")
+    const [editing, setEditing] = useState(null)
+    const [editDraft, setEditDraft] = useState("")
+
+    const create = useCallback(() => {
+        if (!draft.trim()) return
+        onCreate(draft.trim())
+        setDraft("")
+    }, [draft, onCreate])
+
+    const startRename = useCallback(unit => {
+        setEditing(unit)
+        setEditDraft(unit)
+    }, [])
+
+    const commitRename = useCallback(() => {
+        const target = editDraft.trim()
+        if (target && target !== editing) onRename(editing, target)
+        setEditing(null)
+    }, [editing, editDraft, onRename])
+
+    return (
+        <div className="diet-manager-tab">
+            <div className="diet-manager-toolbar">
+                <input
+                    type="text"
+                    className="diet-manager-category-new"
+                    placeholder="New unit..."
+                    value={draft}
+                    onInput={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); create() } }}
+                />
+                <Button icon="bx-plus" text="Add Unit" onClick={create} disabled={!draft.trim()} />
+            </div>
+            <table className="diet-manager-table">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Foods</th>
+                        <th>Recipes</th>
+                        <th>Grocery</th>
+                        <th />
+                    </tr>
+                </thead>
+                <tbody>
+                    {units.map(unit => {
+                        const usage = unitUsage(database, unit)
+                        return (
+                            <tr key={unit}>
+                                <td>
+                                    {editing === unit
+                                        ? <input
+                                            type="text"
+                                            value={editDraft}
+                                            autoFocus
+                                            onInput={e => setEditDraft(e.target.value)}
+                                            onBlur={commitRename}
+                                            onKeyDown={e => {
+                                                if (e.key === "Enter") { e.preventDefault(); commitRename() }
+                                                if (e.key === "Escape") setEditing(null)
+                                            }}
+                                        />
+                                        : unit}
+                                </td>
+                                <td>{usage.foods}</td>
+                                <td>{usage.recipes}</td>
+                                <td>{usage.grocery}</td>
+                                <td className="diet-manager-cell-actions">
+                                    <button className="diet-manager-action bx bx-edit" title="Rename" onClick={() => startRename(unit)} />
+                                    <button
+                                        className="diet-manager-action diet-manager-action-remove bx bx-trash"
+                                        title="Delete"
+                                        onClick={() => onDelete(unit, usage)}
+                                    />
+                                </td>
+                            </tr>
+                        )
+                    })}
+                    {units.length === 0 && <tr><td colSpan={5} className="diet-manager-empty">No units yet.</td></tr>}
+                </tbody>
+            </table>
+            <p className="diet-manager-hint">
+                Renaming updates every food, recipe and grocery line using the unit. Renaming onto an
+                existing unit merges the two. A unit still in use cannot be deleted — rename it onto
+                another unit first, which moves everything over.
+            </p>
+        </div>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Grocery tab — a manually maintained shopping list of foods. Amounts are
 // typed in, never derived from recipes or the diary, and each line keeps its
 // own unit (prefilled from the food's serving unit, then editable).
@@ -1018,6 +1118,28 @@ function DietManagerWidget() {
         persist(current => deleteCategory(current, name))
     }, [persist])
 
+    const onCreateUnit = useCallback(name => {
+        persist(current => addUnit(current, name))
+    }, [persist])
+
+    const onRenameUnit = useCallback((from, to) => {
+        persist(current => renameUnit(current, from, to))
+    }, [persist])
+
+    // A unit in use has to stay: the records carrying it must keep some unit,
+    // and the list would show it again anyway since it unions with what is used.
+    const onDeleteUnit = useCallback((name, usage) => {
+        const total = usage.foods + usage.recipes + usage.grocery
+        if (total > 0) {
+            api.showError(
+                `"${name}" is still used by ${usage.foods} food(s), ${usage.recipes} recipe(s) and ${usage.grocery} grocery line(s). ` +
+                "Rename it onto another unit to move them over, then delete it."
+            )
+            return
+        }
+        persist(current => deleteUnit(current, name))
+    }, [persist])
+
     const onAddGrocery = useCallback(fields => {
         persist(current => ({
             ...current,
@@ -1106,6 +1228,7 @@ function DietManagerWidget() {
                 const groceryIds = new Set(current.grocery.map(item => item.id))
                 return {
                     categories: normalizeTags([...current.categories, ...imported.categories]),
+                    units: normalizeUnits([...current.units, ...imported.units]),
                     foods: { ...current.foods, ...imported.foods },
                     recipes: { ...current.recipes, ...imported.recipes },
                     diary,
@@ -1130,8 +1253,9 @@ function DietManagerWidget() {
                 <button className={tab === "diary" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("diary")}>Diary</button>
                 <button className={tab === "recipes" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("recipes")}>Recipes</button>
                 <button className={tab === "foods" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("foods")}>Foods</button>
-                <button className={tab === "categories" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("categories")}>Categories</button>
                 <button className={tab === "grocery" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("grocery")}>Grocery</button>
+                <button className={tab === "categories" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("categories")}>Categories</button>
+                <button className={tab === "units" ? "diet-manager-tab-btn diet-manager-tab-btn-active" : "diet-manager-tab-btn"} onClick={() => setTab("units")}>Units</button>
                 <span className="diet-manager-tabs-spacer" />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
                 <Button icon="bx-export" text="Export JSON" onClick={onExport} />
@@ -1165,6 +1289,15 @@ function DietManagerWidget() {
                     units={units}
                     onSaveRecipe={onSaveRecipe}
                     onDeleteRecipe={onDeleteRecipe}
+                />
+            )}
+            {tab === "units" && (
+                <UnitsTab
+                    database={database}
+                    units={units}
+                    onCreate={onCreateUnit}
+                    onRename={onRenameUnit}
+                    onDelete={onDeleteUnit}
                 />
             )}
             {tab === "grocery" && (

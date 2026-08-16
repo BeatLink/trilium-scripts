@@ -69,6 +69,17 @@ is edited — recipes never store their own copy of nutrition facts.
 
 The tab filters, groups, and sorts by category exactly like the Foods tab does.
 
+## Grocery tab
+
+The **Grocery** tab is a manually maintained shopping list built from foods already in the
+database. Pick a food, type an amount, and set a unit; the unit prefills from that food's serving
+unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
+`2 loaf`.
+
+Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
+checkbox for "bought", which strikes it through, and **Clear Checked** removes all ticked lines at
+once. Amount and unit stay editable in place.
+
 ## Categories tab
 
 The **Categories** tab manages the category tree itself:
@@ -89,24 +100,23 @@ The **Categories** tab manages the category tree itself:
 The list is the union of categories created here, any category an item actually carries, and every
 parent those paths imply — so a category typed straight into a food form still appears here.
 
-## Grocery tab
+## Units tab
 
-The **Grocery** tab is a manually maintained shopping list built from foods already in the
-database. Pick a food, type an amount, and set a unit; the unit prefills from that food's serving
-unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
-`2 loaf`.
+Foods, recipes and grocery lines share one unit vocabulary, and the **Units** tab manages it:
 
-Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
-checkbox for "bought", which strikes it through, and **Clear Checked** removes all ticked lines at
-once. Amount and unit stay editable in place.
+- **Add Unit** creates one up front, before anything uses it, so it's offered everywhere from the
+  start.
+- The **Foods**, **Recipes** and **Grocery** columns count what currently uses each unit.
+- The edit icon renames a unit **everywhere at once** — every food, recipe and grocery line using
+  it is updated in the same save. Renaming onto an existing unit **merges** the two, which is also
+  how you consolidate `gram` and `g`.
+- The trash icon deletes a unit. A unit still in use **cannot** be deleted: those records have to
+  keep some unit, and the list would show it again regardless (it is the union of the managed list
+  and what's in use). Rename it onto another unit first to move everything over, then delete it.
 
-## Units
-
-Serving units are free text, and every place that takes one — a food's serving unit, a recipe's
-serving unit (`serving`, `bowl`, `slice`...), and each grocery line — offers the units already in
-use as a dropdown the moment you click the field. They share one vocabulary, so a unit typed on a
-food is offered on recipes and the grocery list too. A unit that isn't on the list is just typed
-in.
+Every field that takes a unit — a food's serving unit, a recipe's serving unit (`serving`, `bowl`,
+`slice`...), and each grocery line — offers this list as a dropdown the moment you click it. A unit
+that isn't on the list can still just be typed, and it joins the vocabulary as soon as it's used.
 
 ## Diary
 
@@ -146,6 +156,7 @@ The whole database is one JSON code note:
 ```json
 {
     "categories": ["Protein", "Protein/Meat", "Snack"],
+    "units": ["bowl", "g", "pack"],
     "foods": {
         "a1b2c3d4": {
             "id": "a1b2c3d4",
@@ -184,7 +195,8 @@ A food's or recipe's `tags` array is its categories, each a `/`-separated path; 
 categories existed simply has none. The top-level `categories` array is the managed list — it only
 needs to hold categories nothing carries yet, since the tab shows the union of the two plus every
 implied parent, and it may be absent entirely in an older database. `grocery` is likewise optional
-and its lines are independent of the diary.
+and its lines are independent of the diary. `units` is the managed unit list, and like `categories`
+it only needs to hold units nothing uses yet.
 Diary entries are keyed by ISO date (`YYYY-MM-DD`). A recipe's own nutrition is never stored — it's
 always recomputed from its current ingredients at render time, same as a diary entry's contribution
 is always recomputed from the food or recipe it references.

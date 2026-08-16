@@ -3,6 +3,7 @@
  * addon's persisted Database note:
  *   {
  *     categories: [ "Dairy", "Protein/Meat", ... ],
+ *     units: [ "g", "cup", ... ],
  *     foods: { [id]: { id, name, servingSize, servingUnit, tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] },
@@ -205,19 +206,73 @@ function normalizeGroceryItem(item, foods = {}) {
     }
 }
 
-// Every unit in use, for the unit pickers; foods, recipes and grocery lines share one vocabulary.
-function allUnits(database) {
-    const used = [
-        ...Object.values(database.foods).map(food => food.servingUnit),
-        ...Object.values(database.recipes).map(recipe => recipe.servingUnit),
-        ...database.grocery.map(item => item.unit)
-    ]
+// Units: trimmed, de-duplicated case-insensitively, kept in sorted order.
+function normalizeUnits(raw) {
+    if (!Array.isArray(raw)) return []
     const byLower = new Map()
-    for (const unit of used) {
+    for (const unit of raw) {
         const trimmed = typeof unit === "string" ? unit.trim() : ""
         if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed)
     }
     return [...byLower.values()].sort((a, b) => a.localeCompare(b))
+}
+
+/*
+ * The unit list is the union of the managed `units` array and every unit in
+ * actual use, on the same principle as the category list: a unit created but
+ * not yet used still shows up, and a unit typed straight into a form is never
+ * hidden. Foods, recipes and grocery lines share one vocabulary.
+ */
+function unitsInUse(database) {
+    return [
+        ...Object.values(database.foods).map(food => food.servingUnit),
+        ...Object.values(database.recipes).map(recipe => recipe.servingUnit),
+        ...database.grocery.map(item => item.unit)
+    ]
+}
+
+function allUnits(database) {
+    return normalizeUnits([...database.units, ...unitsInUse(database)])
+}
+
+function unitUsage(database, unit) {
+    return {
+        foods: Object.values(database.foods).filter(food => food.servingUnit === unit).length,
+        recipes: Object.values(database.recipes).filter(recipe => recipe.servingUnit === unit).length,
+        grocery: database.grocery.filter(item => item.unit === unit).length
+    }
+}
+
+function addUnit(database, name) {
+    return { ...database, units: normalizeUnits([...database.units, name]) }
+}
+
+// Renaming rewrites every food, recipe and grocery line using the unit; renaming onto an existing unit merges the two.
+function renameUnit(database, from, to) {
+    const target = typeof to === "string" ? to.trim() : ""
+    if (!target) return database
+    const swap = unit => unit === from ? target : unit
+    const foods = {}
+    for (const [id, food] of Object.entries(database.foods)) foods[id] = { ...food, servingUnit: swap(food.servingUnit) }
+    const recipes = {}
+    for (const [id, recipe] of Object.entries(database.recipes)) recipes[id] = { ...recipe, servingUnit: swap(recipe.servingUnit) }
+    return {
+        ...database,
+        units: normalizeUnits(database.units.map(swap)),
+        foods,
+        recipes,
+        grocery: database.grocery.map(item => ({ ...item, unit: swap(item.unit) }))
+    }
+}
+
+/*
+ * Deleting only drops the unit from the managed list. A unit still on a food,
+ * recipe or grocery line would reappear in the list immediately (it is a union
+ * with what is in use) and those records must keep some unit, so the caller
+ * checks unitUsage first and offers a rename-into-another-unit instead.
+ */
+function deleteUnit(database, name) {
+    return { ...database, units: database.units.filter(unit => unit !== name) }
 }
 
 function normalizeDiaryEntry(entry) {
@@ -258,7 +313,14 @@ function parseDatabase(content) {
         }
     }
     const grocery = Array.isArray(parsed?.grocery) ? parsed.grocery.map(item => normalizeGroceryItem(item, foods)) : []
-    return { categories: normalizeTags(parsed?.categories), foods, recipes, diary, grocery }
+    return {
+        categories: normalizeTags(parsed?.categories),
+        units: normalizeUnits(parsed?.units),
+        foods,
+        recipes,
+        diary,
+        grocery
+    }
 }
 
 function serializeDatabase(database) {
@@ -366,7 +428,12 @@ module.exports = {
     deleteCategory,
     normalizeRecipe,
     normalizeGroceryItem,
+    normalizeUnits,
     allUnits,
+    unitUsage,
+    addUnit,
+    renameUnit,
+    deleteUnit,
     normalizeDiaryEntry,
     parseDatabase,
     serializeDatabase,
