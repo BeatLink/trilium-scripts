@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, Button } from "trilium:preact"
+import { useState, useEffect, useRef, useCallback, useMemo, Button } from "trilium:preact"
 import { currentNote } from "trilium:api"
 import { loadSettings } from "libSettingsUI.jsx"
 
@@ -602,13 +602,17 @@ function DietManagerWidget() {
     const [database, setDatabase] = useState(null)
     const [settings, setSettings] = useState(null)
     const [databaseNoteId, setDatabaseNoteId] = useState(null)
+    // Mirrors `database` so persist can apply its updater without reading state
+    // through a stale closure -- what gets written must be the object itself.
+    const databaseRef = useRef(null)
 
     useEffect(() => {
         (async () => {
             const dbNoteId = await currentNote.getRelationValue("database")
             setDatabaseNoteId(dbNoteId)
             const content = await api.runOnBackend(id => api.getNote(id).getContent(), [dbNoteId])
-            setDatabase(parseDatabase(content))
+            databaseRef.current = parseDatabase(content)
+            setDatabase(databaseRef.current)
 
             const schemaNoteId = await currentNote.getRelationValue("schemaNote")
             const settingsNote = await currentNote.getRelationTarget("settingsNote")
@@ -617,7 +621,9 @@ function DietManagerWidget() {
         })()
     }, [])
 
-    const persist = useCallback(next => {
+    const persist = useCallback(update => {
+        const next = update(databaseRef.current)
+        databaseRef.current = next
         setDatabase(next)
         api.runOnBackend((id, content) => api.getNote(id).setContent(content), [databaseNoteId, serializeDatabase(next)])
     }, [databaseNoteId])
