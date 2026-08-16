@@ -48,17 +48,20 @@ function NutrientInputs({ nutrients, onChange }) {
 
 // ---------------------------------------------------------------------------
 // Category tag editor — chips plus a free-text field that autocompletes
-// against the tags already used elsewhere in the database.
+// against the tags already used elsewhere in the database. The draft lives in
+// the parent form so saving can commit a category still sitting in the field.
 // ---------------------------------------------------------------------------
-function TagEditor({ tags, suggestions, onChange }) {
-    const [draft, setDraft] = useState("")
+function withDraftTag(tags, draft) {
+    const trimmed = draft.trim()
+    return trimmed ? normalizeTags([...tags, trimmed]) : tags
+}
 
+function TagEditor({ tags, draft, suggestions, onChange, onDraftChange }) {
     const addDraft = useCallback(() => {
-        const trimmed = draft.trim()
-        if (!trimmed) return
-        onChange(normalizeTags([...tags, trimmed]))
-        setDraft("")
-    }, [draft, tags, onChange])
+        if (!draft.trim()) return
+        onChange(withDraftTag(tags, draft))
+        onDraftChange("")
+    }, [draft, tags, onChange, onDraftChange])
 
     return (
         <div className="diet-manager-field">
@@ -82,7 +85,7 @@ function TagEditor({ tags, suggestions, onChange }) {
                     list="diet-manager-tag-suggestions"
                     placeholder="Add a category..."
                     value={draft}
-                    onInput={e => setDraft(e.target.value)}
+                    onInput={e => onDraftChange(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDraft() } }}
                 />
                 <datalist id="diet-manager-tag-suggestions">
@@ -99,6 +102,7 @@ function TagEditor({ tags, suggestions, onChange }) {
 // ---------------------------------------------------------------------------
 function FoodForm({ initial, usdaApiKey, tagSuggestions, onSave, onCancel }) {
     const [food, setFood] = useState(() => normalizeFood(initial))
+    const [tagDraft, setTagDraft] = useState("")
     const [query, setQuery] = useState("")
     const [results, setResults] = useState(null)
     const [searching, setSearching] = useState(false)
@@ -197,14 +201,20 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, onSave, onCancel }) {
 
             <TagEditor
                 tags={food.tags}
+                draft={tagDraft}
                 suggestions={tagSuggestions}
                 onChange={tags => setFood(c => ({ ...c, tags }))}
+                onDraftChange={setTagDraft}
             />
 
             <NutrientInputs nutrients={food.nutrients} onChange={setNutrient} />
 
             <div className="diet-manager-form-actions">
-                <Button text="Save" onClick={() => onSave(food)} disabled={!food.name.trim()} />
+                <Button
+                    text="Save"
+                    onClick={() => onSave({ ...food, tags: withDraftTag(food.tags, tagDraft) })}
+                    disabled={!food.name.trim()}
+                />
                 <Button text="Cancel" onClick={onCancel} />
             </div>
         </div>
