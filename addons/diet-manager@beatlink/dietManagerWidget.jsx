@@ -135,6 +135,40 @@ function FoodUnitSelect({ food, value, onChange, title }) {
 }
 
 // ---------------------------------------------------------------------------
+// The food picker, shared by the diary, the grocery list and recipe
+// ingredients: one <optgroup> per category (a food in several categories is
+// offered under each), uncategorised foods last, brands in the labels.
+// `exclude` drops foods the caller has no use for, such as the ones already on
+// the grocery list.
+// ---------------------------------------------------------------------------
+function FoodSelect({ foods, categories, value, placeholder, emptyLabel, exclude, onChange }) {
+    const groups = useMemo(() => {
+        const skip = exclude ?? new Set()
+        const available = Object.values(foods)
+            .filter(food => !skip.has(food.id))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        const byCategory = categories
+            .map(tag => [tag, available.filter(food => food.tags.includes(tag))])
+            .filter(([, members]) => members.length > 0)
+        const untagged = available.filter(food => food.tags.length === 0)
+        if (untagged.length > 0) byCategory.push([UNTAGGED, untagged])
+        return byCategory
+    }, [foods, categories, exclude])
+
+    const empty = groups.length === 0
+    return (
+        <select value={value} onChange={e => onChange(e.target.value)}>
+            <option value="">{empty ? (emptyLabel ?? placeholder) : placeholder}</option>
+            {groups.map(([tag, members]) => (
+                <optgroup label={tag} key={tag}>
+                    {members.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
+                </optgroup>
+            ))}
+        </select>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Category tag editor — chips plus a free-text field that autocompletes
 // against the tags already used elsewhere in the database. The draft lives in
 // the parent form so saving can commit a category still sitting in the field.
@@ -617,7 +651,6 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
     const [tagDraft, setTagDraft] = useState("")
     const [addFoodId, setAddFoodId] = useState("")
 
-    const foodList = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
     const perServing = useMemo(() => recipeNutrientsPerServing(recipe, foods), [recipe, foods])
 
     const addIngredient = useCallback(() => {
@@ -698,10 +731,13 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
                 {recipe.ingredients.length === 0 && <li className="diet-manager-empty">No ingredients yet.</li>}
             </ul>
             <div className="diet-manager-add-ingredient">
-                <select value={addFoodId} onChange={e => setAddFoodId(e.target.value)}>
-                    <option value="">Add ingredient...</option>
-                    {foodList.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
-                </select>
+                <FoodSelect
+                    foods={foods}
+                    categories={tagSuggestions}
+                    value={addFoodId}
+                    placeholder="Add ingredient..."
+                    onChange={setAddFoodId}
+                />
                 <Button text="Add" onClick={addIngredient} disabled={!addFoodId} />
             </div>
 
@@ -812,17 +848,6 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
     const options = kind === "food" ? Object.values(foods) : Object.values(recipes)
     const sortedOptions = useMemo(() => [...options].sort((a, b) => a.name.localeCompare(b.name)), [options])
 
-    // Foods are offered grouped by category; a food in several categories is listed under each.
-    const foodGroups = useMemo(() => {
-        if (kind !== "food") return []
-        const groups = categories
-            .map(tag => [tag, sortedOptions.filter(food => food.tags.includes(tag))])
-            .filter(([, members]) => members.length > 0)
-        const untagged = sortedOptions.filter(food => food.tags.length === 0)
-        if (untagged.length > 0) groups.push([UNTAGGED, untagged])
-        return groups
-    }, [kind, categories, sortedOptions])
-
     const chooseRef = useCallback(id => {
         setRefId(id)
         setUnit(SERVING_UNIT)
@@ -883,16 +908,14 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
                     <option value="food">Food</option>
                     <option value="recipe">Recipe</option>
                 </select>
-                <select value={refId} onChange={e => chooseRef(e.target.value)}>
-                    <option value="">Select {kind}...</option>
-                    {kind === "recipe"
-                        ? sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)
-                        : foodGroups.map(([tag, members]) => (
-                            <optgroup label={tag} key={tag}>
-                                {members.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
-                            </optgroup>
-                        ))}
-                </select>
+                {kind === "food"
+                    ? <FoodSelect foods={foods} categories={categories} value={refId} placeholder="Select food..." onChange={chooseRef} />
+                    : (
+                        <select value={refId} onChange={e => chooseRef(e.target.value)}>
+                            <option value="">Select recipe...</option>
+                            {sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}
+                        </select>
+                    )}
                 <input
                     type="number"
                     step="0.01"
@@ -1019,10 +1042,7 @@ function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate
     const [grouped, setGrouped] = useState(() => localStorage.getItem(GROCERY_GROUPED_PREF_KEY) === "true")
 
     // Foods already on the list are left out of the picker: one line per food, edit the amount instead.
-    const foodList = useMemo(() => {
-        const onList = new Set(grocery.map(item => item.foodId))
-        return Object.values(foods).filter(food => !onList.has(food.id)).sort((a, b) => a.name.localeCompare(b.name))
-    }, [foods, grocery])
+    const onList = useMemo(() => new Set(grocery.map(item => item.foodId)), [grocery])
     const doneCount = grocery.filter(item => item.done).length
 
     // Picking a food offers its own serving unit and brand until they are typed over.
@@ -1108,10 +1128,15 @@ function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate
     return (
         <div className="diet-manager-tab">
             <div className="diet-manager-toolbar">
-                <select value={foodId} onChange={e => chooseFood(e.target.value)}>
-                    <option value="">{foodList.length > 0 ? "Select food..." : "Every food is already listed"}</option>
-                    {foodList.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
-                </select>
+                <FoodSelect
+                    foods={foods}
+                    categories={categories}
+                    value={foodId}
+                    placeholder="Select food..."
+                    emptyLabel="Every food is already listed"
+                    exclude={onList}
+                    onChange={chooseFood}
+                />
                 <input
                     type="number"
                     step="0.01"

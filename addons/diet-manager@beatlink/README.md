@@ -86,7 +86,8 @@ Both the Foods and the Recipes tab use categories three ways:
 A food's brand is free text with a dropdown of brands already in use, and foods are listed as
 "Oats (Quaker)" wherever a food is picked, so two versions of the same thing stay apart.
 
-The Diary tab's food picker is also grouped by category.
+Every food picker — the diary's, the grocery list's, and the recipe ingredient one — is the same
+control: grouped into one section per category, uncategorised foods last, brands in the labels.
 
 ## Recipes
 
