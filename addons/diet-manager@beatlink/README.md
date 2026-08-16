@@ -101,7 +101,8 @@ The tab filters, groups, and sorts by category exactly like the Foods tab does.
 ## Grocery tab
 
 The **Grocery** tab is a manually maintained shopping list built from foods already in the
-database. Pick a food, type an amount, and set a unit; the unit prefills from that food's serving
+database. Pick a food, type an amount, and set a unit; the picker only offers foods that aren't on
+the list yet, since a second line for the same food would just split its amount in two. the unit prefills from that food's serving
 unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
 `2 loaf`.
 

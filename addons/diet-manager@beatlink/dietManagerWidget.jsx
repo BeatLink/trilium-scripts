@@ -1018,7 +1018,11 @@ function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate
     const [comment, setComment] = useState("")
     const [grouped, setGrouped] = useState(() => localStorage.getItem(GROCERY_GROUPED_PREF_KEY) === "true")
 
-    const foodList = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
+    // Foods already on the list are left out of the picker: one line per food, edit the amount instead.
+    const foodList = useMemo(() => {
+        const onList = new Set(grocery.map(item => item.foodId))
+        return Object.values(foods).filter(food => !onList.has(food.id)).sort((a, b) => a.name.localeCompare(b.name))
+    }, [foods, grocery])
     const doneCount = grocery.filter(item => item.done).length
 
     // Picking a food offers its own serving unit and brand until they are typed over.
@@ -1105,7 +1109,7 @@ function GroceryTab({ grocery, foods, categories, units, brands, onAdd, onUpdate
         <div className="diet-manager-tab">
             <div className="diet-manager-toolbar">
                 <select value={foodId} onChange={e => chooseFood(e.target.value)}>
-                    <option value="">Select food...</option>
+                    <option value="">{foodList.length > 0 ? "Select food..." : "Every food is already listed"}</option>
                     {foodList.map(food => <option value={food.id} key={food.id}>{foodLabel(food)}</option>)}
                 </select>
                 <input
