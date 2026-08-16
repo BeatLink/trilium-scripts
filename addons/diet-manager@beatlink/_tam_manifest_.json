@@ -1,11 +1,11 @@
 {
     "id": "diet-manager@beatlink",
     "name": "Diet Manager",
-    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. Foods and recipes sort, filter and group by nestable categories, and a manually maintained grocery list tracks what to buy. All data is a single persisted JSON note.",
+    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. Foods can be measured in several units at once (100 g or 1 tortilla), foods and recipes sort, filter and group by nestable categories, and a manually maintained grocery list tracks what to buy. All data is a single persisted JSON note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/diet-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.3.0",
+    "latestVersion": "2.4.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/diet-manager@beatlink/_tam_manifest_.json",

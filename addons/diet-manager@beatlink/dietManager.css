@@ -200,6 +200,43 @@
     background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
 }
 
+.diet-manager-unit-select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    max-width: 160px;
+}
+
+.diet-manager-portion-list {
+    list-style: none;
+    margin: 0 0 8px 0;
+    padding: 0;
+}
+
+.diet-manager-portion-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+}
+
+.diet-manager-portion-row input[type="number"] {
+    width: 90px;
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-group {
+    margin: 14px 0 4px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
 .diet-manager-grocery-list {
     list-style: none;
     margin: 0;

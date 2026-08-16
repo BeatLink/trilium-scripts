@@ -34,6 +34,18 @@ blocking the other source's results.
 
 Nutrition can always be entered manually instead, regardless of lookup availability.
 
+### Multiple units per food
+
+Nutrition is stored once, per the food's own serving. **Other Units** in the food form adds extra
+ways to measure that same food, each stated in the serving unit: for a tortilla recorded per
+`100 g`, `1 tortilla = 100 g` means logging *1 tortilla* and logging *100 g* give identical
+nutrition. A pack of six is `1 pack = 600 g`.
+
+Everywhere an amount of a food is entered — a diary entry and a recipe ingredient — a unit
+dropdown offers that food's whole serving, its serving unit, and each of these extra units, and the
+nutrition is converted from whichever is picked. Nothing is duplicated: change the nutrition facts
+once and every unit follows.
+
 ### Categories
 
 Foods **and recipes** can each carry any number of free-form **categories** (e.g. `Protein`,
@@ -78,7 +90,11 @@ unit and can be changed per line, so a food measured in `100 g` for nutrition ca
 
 Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
 checkbox for "bought", which strikes it through, and **Clear Checked** removes all ticked lines at
-once. Amount and unit stay editable in place.
+once. Amount and unit stay editable in place, and a line's unit dropdown also offers whatever
+units its food defines, so `2 pack` is as easy to shop for as `500 g`.
+
+**Group by category** splits the list into a section per category of the line's food — a shopping
+list ordered by aisle, in effect. The checkbox state is remembered across reloads.
 
 ## Categories tab
 
@@ -163,6 +179,7 @@ The whole database is one JSON code note:
             "name": "Chicken Breast",
             "servingSize": 100,
             "servingUnit": "g",
+            "portions": [{ "unit": "breast", "size": 170 }],
             "tags": ["Protein/Meat"],
             "nutrients": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6,
@@ -177,12 +194,12 @@ The whole database is one JSON code note:
             "servings": 2,
             "servingUnit": "bowl",
             "tags": ["Protein"],
-            "ingredients": [{ "foodId": "a1b2c3d4", "amount": 200 }]
+            "ingredients": [{ "foodId": "a1b2c3d4", "amount": 1, "unit": "breast" }]
         }
     },
     "diary": {
         "2026-07-22": [
-            { "id": "i1j2k3l4", "kind": "food", "refId": "a1b2c3d4", "servings": 1, "loggedAt": "2026-07-22T12:00:00.000Z" }
+            { "id": "i1j2k3l4", "kind": "food", "refId": "a1b2c3d4", "servings": 1, "unit": "breast", "loggedAt": "2026-07-22T12:00:00.000Z" }
         ]
     },
     "grocery": [
@@ -197,6 +214,11 @@ needs to hold categories nothing carries yet, since the tab shows the union of t
 implied parent, and it may be absent entirely in an older database. `grocery` is likewise optional
 and its lines are independent of the diary. `units` is the managed unit list, and like `categories`
 it only needs to hold units nothing uses yet.
+A food's `portions` are its extra units, each `size` given in the food's own `servingUnit`. A diary
+entry's or ingredient's `unit` says which unit its amount is in; an entry with no `unit` counts whole
+servings and an ingredient with no `unit` is an amount in the serving unit, which is exactly what
+they meant before units existed, so older databases keep their totals.
+
 Diary entries are keyed by ISO date (`YYYY-MM-DD`). A recipe's own nutrition is never stored — it's
 always recomputed from its current ingredients at render time, same as a diary entry's contribution
 is always recomputed from the food or recipe it references.

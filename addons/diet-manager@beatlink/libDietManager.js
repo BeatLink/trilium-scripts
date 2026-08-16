@@ -4,9 +4,9 @@
  *   {
  *     categories: [ "Dairy", "Protein/Meat", ... ],
  *     units: [ "g", "cup", ... ],
- *     foods: { [id]: { id, name, servingSize, servingUnit, tags: [...], nutrients: {...} } },
- *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount }] } },
- *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] },
+ *     foods: { [id]: { id, name, servingSize, servingUnit, portions: [{ unit, size }], tags: [...], nutrients: {...} } },
+ *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount, unit }] } },
+ *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, unit, loggedAt }] },
  *     grocery: [ { id, foodId, amount, unit, done } ]
  *   }
  * `date` is an ISO "YYYY-MM-DD" string. All nutrient values are per the food's
@@ -92,15 +92,70 @@ function isInCategory(tag, category) {
     return tag === category || tag.startsWith(`${category}${CATEGORY_SEPARATOR}`)
 }
 
+/*
+ * A portion is an alternative way to measure one food: `size` is how much of
+ * the food's own serving unit one of them is, so a tortilla whose nutrition is
+ * recorded per 100 g gets { unit: "tortilla", size: 100 } if one tortilla
+ * weighs 100 g. Nutrition is still stored once, per the base serving; portions
+ * only ever convert an amount into that base.
+ */
+function normalizePortion(portion) {
+    const size = Number(portion?.size)
+    return {
+        unit: typeof portion?.unit === "string" ? portion.unit.trim() : "",
+        size: Number.isFinite(size) && size > 0 ? size : 1
+    }
+}
+
+function normalizePortions(raw) {
+    if (!Array.isArray(raw)) return []
+    const byUnit = new Map()
+    for (const portion of raw) {
+        const normalized = normalizePortion(portion)
+        if (normalized.unit) byUnit.set(normalized.unit.toLowerCase(), normalized)
+    }
+    return [...byUnit.values()]
+}
+
 function normalizeFood(food) {
     return {
         id: typeof food?.id === "string" && food.id ? food.id : newId(),
         name: typeof food?.name === "string" ? food.name : "",
         servingSize: Number.isFinite(Number(food?.servingSize)) ? Number(food.servingSize) : 100,
         servingUnit: typeof food?.servingUnit === "string" && food.servingUnit ? food.servingUnit : "g",
+        portions: normalizePortions(food?.portions),
         tags: normalizeTags(food?.tags),
         nutrients: normalizeNutrients(food?.nutrients)
     }
+}
+
+/*
+ * Every way this food can be measured, as { unit, size } where size is that
+ * unit expressed in the food's serving unit: one whole serving, one of the
+ * serving unit itself, then each portion. Amount x size / servingSize is the
+ * multiplier to apply to the stored nutrients.
+ */
+const SERVING_UNIT = "serving"
+
+function foodUnits(food) {
+    const units = [{ unit: SERVING_UNIT, size: food.servingSize }]
+    if (food.servingUnit !== SERVING_UNIT) units.push({ unit: food.servingUnit, size: 1 })
+    for (const portion of food.portions) {
+        if (portion.unit !== SERVING_UNIT && portion.unit !== food.servingUnit) units.push(portion)
+    }
+    return units
+}
+
+// How much of the food's serving unit one `unit` is; unknown units fall back to `fallback`.
+function unitSize(food, unit, fallback) {
+    const match = foodUnits(food).find(entry => entry.unit === unit)
+    return match ? match.size : fallback
+}
+
+// Multiplier to apply to a food's stored (per-serving) nutrients for `amount` of `unit`.
+function servingsFor(food, amount, unit, fallbackUnit) {
+    const size = unitSize(food, unit || fallbackUnit, unitSize(food, fallbackUnit, 1))
+    return (amount * size) / food.servingSize
 }
 
 // Foods and recipes are both taggable and are treated alike wherever categories are concerned.
@@ -162,11 +217,13 @@ function deleteCategory(database, name) {
     return { ...pruned, categories: drop(database.categories) }
 }
 
+// An ingredient with no unit is an amount in the food's serving unit, which is what it always meant.
 function normalizeIngredient(ingredient) {
     const amount = Number(ingredient?.amount)
     return {
         foodId: typeof ingredient?.foodId === "string" ? ingredient.foodId : "",
-        amount: Number.isFinite(amount) && amount > 0 ? amount : 1
+        amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
+        unit: typeof ingredient?.unit === "string" ? ingredient.unit.trim() : ""
     }
 }
 
@@ -282,6 +339,8 @@ function normalizeDiaryEntry(entry) {
         kind: entry?.kind === "recipe" ? "recipe" : "food",
         refId: typeof entry?.refId === "string" ? entry.refId : "",
         servings: Number.isFinite(servings) && servings > 0 ? servings : 1,
+        // No unit means `servings` counts whole servings, which is what every entry meant before units.
+        unit: typeof entry?.unit === "string" ? entry.unit.trim() : "",
         loggedAt: typeof entry?.loggedAt === "string" ? entry.loggedAt : new Date().toISOString()
     }
 }
@@ -333,7 +392,7 @@ function recipeNutrientsPerServing(recipe, foods) {
     for (const ingredient of recipe.ingredients) {
         const food = foods[ingredient.foodId]
         if (!food) continue
-        const multiplier = ingredient.amount / food.servingSize
+        const multiplier = servingsFor(food, ingredient.amount, ingredient.unit, food.servingUnit)
         for (const n of NUTRIENTS) totals[n.key] += food.nutrients[n.key] * multiplier
     }
     const perServing = emptyNutrients()
@@ -346,8 +405,9 @@ function entryNutrients(entry, foods, recipes) {
     if (entry.kind === "food") {
         const food = foods[entry.refId]
         if (!food) return emptyNutrients()
+        const multiplier = servingsFor(food, entry.servings, entry.unit, SERVING_UNIT)
         const scaled = emptyNutrients()
-        for (const n of NUTRIENTS) scaled[n.key] = food.nutrients[n.key] * entry.servings
+        for (const n of NUTRIENTS) scaled[n.key] = food.nutrients[n.key] * multiplier
         return scaled
     }
     const recipe = recipes[entry.refId]
@@ -416,6 +476,10 @@ module.exports = {
     normalizeTags,
     normalizeCategoryName,
     normalizeFood,
+    SERVING_UNIT,
+    foodUnits,
+    unitSize,
+    servingsFor,
     CATEGORY_SEPARATOR,
     categoryDepth,
     categoryLeaf,

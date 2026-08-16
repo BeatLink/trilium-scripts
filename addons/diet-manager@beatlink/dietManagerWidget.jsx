@@ -9,6 +9,8 @@ const {
     normalizeTags,
     normalizeCategoryName,
     normalizeFood,
+    SERVING_UNIT,
+    foodUnits,
     CATEGORY_SEPARATOR,
     categoryDepth,
     categoryLeaf,
@@ -111,6 +113,25 @@ function SuggestInput({ value, suggestions, placeholder, className, onChange, on
 }
 
 // ---------------------------------------------------------------------------
+// The units one food can be measured in: its whole serving, its serving unit,
+// and any extra portion it defines ("1 tortilla = 100 g"). Nutrition is stored
+// once per serving and converted from whichever unit is picked.
+// ---------------------------------------------------------------------------
+function FoodUnitSelect({ food, value, onChange, title }) {
+    if (!food) return <span className="diet-manager-hint">—</span>
+    const options = foodUnits(food)
+    return (
+        <select className="diet-manager-unit-select" value={value} title={title} onChange={e => onChange(e.target.value)}>
+            {options.map(option => (
+                <option value={option.unit} key={option.unit}>
+                    {option.unit === SERVING_UNIT ? `serving (${food.servingSize} ${food.servingUnit})` : option.unit}
+                </option>
+            ))}
+        </select>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Category tag editor — chips plus a free-text field that autocompletes
 // against the tags already used elsewhere in the database. The draft lives in
 // the parent form so saving can commit a category still sitting in the field.
@@ -179,6 +200,13 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
 
     const setNutrient = useCallback((key, value) => {
         setFood(current => ({ ...current, nutrients: { ...current.nutrients, [key]: value } }))
+    }, [])
+
+    const setPortion = useCallback((index, changes) => {
+        setFood(current => ({
+            ...current,
+            portions: current.portions.map((portion, i) => i === index ? { ...portion, ...changes } : portion)
+        }))
     }, [])
 
     const runSearch = useCallback(async () => {
@@ -273,6 +301,50 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                 </label>
             </div>
 
+            {/* Extra ways to measure this food, each stated in its serving unit. */}
+            <div className="diet-manager-field">
+                <span>Other Units</span>
+                <ul className="diet-manager-portion-list">
+                    {food.portions.map((portion, index) => (
+                        <li key={index} className="diet-manager-portion-row">
+                            <span>1</span>
+                            <SuggestInput
+                                className="diet-manager-suggest-unit"
+                                value={portion.unit}
+                                suggestions={unitSuggestions}
+                                placeholder="tortilla"
+                                onChange={unit => setPortion(index, { unit })}
+                            />
+                            <span>=</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={portion.size}
+                                onInput={e => setPortion(index, { size: parseFloat(e.target.value) || 0 })}
+                            />
+                            <span>{food.servingUnit}</span>
+                            <button
+                                className="diet-manager-action diet-manager-action-remove bx bx-trash"
+                                title="Remove unit"
+                                onClick={() => setFood(c => ({ ...c, portions: c.portions.filter((_, i) => i !== index) }))}
+                            />
+                        </li>
+                    ))}
+                    {food.portions.length === 0 && (
+                        <li className="diet-manager-hint">
+                            Nutrition is per {food.servingSize} {food.servingUnit}. Add a unit to also log this food
+                            as whole pieces, packs or cups.
+                        </li>
+                    )}
+                </ul>
+                <Button
+                    icon="bx-plus"
+                    text="Add Unit"
+                    onClick={() => setFood(c => ({ ...c, portions: [...c.portions, { unit: "", size: c.servingSize }] }))}
+                />
+            </div>
+
             <TagEditor
                 tags={food.tags}
                 draft={tagDraft}
@@ -307,6 +379,9 @@ const FOOD_COLUMNS = [
 ]
 
 const UNTAGGED = "(uncategorized)"
+
+// View preference, not data, so it lives in localStorage rather than the database note.
+const GROCERY_GROUPED_PREF_KEY = "diet-manager-group-grocery-by-category"
 
 // ---------------------------------------------------------------------------
 // Shared category view — the filter/group/sort behaviour of the Foods and
@@ -503,12 +578,15 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
 
     const addIngredient = useCallback(() => {
         if (!addFoodId) return
-        setRecipe(c => ({ ...c, ingredients: [...c.ingredients, { foodId: addFoodId, amount: foods[addFoodId]?.servingSize ?? 1 }] }))
+        setRecipe(c => ({
+            ...c,
+            ingredients: [...c.ingredients, { foodId: addFoodId, amount: foods[addFoodId]?.servingSize ?? 1, unit: foods[addFoodId]?.servingUnit ?? "" }]
+        }))
         setAddFoodId("")
     }, [addFoodId, foods])
 
-    const updateIngredient = useCallback((index, amount) => {
-        setRecipe(c => ({ ...c, ingredients: c.ingredients.map((ing, i) => i === index ? { ...ing, amount } : ing) }))
+    const updateIngredient = useCallback((index, changes) => {
+        setRecipe(c => ({ ...c, ingredients: c.ingredients.map((ing, i) => i === index ? { ...ing, ...changes } : ing) }))
     }, [])
 
     const removeIngredient = useCallback(index => {
@@ -561,9 +639,13 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
                             type="number"
                             step="0.01"
                             value={ing.amount}
-                            onInput={e => updateIngredient(index, parseFloat(e.target.value) || 0)}
+                            onInput={e => updateIngredient(index, { amount: parseFloat(e.target.value) || 0 })}
                         />
-                        <span>{foods[ing.foodId]?.servingUnit || ""}</span>
+                        <FoodUnitSelect
+                            food={foods[ing.foodId]}
+                            value={ing.unit || foods[ing.foodId]?.servingUnit || ""}
+                            onChange={unit => updateIngredient(index, { unit })}
+                        />
                         <button className="diet-manager-action diet-manager-action-remove bx bx-trash" onClick={() => removeIngredient(index)} />
                     </li>
                 ))}
@@ -676,6 +758,7 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
     const [kind, setKind] = useState("food")
     const [refId, setRefId] = useState("")
     const [servings, setServings] = useState(1)
+    const [unit, setUnit] = useState(SERVING_UNIT)
 
     const entries = diary[date] || []
     const totals = useMemo(() => dayTotals(entries, foods, recipes), [entries, foods, recipes])
@@ -694,12 +777,18 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
         return groups
     }, [kind, categories, sortedOptions])
 
+    const chooseRef = useCallback(id => {
+        setRefId(id)
+        setUnit(SERVING_UNIT)
+    }, [])
+
     const addEntry = useCallback(() => {
         if (!refId) return
-        onAddEntry(date, { kind, refId, servings })
+        onAddEntry(date, { kind, refId, servings, unit: kind === "food" ? unit : "" })
         setRefId("")
         setServings(1)
-    }, [date, kind, refId, servings, onAddEntry])
+        setUnit(SERVING_UNIT)
+    }, [date, kind, refId, servings, unit, onAddEntry])
 
     return (
         <div className="diet-manager-tab">
@@ -733,7 +822,9 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
                     return (
                         <li key={entry.id} className="diet-manager-diary-entry">
                             <span>{item?.name || "(deleted)"}</span>
-                            <span className="diet-manager-diary-entry-servings">{entry.servings}x</span>
+                            <span className="diet-manager-diary-entry-servings">
+                                {entry.unit ? `${entry.servings} ${entry.unit}` : `${entry.servings}x`}
+                            </span>
                             <button className="diet-manager-action diet-manager-action-remove bx bx-trash" onClick={() => onRemoveEntry(date, entry.id)} />
                         </li>
                     )
@@ -742,11 +833,11 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
             </ul>
 
             <div className="diet-manager-add-ingredient">
-                <select value={kind} onChange={e => { setKind(e.target.value); setRefId("") }}>
+                <select value={kind} onChange={e => { setKind(e.target.value); chooseRef("") }}>
                     <option value="food">Food</option>
                     <option value="recipe">Recipe</option>
                 </select>
-                <select value={refId} onChange={e => setRefId(e.target.value)}>
+                <select value={refId} onChange={e => chooseRef(e.target.value)}>
                     <option value="">Select {kind}...</option>
                     {kind === "recipe"
                         ? sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)
@@ -762,8 +853,11 @@ function DiaryTab({ diary, foods, recipes, categories, settings, onAddEntry, onR
                     min="0.01"
                     value={servings}
                     onInput={e => setServings(parseFloat(e.target.value) || 1)}
-                    title="Servings"
+                    title="Amount"
                 />
+                {kind === "food" && refId && (
+                    <FoodUnitSelect food={foods[refId]} value={unit} title="Unit" onChange={setUnit} />
+                )}
                 <Button text="Log" onClick={addEntry} disabled={!refId} />
             </div>
         </div>
@@ -870,10 +964,11 @@ function UnitsTab({ database, units, onCreate, onRename, onDelete }) {
 // typed in, never derived from recipes or the diary, and each line keeps its
 // own unit (prefilled from the food's serving unit, then editable).
 // ---------------------------------------------------------------------------
-function GroceryTab({ grocery, foods, units, onAdd, onUpdate, onRemove, onClearDone }) {
+function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemove, onClearDone }) {
     const [foodId, setFoodId] = useState("")
     const [amount, setAmount] = useState(1)
     const [unit, setUnit] = useState("")
+    const [grouped, setGrouped] = useState(() => localStorage.getItem(GROCERY_GROUPED_PREF_KEY) === "true")
 
     const foodList = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
     const doneCount = grocery.filter(item => item.done).length
@@ -891,6 +986,55 @@ function GroceryTab({ grocery, foods, units, onAdd, onUpdate, onRemove, onClearD
         setAmount(1)
         setUnit("")
     }, [foodId, amount, unit, onAdd])
+
+    const toggleGrouped = useCallback(checked => {
+        setGrouped(checked)
+        localStorage.setItem(GROCERY_GROUPED_PREF_KEY, String(checked))
+    }, [])
+
+    // Lines grouped by their food's categories, in the same tree order the other
+    // tabs use; a line whose food is in several categories shows under each.
+    const groups = useMemo(() => {
+        const tagsOf = item => foods[item.foodId]?.tags ?? []
+        const nested = categories
+            .filter(tag => grocery.some(item => tagsOf(item).some(t => isInCategory(t, tag))))
+            .map(tag => ({ tag, depth: categoryDepth(tag), members: grocery.filter(item => tagsOf(item).includes(tag)) }))
+        const untagged = grocery.filter(item => tagsOf(item).length === 0)
+        if (untagged.length > 0) nested.push({ tag: UNTAGGED, depth: 0, members: untagged })
+        return nested
+    }, [grocery, foods, categories])
+
+    // A line's own unit picker also offers whatever units its food defines.
+    const unitsFor = useCallback(item => {
+        const food = foods[item.foodId]
+        return food ? normalizeUnits([...units, ...foodUnits(food).map(u => u.unit)]) : units
+    }, [foods, units])
+
+    const renderRow = item => (
+        <li key={item.id} className={item.done ? "diet-manager-grocery-row diet-manager-grocery-done" : "diet-manager-grocery-row"}>
+            <input
+                type="checkbox"
+                checked={item.done}
+                title="Bought"
+                onChange={e => onUpdate(item.id, { done: e.target.checked })}
+            />
+            <span className="diet-manager-grocery-name">{foods[item.foodId]?.name || "(deleted food)"}</span>
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={item.amount}
+                onInput={e => onUpdate(item.id, { amount: parseFloat(e.target.value) || 0 })}
+            />
+            <SuggestInput
+                className="diet-manager-suggest-unit"
+                value={item.unit}
+                suggestions={unitsFor(item)}
+                onChange={value => onUpdate(item.id, { unit: value })}
+            />
+            <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Remove" onClick={() => onRemove(item.id)} />
+        </li>
+    )
 
     return (
         <div className="diet-manager-tab">
@@ -911,42 +1055,29 @@ function GroceryTab({ grocery, foods, units, onAdd, onUpdate, onRemove, onClearD
                     className="diet-manager-suggest-unit"
                     placeholder="Unit"
                     value={unit}
-                    suggestions={units}
+                    suggestions={foodId && foods[foodId] ? normalizeUnits([...units, ...foodUnits(foods[foodId]).map(u => u.unit)]) : units}
                     onChange={setUnit}
                     onCommit={add}
                 />
                 <Button icon="bx-plus" text="Add" onClick={add} disabled={!foodId} />
+                <label className="diet-manager-toolbar-check">
+                    <input type="checkbox" checked={grouped} onChange={e => toggleGrouped(e.target.checked)} />
+                    <span>Group by category</span>
+                </label>
                 <span className="diet-manager-tabs-spacer" />
                 <Button text={`Clear Checked (${doneCount})`} onClick={onClearDone} disabled={doneCount === 0} />
             </div>
-            <ul className="diet-manager-grocery-list">
-                {grocery.map(item => (
-                    <li key={item.id} className={item.done ? "diet-manager-grocery-row diet-manager-grocery-done" : "diet-manager-grocery-row"}>
-                        <input
-                            type="checkbox"
-                            checked={item.done}
-                            title="Bought"
-                            onChange={e => onUpdate(item.id, { done: e.target.checked })}
-                        />
-                        <span className="diet-manager-grocery-name">{foods[item.foodId]?.name || "(deleted food)"}</span>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={item.amount}
-                            onInput={e => onUpdate(item.id, { amount: parseFloat(e.target.value) || 0 })}
-                        />
-                        <SuggestInput
-                            className="diet-manager-suggest-unit"
-                            value={item.unit}
-                            suggestions={units}
-                            onChange={value => onUpdate(item.id, { unit: value })}
-                        />
-                        <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Remove" onClick={() => onRemove(item.id)} />
-                    </li>
-                ))}
-                {grocery.length === 0 && <li className="diet-manager-empty">Nothing on the list.</li>}
-            </ul>
+            {grouped
+                ? groups.map(({ tag, depth, members }) => (
+                    <div key={tag}>
+                        <h4 className="diet-manager-grocery-group" style={{ paddingLeft: `${depth * 20}px` }}>
+                            {categoryLeaf(tag)} <span className="diet-manager-hint">({members.length})</span>
+                        </h4>
+                        <ul className="diet-manager-grocery-list">{members.map(renderRow)}</ul>
+                    </div>
+                ))
+                : <ul className="diet-manager-grocery-list">{grocery.map(renderRow)}</ul>}
+            {grocery.length === 0 && <p className="diet-manager-empty">Nothing on the list.</p>}
         </div>
     )
 }
@@ -1304,6 +1435,7 @@ function DietManagerWidget() {
                 <GroceryTab
                     grocery={database.grocery}
                     foods={database.foods}
+                    categories={categories}
                     units={units}
                     onAdd={onAddGrocery}
                     onUpdate={onUpdateGrocery}
