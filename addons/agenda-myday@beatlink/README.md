@@ -26,8 +26,17 @@ instance inside the panel with it. It is captured once per page load, from
 
 Consequence: **until a text note has been opened once in the session there is nothing to borrow**, and
 the panel shows the My Day note read-only. It upgrades to a live editor the moment you open any text
-note. Which editor you get — floating toolbar or classic — follows your Trilium editor-type setting,
-since that is what the borrowed class is.
+note, and falls back to the read-only view if the editor cannot be built (the reason is logged to the
+browser console).
+
+Which editor you get — floating toolbar or fixed — follows your Trilium editor-type setting, since
+that is what the borrowed class is. The fixed-toolbar type is a *decoupled* editor: it builds a
+toolbar but leaves placing it to the caller, so the panel mounts it above the editable itself.
+
+The borrowed configuration is copied minus its `roots` / `root` / `rootsAttributes` / `initialData`
+entries. Those name the editor they were built for — `roots.main.element` still points at the note
+detail's own element — and CKEditor rejects a config carrying one with
+`editor-create-root-element-overspecified`.
 
 Edits are written back to the note about a second after you stop typing. Content changed elsewhere —
 by the `+` button, by a prune, or in the note detail — is pulled into the panel, but never while the

@@ -6,7 +6,9 @@ const {
     NUTRIENTS,
     newId,
     emptyNutrients,
+    normalizeTags,
     normalizeFood,
+    allTags,
     normalizeRecipe,
     normalizeDiaryEntry,
     parseDatabase,
@@ -45,9 +47,57 @@ function NutrientInputs({ nutrients, onChange }) {
 }
 
 // ---------------------------------------------------------------------------
+// Category tag editor — chips plus a free-text field that autocompletes
+// against the tags already used elsewhere in the database.
+// ---------------------------------------------------------------------------
+function TagEditor({ tags, suggestions, onChange }) {
+    const [draft, setDraft] = useState("")
+
+    const addDraft = useCallback(() => {
+        const trimmed = draft.trim()
+        if (!trimmed) return
+        onChange(normalizeTags([...tags, trimmed]))
+        setDraft("")
+    }, [draft, tags, onChange])
+
+    return (
+        <div className="diet-manager-field">
+            <span>Categories</span>
+            <div className="diet-manager-tag-chips">
+                {tags.map(tag => (
+                    <span className="diet-manager-tag" key={tag}>
+                        {tag}
+                        <button
+                            className="diet-manager-tag-remove bx bx-x"
+                            title="Remove category"
+                            onClick={() => onChange(tags.filter(t => t !== tag))}
+                        />
+                    </span>
+                ))}
+                {tags.length === 0 && <span className="diet-manager-hint">No categories.</span>}
+            </div>
+            <div className="diet-manager-tag-add">
+                <input
+                    type="text"
+                    list="diet-manager-tag-suggestions"
+                    placeholder="Add a category..."
+                    value={draft}
+                    onInput={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDraft() } }}
+                />
+                <datalist id="diet-manager-tag-suggestions">
+                    {suggestions.filter(tag => !tags.includes(tag)).map(tag => <option value={tag} key={tag} />)}
+                </datalist>
+                <Button text="Add" onClick={addDraft} disabled={!draft.trim()} />
+            </div>
+        </div>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Foods tab
 // ---------------------------------------------------------------------------
-function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
+function FoodForm({ initial, usdaApiKey, tagSuggestions, onSave, onCancel }) {
     const [food, setFood] = useState(() => normalizeFood(initial))
     const [query, setQuery] = useState("")
     const [results, setResults] = useState(null)
@@ -145,6 +195,12 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
                 </label>
             </div>
 
+            <TagEditor
+                tags={food.tags}
+                suggestions={tagSuggestions}
+                onChange={tags => setFood(c => ({ ...c, tags }))}
+            />
+
             <NutrientInputs nutrients={food.nutrients} onChange={setNutrient} />
 
             <div className="diet-manager-form-actions">
@@ -155,60 +211,144 @@ function FoodForm({ initial, usdaApiKey, onSave, onCancel }) {
     )
 }
 
+// Sortable columns of the foods table: `value` sorts, `render` draws the cell.
+const FOOD_COLUMNS = [
+    { key: "name", label: "Name", value: food => food.name, render: food => food.name },
+    { key: "tags", label: "Categories", value: food => food.tags.join(", "), render: food => food.tags.join(", ") },
+    { key: "serving", label: "Serving", value: food => food.servingSize, render: food => `${food.servingSize} ${food.servingUnit}` },
+    { key: "calories", label: "Calories", value: food => food.nutrients.calories, render: food => food.nutrients.calories },
+    { key: "protein", label: "Protein", value: food => food.nutrients.protein, render: food => `${food.nutrients.protein}g` },
+    { key: "carbs", label: "Carbs", value: food => food.nutrients.carbs, render: food => `${food.nutrients.carbs}g` },
+    { key: "fat", label: "Fat", value: food => food.nutrients.fat, render: food => `${food.nutrients.fat}g` }
+]
+
+const UNTAGGED = "(uncategorized)"
+
+function sortFoods(list, sortKey, ascending) {
+    const column = FOOD_COLUMNS.find(c => c.key === sortKey) ?? FOOD_COLUMNS[0]
+    const direction = ascending ? 1 : -1
+    return [...list].sort((a, b) => {
+        const left = column.value(a)
+        const right = column.value(b)
+        const order = typeof left === "number" ? left - right : String(left).localeCompare(String(right))
+        return order * direction
+    })
+}
+
+function FoodRows({ list, onEdit, onDelete }) {
+    return list.map(food => (
+        <tr key={food.id}>
+            {FOOD_COLUMNS.map(column => <td key={column.key}>{column.render(food)}</td>)}
+            <td className="diet-manager-cell-actions">
+                <button className="diet-manager-action bx bx-edit" title="Edit" onClick={() => onEdit(food.id)} />
+                <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Delete" onClick={() => onDelete(food.id)} />
+            </td>
+        </tr>
+    ))
+}
+
 function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
     const [editingId, setEditingId] = useState(null)
     const [adding, setAdding] = useState(false)
+    const [filterTag, setFilterTag] = useState("")
+    const [grouped, setGrouped] = useState(false)
+    const [sortKey, setSortKey] = useState("name")
+    const [ascending, setAscending] = useState(true)
 
-    const list = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
+    const tags = useMemo(() => allTags(foods), [foods])
+
+    const filtered = useMemo(() => {
+        const list = Object.values(foods)
+        if (!filterTag) return list
+        if (filterTag === UNTAGGED) return list.filter(food => food.tags.length === 0)
+        return list.filter(food => food.tags.includes(filterTag))
+    }, [foods, filterTag])
+
+    const list = useMemo(() => sortFoods(filtered, sortKey, ascending), [filtered, sortKey, ascending])
+
+    // A food with several categories appears under each of them.
+    const groups = useMemo(() => {
+        const byTag = tags.map(tag => [tag, list.filter(food => food.tags.includes(tag))])
+        const untagged = list.filter(food => food.tags.length === 0)
+        if (untagged.length > 0) byTag.push([UNTAGGED, untagged])
+        return byTag.filter(([, members]) => members.length > 0)
+    }, [tags, list])
+
+    const toggleSort = useCallback(key => {
+        if (key === sortKey) setAscending(asc => !asc)
+        else { setSortKey(key); setAscending(true) }
+    }, [sortKey])
 
     if (adding) {
-        return <FoodForm usdaApiKey={usdaApiKey} onSave={food => { onSaveFood(food); setAdding(false) }} onCancel={() => setAdding(false)} />
+        return (
+            <FoodForm
+                usdaApiKey={usdaApiKey}
+                tagSuggestions={tags}
+                onSave={food => { onSaveFood(food); setAdding(false) }}
+                onCancel={() => setAdding(false)}
+            />
+        )
     }
     if (editingId) {
         return (
             <FoodForm
                 initial={foods[editingId]}
                 usdaApiKey={usdaApiKey}
+                tagSuggestions={tags}
                 onSave={food => { onSaveFood(food); setEditingId(null) }}
                 onCancel={() => setEditingId(null)}
             />
         )
     }
 
+    const header = (
+        <tr>
+            {FOOD_COLUMNS.map(column => (
+                <th
+                    className="diet-manager-sortable"
+                    key={column.key}
+                    onClick={() => toggleSort(column.key)}
+                    title={`Sort by ${column.label}`}
+                >
+                    {column.label}
+                    {sortKey === column.key && <span className="diet-manager-sort-arrow">{ascending ? "▲" : "▼"}</span>}
+                </th>
+            ))}
+            <th />
+        </tr>
+    )
+
     return (
         <div className="diet-manager-tab">
             <div className="diet-manager-toolbar">
                 <Button icon="bx-plus" text="Add Food" onClick={() => setAdding(true)} />
+                <select value={filterTag} onChange={e => setFilterTag(e.target.value)} title="Filter by category">
+                    <option value="">All categories</option>
+                    {tags.map(tag => <option value={tag} key={tag}>{tag}</option>)}
+                    <option value={UNTAGGED}>{UNTAGGED}</option>
+                </select>
+                <label className="diet-manager-toolbar-check">
+                    <input type="checkbox" checked={grouped} onChange={e => setGrouped(e.target.checked)} />
+                    <span>Group by category</span>
+                </label>
             </div>
             <table className="diet-manager-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Serving</th>
-                        <th>Calories</th>
-                        <th>Protein</th>
-                        <th>Carbs</th>
-                        <th>Fat</th>
-                        <th />
-                    </tr>
-                </thead>
-                <tbody>
-                    {list.map(food => (
-                        <tr key={food.id}>
-                            <td>{food.name}</td>
-                            <td>{food.servingSize} {food.servingUnit}</td>
-                            <td>{food.nutrients.calories}</td>
-                            <td>{food.nutrients.protein}g</td>
-                            <td>{food.nutrients.carbs}g</td>
-                            <td>{food.nutrients.fat}g</td>
-                            <td className="diet-manager-cell-actions">
-                                <button className="diet-manager-action bx bx-edit" title="Edit" onClick={() => setEditingId(food.id)} />
-                                <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Delete" onClick={() => onDeleteFood(food.id)} />
-                            </td>
-                        </tr>
-                    ))}
-                    {list.length === 0 && <tr><td colSpan={7} className="diet-manager-empty">No foods yet.</td></tr>}
-                </tbody>
+                <thead>{header}</thead>
+                {grouped
+                    ? groups.map(([tag, members]) => (
+                        <tbody key={tag}>
+                            <tr className="diet-manager-group-row">
+                                <th colSpan={FOOD_COLUMNS.length + 1}>{tag} <span className="diet-manager-hint">({members.length})</span></th>
+                            </tr>
+                            <FoodRows list={members} onEdit={setEditingId} onDelete={onDeleteFood} />
+                        </tbody>
+                    ))
+                    : <tbody><FoodRows list={list} onEdit={setEditingId} onDelete={onDeleteFood} /></tbody>}
+                {list.length === 0 && (
+                    <tbody>
+                        <tr><td colSpan={FOOD_COLUMNS.length + 1} className="diet-manager-empty">{filterTag ? "No foods in this category." : "No foods yet."}</td></tr>
+                    </tbody>
+                )}
             </table>
         </div>
     )
@@ -369,6 +509,15 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
     const options = kind === "food" ? Object.values(foods) : Object.values(recipes)
     const sortedOptions = useMemo(() => [...options].sort((a, b) => a.name.localeCompare(b.name)), [options])
 
+    // Foods are offered grouped by category; a food in several categories is listed under each.
+    const foodGroups = useMemo(() => {
+        if (kind !== "food") return []
+        const groups = allTags(foods).map(tag => [tag, sortedOptions.filter(food => food.tags.includes(tag))])
+        const untagged = sortedOptions.filter(food => food.tags.length === 0)
+        if (untagged.length > 0) groups.push([UNTAGGED, untagged])
+        return groups
+    }, [kind, foods, sortedOptions])
+
     const addEntry = useCallback(() => {
         if (!refId) return
         onAddEntry(date, { kind, refId, servings })
@@ -423,7 +572,13 @@ function DiaryTab({ diary, foods, recipes, settings, onAddEntry, onRemoveEntry }
                 </select>
                 <select value={refId} onChange={e => setRefId(e.target.value)}>
                     <option value="">Select {kind}...</option>
-                    {sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}
+                    {kind === "recipe"
+                        ? sortedOptions.map(item => <option value={item.id} key={item.id}>{item.name}</option>)
+                        : foodGroups.map(([tag, members]) => (
+                            <optgroup label={tag} key={tag}>
+                                {members.map(food => <option value={food.id} key={food.id}>{food.name}</option>)}
+                            </optgroup>
+                        ))}
                 </select>
                 <input
                     type="number"
