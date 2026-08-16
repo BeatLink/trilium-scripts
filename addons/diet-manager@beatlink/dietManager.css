@@ -33,12 +33,17 @@
 
 .diet-manager-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
 }
 
+/* Capped so a long food or category name can't stretch the select across the toolbar. */
 .diet-manager-toolbar select {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 220px;
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
