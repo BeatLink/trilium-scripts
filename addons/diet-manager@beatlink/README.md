@@ -1,8 +1,8 @@
 # Diet Manager
 
-A food and recipe database with a daily nutrition diary, built to replace Cronometer. All data —
-foods, recipes, and the diary — lives in one persisted JSON note, so it's a single note you can
-back up, inspect, or migrate.
+A food and recipe database with a daily nutrition diary and a grocery list, built to replace
+Cronometer. All data — categories, foods, recipes, the diary, and the grocery list — lives in one
+persisted JSON note, so it's a single note you can back up, inspect, or migrate.
 
 ## Setup
 
@@ -36,45 +36,77 @@ Nutrition can always be entered manually instead, regardless of lookup availabil
 
 ### Categories
 
-Each food can carry any number of free-form **categories** (e.g. `Protein`, `Snack`, `Dairy`),
-added in the food form: type a name and press Enter or **Add**. The field autocompletes against
-categories already used elsewhere, so the vocabulary stays consistent without being a fixed list.
-Categories are de-duplicated case-insensitively and always shown in alphabetical order.
+Foods **and recipes** can each carry any number of free-form **categories** (e.g. `Protein`,
+`Snack`, `Dairy`), added in their form: type a name and press Enter or **Add**. The field offers
+every category already in use the moment you click it, and typing narrows the list; anything not on
+it can just be typed. Categories are de-duplicated case-insensitively and always shown in
+alphabetical order.
 
-The Foods tab uses them three ways:
+Categories **nest**, using `/` as the separator: `Protein/Meat/Poultry` is Poultry inside Meat
+inside Protein. Typing a path creates every level it needs, so tagging a food `Protein/Meat` makes
+`Protein` exist too. Filtering or grouping by a parent includes everything nested under it.
 
-- **Filter** — the dropdown in the toolbar narrows the table to one category, or to
-  `(uncategorized)` for foods with none.
-- **Group by category** — the checkbox splits the table into a section per category, each with its
-  own count. A food in several categories appears in each of their sections. Its state is
-  remembered across reloads (per browser/client, not synced).
+Both the Foods and the Recipes tab use categories three ways:
+
+- **Filter** — the dropdown in the toolbar narrows the table to one category and everything nested
+  under it, or to `(uncategorized)` for items with none.
+- **Group by category** — the checkbox splits the table into a section per category, indented to
+  show the tree, each with its own count. An item in several categories appears in each of their
+  sections, and a parent still gets a header when only its subcategories have items. The checkbox
+  state is remembered across reloads (per browser/client, not synced), separately per tab.
 - **Sort** — click any column header (including **Categories**) to sort by it; click again to
   reverse.
 
 The Diary tab's food picker is also grouped by category.
 
-## Categories tab
-
-The **Categories** tab manages the category list itself:
-
-- **Add Category** creates one up front, before any food uses it, so it's offered in the food form
-  from the start.
-- The **Foods** column counts how many foods currently carry each category.
-- The edit icon renames a category **everywhere at once** — every food using it is updated in the
-  same save. Renaming onto a name that already exists **merges** the two categories.
-- The trash icon deletes a category, removing it from every food that carries it. It asks first,
-  naming how many foods are affected. The foods themselves are never deleted.
-
-The list is the union of categories created here and any category a food actually carries, so a
-category typed straight into a food form still appears here, and deleting a category used by no
-food simply drops it.
-
 ## Recipes
 
 The **Recipes** tab builds recipes out of foods already in your database. A recipe has a name, a
-servings count, and a list of ingredients (food + amount, in that food's own serving unit).
-Nutrition per serving is computed automatically from its ingredients and re-derives whenever an
-ingredient's underlying food is edited — recipes never store their own copy of nutrition facts.
+servings count and serving unit (`serving`, `bowl`, `slice`...), any number of categories, and a
+list of ingredients (food + amount, in that food's own serving unit). Nutrition per serving is
+computed automatically from its ingredients and re-derives whenever an ingredient's underlying food
+is edited — recipes never store their own copy of nutrition facts.
+
+The tab filters, groups, and sorts by category exactly like the Foods tab does.
+
+## Categories tab
+
+The **Categories** tab manages the category tree itself:
+
+- **Add Category** creates one up front, before anything uses it, so it's offered in the food and
+  recipe forms from the start. The dropdown beside it picks a parent, or leave it on
+  `(top level)`; a name containing `/` also creates a nested path directly.
+- The **Foods** and **Recipes** columns count what carries each category directly, and in
+  parentheses the total including its subcategories.
+- The edit icon renames a category **everywhere at once** — every food and recipe using it is
+  updated in the same save. Because the name is the full path, renaming also **moves** a category:
+  renaming `Protein` to `Macros/Protein` carries `Protein/Meat` along as `Macros/Protein/Meat`.
+  Renaming onto a name that already exists **merges** the two.
+- The trash icon deletes a category **and its subcategories**, removing them from every food and
+  recipe. It asks first, naming how many items are affected. The foods and recipes themselves are
+  never deleted.
+
+The list is the union of categories created here, any category an item actually carries, and every
+parent those paths imply — so a category typed straight into a food form still appears here.
+
+## Grocery tab
+
+The **Grocery** tab is a manually maintained shopping list built from foods already in the
+database. Pick a food, type an amount, and set a unit; the unit prefills from that food's serving
+unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
+`2 loaf`.
+
+Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
+checkbox for "bought", which strikes it through, and **Clear Checked** removes all ticked lines at
+once. Amount and unit stay editable in place.
+
+## Units
+
+Serving units are free text, and every place that takes one — a food's serving unit, a recipe's
+serving unit (`serving`, `bowl`, `slice`...), and each grocery line — offers the units already in
+use as a dropdown the moment you click the field. They share one vocabulary, so a unit typed on a
+food is offered on recipes and the grocery list too. A unit that isn't on the list is just typed
+in.
 
 ## Diary
 
@@ -98,12 +130,12 @@ Open the addon's launcher note for the settings screen:
 
 ## Import and export
 
-The tab bar's **Export JSON** downloads the whole database (foods, recipes, and diary) as a
-`.json` file, and **Import JSON** loads one back in. Import **merges**: every food, recipe, and
-diary entry in the file is added by id alongside whatever's already in the database, so importing
-the same file twice — or a partial export from another install — never duplicates entries or wipes
-existing data. A file that isn't valid database JSON reports an error and leaves the database
-untouched.
+The tab bar's **Export JSON** downloads the whole database (categories, foods, recipes, diary, and
+grocery list) as a `.json` file, and **Import JSON** loads one back in. Import **merges**: every
+category, food, recipe, diary entry, and grocery line in the file is added by id alongside whatever
+is already in the database, so importing the same file twice — or a partial export from another
+install — never duplicates entries or wipes existing data. A file that isn't valid database JSON
+reports an error and leaves the database untouched.
 
 The import format is the [storage format](#storage-format) below.
 
@@ -113,14 +145,14 @@ The whole database is one JSON code note:
 
 ```json
 {
-    "categories": ["Meat", "Protein", "Snack"],
+    "categories": ["Protein", "Protein/Meat", "Snack"],
     "foods": {
         "a1b2c3d4": {
             "id": "a1b2c3d4",
             "name": "Chicken Breast",
             "servingSize": 100,
             "servingUnit": "g",
-            "tags": ["Meat", "Protein"],
+            "tags": ["Protein/Meat"],
             "nutrients": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6,
                 "fiber": 0, "sugar": 0, "saturatedFat": 1, "sodium": 74, "cholesterol": 85
@@ -132,6 +164,8 @@ The whole database is one JSON code note:
             "id": "e5f6g7h8",
             "name": "Chicken Salad",
             "servings": 2,
+            "servingUnit": "bowl",
+            "tags": ["Protein"],
             "ingredients": [{ "foodId": "a1b2c3d4", "amount": 200 }]
         }
     },
@@ -139,13 +173,18 @@ The whole database is one JSON code note:
         "2026-07-22": [
             { "id": "i1j2k3l4", "kind": "food", "refId": "a1b2c3d4", "servings": 1, "loggedAt": "2026-07-22T12:00:00.000Z" }
         ]
-    }
+    },
+    "grocery": [
+        { "id": "m1n2o3p4", "foodId": "a1b2c3d4", "amount": 2, "unit": "pack", "done": false }
+    ]
 }
 ```
 
-A food's `tags` array is its categories; a food saved before categories existed simply has none. The
-top-level `categories` array is the managed list — it only needs to hold categories no food carries
-yet, since the tab shows the union of the two, and it may be absent entirely in an older database.
+A food's or recipe's `tags` array is its categories, each a `/`-separated path; an item saved before
+categories existed simply has none. The top-level `categories` array is the managed list — it only
+needs to hold categories nothing carries yet, since the tab shows the union of the two plus every
+implied parent, and it may be absent entirely in an older database. `grocery` is likewise optional
+and its lines are independent of the diary.
 Diary entries are keyed by ISO date (`YYYY-MM-DD`). A recipe's own nutrition is never stored — it's
 always recomputed from its current ingredients at render time, same as a diary entry's contribution
 is always recomputed from the food or recipe it references.

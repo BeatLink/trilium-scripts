@@ -2,10 +2,11 @@
  * Diet Manager data model. Pure functions over the JSON document stored in the
  * addon's persisted Database note:
  *   {
- *     categories: [ "Dairy", ... ],
+ *     categories: [ "Dairy", "Protein/Meat", ... ],
  *     foods: { [id]: { id, name, servingSize, servingUnit, tags: [...], nutrients: {...} } },
- *     recipes: { [id]: { id, name, servings, ingredients: [{ foodId, amount }] } },
- *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] }
+ *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount }] } },
+ *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] },
+ *     grocery: [ { id, foodId, amount, unit, done } ]
  *   }
  * `date` is an ISO "YYYY-MM-DD" string. All nutrient values are per the food's
  * own serving (servingSize/servingUnit), same convention Cronometer uses.
@@ -42,15 +43,52 @@ function normalizeNutrients(raw) {
     return nutrients
 }
 
-// Category tags: trimmed, de-duplicated case-insensitively, kept in sorted order.
+/*
+ * Categories nest by path: "Protein/Meat/Poultry" is Poultry inside Meat inside
+ * Protein. The path string is the whole identity -- there are no category
+ * records to keep in step with it -- so a flat name is simply a depth-1 path
+ * and every older database is already valid.
+ */
+const CATEGORY_SEPARATOR = "/"
+
+function normalizeCategoryName(raw) {
+    if (typeof raw !== "string") return ""
+    return raw.split(CATEGORY_SEPARATOR).map(segment => segment.trim()).filter(Boolean).join(CATEGORY_SEPARATOR)
+}
+
+// Category tags: path-normalized, de-duplicated case-insensitively, kept in
+// sorted order -- which also puts every parent directly before its children.
 function normalizeTags(raw) {
     if (!Array.isArray(raw)) return []
     const byLower = new Map()
     for (const tag of raw) {
-        const trimmed = typeof tag === "string" ? tag.trim() : ""
-        if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed)
+        const name = normalizeCategoryName(tag)
+        if (name && !byLower.has(name.toLowerCase())) byLower.set(name.toLowerCase(), name)
     }
     return [...byLower.values()].sort((a, b) => a.localeCompare(b))
+}
+
+function categorySegments(name) {
+    return name.split(CATEGORY_SEPARATOR)
+}
+
+function categoryDepth(name) {
+    return categorySegments(name).length - 1
+}
+
+function categoryLeaf(name) {
+    return categorySegments(name).at(-1)
+}
+
+// "A/B/C" -> ["A", "A/B"]: the categories it implicitly belongs to.
+function categoryAncestors(name) {
+    const segments = categorySegments(name)
+    return segments.slice(0, -1).map((_, index) => segments.slice(0, index + 1).join(CATEGORY_SEPARATOR))
+}
+
+// A tag counts as being in a category when it is that category or nested under it.
+function isInCategory(tag, category) {
+    return tag === category || tag.startsWith(`${category}${CATEGORY_SEPARATOR}`)
 }
 
 function normalizeFood(food) {
@@ -64,37 +102,63 @@ function normalizeFood(food) {
     }
 }
 
-/*
- * The category list is the union of the explicitly managed `categories` array
- * and whatever tags foods actually carry, so a category created but not yet
- * used still shows up, and a tag that only exists on a food is never hidden.
- */
-function allCategories(database) {
-    return normalizeTags([...database.categories, ...Object.values(database.foods).flatMap(food => food.tags)])
+// Foods and recipes are both taggable and are treated alike wherever categories are concerned.
+function taggedItems(database) {
+    return [...Object.values(database.foods), ...Object.values(database.recipes)]
 }
 
-function categoryUsage(database, name) {
-    return Object.values(database.foods).filter(food => food.tags.includes(name)).length
+/*
+ * The category list is the union of the explicitly managed `categories` array,
+ * whatever tags items actually carry, and every ancestor those paths imply. So
+ * a category created but not yet used still shows up, a tag that only exists on
+ * an item is never hidden, and tagging something "A/B" makes "A" exist too.
+ */
+function allCategories(database) {
+    const used = [...database.categories, ...taggedItems(database).flatMap(item => item.tags)]
+    return normalizeTags(used.flatMap(name => [name, ...categoryAncestors(name)]))
+}
+
+// Items tagged with this exact category, and (with descendants) its whole subtree.
+function categoryUsage(database, name, includeDescendants = false) {
+    const matches = tags => includeDescendants ? tags.some(tag => isInCategory(tag, name)) : tags.includes(name)
+    return {
+        foods: Object.values(database.foods).filter(food => matches(food.tags)).length,
+        recipes: Object.values(database.recipes).filter(recipe => matches(recipe.tags)).length
+    }
 }
 
 function addCategory(database, name) {
     return { ...database, categories: normalizeTags([...database.categories, name]) }
 }
 
-// Renaming onto a name that already exists merges the two: normalizeTags drops the duplicate.
-function renameCategory(database, from, to) {
-    const rename = tags => normalizeTags(tags.map(tag => tag === from ? to : tag))
-    const foods = {}
-    for (const [id, food] of Object.entries(database.foods)) foods[id] = { ...food, tags: rename(food.tags) }
-    return { ...database, categories: rename(database.categories), foods }
+// Maps every tag of every food and recipe, then rebuilds both collections.
+function mapItemTags(database, mapTags) {
+    const remap = collection => {
+        const next = {}
+        for (const [id, item] of Object.entries(collection)) next[id] = { ...item, tags: normalizeTags(mapTags(item.tags)) }
+        return next
+    }
+    return { ...database, foods: remap(database.foods), recipes: remap(database.recipes) }
 }
 
+/*
+ * Renaming moves the subtree with it: renaming "Protein" to "Macros/Protein"
+ * takes "Protein/Meat" along as "Macros/Protein/Meat". Renaming onto a name
+ * that already exists merges the two, since normalizeTags drops the duplicate.
+ */
+function renameCategory(database, from, to) {
+    const target = normalizeCategoryName(to)
+    if (!target) return database
+    const rename = tags => tags.map(tag => isInCategory(tag, from) ? target + tag.slice(from.length) : tag)
+    const renamed = mapItemTags(database, rename)
+    return { ...renamed, categories: normalizeTags(rename(database.categories)) }
+}
+
+// Deleting takes the subtree with it; the items themselves are kept, just untagged.
 function deleteCategory(database, name) {
-    const foods = {}
-    for (const [id, food] of Object.entries(database.foods)) {
-        foods[id] = { ...food, tags: food.tags.filter(tag => tag !== name) }
-    }
-    return { ...database, categories: database.categories.filter(tag => tag !== name), foods }
+    const drop = tags => tags.filter(tag => !isInCategory(tag, name))
+    const pruned = mapItemTags(database, drop)
+    return { ...pruned, categories: drop(database.categories) }
 }
 
 function normalizeIngredient(ingredient) {
@@ -105,14 +169,55 @@ function normalizeIngredient(ingredient) {
     }
 }
 
+function normalizeUnit(raw, fallback) {
+    const trimmed = typeof raw === "string" ? raw.trim() : ""
+    return trimmed || fallback
+}
+
+// A recipe's unit names what one serving is: a bowl, a slice, a portion.
 function normalizeRecipe(recipe) {
     const servings = Number(recipe?.servings)
     return {
         id: typeof recipe?.id === "string" && recipe.id ? recipe.id : newId(),
         name: typeof recipe?.name === "string" ? recipe.name : "",
         servings: Number.isFinite(servings) && servings > 0 ? servings : 1,
+        servingUnit: normalizeUnit(recipe?.servingUnit, "serving"),
+        tags: normalizeTags(recipe?.tags),
         ingredients: Array.isArray(recipe?.ingredients) ? recipe.ingredients.map(normalizeIngredient) : []
     }
+}
+
+/*
+ * Grocery list: a flat, manually maintained shopping list of foods. Amounts are
+ * typed in rather than derived from recipes or the diary, and each line carries
+ * its own unit so "2 loaf" and "500 g" can both be shopping-list amounts for a
+ * food whose nutrition serving is 100 g.
+ */
+function normalizeGroceryItem(item, foods = {}) {
+    const amount = Number(item?.amount)
+    const foodId = typeof item?.foodId === "string" ? item.foodId : ""
+    return {
+        id: typeof item?.id === "string" && item.id ? item.id : newId(),
+        foodId,
+        amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
+        unit: normalizeUnit(item?.unit, foods[foodId]?.servingUnit || "g"),
+        done: item?.done === true
+    }
+}
+
+// Every unit in use, for the unit pickers; foods, recipes and grocery lines share one vocabulary.
+function allUnits(database) {
+    const used = [
+        ...Object.values(database.foods).map(food => food.servingUnit),
+        ...Object.values(database.recipes).map(recipe => recipe.servingUnit),
+        ...database.grocery.map(item => item.unit)
+    ]
+    const byLower = new Map()
+    for (const unit of used) {
+        const trimmed = typeof unit === "string" ? unit.trim() : ""
+        if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed)
+    }
+    return [...byLower.values()].sort((a, b) => a.localeCompare(b))
 }
 
 function normalizeDiaryEntry(entry) {
@@ -152,7 +257,8 @@ function parseDatabase(content) {
             if (Array.isArray(entries)) diary[date] = entries.map(normalizeDiaryEntry)
         }
     }
-    return { categories: normalizeTags(parsed?.categories), foods, recipes, diary }
+    const grocery = Array.isArray(parsed?.grocery) ? parsed.grocery.map(item => normalizeGroceryItem(item, foods)) : []
+    return { categories: normalizeTags(parsed?.categories), foods, recipes, diary, grocery }
 }
 
 function serializeDatabase(database) {
@@ -246,13 +352,21 @@ module.exports = {
     newId,
     emptyNutrients,
     normalizeTags,
+    normalizeCategoryName,
     normalizeFood,
+    CATEGORY_SEPARATOR,
+    categoryDepth,
+    categoryLeaf,
+    categoryAncestors,
+    isInCategory,
     allCategories,
     categoryUsage,
     addCategory,
     renameCategory,
     deleteCategory,
     normalizeRecipe,
+    normalizeGroceryItem,
+    allUnits,
     normalizeDiaryEntry,
     parseDatabase,
     serializeDatabase,

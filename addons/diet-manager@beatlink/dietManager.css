@@ -46,6 +46,15 @@
     color: inherit;
 }
 
+.diet-manager-toolbar input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
 .diet-manager-category-new {
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
@@ -134,16 +143,28 @@
     margin-top: 6px;
 }
 
-.diet-manager-tag-input {
+.diet-manager-suggest {
     position: relative;
+}
+
+.diet-manager-suggest input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-suggest-grow {
     flex: 1;
 }
 
-.diet-manager-tag-input input {
-    width: 100%;
+.diet-manager-suggest-unit {
+    width: 90px;
 }
 
-.diet-manager-tag-suggestions {
+.diet-manager-suggestions {
     position: absolute;
     z-index: 10;
     left: 0;
@@ -159,7 +180,7 @@
     background: var(--main-background-color);
 }
 
-.diet-manager-tag-suggestions button {
+.diet-manager-suggestions button {
     display: block;
     width: 100%;
     text-align: left;
@@ -170,8 +191,40 @@
     cursor: pointer;
 }
 
-.diet-manager-tag-suggestions button:hover {
+.diet-manager-suggestions button:hover {
     background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+}
+
+.diet-manager-grocery-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.diet-manager-grocery-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-grocery-name {
+    flex: 1;
+}
+
+.diet-manager-grocery-row input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-done .diet-manager-grocery-name {
+    text-decoration: line-through;
+    color: var(--muted-text-color);
 }
 
 .diet-manager-cell-actions {
