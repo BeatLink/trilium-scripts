@@ -307,7 +307,14 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                 <ul className="diet-manager-portion-list">
                     {food.portions.map((portion, index) => (
                         <li key={index} className="diet-manager-portion-row">
-                            <span>1</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={portion.amount}
+                                title="How many"
+                                onInput={e => setPortion(index, { amount: parseFloat(e.target.value) || 0 })}
+                            />
                             <SuggestInput
                                 className="diet-manager-suggest-unit"
                                 value={portion.unit}
@@ -334,14 +341,14 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, onSave
                     {food.portions.length === 0 && (
                         <li className="diet-manager-hint">
                             Nutrition is per {food.servingSize} {food.servingUnit}. Add a unit to also log this food
-                            as whole pieces, packs or cups.
+                            as whole pieces, packs or trays — both sides can be counted, so "4 tray = 30 {food.servingUnit}" works.
                         </li>
                     )}
                 </ul>
                 <Button
                     icon="bx-plus"
                     text="Add Unit"
-                    onClick={() => setFood(c => ({ ...c, portions: [...c.portions, { unit: "", size: c.servingSize }] }))}
+                    onClick={() => setFood(c => ({ ...c, portions: [...c.portions, { unit: "", amount: 1, size: c.servingSize }] }))}
                 />
             </div>
 

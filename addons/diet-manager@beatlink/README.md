@@ -37,9 +37,11 @@ Nutrition can always be entered manually instead, regardless of lookup availabil
 ### Multiple units per food
 
 Nutrition is stored once, per the food's own serving. **Other Units** in the food form adds extra
-ways to measure that same food, each stated in the serving unit: for a tortilla recorded per
-`100 g`, `1 tortilla = 100 g` means logging *1 tortilla* and logging *100 g* give identical
-nutrition. A pack of six is `1 pack = 600 g`.
+ways to measure that same food, each written as an equivalence with a count on **both** sides: for
+a tortilla recorded per `100 g`, `1 tortilla = 100 g` means logging *1 tortilla* and logging
+*100 g* give identical nutrition, and a pack of six is `1 pack = 600 g`. Counting the left side
+lets you enter whatever's written on the packaging without doing the division yourself —
+`4 tray = 30 egg` records that a tray is 7.5 eggs.
 
 Everywhere an amount of a food is entered — a diary entry and a recipe ingredient — a unit
 dropdown offers that food's whole serving, its serving unit, and each of these extra units, and the
@@ -182,7 +184,7 @@ The whole database is one JSON code note:
             "name": "Chicken Breast",
             "servingSize": 100,
             "servingUnit": "g",
-            "portions": [{ "unit": "breast", "size": 170 }],
+            "portions": [{ "unit": "breast", "amount": 1, "size": 170 }],
             "tags": ["Protein/Meat"],
             "nutrients": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6,
@@ -217,7 +219,9 @@ needs to hold categories nothing carries yet, since the tab shows the union of t
 implied parent, and it may be absent entirely in an older database. `grocery` is likewise optional
 and its lines are independent of the diary. `units` is the managed unit list, and like `categories`
 it only needs to hold units nothing uses yet.
-A food's `portions` are its extra units, each `size` given in the food's own `servingUnit`. A diary
+A food's `portions` are its extra units: `amount` of `unit` equals `size` of the food's own
+`servingUnit`, so one of that unit is `size / amount`. A portion with no `amount` is one of them,
+which is what portions meant when only the right side could be counted. A diary
 entry's or ingredient's `unit` says which unit its amount is in; an entry with no `unit` counts whole
 servings and an ingredient with no `unit` is an amount in the serving unit, which is exactly what
 they meant before units existed, so older databases keep their totals.

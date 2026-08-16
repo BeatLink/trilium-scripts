@@ -4,7 +4,7 @@
  *   {
  *     categories: [ "Dairy", "Protein/Meat", ... ],
  *     units: [ "g", "cup", ... ],
- *     foods: { [id]: { id, name, servingSize, servingUnit, portions: [{ unit, size }], tags: [...], nutrients: {...} } },
+ *     foods: { [id]: { id, name, servingSize, servingUnit, portions: [{ unit, amount, size }], tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount, unit }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, unit, loggedAt }] },
  *     grocery: [ { id, foodId, amount, unit, comment, done } ]
@@ -93,16 +93,19 @@ function isInCategory(tag, category) {
 }
 
 /*
- * A portion is an alternative way to measure one food: `size` is how much of
- * the food's own serving unit one of them is, so a tortilla whose nutrition is
- * recorded per 100 g gets { unit: "tortilla", size: 100 } if one tortilla
- * weighs 100 g. Nutrition is still stored once, per the base serving; portions
- * only ever convert an amount into that base.
+ * A portion is an alternative way to measure one food, written as an
+ * equivalence: `amount` of `unit` equals `size` of the food's own serving unit.
+ * "4 tray = 30 egg" is { unit: "tray", amount: 4, size: 30 }, so one tray is
+ * 7.5 eggs. A portion with no amount is one of them, which is what every
+ * portion meant before both sides could be counted. Nutrition is still stored
+ * once, per the base serving; portions only ever convert into that base.
  */
 function normalizePortion(portion) {
     const size = Number(portion?.size)
+    const amount = Number(portion?.amount)
     return {
         unit: typeof portion?.unit === "string" ? portion.unit.trim() : "",
+        amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
         size: Number.isFinite(size) && size > 0 ? size : 1
     }
 }
@@ -141,7 +144,9 @@ function foodUnits(food) {
     const units = [{ unit: SERVING_UNIT, size: food.servingSize }]
     if (food.servingUnit !== SERVING_UNIT) units.push({ unit: food.servingUnit, size: 1 })
     for (const portion of food.portions) {
-        if (portion.unit !== SERVING_UNIT && portion.unit !== food.servingUnit) units.push(portion)
+        if (portion.unit !== SERVING_UNIT && portion.unit !== food.servingUnit) {
+            units.push({ unit: portion.unit, size: portion.size / portion.amount })
+        }
     }
     return units
 }
