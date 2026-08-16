@@ -432,7 +432,7 @@ function FoodForm({ initial, usdaApiKey, tagSuggestions, unitSuggestions, brandS
                 <span>Comment</span>
                 <textarea
                     className="diet-manager-textarea"
-                    rows={2}
+                    rows={5}
                     placeholder="Notes about this food"
                     value={food.comment}
                     onInput={e => setFood(c => ({ ...c, comment: e.target.value }))}
@@ -719,6 +719,17 @@ function RecipeForm({ initial, foods, tagSuggestions, unitSuggestions, onSave, o
                 onDraftChange={setTagDraft}
             />
 
+            <label className="diet-manager-field">
+                <span>Comment</span>
+                <textarea
+                    className="diet-manager-textarea"
+                    rows={5}
+                    placeholder="Notes about this recipe"
+                    value={recipe.comment}
+                    onInput={e => setRecipe(c => ({ ...c, comment: e.target.value }))}
+                />
+            </label>
+
             <h4>Ingredients</h4>
             <ul className="diet-manager-ingredient-list">
                 {recipe.ingredients.map((ing, index) => (
@@ -779,6 +790,7 @@ function RecipesTab({ recipes, foods, categories, units, onSaveRecipe, onDeleteR
     // Per-serving figures depend on the foods, so the columns are built per render of that list.
     const columns = useMemo(() => [
         { key: "name", label: "Name", value: recipe => recipe.name, render: recipe => recipe.name },
+        { key: "comment", label: "Comment", value: recipe => recipe.comment, render: recipe => recipe.comment },
         { key: "tags", label: "Categories", value: recipe => recipe.tags.join(", "), render: recipe => recipe.tags.join(", ") },
         { key: "servings", label: "Servings", value: recipe => recipe.servings, render: recipe => `${recipe.servings} ${recipe.servingUnit}` },
         {

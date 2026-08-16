@@ -98,7 +98,8 @@ labels.
 ## Recipes
 
 The **Recipes** tab builds recipes out of foods already in your database. A recipe has a name, a
-servings count and serving unit (`serving`, `bowl`, `slice`...), any number of categories, and a
+servings count and serving unit (`serving`, `bowl`, `slice`...), any number of categories, a
+free-text comment for method notes or variations (its own sortable column in the table), and a
 list of ingredients (food + amount, in that food's own serving unit). Nutrition per serving is
 computed automatically from its ingredients and re-derives whenever an ingredient's underlying food
 is edited — recipes never store their own copy of nutrition facts.
@@ -224,6 +225,7 @@ The whole database is one JSON code note:
         "e5f6g7h8": {
             "id": "e5f6g7h8",
             "name": "Chicken Salad",
+            "comment": "",
             "servings": 2,
             "servingUnit": "bowl",
             "tags": ["Protein"],

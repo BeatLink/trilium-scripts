@@ -329,7 +329,9 @@
 }
 
 .diet-manager-textarea {
-    padding: 4px 6px;
+    width: 100%;
+    min-height: 90px;
+    padding: 6px 8px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
     background: var(--input-background-color, transparent);
