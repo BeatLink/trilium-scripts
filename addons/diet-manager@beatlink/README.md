@@ -88,6 +88,9 @@ database. Pick a food, type an amount, and set a unit; the unit prefills from th
 unit and can be changed per line, so a food measured in `100 g` for nutrition can be shopped for as
 `2 loaf`.
 
+Each line also takes a free-text **comment** — "corn only", "brand X", "whatever's on offer" — set
+when adding the line or edited in place afterwards.
+
 Amounts are **entered by hand** — nothing is derived from recipes or the diary. Each line has a
 checkbox for "bought", which strikes it through, and **Clear Checked** removes all ticked lines at
 once. Amount and unit stay editable in place, and a line's unit dropdown also offers whatever
@@ -203,7 +206,7 @@ The whole database is one JSON code note:
         ]
     },
     "grocery": [
-        { "id": "m1n2o3p4", "foodId": "a1b2c3d4", "amount": 2, "unit": "pack", "done": false }
+        { "id": "m1n2o3p4", "foodId": "a1b2c3d4", "amount": 2, "unit": "pack", "comment": "corn only", "done": false }
     ]
 }
 ```

@@ -231,6 +231,16 @@
     color: inherit;
 }
 
+.diet-manager-grocery-comment {
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
 .diet-manager-grocery-group {
     margin: 14px 0 4px 0;
     padding-bottom: 4px;

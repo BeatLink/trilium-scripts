@@ -7,7 +7,7 @@
  *     foods: { [id]: { id, name, servingSize, servingUnit, portions: [{ unit, size }], tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, servingUnit, tags: [...], ingredients: [{ foodId, amount, unit }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, unit, loggedAt }] },
- *     grocery: [ { id, foodId, amount, unit, done } ]
+ *     grocery: [ { id, foodId, amount, unit, comment, done } ]
  *   }
  * `date` is an ISO "YYYY-MM-DD" string. All nutrient values are per the food's
  * own serving (servingSize/servingUnit), same convention Cronometer uses.
@@ -259,6 +259,7 @@ function normalizeGroceryItem(item, foods = {}) {
         foodId,
         amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
         unit: normalizeUnit(item?.unit, foods[foodId]?.servingUnit || "g"),
+        comment: typeof item?.comment === "string" ? item.comment : "",
         done: item?.done === true
     }
 }

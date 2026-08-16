@@ -968,6 +968,7 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
     const [foodId, setFoodId] = useState("")
     const [amount, setAmount] = useState(1)
     const [unit, setUnit] = useState("")
+    const [comment, setComment] = useState("")
     const [grouped, setGrouped] = useState(() => localStorage.getItem(GROCERY_GROUPED_PREF_KEY) === "true")
 
     const foodList = useMemo(() => Object.values(foods).sort((a, b) => a.name.localeCompare(b.name)), [foods])
@@ -981,11 +982,12 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
 
     const add = useCallback(() => {
         if (!foodId) return
-        onAdd({ foodId, amount, unit })
+        onAdd({ foodId, amount, unit, comment })
         setFoodId("")
         setAmount(1)
         setUnit("")
-    }, [foodId, amount, unit, onAdd])
+        setComment("")
+    }, [foodId, amount, unit, comment, onAdd])
 
     const toggleGrouped = useCallback(checked => {
         setGrouped(checked)
@@ -1032,6 +1034,13 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
                 suggestions={unitsFor(item)}
                 onChange={value => onUpdate(item.id, { unit: value })}
             />
+            <input
+                type="text"
+                className="diet-manager-grocery-comment"
+                placeholder="Comment"
+                value={item.comment}
+                onInput={e => onUpdate(item.id, { comment: e.target.value })}
+            />
             <button className="diet-manager-action diet-manager-action-remove bx bx-trash" title="Remove" onClick={() => onRemove(item.id)} />
         </li>
     )
@@ -1058,6 +1067,14 @@ function GroceryTab({ grocery, foods, categories, units, onAdd, onUpdate, onRemo
                     suggestions={foodId && foods[foodId] ? normalizeUnits([...units, ...foodUnits(foods[foodId]).map(u => u.unit)]) : units}
                     onChange={setUnit}
                     onCommit={add}
+                />
+                <input
+                    type="text"
+                    className="diet-manager-grocery-comment"
+                    placeholder="Comment (optional)"
+                    value={comment}
+                    onInput={e => setComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add() } }}
                 />
                 <Button icon="bx-plus" text="Add" onClick={add} disabled={!foodId} />
                 <label className="diet-manager-toolbar-check">
