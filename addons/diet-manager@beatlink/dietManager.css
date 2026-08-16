@@ -126,8 +126,44 @@
     margin-top: 6px;
 }
 
-.diet-manager-tag-add input {
+.diet-manager-tag-input {
+    position: relative;
     flex: 1;
+}
+
+.diet-manager-tag-input input {
+    width: 100%;
+}
+
+.diet-manager-tag-suggestions {
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 2px 0 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--main-background-color);
+}
+
+.diet-manager-tag-suggestions button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.diet-manager-tag-suggestions button:hover {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
 }
 
 .diet-manager-cell-actions {

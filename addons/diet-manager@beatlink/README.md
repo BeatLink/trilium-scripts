@@ -46,7 +46,8 @@ The Foods tab uses them three ways:
 - **Filter** — the dropdown in the toolbar narrows the table to one category, or to
   `(uncategorized)` for foods with none.
 - **Group by category** — the checkbox splits the table into a section per category, each with its
-  own count. A food in several categories appears in each of their sections.
+  own count. A food in several categories appears in each of their sections. Its state is
+  remembered across reloads (per browser/client, not synced).
 - **Sort** — click any column header (including **Categories**) to sort by it; click again to
   reverse.
 

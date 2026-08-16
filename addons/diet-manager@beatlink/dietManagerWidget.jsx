@@ -57,11 +57,27 @@ function withDraftTag(tags, draft) {
 }
 
 function TagEditor({ tags, draft, suggestions, onChange, onDraftChange }) {
+    const [open, setOpen] = useState(false)
+
     const addDraft = useCallback(() => {
         if (!draft.trim()) return
         onChange(withDraftTag(tags, draft))
         onDraftChange("")
+        setOpen(false)
     }, [draft, tags, onChange, onDraftChange])
+
+    // Focusing the field offers every unused category; typing narrows the list.
+    const matches = useMemo(() => {
+        const unused = suggestions.filter(tag => !tags.includes(tag))
+        const needle = draft.trim().toLowerCase()
+        return needle ? unused.filter(tag => tag.toLowerCase().includes(needle)) : unused
+    }, [suggestions, tags, draft])
+
+    const pick = useCallback(tag => {
+        onChange(normalizeTags([...tags, tag]))
+        onDraftChange("")
+        setOpen(false)
+    }, [tags, onChange, onDraftChange])
 
     return (
         <div className="diet-manager-field">
@@ -80,17 +96,31 @@ function TagEditor({ tags, draft, suggestions, onChange, onDraftChange }) {
                 {tags.length === 0 && <span className="diet-manager-hint">No categories.</span>}
             </div>
             <div className="diet-manager-tag-add">
-                <input
-                    type="text"
-                    list="diet-manager-tag-suggestions"
-                    placeholder="Add a category..."
-                    value={draft}
-                    onInput={e => onDraftChange(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDraft() } }}
-                />
-                <datalist id="diet-manager-tag-suggestions">
-                    {suggestions.filter(tag => !tags.includes(tag)).map(tag => <option value={tag} key={tag} />)}
-                </datalist>
+                <div className="diet-manager-tag-input">
+                    <input
+                        type="text"
+                        placeholder="Add a category..."
+                        value={draft}
+                        onInput={e => { onDraftChange(e.target.value); setOpen(true) }}
+                        onFocus={() => setOpen(true)}
+                        onClick={() => setOpen(true)}
+                        // Blur closes on a delay so a click on a suggestion still lands.
+                        onBlur={() => setTimeout(() => setOpen(false), 150)}
+                        onKeyDown={e => {
+                            if (e.key === "Enter") { e.preventDefault(); addDraft() }
+                            if (e.key === "Escape") setOpen(false)
+                        }}
+                    />
+                    {open && matches.length > 0 && (
+                        <ul className="diet-manager-tag-suggestions">
+                            {matches.map(tag => (
+                                <li key={tag}>
+                                    <button onClick={() => pick(tag)}>{tag}</button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
                 <Button text="Add" onClick={addDraft} disabled={!draft.trim()} />
             </div>
         </div>
@@ -234,6 +264,9 @@ const FOOD_COLUMNS = [
 
 const UNTAGGED = "(uncategorized)"
 
+// View preference, not data, so it lives in localStorage rather than the database note.
+const GROUPED_PREF_KEY = "diet-manager-group-by-category"
+
 function sortFoods(list, sortKey, ascending) {
     const column = FOOD_COLUMNS.find(c => c.key === sortKey) ?? FOOD_COLUMNS[0]
     const direction = ascending ? 1 : -1
@@ -261,7 +294,7 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
     const [editingId, setEditingId] = useState(null)
     const [adding, setAdding] = useState(false)
     const [filterTag, setFilterTag] = useState("")
-    const [grouped, setGrouped] = useState(false)
+    const [grouped, setGrouped] = useState(() => localStorage.getItem(GROUPED_PREF_KEY) === "true")
     const [sortKey, setSortKey] = useState("name")
     const [ascending, setAscending] = useState(true)
 
@@ -283,6 +316,11 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
         if (untagged.length > 0) byTag.push([UNTAGGED, untagged])
         return byTag.filter(([, members]) => members.length > 0)
     }, [tags, list])
+
+    const toggleGrouped = useCallback(checked => {
+        setGrouped(checked)
+        localStorage.setItem(GROUPED_PREF_KEY, String(checked))
+    }, [])
 
     const toggleSort = useCallback(key => {
         if (key === sortKey) setAscending(asc => !asc)
@@ -338,7 +376,7 @@ function FoodsTab({ foods, usdaApiKey, onSaveFood, onDeleteFood }) {
                     <option value={UNTAGGED}>{UNTAGGED}</option>
                 </select>
                 <label className="diet-manager-toolbar-check">
-                    <input type="checkbox" checked={grouped} onChange={e => setGrouped(e.target.checked)} />
+                    <input type="checkbox" checked={grouped} onChange={e => toggleGrouped(e.target.checked)} />
                     <span>Group by category</span>
                 </label>
             </div>
