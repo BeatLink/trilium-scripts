@@ -10,7 +10,8 @@
 import {
     useActiveNoteContext,
     useState,
-    useEffect
+    useEffect,
+    useRef
 } from "trilium:preact"
 
 import {
@@ -38,6 +39,32 @@ const TYPE_COLORS = {
 
 const TAM_ID = "trilium-addon-manager@beatlink"
 
+// Commands the activity log does not open itself for. These are either the page
+// doing its own housekeeping (load-addons runs on every mount, so treating it as
+// activity pops the log open every time TAM is selected), navigation, or a step
+// that only prepares a dialog. Everything else is real work worth watching.
+const QUIET_COMMANDS = new Set([
+    "load-addons",
+    "browse-catalog",
+    "visit-catalog-website",
+    "request-uninstall"
+])
+
+// What each diagnosis code means in one line, shown in the table's Issue column
+// so a row explains itself without a trip to the docs.
+const ISSUE_TITLES = {
+    "duplicate-id": "Duplicate TAMFILEID",
+    "orphaned-note": "Orphaned note",
+    "unclaimed-note": "Unclaimed note",
+    "dead-source": "Source unreachable",
+    "unverifiable-source": "Source carries no hashes",
+    "partial-sync": "Sync half-failed",
+    "missing-note": "Note not installed",
+    "content-drift": "Content doesn't match manifest",
+    "broken-wiring": "Wiring not applied",
+    "duplicate-child-title": "Duplicate child name breaks the script bundle"
+}
+
 function typeColor(type) {
     return TYPE_COLORS[type] || "#6b7280"
 }
@@ -56,6 +83,139 @@ function TamButton({ icon, text, onClick, className = "" }) {
             {icon && <i className={icon}></i>}
             <span>{text}</span>
         </button>
+    )
+}
+
+// The diagnosis, one row per problem, each with its own repair. Nothing has been
+// changed at this point - the audit is read-only, and a row only acts when its
+// button is pressed.
+function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
+    return (
+        <div className="TAM-validation-results">
+            <h4>
+                Diagnostics — {issues.length === 0 ? "no issues found" : `${issues.length} issue(s) found`}
+            </h4>
+            {reloadRequired && (
+                <p className="TAM-diagnostics-reload">
+                    <i className="bx bx-refresh"></i>{" "}
+                    TAM repaired its own notes. The old code is still the code running — reload Trilium
+                    to pick up the repaired version.
+                </p>
+            )}
+            {issues.length > 0 && (
+                <>
+                    <p className="no-readme">
+                        Each repair acts on that row alone. Your settings aren't touched: a persistent
+                        note that differs still goes through the usual Keep Mine / Use New prompt.
+                    </p>
+                    <table className="TAM-diagnostics-table">
+                        <thead>
+                            <tr>
+                                <th>Addon</th>
+                                <th>Issue</th>
+                                <th>Item</th>
+                                <th>Details</th>
+                                <th>Repair</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {issues.map((issue, index) => (
+                                <tr key={`${issue.addonId}/${issue.code}/${issue.target}/${index}`}>
+                                    <td>{issue.addonId}</td>
+                                    <td>{ISSUE_TITLES[issue.code] || issue.code}</td>
+                                    <td><code>{issue.target}</code></td>
+                                    <td>{issue.detail}</td>
+                                    <td>
+                                        {issue.fixes.length === 0
+                                            ? <span className="TAM-diagnostics-manual">by hand</span>
+                                            : (
+                                                <div className="TAM-diagnostics-fixes">
+                                                    {issue.fixes.map(fix => (
+                                                        <TamButton
+                                                            key={fix.kind}
+                                                            className={fix.kind === "uninstall" ? "btn-ghost" : ""}
+                                                            icon={fix.kind === "uninstall" ? "bx bx-trash" : "bx bx-wrench"}
+                                                            text={fix.label}
+                                                            onClick={() => onRepair(issue, fix)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </>
+            )}
+            <div className="TAM-validation-buttons">
+                {issues.length > 0 && <TamButton
+                    className="btn-ghost"
+                    icon="bx bx-copy"
+                    text="Copy to Clipboard"
+                    onClick={() => navigator.clipboard.writeText(
+                        issues.map(issue => `${issue.addonId}: [${issue.code}] ${issue.target} - ${issue.detail}`).join("\n")
+                    )}
+                />}
+                <TamButton className="btn-ghost" icon="bx bx-x" text="Dismiss" onClick={onDismiss} />
+            </div>
+        </div>
+    )
+}
+
+// TAM's activity log, shown in place of a blocking spinner overlay: a long
+// update-all or repair says what it is doing rather than covering the screen.
+//
+// It subscribes to lib-tam's log bus rather than being handed entries as props,
+// so a line written deep inside a sync appears the moment it is written, without
+// every caller having to thread progress state back out.
+function ActivityLog({ busyLabel, onDismiss }) {
+    const [entries, setEntries] = useState(() => libTAMjs.getLogEntries())
+    const bodyRef = useRef(null)
+
+    useEffect(() => libTAMjs.subscribeToLog(() => setEntries(libTAMjs.getLogEntries())), [])
+
+    // Follow the tail as lines arrive, scrolling the log's own box rather than
+    // the page.
+    useEffect(() => {
+        const body = bodyRef.current
+        if (body) body.scrollTop = body.scrollHeight
+    }, [entries])
+
+    // Dismissable while work is still running: closing the page only stops you
+    // watching it, it never cancels the command, and the log keeps filling up
+    // behind it.
+    useEffect(() => {
+        function onKeyDown(e) {
+            if (e.key === "Escape") onDismiss()
+        }
+        document.addEventListener("keydown", onKeyDown)
+        return () => document.removeEventListener("keydown", onKeyDown)
+    }, [onDismiss])
+
+    return (
+        <div className="TAM-log">
+            {/* Everything lives in the header: the page opens itself when work
+                starts, so it has to say when it's finished too - otherwise it
+                sits over the UI looking like something is still happening. */}
+            <div className="TAM-log-head">
+                {busyLabel
+                    ? <><Spinner /><span>{busyLabel}…</span></>
+                    : <span>Activity log — nothing is running</span>}
+                <button className="TAM-log-action" onClick={() => libTAMjs.clearLog()}>Clear</button>
+                <button className="TAM-log-action" title="Dismiss (Esc)" onClick={onDismiss}>Close</button>
+            </div>
+            <div className="TAM-log-body" ref={bodyRef}>
+                {entries.length === 0
+                    ? <div className="TAM-log-empty">Nothing logged yet.</div>
+                    : entries.map((entry, index) => (
+                        <div key={index} className={`TAM-log-line TAM-log-${entry.level}`}>
+                            <span className="TAM-log-time">{entry.time}</span>
+                            <span className="TAM-log-message">{entry.message}</span>
+                        </div>
+                    ))}
+            </div>
+        </div>
     )
 }
 
@@ -82,9 +242,8 @@ const COMMAND_LABELS = {
     "update-all": "Updating all addons",
     "enable-addon": "Updating addon",
     "check-updates": "Checking for updates",
-    "validate-database": "Validating database",
-    "sweep-orphans": "Sweeping orphaned notes",
-    "sweep-invalid-tree": "Sweeping invalid addon tree notes",
+    "run-diagnostics": "Running diagnostics",
+    "repair-issue": "Applying repair",
     "reinitialize-database": "Reinitializing database"
 }
 
@@ -600,7 +759,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onSweepOrphans, onSweepInvalidTree, onReinitialize, anyUpdateAvailable
+    onDiagnose, onShowLog, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -653,9 +812,8 @@ function SettingsView({
                 <div className="TAM-maintenance-actions">
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
                     {anyUpdateAvailable && <TamButton className="btn-ghost" icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
-                    <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
-                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
-                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Invalid Addon Tree Notes" onClick={onSweepInvalidTree} />
+                    <TamButton className="btn-ghost" icon="bx bx-first-aid" text="Run Diagnostics" onClick={onDiagnose} />
+                    <TamButton className="btn-ghost" icon="bx bx-terminal" text="Show Activity Log" onClick={onShowLog} />
                     <TamButton
                         className="btn-ghost"
                         icon="bx bx-trash"
@@ -686,11 +844,11 @@ function SettingsView({
 // reading them itself:
 // - resolveDisplayNote(): currentNote only resolves correctly in the note it physically
 //   executes in (this note), so RepoManager owns that read and injects it in.
-// - dialogActions: the handful of setters (setUninstallPrompt/setView/setValidationTitle/
-//   setValidationIssues) that a few commands need to update — these are pure UI-dialog state
+// - dialogActions: the handful of setters (setUninstallPrompt/setView/setDiagnostics/
+//   setReloadRequired) that a few commands need to update — these are pure UI-dialog state
 //   that belongs to RepoManager, not to this data layer.
 function useTamCommands(resolveDisplayNote, dialogActions) {
-    const { setUninstallPrompt, setView, setValidationTitle, setValidationIssues } = dialogActions
+    const { setUninstallPrompt, setView, setDiagnostics, setReloadRequired } = dialogActions
 
     const [command, setCommand] = useState(null)
     const [addons, setAddons] = useState(null)
@@ -870,30 +1028,17 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         await reload()
     }
 
-    async function handleValidateDatabase() {
-        setValidationTitle("Database Validation")
-        setValidationIssues(await libTAMjs.validateDatabase())
+    async function handleRunDiagnostics() {
+        setDiagnostics(await libTAMjs.diagnose())
     }
 
-    async function handleSweepOrphans() {
-        const removedTamFileIds = await libTAMjs.sweepOrphanedNotes()
-        setValidationTitle("Orphaned Notes")
-        setValidationIssues(removedTamFileIds.map(tamFileId => ({
-            addonId: tamFileId.split("/")[0],
-            message: `removed orphaned note '${tamFileId}'`
-        })))
-        await reload()
-    }
-
-    async function handleSweepInvalidTree() {
-        const removed = await libTAMjs.sweepInvalidAddonTreeNotes()
-        setValidationTitle("Invalid Addon Tree Notes")
-        setValidationIssues(removed.map(({ title, tamFileId }) => ({
-            addonId: tamFileId ? tamFileId.split("/")[0] : "(none)",
-            message: tamFileId
-                ? `removed note '${title}' with TAMFILEID '${tamFileId}' for an addon that isn't installed`
-                : `removed note '${title}' with no TAMFILEID`
-        })))
+    // Re-runs the audit after each repair rather than striking the row out: one
+    // fix routinely settles several rows (a re-sync clears every finding for that
+    // addon at once), so anything else would leave the table lying.
+    async function handleRepairIssue(command) {
+        const { requiresReload } = await libTAMjs.repairIssue(command.issue, command.fix)
+        if (requiresReload) setReloadRequired(true)
+        setDiagnostics(await libTAMjs.diagnose())
         await reload()
     }
 
@@ -920,9 +1065,8 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "update-all": handleUpdateAll,
         "enable-addon": handleEnableAddon,
         "check-updates": handleCheckUpdates,
-        "validate-database": handleValidateDatabase,
-        "sweep-orphans": handleSweepOrphans,
-        "sweep-invalid-tree": handleSweepInvalidTree,
+        "run-diagnostics": handleRunDiagnostics,
+        "repair-issue": handleRepairIssue,
         "reinitialize-database": handleReinitializeDatabase
     }
 
@@ -962,21 +1106,37 @@ async function resolveDisplayNote() {
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
     const [view, setView] = useState({ type: "list" })
-    const [validationIssues, setValidationIssues] = useState(null)
-    const [validationTitle, setValidationTitle] = useState("Database Validation")
+    // The log is a page rather than a permanent panel: it opens itself when a
+    // command starts, so pressing something still shows you what it's doing, and
+    // is dismissable at any point - including mid-run, which only stops you
+    // watching. Reopen it from the header any time.
+    const [logOpen, setLogOpen] = useState(false)
+    // null until diagnostics have been run at least once; [] means a clean run.
+    const [diagnostics, setDiagnostics] = useState(null)
+    const [reloadRequired, setReloadRequired] = useState(false)
     const [uninstallPrompt, setUninstallPrompt] = useState(null) // { addonId, references, hasData }
 
     const {
         addons, catalogs, catalogBrowse, catalogAddons,
         pendingPrompts, promptAddonId, promptQueue,
         pendingCommand, progressDetail, dispatch
-    } = useTamCommands(resolveDisplayNote, { setUninstallPrompt, setView, setValidationTitle, setValidationIssues })
+    } = useTamCommands(resolveDisplayNote, { setUninstallPrompt, setView, setDiagnostics, setReloadRequired })
 
     // Trigger loading of addons on page load.
     useEffect(() => {
         if (!note) return
         dispatch({ command: "load-addons" })
     }, [note])
+
+    const isBusy = Boolean(pendingCommand && !QUIET_COMMANDS.has(pendingCommand.command))
+
+    // Opens on the transition into activity rather than while it runs, so a
+    // dismissal mid-run sticks until the next thing you press.
+    const wasBusyRef = useRef(false)
+    useEffect(() => {
+        if (isBusy && !wasBusyRef.current) setLogOpen(true)
+        wasBusyRef.current = isBusy
+    }, [isBusy])
 
     if (!addons) {
         return <div>Loading addons...</div>
@@ -1058,9 +1218,8 @@ export default function RepoManager() {
                 onInstallByUrl={url => dispatch({ command: "install-by-url", url })}
                 onCheckUpdates={() => dispatch({ command: "check-updates" })}
                 onUpdateAll={() => dispatch({ command: "update-all" })}
-                onValidate={() => dispatch({ command: "validate-database" })}
-                onSweepOrphans={() => dispatch({ command: "sweep-orphans" })}
-                onSweepInvalidTree={() => dispatch({ command: "sweep-invalid-tree" })}
+                onDiagnose={() => dispatch({ command: "run-diagnostics" })}
+                onShowLog={() => setLogOpen(true)}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />
         )
@@ -1152,64 +1311,31 @@ export default function RepoManager() {
         )
     }
 
-    // browse-catalog already shows its own inline Spinner in CatalogBrowseView —
-    // the blocking overlay is for everything else, where nothing on screen
-    // otherwise indicates a long-running mutation is in flight.
-    const showProgressOverlay = pendingCommand && pendingCommand.command !== "browse-catalog"
+    // The log's header is what says work is in flight; CatalogBrowseView draws
+    // its own inline spinner for the one command that needs it.
+    const busyLabel = isBusy ? (progressDetail || commandLabel(pendingCommand)) : null
 
     return (
         <div className="TAM-body">
             <header>{headerContent}</header>
-            {showProgressOverlay && (
-                <div className="TAM-progress-overlay">
-                    <Spinner />
-                    <p>{progressDetail || commandLabel(pendingCommand)}…</p>
-                </div>
-            )}
             <main>
-                {validationIssues !== null && (
-                    <div className="TAM-validation-results">
-                        <h4>
-                            {validationTitle} —{" "}
-                            {validationIssues.length === 0
-                                ? "no issues found"
-                                : `${validationIssues.length} issue(s) found`}
-                        </h4>
-                        {validationIssues.length > 0 && (
-                            <>
-                                <p className="no-readme">
-                                    {validationTitle === "Orphaned Notes"
-                                        ? "Already removed — nothing further to do."
-                                        : "There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these."}
-                                </p>
-                                <pre className="TAM-validation-content">
-                                    {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
-                                </pre>
-                            </>
+                {diagnostics !== null && (
+                    <DiagnosticsTable
+                        issues={diagnostics}
+                        reloadRequired={reloadRequired}
+                        onRepair={(issue, fix) => dispatch(
+                            // Uninstall goes through TAM's normal uninstall flow, so the
+                            // dangling-reference and delete-my-data questions still get asked.
+                            fix.kind === "uninstall"
+                                ? { command: "request-uninstall", addon: issue.addonId }
+                                : { command: "repair-issue", issue, fix }
                         )}
-                        <div className="TAM-validation-buttons">
-                            {validationIssues.length > 0 && <TamButton
-                                className="btn-ghost"
-                                icon="bx bx-copy"
-                                text="Copy to Clipboard"
-                                onClick={e => {
-                                    const text = validationIssues
-                                        .map(issue => `${issue.addonId}: ${issue.message}`)
-                                        .join("\n")
-                                    navigator.clipboard.writeText(text)
-                                }}
-                            />}
-                            <TamButton
-                                className="btn-ghost"
-                                icon="bx bx-x"
-                                text="Dismiss"
-                                onClick={e => { setValidationIssues(null) }}
-                            />
-                        </div>
-                    </div>
+                        onDismiss={() => setDiagnostics(null)}
+                    />
                 )}
                 {bodyContent}
             </main>
+            {logOpen && <ActivityLog busyLabel={busyLabel} onDismiss={() => setLogOpen(false)} />}
         </div>
     )
 }

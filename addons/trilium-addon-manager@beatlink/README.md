@@ -60,8 +60,27 @@ itself would risk taking down the one thing that could otherwise fix it.
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
   data, addons with an update available), catalog management (each catalog's row has **Browse**,
   **Visit Website**, and **Delete** actions, plus adding a new catalog by URL), a single-addon
-  "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons, Validate
-  Database, Clean Up Empty Persistence Roots).
+  "install by URL" action, and maintenance triggers (Check for Updates, Update All Addons,
+  **Run Diagnostics**, Reinitialize Database).
+- **Diagnostics** — one audit covering TAM's own bookkeeping, the addon-owned note tree, and every
+  installed addon against its live manifest. Results are a table, one row per problem, each with the
+  repair for that row: missing notes, content that has drifted from the manifest's hash, wiring the
+  manifest declares but the tree doesn't have, orphaned and unclaimed notes, sources that have gone
+  dead or carry no hashes, and records left by a sync that half-failed. **Nothing changes until you
+  press a row's button** — the audit is read-only, and each repair acts on its row alone. This
+  replaced the old Validate Database and the two Sweep actions, which deleted first and reported
+  after. TAM audits itself too; repairing its own notes reads "… & reload", since the running copy
+  lives in memory and only the next load picks up the repair. Your settings are never overwritten
+  silently — a persistent note that differs still goes through the usual Keep Mine / Use New prompt.
+  An addon whose source has gone unreachable offers **Uninstall** alongside the repoint, and that
+  goes through the normal uninstall flow, so you're still asked about dangling references and saved
+  data. See [Diagnostics](ARCHITECTURE.md#diagnostics).
+- **Activity log** — a full-screen page recording every operation, in place of the old blocking
+  spinner overlay: each note installed, each prompt queued, each update check, each repair. It
+  **opens itself whenever something starts running** so you can watch it work, and says so in its
+  header once nothing is running. Clear and Close both sit in that header, and **Esc** closes too —
+  dismissing never cancels anything, and the log keeps filling up behind it. Reopen any time with **Show
+  Activity Log** in the Settings view. Only the log scrolls, never the page.
 
 ---
 
