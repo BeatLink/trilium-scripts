@@ -16,19 +16,24 @@ pkgs.mkShell {
     zip_to_tam()           { tamhelper zip-to-tam "$@"; }
     tam_to_zip()           { tamhelper tam-to-zip "$@"; }
     publish_release()      { tamhelper publish-release "$@"; }
-    backfill_manifest_source_url() { tamhelper backfill-source-url "$@"; }
+    publish()              { tamhelper publish "$@"; }
 
-    export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release backfill_manifest_source_url
+    export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release publish
 
-    # Reinstall the toolchain's npm deps (marked, playwright) into node_modules
-    # on every shell entry -- `npm ci` wipes node_modules and installs fresh
-    # from package-lock.json, so a truncated/corrupt prior install (seen once
-    # as a NUL-padded playwright/lib/runner/index.js) can never persist across
-    # runs. No build step, just the runtime libraries the scripts require().
-    if [ -f package.json ] && [ -f package-lock.json ]; then
+    # Reinstall the toolchain's npm deps (marked, playwright) into
+    # resources/node_modules on every shell entry -- `npm ci` wipes node_modules
+    # and installs fresh from package-lock.json, so a truncated/corrupt prior
+    # install (seen once as a NUL-padded playwright/lib/runner/index.js) can
+    # never persist across runs. No build step, just the runtime libraries the
+    # scripts require(). package.json lives in resources/, so install there --
+    # node's require() walk finds resources/node_modules from any script under
+    # resources/ regardless of the shell's cwd.
+    _tsroot="$(git rev-parse --show-toplevel 2>/dev/null)"
+    if [ -f "$_tsroot/resources/package.json" ] && [ -f "$_tsroot/resources/package-lock.json" ]; then
       echo "  Installing npm dependencies (npm ci: marked, playwright, @playwright/test)..."
-      npm ci --no-audit --no-fund --silent
+      (cd "$_tsroot/resources" && npm ci --no-audit --no-fund --silent)
     fi
+    unset _tsroot
 
     # playwright-driver.browsers ships prebuilt browser binaries matching the
     # revision the pinned `playwright` npm package expects -- point at it
@@ -46,10 +51,10 @@ pkgs.mkShell {
     echo "  zip_to_tam <zip>               Convert Trilium export ZIP to _tam_manifest_.json"
     echo "  tam_to_zip <manifest>          Convert _tam_manifest_.json to a Trilium ZIP import"
     echo "  tam_to_zip --all               Convert every addon's manifest to a ZIP (used by CI)"
-    echo "  generate_pages                 Build GitHub Pages site (docs/, incl. catalog.json)"
+    echo "  generate_pages                 Build GitHub Pages site (resources/docs/)"
+    echo "  publish                        Resolve + hash every manifest into resources/docs/ (incl. catalog.json)"
     echo "  generate_readme                Regenerate README.md's addon table from manifests"
     echo "  publish_release                Upload *.zip to a new versioned + the 'latest' GitHub release (used by CI)"
-    echo "  backfill_manifest_source_url   One-time: add manifestSourceUrl to every addon missing one"
     echo ""
   '';
 }

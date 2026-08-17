@@ -26,13 +26,13 @@ Or download individual `.zip` files from [Releases](https://github.com/BeatLink/
 ## Development
 
 ```bash
-nix-shell        # enter dev shell
+nix-shell resources/nix   # enter dev shell
 
 validate         # validate addon structure
 ci               # validate then build every addon's ZIP
 
 zip_to_tam <zip>          # convert a Trilium export ZIP into a _tam_manifest_.json
 tam_to_zip <manifest>     # convert a _tam_manifest_.json into a Trilium-importable ZIP
-generate_pages            # build GitHub Pages site into docs/ (incl. catalog.json)
+generate_pages            # build GitHub Pages site into resources/docs/ (incl. catalog.json)
 generate_readme           # regenerate README.md's addon table from manifests
 ```
