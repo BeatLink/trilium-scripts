@@ -1,0 +1,387 @@
+{
+    "id": "agenda-task@beatlink",
+    "name": "Agenda Task",
+    "description": "The Task widget from agenda@beatlink, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Each section is collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which agenda declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "3.2.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "task-settings",
+        "notes": [
+            {
+                "id": "task",
+                "title": "agendaTask.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "agendaTask.jsx"
+            },
+            {
+                "id": "recurrence-picker",
+                "title": "recurrencePicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "recurrencePicker.jsx"
+            },
+            {
+                "id": "togglebutton",
+                "title": "FormToggleButton.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "FormToggleButton.jsx"
+            },
+            {
+                "id": "lib-task",
+                "title": "libAgendaTask.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libAgendaTask.js"
+            },
+            {
+                "id": "lib-recurrence",
+                "title": "libRecurrence.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libRecurrence.js"
+            },
+            {
+                "id": "lib-task-settings",
+                "title": "agendaTaskSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "agendaTaskSettings.js"
+            },
+            {
+                "id": "task-schema",
+                "title": "taskSchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "taskSchema.json"
+            },
+            {
+                "id": "task-defaults",
+                "title": "taskDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "taskDefaults.json"
+            },
+            {
+                "id": "task-config",
+                "title": "taskConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "task-settings",
+                "title": "Task Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings-source",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "task-labels-panel",
+                "title": "taskLabelsPanel.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "taskLabelsPanel.jsx"
+            },
+            {
+                "id": "reschedule-options",
+                "title": "rescheduleOptions.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "rescheduleOptions.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "librrule-lib",
+                "title": "rrule.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/librrule/rrule.min.js"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "task"
+            },
+            {
+                "parent": "root",
+                "child": "task-settings"
+            },
+            {
+                "parent": "root",
+                "child": "task-schema"
+            },
+            {
+                "parent": "root",
+                "child": "task-defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "task-config"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "root",
+                "child": "task-labels-panel"
+            },
+            {
+                "parent": "root",
+                "child": "reschedule-options"
+            },
+            {
+                "parent": "task-settings",
+                "child": "settings-source"
+            },
+            {
+                "parent": "settings-source",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings-source",
+                "child": "reschedule-options"
+            },
+            {
+                "parent": "task",
+                "child": "recurrence-picker"
+            },
+            {
+                "parent": "task",
+                "child": "lib-task"
+            },
+            {
+                "parent": "task",
+                "child": "lib-task-settings"
+            },
+            {
+                "parent": "recurrence-picker",
+                "child": "togglebutton"
+            },
+            {
+                "parent": "recurrence-picker",
+                "child": "lib-task"
+            },
+            {
+                "parent": "lib-task",
+                "child": "lib-recurrence"
+            },
+            {
+                "parent": "lib-recurrence",
+                "child": "librrule-lib"
+            },
+            {
+                "parent": "lib-task-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "recurrence-picker"
+            },
+            {
+                "parent": "reschedule-options",
+                "child": "lib-task-settings"
+            },
+            {
+                "parent": "task-labels-panel",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "task-labels-panel",
+                "child": "lib-task-settings"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            }
+        ],
+        "relations": [
+            {
+                "from": "task-settings",
+                "type": "renderNote",
+                "to": "settings-source"
+            },
+            {
+                "from": "settings-source",
+                "type": "configNote",
+                "to": "task-config"
+            },
+            {
+                "from": "settings-source",
+                "type": "schemaNote",
+                "to": "task-schema"
+            },
+            {
+                "from": "task-config",
+                "type": "sourceConfig",
+                "to": "task-defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "task",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "settings-source",
+                "name": "agendaTaskConfig",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "task",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "recurrence-picker",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "togglebutton",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-task",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-recurrence",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-task-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-schema",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings-source",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-labels-panel",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "reschedule-options",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "task-schema",
+            "defaults": "task-defaults",
+            "config": "task-config"
+        }
+    }
+}

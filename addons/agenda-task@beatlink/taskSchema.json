@@ -1,0 +1,105 @@
+{
+    "_categories": [
+        "Settings"
+    ],
+    "startDatetimeLabel": {
+        "type": "string",
+        "label": "Start Datetime Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Start"
+    },
+    "startDateLabel": {
+        "type": "string",
+        "label": "Start Date Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Start"
+    },
+    "startTimeLabel": {
+        "type": "string",
+        "label": "Start Time Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Start"
+    },
+    "dueDatetimeLabel": {
+        "type": "string",
+        "label": "Due Datetime Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Due"
+    },
+    "dueDateLabel": {
+        "type": "string",
+        "label": "Due Date Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Due"
+    },
+    "dueTimeLabel": {
+        "type": "string",
+        "label": "Due Time Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Due"
+    },
+    "durationLabel": {
+        "type": "string",
+        "label": "Duration Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Task"
+    },
+    "recurrenceLabel": {
+        "type": "string",
+        "label": "Recurrence Label",
+        "category": "Settings",
+        "tab": "Settings",
+        "subgroup": "Task"
+    },
+    "rescheduleOptions": {
+        "type": "registry",
+        "hidden": true,
+        "label": "Reschedule Options",
+        "description": "The reschedule buttons offered by the Task pane's Actions section. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is button order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Option"
+            },
+            "mode": {
+                "type": "select",
+                "label": "Mode",
+                "default": "days",
+                "options": [
+                    {
+                        "value": "days",
+                        "label": "Days From Now"
+                    },
+                    {
+                        "value": "recurrence",
+                        "label": "Recurrence Rule"
+                    }
+                ]
+            },
+            "days": {
+                "type": "number",
+                "label": "Days From Now",
+                "default": 0,
+                "showWhen": {
+                    "mode": "days"
+                }
+            },
+            "recurrence": {
+                "type": "string",
+                "label": "Recurrence Rule",
+                "default": "",
+                "showWhen": {
+                    "mode": "recurrence"
+                }
+            }
+        }
+    }
+}
