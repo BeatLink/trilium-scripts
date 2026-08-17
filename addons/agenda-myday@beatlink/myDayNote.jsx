@@ -21,12 +21,17 @@ import {
 // The borrowed editor class and config, captured once per page load.
 let captured = null
 
+// Root and data entries name the editor they were built for. `roots.main.element`
+// in particular still points at the note detail's own element, and CKEditor throws
+// editor-create-root-element-overspecified when a config carrying it is used to
+// create an editor on a different element.
+const NOT_TRANSFERABLE = ["roots", "root", "rootsAttributes", "initialData"]
+
 function captureEditor(editor) {
     if (captured || !editor?.config?.names) return
     const config = {}
     for (const name of editor.config.names()) config[name] = editor.config.get(name)
-    // The panel sets its own data; a copied initialData would fight with it.
-    delete config.initialData
+    for (const name of NOT_TRANSFERABLE) delete config[name]
     captured = { EditorClass: editor.constructor, config }
 }
 
@@ -39,6 +44,7 @@ export function MyDayNote({ noteId }) {
     const contentRef = useRef("")
     const savedRef = useRef(null)
     const [hasEditor, setHasEditor] = useState(Boolean(captured))
+    const [failed, setFailed] = useState(false)
 
     const spacedUpdate = useSpacedUpdate(async () => {
         const content = contentRef.current
@@ -73,19 +79,30 @@ export function MyDayNote({ noteId }) {
     }, [])
 
     useEffect(() => {
-        if (!hasEditor || !containerRef.current || editorRef.current) return
+        if (!hasEditor || failed || !containerRef.current || editorRef.current) return
+        const container = containerRef.current
         let destroyed = false
-        captured.EditorClass.create(containerRef.current, captured.config).then(editor => {
+        captured.EditorClass.create(container, captured.config).then(editor => {
             if (destroyed) {
                 editor.destroy()
                 return
             }
             editorRef.current = editor
+
+            // The fixed-toolbar editor type is decoupled: it builds a toolbar but
+            // leaves placing it to the caller, so it has to be put above the
+            // editable here. The floating-toolbar type has none to place.
+            const toolbar = editor.ui?.view?.toolbar?.element
+            if (toolbar && !toolbar.isConnected) container.before(toolbar)
+
             editor.setData(contentRef.current || "")
             editor.model.document.on("change:data", () => {
                 contentRef.current = editor.getData()
                 spacedUpdate.scheduleUpdate()
             })
+        }).catch(e => {
+            console.error("My Day: could not build the panel editor", e)
+            setFailed(true)
         })
         return () => {
             destroyed = true
@@ -93,7 +110,7 @@ export function MyDayNote({ noteId }) {
             editorRef.current?.destroy()
             editorRef.current = null
         }
-    }, [hasEditor])
+    }, [hasEditor, failed])
 
     // Content the panel did not write - a task filed by the suggestion list, a
     // prune, or an edit in the note detail - is pulled in, but never while the
@@ -108,7 +125,7 @@ export function MyDayNote({ noteId }) {
         editorRef.current?.setData(content)
     }, [blob])
 
-    if (!hasEditor) {
+    if (!hasEditor || failed) {
         return (
             <div
                 className="myDayNote myDayNoteReadOnly ck-content"
