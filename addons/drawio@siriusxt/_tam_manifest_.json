@@ -5,15 +5,14 @@
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
-    "latestVersion": "0.7.4",
+    "latestVersion": "0.8.2",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/drawio@siriusxt/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/drawio@siriusxt/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "drawio@siriusxt",
                 "type": "text",
                 "mime": "text/html",
@@ -31,35 +30,39 @@
                 "title": "drawio",
                 "type": "image",
                 "mime": "image/svg+xml",
-                "sourceUrl": "drawio.svg",
-                "promptOnUpdate": true
+                "sourceUrl": "drawio.svg"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
                 "child": "widget"
             },
             {
-                "parent": "root",
+                "parent": "persistence",
                 "child": "template"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             }
         ],
         "relations": [
             {
-                "from": "root",
-                "type": "AddonData:template",
+                "from": "launcher",
+                "type": "templateNote",
                 "to": "template"
             }
         ],
@@ -75,8 +78,6 @@
                 "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
         "readmeNote": "readme"
     }
 }
