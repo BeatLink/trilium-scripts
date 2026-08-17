@@ -8,7 +8,7 @@
     "latestVersion": "0.1.6",
     "type": "theme",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/tamtheme@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {
@@ -16,14 +16,14 @@
                 "title": "tamtheme@beatlink.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/tamtheme@beatlink.css"
+                "sourceUrl": "tamtheme@beatlink.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/tamtheme@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             }
         ],

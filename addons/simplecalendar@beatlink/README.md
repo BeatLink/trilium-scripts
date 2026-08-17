@@ -22,7 +22,7 @@ TAM's "Settings" button to configure it:
 | `recurrenceLabel` | Label holding an RRULE string, if any (default `recurrence`)          |
 
 Settings are saved to a persisted note (see TAM's
-[Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) and provided by
+[Persistence](../trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence) mechanism) and provided by
 [libsettings@beatlink](../libsettings@beatlink/).
 
 ## How it works

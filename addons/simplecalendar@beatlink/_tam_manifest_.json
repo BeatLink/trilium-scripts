@@ -5,10 +5,10 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.3.2",
+    "latestVersion": "1.5.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/simplecalendar@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [
@@ -24,7 +24,7 @@
                 "title": "view.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/view.jsx"
+                "sourceUrl": "view.jsx"
             },
             {
                 "id": "settings-page",
@@ -38,35 +38,42 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "feed",
                 "title": "simpleCalendarFeed.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/simpleCalendarFeed.js"
+                "sourceUrl": "simpleCalendarFeed.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/simplecalendar@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -74,91 +81,98 @@
                 "title": "CalendarWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendarwidget/CalendarWidget.jsx"
+                "sourceUrl": "../../libs/libcalendarwidget/CalendarWidget.jsx"
             },
             {
                 "id": "calendarwidget-css",
                 "title": "CalendarWidget.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendarwidget/CalendarWidget.css"
+                "sourceUrl": "../../libs/libcalendarwidget/CalendarWidget.css"
             },
             {
                 "id": "fc-core",
                 "title": "fullcalendar.global.min.js",
                 "type": "code",
                 "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libfullcalendar/fullcalendar.global.min.js"
+                "sourceUrl": "../../libs/libfullcalendar/fullcalendar.global.min.js"
             },
             {
                 "id": "fc-icalendar",
                 "title": "fullcalendar-icalendar.global.min.js",
                 "type": "code",
                 "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libfullcalendar/fullcalendar-icalendar.global.min.js"
+                "sourceUrl": "../../libs/libfullcalendar/fullcalendar-icalendar.global.min.js"
             },
             {
                 "id": "ical-lib",
                 "title": "ical.min.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+                "sourceUrl": "../../libs/libical/ical.min.js"
             },
             {
                 "id": "ical-resource",
                 "title": "ical.min.js (resource)",
                 "type": "code",
                 "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+                "sourceUrl": "../../libs/libical/ical.min.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             },
             {
                 "id": "libsettings-backend",
                 "title": "libSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
             },
             {
                 "id": "libcalendar-backend",
                 "title": "libCalendar.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendar/libCalendar.js"
+                "sourceUrl": "../../libs/libcalendar/libCalendar.js"
             },
             {
                 "id": "libcalendar-ical-backend",
                 "title": "ical.min.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+                "sourceUrl": "../../libs/libical/ical.min.js"
             }
         ],
         "children": [
@@ -181,6 +195,10 @@
             {
                 "parent": "launcher",
                 "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
             },
             {
                 "parent": "persistence",
@@ -209,6 +227,10 @@
             {
                 "parent": "ical-lib",
                 "child": "ical-resource"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -291,6 +313,11 @@
                 "from": "settings-page",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -330,6 +357,11 @@
                 "value": ""
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

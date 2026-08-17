@@ -8,7 +8,7 @@
     "latestVersion": "1.1.2",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/togglenotes@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {
@@ -23,70 +23,70 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "config-js",
                 "title": "config.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/config.js"
+                "sourceUrl": "config.js"
             },
             {
                 "id": "settings-json",
                 "title": "Settings.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/Settings.json"
+                "sourceUrl": "Settings.json"
             },
             {
                 "id": "leftpane-jsx",
                 "title": "leftpane.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/leftpane.jsx"
+                "sourceUrl": "leftpane.jsx"
             },
             {
                 "id": "launcherbuttons-jsx",
                 "title": "LauncherButtons.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/LauncherButtons.jsx"
+                "sourceUrl": "LauncherButtons.jsx"
             },
             {
                 "id": "lib-js",
                 "title": "lib.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/lib.js"
+                "sourceUrl": "lib.js"
             },
             {
                 "id": "rightpane-jsx",
                 "title": "rightpane.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/rightpane.jsx"
+                "sourceUrl": "rightpane.jsx"
             },
             {
                 "id": "startup-js",
                 "title": "startup.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/startup.js"
+                "sourceUrl": "startup.js"
             },
             {
                 "id": "style-css",
                 "title": "style.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/style.css"
+                "sourceUrl": "style.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             }
         ],
