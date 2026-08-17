@@ -50,7 +50,7 @@ export function DimensionsPanel() {
                 Changing a value's <strong>Key</strong> orphans every note already tagged with the old
                 one. Renaming its <strong>Name</strong> or reordering the list is safe. A dimension
                 that <strong>scaffolds a root note per value</strong> (Area) shapes the notebook
-                Workflow Setup builds. Item type is assigned via template-picker@beatlink's own widget,
+                roots the queues expect. Item type is assigned via template-picker@beatlink's own widget,
                 not a dimension here.
             </p>
             <SettingsForm

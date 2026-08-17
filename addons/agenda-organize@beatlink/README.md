@@ -17,25 +17,26 @@ The **`dimensions`** registry deliberately stays in [`agenda@beatlink`](../agend
 `#agendaConfig` and is read cross-addon (see `organizeSettings.js`). Agenda's Overview derives its
 prefix/color/grouping/filter variants from the same list these triage queues write to, so a local
 copy would silently drift out of sync — one registry, read from whoever owns it. The Dimensions tab
-renders an explanatory note when agenda isn't installed, and the scaffolding plus start-date triage
-still work without it.
+renders an explanatory note when agenda isn't installed, and the start-date triage still works
+without it.
 
 The **Inbox** is not read from config: `organize.js` finds it by the `#agendaOrganizeSpecial=inbox`
-label, provisioned by [`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md).
+label, which you put on your own Inbox note.
 
-## Relationship to `agenda-structure@beatlink`
+## Where the roots come from
 
-**One-directional, through labels rather than code.** As of 3.0.0 the notebook scaffolder lives in
-[`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md), which *writes* the three
-structural identity labels (`#agendaOrganizeArea` / `#agendaOrganizeType` / `#agendaOrganizeSpecial`)
-and ships the `AreaCollection` / `TypeCollection` / `Special` templates. This addon *reads* those
-labels to find the roots its queues walk. Neither requires the other's code.
+**Nothing provisions them.** The scaffolder addon that used to build the tree is gone; you make the
+root notes yourself and tag them with the three structural identity labels this addon reads
+(`#agendaOrganizeArea` / `#agendaOrganizeType` / `#agendaOrganizeSpecial` — see
+[Root contract](#4-root-contract)). [`template-picker@beatlink`](../template-picker@beatlink/README.md)
+ships an empty, unlabelled root container note per bundled template as a starting point; move them
+where you want them and add the identity label.
 
-Installed alone, Organize triages an already-provisioned tree but cannot scaffold one — the queues
-are simply empty until something provisions the roots. Most users want both addons.
+Until roots carry those labels the triage queues are simply empty — the addon reads them, it never
+writes them.
 
-The labels keep their `agendaOrganize*` names despite now being written elsewhere: renaming them
-would orphan every provisioned root in an existing tree for no benefit.
+The labels keep their `agendaOrganize*` names: renaming them would orphan every root in an existing
+tree for no benefit.
 
 ## 1. Purpose / workflow
 
@@ -55,7 +56,7 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 
 ## 2. Dimensions
 
-Agenda owns one open-ended **`dimensions`** registry in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json),
+Agenda owns one open-ended **`dimensions`** registry, declared in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json) and shipped in its [`common/defaults.json`](../agenda@beatlink/common/defaults.json),
 loaded by [`dimensions.js`](../agenda@beatlink/common/dimensions.js) → `getDimensions()`. A dimension is one
 note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
 priority ship as defaults, but the set is open-ended. Triage queues, sort ordinals, and the derived
@@ -68,8 +69,8 @@ Item **type** is deliberately NOT one of these dimensions — it moved out entir
 its `~template` relation, assigned by template-picker's own right-pane widget (or its Missing Templates
 page), never a `#type` label agenda writes. Organize reads that registry read-only, via
 `getBucketTemplates()` in [`organize.js`](organize.js) (discovered through template-picker's own
-`#templatePickerConfig` anchor, the same shape agenda uses for its own `#agendaConfig`) — for bucket
-scaffolding and the actionable-item set only. See
+`#templatePickerConfig` anchor, the same shape agenda uses for its own `#agendaConfig`) — to tell a
+Type root's identity from a current template and for the actionable-item set. See
 [template-picker's README](../template-picker@beatlink/README.md) for its own registry fields
 (Name, Template Note, Enabled, Color, Actionable, Bucket Icon).
 
@@ -82,7 +83,7 @@ the Organize triage queues). It writes `#<label>=<key>` and optionally mirrors `
 | `triage`           | Gives the dimension a "Notes Without X" queue. |
 | `actionableOnly`   | Restricts that queue to notes whose `~template` is a template-picker entry marked **Actionable** (and non-subtasks). |
 | `writeColor`       | Also writes `#color` from the chosen value. |
-| `scaffoldsAreas`   | Workflow Setup builds one root note per value (the Area axis). |
+| `scaffoldsAreas`   | Marks the axis that gets one root note per value (the Area axis). |
 
 **Actionable** and the per-template **Bucket Icon** live on template-picker's own registry rows now,
 not on any agenda dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it gates
@@ -90,11 +91,10 @@ whether the Task editor shows at all. It's set as an inheritable label on the te
 Classification (area, priority, item type) is assigned via each dimension's own dedicated picker
 addon, not the Task editor.
 
-Area folds/renames are handled at migration time by `AREA_ALIASES` in
-[`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md)'s `provision.js`
-(`health`→`fitness`, `productivity`→`tech`), so existing notes re-tag on the next Setup provision.
-There is no equivalent table for Type roots — a Type root's identity is its template's own noteId,
-which never gets renamed the way a string slug did.
+Folding or renaming an Area value leaves its old slug on already-tagged notes; nothing re-keys them
+automatically any more, so retag them yourself (the **Invalid Roots** table surfaces the stranded
+root). Type roots need no equivalent: a Type root's identity is its template's own noteId, which
+never gets renamed the way a string slug did.
 
 ### Notebook structure
 
@@ -111,24 +111,24 @@ buckets under it. A filed item lives in **both** trees at once as a Trilium **cl
 under the Area root matching its `#area`, one under the Type root matching its `~template`. The same
 note, two paths to it.
 
-Setup (in [`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md)) provisions the
-**roots only**. Cloning an item into its two roots is the Organize page's job, done per note during
-triage; provisioning never creates, moves, or reconciles item branches, so re-running it can't
-disturb anything you've filed.
+You create the **roots**; cloning an item into its two roots is the Organize page's job, done per
+note during triage.
 
-Each kind of container has its own structural template, and the public `#area` / `#type` labels are
-what tell them apart:
+The public `#area` / `#type` labels are what tell the kinds of container apart. Only
+`AreaCollection` still ships as a template (with
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)); the other two rows are label
+conventions with no template behind them any more:
 
 | Note              | Template         | Public labels                          |
 |-------------------|------------------|----------------------------------------|
 | Area root         | `AreaCollection` | `#area=<slug>` `#type=areacollection`  |
-| Type root         | `TypeCollection` | `#type=typecollection` (no `#area`)    |
-| Inbox/My Day/Agenda | `Special`      | `#type=special`                        |
+| Type root         | none             | `#type=typecollection` (no `#area`)    |
+| Inbox/My Day/Agenda | none           | `#type=special`                        |
 
 A Type root carries **no `#area`** — it spans every area. It is a *container*, not an instance of the
-type it holds, so its `#type` is the fixed `typecollection` marker and its OWN `~template` stays
-`TypeCollection`, even though it files notes whose `~template` is something else entirely. Which
-template it collects is carried by the private identity label `#agendaOrganizeType=<templateNoteId>`.
+type it holds, so its `#type` is the fixed `typecollection` marker even though it files notes whose
+`~template` is something else entirely. Which template it collects is carried by the private
+identity label `#agendaOrganizeType=<templateNoteId>`.
 
 The three private identity labels are **mutually exclusive** — `#agendaOrganizeArea=<areaSlug>` on an
 Area root, `#agendaOrganizeType=<templateNoteId>` on a Type root, `#agendaOrganizeSpecial=<name>` on a
@@ -187,15 +187,13 @@ place so the acted-on note leaves its queue. Sections:
    cascade-deletes it (the confirm warns when the root still holds notes). Provisioning does no
    automatic folding of its own, so every orphan ends up here for an explicit decision.
 
-## 4. Provisioning model
+## 4. Root contract
 
-**Moved.** The notebook structure is provisioned by
-[`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md) — `buildStructure()` /
-`provisionStructure()`, the find-or-create walk, the identity labels, the legacy `#workflowNote`
-migration and the area-slug migration all live there, along with the three structural templates.
-See that addon's README for the full model.
+**Gone.** There is no provisioner: the scaffolder addon, the find-or-create walk, the identity-label
+writes and the legacy `#workflowNote` / area-slug migrations were all removed along with the two
+structural templates it shipped.
 
-What matters on this side is only the **contract** it leaves behind:
+What matters on this side is only the **contract**, which you now satisfy by hand:
 
 - `#agendaOrganizeArea=<areaSlug>` on an Area root
 - `#agendaOrganizeType=<templateNoteId>` on a Type root
@@ -205,8 +203,8 @@ They are mutually exclusive, so "which kind of root is this?" stays a single lab
 keys every queue off them, excludes structural notes from the candidate walk on the same basis, and
 surfaces roots whose slug or template id is no longer current in the **Invalid Roots** table.
 
-Provisioning never deletes and never touches item branches, so re-running Setup cannot disturb
-anything you have filed here.
+Nothing here ever creates, moves or deletes a root — the only structural writes this addon makes are
+the Invalid Roots table's explicit Merge / Delete actions.
 
 ## 5. Wiring
 
@@ -227,9 +225,7 @@ read: the copy tracks template-picker's registry content, but template-picker kn
 Organize.
 
 The Organize Editor (`organizeEditor.jsx`) hosts two tabs — the **Organize Note** picker and
-**Dimensions**. Workflow Setup is no longer here; it moved to
-[`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md) along with
-`provision.js` / `structure.js`, so nothing on this side requires them any more.
+**Dimensions**. There is no Workflow Setup tab: nothing on this side provisions structure.
 
 Per TAM's direct-child require rule, `dimensions` is a child of every note that requires it
 (`organize-page-src`, `organize-dimensions`, `organize-editor`), and libsettings' `ui` is wired under

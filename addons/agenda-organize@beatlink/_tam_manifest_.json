@@ -1,14 +1,14 @@
 {
     "id": "agenda-organize@beatlink",
     "name": "Agenda Organize",
-    "description": "The Organize triage UI from agenda@beatlink. As of 3.0.0 the notebook scaffolder has moved to agenda-structure@beatlink; this addon reads the structural identity labels that addon writes (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) and triages the items filed under those roots. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Every cross-addon read degrades gracefully: without agenda-structure the queues are simply empty until something provisions the roots.",
+    "description": "The Organize triage UI from agenda@beatlink. Nothing provisions the notebook structure any more: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Every cross-addon read degrades gracefully: until roots carry the identity labels the queues are simply empty.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.0.0",
+    "latestVersion": "3.3.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "organize-editor-page",
         "notes": [
@@ -17,28 +17,28 @@
                 "title": "organizePage.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizePage.jsx"
+                "sourceUrl": "organizePage.jsx"
             },
             {
                 "id": "organize-lib",
                 "title": "organize.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.js"
+                "sourceUrl": "organize.js"
             },
             {
                 "id": "organize-dimensions",
                 "title": "organizeDimensions.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeDimensions.jsx"
+                "sourceUrl": "organizeDimensions.jsx"
             },
             {
                 "id": "organize-settings",
                 "title": "organizeSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeSettings.js"
+                "sourceUrl": "organizeSettings.js"
             },
             {
                 "id": "organize-editor-page",
@@ -52,21 +52,28 @@
                 "title": "organizeEditor.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeEditor.jsx"
+                "sourceUrl": "organizeEditor.jsx"
             },
             {
                 "id": "organize-schema",
                 "title": "organizeSchema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeSchema.json"
+                "sourceUrl": "organizeSchema.json"
+            },
+            {
+                "id": "organize-defaults",
+                "title": "organizeDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "organizeDefaults.json"
             },
             {
                 "id": "organize-config",
                 "title": "organizeConfig.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeConfig.json"
+                "sourceUrl": null
             },
             {
                 "id": "organize-settings-note",
@@ -80,57 +87,64 @@
                 "title": "organize.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organize.css"
+                "sourceUrl": "organize.css"
             },
             {
                 "id": "dimensions",
                 "title": "dimensions.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/dimensions.js"
+                "sourceUrl": "../agenda@beatlink/common/dimensions.js"
             },
             {
                 "id": "registry",
                 "title": "templateRegistry.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templateRegistry.jsx"
+                "sourceUrl": "../template-picker@beatlink/templateRegistry.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -149,6 +163,10 @@
             {
                 "parent": "root",
                 "child": "organize-schema"
+            },
+            {
+                "parent": "root",
+                "child": "organize-defaults"
             },
             {
                 "parent": "root",
@@ -228,6 +246,10 @@
             },
             {
                 "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
                 "child": "libsettings-style"
             },
             {
@@ -254,6 +276,11 @@
                 "from": "organize-settings-note",
                 "type": "schemaNote",
                 "to": "organize-schema"
+            },
+            {
+                "from": "organize-config",
+                "type": "sourceConfig",
+                "to": "organize-defaults"
             }
         ],
         "labels": [
@@ -343,6 +370,11 @@
                 "value": ""
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "organize-schema",
+            "defaults": "organize-defaults",
+            "config": "organize-config"
+        }
     }
 }
