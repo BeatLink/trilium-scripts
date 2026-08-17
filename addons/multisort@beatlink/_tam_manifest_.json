@@ -1,0 +1,61 @@
+{
+    "id": "multisort@beatlink",
+    "name": "MultiSort",
+    "description": "Sorts note children by multiple attributes and criteria using the #multiSorted label.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/multisort@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.2.2",
+    "type": "script",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/multisort@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "script",
+                "title": "multisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "multisort.js"
+            },
+            {
+                "id": "lib",
+                "title": "libMultisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libmultisort/libmultisort.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "script",
+                "child": "lib"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
