@@ -1,20 +1,19 @@
 import {
     FormDropdownList,
     FormCheckbox,
-    Button,
     defineWidget,
     RightPanelWidget,
     useActiveNoteContext,
     useNoteProperty,
     useEffect,
-    useState
+    useState,
+    useTriliumEvent
 } from "trilium:preact"
 
 import { Collapsible } from "Collapsible.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
-const { subscribe } = require("libIpc.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, getSectionState, saveSectionState } = require("libAgendaOverview.js")
 
 const VIEW_TYPES = [
     { key: "list", title: "List" },
@@ -167,15 +166,10 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [noteId, ids])
 
-    // Subscribe as soon as ids resolve. Gating on `profile` too would drop any
-    // event published before the profile loads: the bus is fire-and-forget with
-    // no history, so a missed event is never redelivered.
-    useEffect(() => {
+    useTriliumEvent("agenda:tasksChanged", () => {
         if (!ids) return
-        return subscribe("agenda:tasksChanged", () => {
-            updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
-        })
-    }, [ids])
+        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+    })
 
     useEffect(() => {
         if (!profiles || !profileId) return
@@ -294,17 +288,6 @@ function AgendaOverviewWidgetJSX() {
                     expanded={sectionState.colors !== false}
                     onToggle={toggleSection("colors")}
                 />
-
-                <div>
-                    <label>Actions</label>
-                    <div>
-                        <Button
-                            icon="bx bx-rocket"
-                            text="Start All Tasks Today"
-                            onClick={e => { rescheduleAllTasks(ids.profileContext, ids.constants, ids.icalNoteId) }}
-                        />
-                    </div>
-                </div>
             </div>
         </RightPanelWidget>
     )

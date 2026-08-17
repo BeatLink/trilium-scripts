@@ -105,7 +105,7 @@ async function writeConfig(configNoteId, config) {
 // loads settings, so every widget and page sees migrated config.
 //
 // `anchorNoteId` is the #agendaConfig note (where the version label lives);
-// `configNoteId` is its AddonData:config target (the config.json note).
+// `configNoteId` is its configNote target (the config.json note).
 //
 // A brand-new install (version 0, but its config was written by the current
 // agenda so it's already in the current shape) is stamped straight to
