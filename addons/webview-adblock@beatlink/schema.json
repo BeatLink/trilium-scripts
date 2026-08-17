@@ -1,0 +1,12 @@
+{
+    "backupPath": {
+        "type": "string",
+        "label": "uBlock Origin backup file",
+        "description": "Full path to a backup exported from uBO's dashboard (Settings -> Backup to file). Its selected filter lists, My filters and trusted sites replace this addon's built-in defaults. Leave empty to keep the defaults."
+    },
+    "syncOnStartup": {
+        "type": "boolean",
+        "label": "Re-read the backup on every start",
+        "description": "Picks up a freshly exported backup without opening this page. Turn off to sync only when you press Sync Now."
+    }
+}
