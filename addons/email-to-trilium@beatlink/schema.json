@@ -3,7 +3,6 @@
         "type": "registry",
         "label": "Email Accounts",
         "description": "One entry per mailbox. After filling in the OAuth client credentials, save, then use the 'Connect' button in the inbox view to authorize each account.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -17,8 +16,14 @@
                 "description": "Which email service this account uses",
                 "default": "gmail",
                 "options": [
-                    {"value": "gmail", "label": "Gmail"},
-                    {"value": "graph", "label": "Microsoft (Outlook / Office 365)"}
+                    {
+                        "value": "gmail",
+                        "label": "Gmail"
+                    },
+                    {
+                        "value": "graph",
+                        "label": "Microsoft (Outlook / Office 365)"
+                    }
                 ]
             },
             "clientId": {
@@ -38,7 +43,9 @@
                 "label": "Azure Tenant",
                 "description": "Azure directory (tenant) ID, or 'common' for multi-tenant/personal accounts",
                 "default": "common",
-                "showWhen": {"provider": "graph"}
+                "showWhen": {
+                    "provider": "graph"
+                }
             },
             "targetNoteId": {
                 "type": "note",
@@ -58,14 +65,12 @@
         "type": "number",
         "label": "Messages to List",
         "description": "How many recent messages to fetch per account in the inbox view",
-        "default": 25,
         "tab": "General"
     },
     "deleteAfterCreate": {
         "type": "boolean",
         "label": "Delete After Creating Note",
         "description": "When you create a note from an email, also delete (trash) that email from the account",
-        "default": false,
         "tab": "General"
     }
 }

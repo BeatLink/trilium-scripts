@@ -66,7 +66,7 @@ chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-or
 
 ## Shared configuration
 
-The config lives in one settings note holding a `schema.json`/`config.json` pair (the inbox note, the
+The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set (the inbox note, the
 **dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
 those profiles reference). That note is tagged **`#agendaConfig`**; every widget in this addon finds it
 at runtime via `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all of them at
@@ -105,8 +105,8 @@ per-field `category`):
 ### Config migrations
 
 Adding a new default dimension/sort/colour/etc. reaches existing installs for free — a registry's
-`default` in `schema.json` is its *shipped* entry set, reconciled into every install on read/write, so
-no migration is needed for additive changes. Reshaping data the user already owns (renaming a stored
+entries in `defaults.json` are its *shipped* entry set, reconciled into every install on read/write,
+so no migration is needed for additive changes. Reshaping data the user already owns (renaming a stored
 key, moving a value between fields, dropping a field) is what [`common/migrate.js`](common/migrate.js)
 handles: an ordered list of one-time transforms of the raw persisted config, gated by a
 `#agendaConfigVersion` label on the `#agendaConfig` note so each step runs exactly once per install.

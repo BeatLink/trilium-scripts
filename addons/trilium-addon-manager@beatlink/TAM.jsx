@@ -204,10 +204,13 @@ function PromptChoice({ selected, onSelect, current, incoming }) {
 }
 
 function PromptReview({ prompts, onResolve }) {
+    // An item may pre-select its own side: a setting whose default moved but which
+    // the user never customized is already following the new value, so its row
+    // starts on Use New Default rather than silently pinning the old one.
     const [decisions, setDecisions] = useState(
         Object.fromEntries(prompts.map(p => [
             p.noteLocalId,
-            p.items ? Object.fromEntries(p.items.map(item => [item.key, false])) : false
+            p.items ? Object.fromEntries(p.items.map(item => [item.key, !!item.defaultSelected])) : false
         ]))
     )
 

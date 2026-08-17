@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.5.0",
+    "latestVersion": "1.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/_tam_manifest_.json",
@@ -47,6 +47,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/defaults.json"
             },
             {
                 "id": "config",
@@ -121,6 +128,10 @@
             {
                 "parent": "launcher",
                 "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
             },
             {
                 "parent": "persistence",
@@ -203,6 +214,11 @@
                 "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -226,6 +242,7 @@
         "allowExternalReferences": true,
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

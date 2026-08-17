@@ -1,0 +1,12 @@
+{
+    "usdaApiKey": "",
+    "targetCalories": 2000,
+    "targetProtein": 100,
+    "targetCarbs": 250,
+    "targetFat": 65,
+    "targetFiber": 30,
+    "targetSugar": 50,
+    "targetSaturatedFat": 20,
+    "targetSodium": 2300,
+    "targetCholesterol": 300
+}

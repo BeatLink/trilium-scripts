@@ -4,11 +4,19 @@
         "label": "Parent Totals",
         "description": "How a parent row's income and expense relate to its children's",
         "options": [
-            {"value": "computed", "label": "Computed - parent amounts are the sum of its children"},
-            {"value": "additive", "label": "Own + children - parent's own amounts are added to its children's sum"},
-            {"value": "cap", "label": "Budget cap - parent amounts are an allocation, children are shown against it"}
-        ],
-        "default": "computed"
+            {
+                "value": "computed",
+                "label": "Computed - parent amounts are the sum of its children"
+            },
+            {
+                "value": "additive",
+                "label": "Own + children - parent's own amounts are added to its children's sum"
+            },
+            {
+                "value": "cap",
+                "label": "Budget cap - parent amounts are an allocation, children are shown against it"
+            }
+        ]
     },
     "columns": {
         "type": "list",
@@ -16,32 +24,31 @@
         "hidden": true,
         "description": "Ordered column visibility, edited by the Columns tab rather than as a schema field",
         "itemSchema": {
-            "key": {"type": "string", "label": "Column", "default": ""},
-            "visible": {"type": "boolean", "label": "Visible", "default": true}
-        },
-        "default": [
-            {"key": "income", "visible": true},
-            {"key": "expense", "visible": true},
-            {"key": "balance", "visible": true},
-            {"key": "notes", "visible": true}
-        ]
+            "key": {
+                "type": "string",
+                "label": "Column",
+                "default": ""
+            },
+            "visible": {
+                "type": "boolean",
+                "label": "Visible",
+                "default": true
+            }
+        }
     },
     "decimals": {
         "type": "number",
         "label": "Decimal Places",
-        "description": "How many decimal places amounts are shown and stored with. Entering more precision than this rounds to it. 0 gives whole-currency budgeting.",
-        "default": 2
+        "description": "How many decimal places amounts are shown and stored with. Entering more precision than this rounds to it. 0 gives whole-currency budgeting."
     },
     "currency": {
         "type": "string",
         "label": "Currency Code",
-        "description": "ISO 4217 currency code used to format amounts, e.g. USD, JMD",
-        "default": "USD"
+        "description": "ISO 4217 currency code used to format amounts, e.g. USD, JMD"
     },
     "locale": {
         "type": "string",
         "label": "Locale",
-        "description": "Locale used to format amounts, e.g. en-US, en-JM. Leave blank to use the system default.",
-        "default": ""
+        "description": "Locale used to format amounts, e.g. en-US, en-JM. Leave blank to use the system default."
     }
 }

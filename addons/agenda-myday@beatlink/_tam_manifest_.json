@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "12.2.0",
+    "latestVersion": "12.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
@@ -67,6 +67,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDaySchema.json"
+            },
+            {
+                "id": "myday-defaults",
+                "title": "myDayDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayDefaults.json"
             },
             {
                 "id": "myday-config",
@@ -175,6 +182,10 @@
                 "child": "myday-schema"
             },
             {
+                "parent": "myday-editor-page",
+                "child": "myday-defaults"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             },
@@ -262,6 +273,11 @@
                 "from": "myday-editor-page",
                 "type": "schemaNote",
                 "to": "myday-schema"
+            },
+            {
+                "from": "myday-config",
+                "type": "sourceConfig",
+                "to": "myday-defaults"
             }
         ],
         "labels": [
@@ -384,6 +400,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "myday-schema",
+            "defaults": "myday-defaults",
             "config": "myday-config"
         }
     }

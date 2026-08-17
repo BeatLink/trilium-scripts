@@ -38,18 +38,41 @@ async function readJson(noteId) {
     }
 }
 
-// Merges the addon's stored config.json over schema.json's defaults. This schema is flat strings
-// only, so libsettings' full merge isn't needed — and requiring libSettingsUI.jsx here would drag
-// its whole preact form into a plain script note's bundle.
+
+// Every source under a config note, lowest priority first: the addon's shipped defaults.json, then
+// the user's own config.json, then anything either of them layers over through `sourceConfig`.
+async function readSources(configNoteId) {
+    if (!configNoteId) return [];
+    return await api.runOnBackend((rootId) => {
+        const docs = [];
+        const seen = new Set();
+        const visit = (noteId) => {
+            if (!noteId || seen.has(noteId)) return;
+            seen.add(noteId);
+            const note = api.getNote(noteId);
+            if (!note) return;
+            for (const relation of note.getOwnedRelations("sourceConfig")) visit(relation.value);
+            try {
+                docs.push(JSON.parse(note.getContent() || "{}"));
+            } catch (error) {
+                docs.push({});
+            }
+        };
+        visit(rootId);
+        return docs;
+    }, [configNoteId]);
+}
+
+// Merges the config note's whole source chain, keeping only the keys schema.json declares. This
+// schema is flat strings only, so libsettings' full merge isn't needed — and requiring
+// libSettingsUI.jsx here would drag its whole preact form into a plain script note's bundle.
 async function getConfig(note) {
     if (!configPromise) {
         configPromise = (async () => {
             const schema = await readJson(await note.getRelationValue("schemaNote"));
-            const stored = await readJson(await note.getRelationValue("configNote"));
+            const merged = Object.assign({}, ...(await readSources(await note.getRelationValue("configNote"))));
             const values = {};
-            for (const [key, definition] of Object.entries(schema)) {
-                values[key] = key in stored ? stored[key] : definition.default;
-            }
+            for (const key of Object.keys(schema)) values[key] = merged[key];
             return values;
         })();
     }

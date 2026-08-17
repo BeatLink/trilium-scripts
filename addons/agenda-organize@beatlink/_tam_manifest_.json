@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.2.0",
+    "latestVersion": "3.3.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/_tam_manifest_.json",
@@ -60,6 +60,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeSchema.json"
+            },
+            {
+                "id": "organize-defaults",
+                "title": "organizeDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-organize@beatlink/organizeDefaults.json"
             },
             {
                 "id": "organize-config",
@@ -156,6 +163,10 @@
             {
                 "parent": "root",
                 "child": "organize-schema"
+            },
+            {
+                "parent": "root",
+                "child": "organize-defaults"
             },
             {
                 "parent": "root",
@@ -265,6 +276,11 @@
                 "from": "organize-settings-note",
                 "type": "schemaNote",
                 "to": "organize-schema"
+            },
+            {
+                "from": "organize-config",
+                "type": "sourceConfig",
+                "to": "organize-defaults"
             }
         ],
         "labels": [
@@ -357,6 +373,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "organize-schema",
+            "defaults": "organize-defaults",
             "config": "organize-config"
         }
     }

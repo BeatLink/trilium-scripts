@@ -4,7 +4,7 @@ const marked = require("marked.min.js")
 // The same note libsettings' own frontend half requires, so TAM's settings
 // review reads a schema, a config and a registry's shipped-vs-stored delta
 // exactly the way the settings form that wrote them does.
-const { isPlainObject, mergeDefaults, titleFor } = require("libSettingsCore.js")
+const { isPlainObject, mergeSchemas, mergeSources, mergeDefaults, titleFor } = require("libSettingsCore.js")
 
 const addonRootLabel = "addonRoot"
 
@@ -560,6 +560,10 @@ async function resolvePrompt(addonId, noteLocalId, decision) {
         await applySettingsSelections(addonId, record.manifest, decision || {})
         return
     }
+    if (prompt.source === metadataPromptSource) {
+        await applyMetadataSelections(addonId, prompt, decision || {})
+        return
+    }
     if (prompt.items) {
         await runHook(addonId, record.manifest?.hooks?.updateReview, {
             phase: "apply",
@@ -586,15 +590,15 @@ async function clearPendingPrompts(addonId) {
 // Settings review: the per-setting half of the Update Review, for addons declaring `manifest.settings`.
 // =========================================================================
 
-// An addon's schema.json is structural (replaced on every update) while its
+// An addon's defaults.json is structural (replaced on every update) while its
 // config.json is persistent (never overwritten), so both versions of "what this
 // setting should be" are already on disk. What is missing is what the defaults
-// looked like *last* time: a config that has ever been saved holds a value for
-// every scalar key, so "stored differs from the current default" cannot tell a
-// deliberate user choice from a default that moved upstream. `settingsBaseline`
-// on the addon's own database record is that missing side — the shipped defaults
-// as of the last review — which keeps this review down to what actually changed
-// upstream instead of re-asking about every customization on every update.
+// looked like *last* time: without it, "the user's config differs from the
+// current default" cannot tell a deliberate choice from a default that moved
+// upstream. `settingsBaseline` on the addon's own database record is that
+// missing side — the merged read-only sources as of the last review — which
+// keeps this review down to what actually changed upstream instead of re-asking
+// about every customization on every update.
 //
 // It lives here rather than inside config.json because it is TAM's bookkeeping,
 // not the user's data: nothing in the addon has to know it exists, a settings
@@ -611,12 +615,12 @@ function isReviewableField(key, def) {
     return !key.startsWith("_") && def.type !== "list" && def.type !== "checklist"
 }
 
-// The shipped baseline of every reviewable field, in the shape the schema
-// declares: a plain value for a scalar, the shipped entry map for a registry.
-function shippedDefaults(schema) {
+// The shipped baseline of every reviewable field, taken from the merged
+// read-only sources: a plain value for a scalar, the entry map for a registry.
+function shippedDefaults(schema, defaults) {
     const shipped = {}
     for (const [key, def] of Object.entries(schema)) {
-        if (isReviewableField(key, def)) shipped[key] = def.default
+        if (isReviewableField(key, def)) shipped[key] = defaults[key]
     }
     return shipped
 }
@@ -629,25 +633,26 @@ function registrySettingsItems(key, def, storedField, shippedNow, shippedThen) {
     const items = []
     const storedEntries = isPlainObject(storedField?.entries) ? storedField.entries : {}
     const removedIds = Array.isArray(storedField?.removedIds) ? storedField.removedIds : []
-    for (const [id, storedItem] of Object.entries(storedEntries)) {
+    for (const [id, now] of Object.entries(shippedNow)) {
+        // An entry the user deleted is never resurrected, and one shipped for the
+        // first time in this version has no previous version to diff against.
         if (removedIds.includes(id)) continue
-        // Only ids the addon still ships are reviewable — an entry the user
-        // added themselves, or one dropped from the schema since, has no
-        // upstream version to offer. An id shipped for the first time in this
-        // version while the user already had one under it does, hence no
-        // matching guard on `then`.
-        const now = shippedNow[id]
-        if (!now) continue
-        const nowMerged = mergeDefaults(def.itemSchema, now, null)
         const then = shippedThen[id]
-        if (then && sameJson(mergeDefaults(def.itemSchema, then, null), nowMerged)) continue
-        const currentMerged = mergeDefaults(def.itemSchema, now, storedItem)
+        if (!then) continue
+        const nowMerged = mergeDefaults(def.itemSchema, now, null)
+        const thenMerged = mergeDefaults(def.itemSchema, then, null)
+        if (sameJson(thenMerged, nowMerged)) continue
+        const storedItem = storedEntries[id]
+        // What the user has right now: their own version if they edited this
+        // entry, otherwise the entry as it shipped last time.
+        const currentMerged = storedItem ? mergeDefaults(def.itemSchema, now, storedItem) : thenMerged
         if (sameJson(currentMerged, nowMerged)) continue
         items.push({
             key: `${key}.${id}`,
             label: `${def.label ?? key}: ${titleFor(def.itemSchema, currentMerged, null)}`,
             current: currentMerged,
             incoming: nowMerged,
+            defaultSelected: !storedItem,
             field: key,
             id
         })
@@ -658,34 +663,47 @@ function registrySettingsItems(key, def, storedField, shippedNow, shippedThen) {
 // Everything the user would have to decide about, given what shipped last time.
 // `field`/`id` are internal: the prompt strips them, and applySettingsSelections
 // recomputes this list to get them back rather than parsing them out of `key`.
-function settingsReviewItems(schema, stored, baseline) {
+function settingsReviewItems(schema, stored, baseline, defaults) {
     const items = []
     for (const [key, def] of Object.entries(schema)) {
         // A field with no baseline is new in this version: nothing to diff.
         if (!isReviewableField(key, def) || !(key in baseline)) continue
         if (def.type === "registry") {
-            items.push(...registrySettingsItems(key, def, stored[key], def.default || {}, baseline[key] || {}))
-        } else if (key in stored && !sameJson(def.default, baseline[key]) && !sameJson(stored[key], def.default)) {
-            // A key absent from stored has never been persisted, so it already
-            // tracks whatever the schema currently defaults to.
-            items.push({ key, label: def.label ?? key, current: stored[key], incoming: def.default, field: key, id: null })
+            items.push(...registrySettingsItems(key, def, stored[key], defaults[key] || {}, baseline[key] || {}))
+            continue
         }
+        // Every default that moved in this update gets a row, whether or not the
+        // user ever saved anything: a setting they never customized is already
+        // following the new value, so the row is what lets them say otherwise.
+        if (sameJson(defaults[key], baseline[key])) continue
+        const current = key in stored ? stored[key] : baseline[key]
+        if (sameJson(current, defaults[key])) continue
+        items.push({
+            key,
+            label: def.label ?? key,
+            current,
+            incoming: defaults[key],
+            defaultSelected: !(key in stored),
+            field: key,
+            id: null
+        })
     }
     return items
 }
 
 // A scalar still holding exactly the default it shipped with is one the user
-// never touched, so a changed default is theirs for free — no review. Registry
+// never touched, so dropping it from the config lets it follow the defaults
+// source again and a changed default is theirs for free — no review. Registry
 // entries need no equivalent: an untouched shipped entry is never copied into
 // config.json in the first place, so it already tracks its shipped version.
 // Mutates `stored`; returns whether anything moved.
-function adoptUnchangedDefaults(schema, stored, baseline) {
+function adoptUnchangedDefaults(schema, stored, baseline, defaults) {
     let changed = false
     for (const [key, def] of Object.entries(schema)) {
         if (!isReviewableField(key, def) || def.type === "registry") continue
         if (!(key in stored) || !(key in baseline)) continue
-        if (sameJson(def.default, baseline[key]) || !sameJson(stored[key], baseline[key])) continue
-        stored[key] = def.default
+        if (sameJson(defaults[key], baseline[key]) || !sameJson(stored[key], baseline[key])) continue
+        delete stored[key]
         changed = true
     }
     return changed
@@ -699,6 +717,38 @@ async function readJsonNote(noteId) {
         console.error(`TAM: note ${noteId} does not hold valid JSON`, e)
         return {}
     }
+}
+
+// The config note's whole source chain, lowest priority first and the note
+// itself last — the same walk libsettings does when it reads settings, so the
+// review sees exactly the layering the settings form does.
+async function loadSettingsSources(configNoteId) {
+    return await api.runOnBackend((rootId) => {
+        const readJson = (noteId) => {
+            const note = noteId ? api.getNote(noteId) : null
+            if (!note) return {}
+            try {
+                return JSON.parse(note.getContent() || "{}")
+            } catch (e) {
+                return {}
+            }
+        }
+        const sources = []
+        const seen = new Set()
+        const visit = (noteId) => {
+            if (!noteId || seen.has(noteId)) return
+            seen.add(noteId)
+            const note = api.getNote(noteId)
+            if (!note) return
+            for (const relation of note.getOwnedRelations("sourceConfig")) visit(relation.value)
+            sources.push({
+                schema: readJson(note.getRelationValue("schemaNote")),
+                stored: readJson(noteId)
+            })
+        }
+        visit(rootId)
+        return sources
+    }, [configNoteId])
 }
 
 async function writeJsonNote(noteId, value) {
@@ -718,8 +768,16 @@ async function loadSettingsState(addonId, m) {
         console.error(`TAM: settings notes of ${addonId} did not resolve (schema '${m.settings.schema}', config '${m.settings.config}')`)
         return null
     }
-    const schema = await readJsonNote(schemaNoteId)
-    return { configNoteId, schema, stored: await readJsonNote(configNoteId), shipped: shippedDefaults(schema) }
+    // Every source under the config note but the config note itself: those are
+    // the read-only ones the review compares the user's own document against.
+    const sources = (await loadSettingsSources(configNoteId)).slice(0, -1)
+    const schema = mergeSchemas([...sources.map(s => s.schema), await readJsonNote(schemaNoteId)])
+    const defaults = mergeSources(schema, sources.map(s => s.stored)) || {}
+    return {
+        configNoteId, schema, defaults,
+        stored: await readJsonNote(configNoteId),
+        shipped: shippedDefaults(schema, defaults)
+    }
 }
 
 async function saveSettingsBaseline(addonId, shipped) {
@@ -754,10 +812,10 @@ async function collectSettingsPrompt(addonId, m, title) {
         await saveSettingsBaseline(addonId, state.shipped)
         return null
     }
-    if (adoptUnchangedDefaults(state.schema, state.stored, baseline)) {
+    if (adoptUnchangedDefaults(state.schema, state.stored, baseline, state.defaults)) {
         await writeJsonNote(state.configNoteId, state.stored)
     }
-    const items = settingsReviewItems(state.schema, state.stored, baseline)
+    const items = settingsReviewItems(state.schema, state.stored, baseline, state.defaults)
     if (items.length === 0) {
         await saveSettingsBaseline(addonId, state.shipped)
         return null
@@ -769,30 +827,220 @@ async function collectSettingsPrompt(addonId, m, title) {
         noteLocalId: m.settings.config,
         source: settingsPromptSource,
         title,
-        items: items.map(({ key, label, current, incoming }) => ({ key, label, current, incoming }))
+        items: items.map(({ key, label, current, incoming, defaultSelected }) => ({ key, label, current, incoming, defaultSelected }))
     }
 }
 
-// `true` for an item means "use the new default": a scalar takes the shipped
-// value, a registry entry drops its override so it goes back to tracking the
-// shipped one. `false` (or absent) leaves the user's version exactly as is.
+// `true` for an item means "use the new default": it drops the user's override —
+// a scalar's own key, a registry entry's shadowing entry — so the setting goes
+// back to tracking the defaults source. `false` means "keep mine", which has to
+// *pin* what they have today: a setting they never diverged on holds no value of
+// its own, so without writing one it would simply follow the new default.
 async function applySettingsSelections(addonId, m, selections) {
     const state = await loadSettingsState(addonId, m)
     if (!state) return
     const database = await loadDatabase()
     const baseline = database.installedAddons?.[addonId]?.persistence?.settingsBaseline
     if (isPlainObject(baseline)) {
-        for (const item of settingsReviewItems(state.schema, state.stored, baseline)) {
-            if (!selections[item.key]) continue
-            if (item.id === null) {
-                state.stored[item.field] = item.incoming
-            } else if (isPlainObject(state.stored[item.field]?.entries)) {
-                delete state.stored[item.field].entries[item.id]
+        for (const item of settingsReviewItems(state.schema, state.stored, baseline, state.defaults)) {
+            if (selections[item.key]) {
+                if (item.id === null) {
+                    delete state.stored[item.field]
+                } else if (isPlainObject(state.stored[item.field]?.entries)) {
+                    delete state.stored[item.field].entries[item.id]
+                }
+            } else if (item.id === null) {
+                state.stored[item.field] = item.current
+            } else {
+                const field = isPlainObject(state.stored[item.field]) ? state.stored[item.field] : {}
+                field.entries = isPlainObject(field.entries) ? field.entries : {}
+                field.removedIds = Array.isArray(field.removedIds) ? field.removedIds : []
+                if (!(item.id in field.entries)) field.entries[item.id] = item.current
+                state.stored[item.field] = field
             }
         }
         await writeJsonNote(state.configNoteId, state.stored)
     }
     await saveSettingsBaseline(addonId, state.shipped)
+}
+
+// =========================================================================
+// Metadata review: the per-item half of the Update Review for a note's title, labels and relations.
+// =========================================================================
+
+// A note's content is not the only thing an update replaces: `resolveNotes`
+// rewrites every declared title, and `applyLabels`/`applyRelation` overwrite
+// every declared label and relation, so a title the user renamed or a label they
+// retargeted is silently reverted. This review is the same key-by-key treatment
+// the settings review gives a config note, applied to that metadata:
+// `metadataBaseline` on the addon's own database record holds what the manifest
+// declared last time, so a row is raised only where the *declaration* moved, and
+// the live value says whether the user had diverged from it.
+//
+// It is collected before the sync (the live values are gone once notes are
+// rewritten) and applied after the user answers: "use new" makes the note match
+// the manifest — which is also the only way a label or relation the manifest has
+// dropped ever goes away — and "keep mine" writes the pre-update value back.
+const metadataPromptSource = "metadata"
+const metadataPromptLocalId = "__metadata__"
+
+// What a manifest declares about each of its notes, in the shape the baseline is
+// stored and compared in.
+function declaredMetadata(m) {
+    const declared = {}
+    for (const note of m.notes || []) {
+        declared[note.id] = { title: note.title, labels: {}, relations: {} }
+    }
+    for (const label of m.labels || []) {
+        if (declared[label.note]) declared[label.note].labels[label.name] = String(label.value ?? "")
+    }
+    for (const relation of m.relations || []) {
+        if (declared[relation.from]) declared[relation.from].relations[relation.type] = relation.to
+    }
+    return declared
+}
+
+// The live title, label values and relation targets of every note named in
+// `wanted` ({ localId: { labels: [name], relations: [type] } }), read in one hop
+// before the sync overwrites them. A label TAM has disabled lives under its
+// `disabled:` name, which is still the user's value for review purposes.
+async function liveMetadata(addonId, wanted) {
+    return await api.runOnBackend((tamFileIdLabel, addonId, wanted) => {
+        const live = {}
+        for (const [localId, want] of Object.entries(wanted)) {
+            const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
+            if (!note || note.isDeleted) continue
+            const entry = { title: note.title, labels: {}, relations: {} }
+            for (const name of want.labels) {
+                entry.labels[name] = note.getOwnedLabelValue(name) ?? note.getOwnedLabelValue(`disabled:${name}`)
+            }
+            for (const type of want.relations) {
+                const targetId = note.getOwnedRelationValue(type) ?? note.getOwnedRelationValue(`disabled:${type}`)
+                const target = targetId ? api.getNote(targetId) : null
+                const targetTamId = target ? target.getOwnedLabelValue(tamFileIdLabel) : null
+                // Compared as the manifest states it — a local id for a note of
+                // this addon, a raw noteId for anything else.
+                entry.relations[type] = targetTamId && targetTamId.startsWith(`${addonId}/`)
+                    ? targetTamId.slice(addonId.length + 1)
+                    : targetId
+            }
+            live[localId] = entry
+        }
+        return live
+    }, [tamFileIdLabel, addonId, wanted])
+}
+
+// One row per declaration that moved in this update, skipping any the note
+// already matches. `defaultSelected` starts a row on "use new" when the user
+// never diverged from the old declaration — the same rule the settings review
+// uses, so an untouched note is not asked about twice for no reason.
+function metadataReviewItems(now, then, live) {
+    const items = []
+    const add = (localId, kind, name, currentValue, incomingValue, wasUntouched) => {
+        if (currentValue === incomingValue) return
+        const what = kind === "title" ? "title" : `${kind} ${name}`
+        items.push({
+            key: `${kind}:${localId}${name ? `:${name}` : ""}`,
+            label: `${localId}: ${what}`,
+            current: currentValue === null ? "(none)" : currentValue,
+            incoming: incomingValue === null ? "(removed)" : incomingValue,
+            defaultSelected: wasUntouched,
+            localId,
+            kind,
+            name: name || null,
+            currentValue,
+            incomingValue
+        })
+    }
+    for (const [localId, declaredNow] of Object.entries(now)) {
+        const declaredThen = then[localId]
+        const liveNote = live[localId]
+        if (!declaredThen || !liveNote) continue
+        if (declaredNow.title !== declaredThen.title) {
+            add(localId, "title", null, liveNote.title, declaredNow.title, liveNote.title === declaredThen.title)
+        }
+        for (const kind of ["labels", "relations"]) {
+            const names = new Set([...Object.keys(declaredNow[kind]), ...Object.keys(declaredThen[kind])])
+            for (const name of names) {
+                const valueNow = declaredNow[kind][name] ?? null
+                const valueThen = declaredThen[kind][name] ?? null
+                if (valueNow === valueThen) continue
+                const liveValue = liveNote[kind][name] ?? null
+                add(localId, kind === "labels" ? "label" : "relation", name, liveValue, valueNow, liveValue === valueThen)
+            }
+        }
+    }
+    return items
+}
+
+async function saveMetadataBaseline(addonId, declared) {
+    const database = await loadDatabase()
+    const record = database.installedAddons?.[addonId]
+    if (!record) return
+    record.persistence = record.persistence || {}
+    record.persistence.metadataBaseline = declared
+    await saveDatabase(database)
+}
+
+// Runs *before* the sync rewrites anything. Returns a prompt entry (appended to
+// the pending prompts once the sync is done) or null when nothing moved.
+async function collectMetadataPrompt(addonId, m, title) {
+    const database = await loadDatabase()
+    const baseline = database.installedAddons?.[addonId]?.persistence?.metadataBaseline
+    // No baseline means this install predates the metadata review: there is no
+    // way to tell a user's rename from a declaration that has always been this
+    // way, so record where things stand and review nothing this once.
+    if (!isPlainObject(baseline)) return null
+    const declared = declaredMetadata(m)
+    const wanted = {}
+    for (const [localId, entry] of Object.entries(declared)) {
+        if (!baseline[localId]) continue
+        wanted[localId] = {
+            labels: [...new Set([...Object.keys(entry.labels), ...Object.keys(baseline[localId].labels || {})])],
+            relations: [...new Set([...Object.keys(entry.relations), ...Object.keys(baseline[localId].relations || {})])]
+        }
+    }
+    const items = metadataReviewItems(declared, baseline, await liveMetadata(addonId, wanted))
+    if (items.length === 0) return null
+    return { noteLocalId: metadataPromptLocalId, source: metadataPromptSource, title, items }
+}
+
+// `true` for an item makes the note match the manifest (including dropping a
+// label or relation the manifest no longer declares, which nothing else does);
+// `false` writes back what the note held before the update.
+async function applyMetadataSelections(addonId, prompt, selections) {
+    const actions = (prompt.items || []).map(item => ({
+        localId: item.localId,
+        kind: item.kind,
+        name: item.name,
+        value: selections[item.key] ? item.incomingValue : item.currentValue
+    }))
+    await api.runOnBackend((tamFileIdLabel, addonId, actions) => {
+        for (const action of actions) {
+            const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${action.localId}`)
+            if (!note || note.isDeleted) continue
+            if (action.kind === "title") {
+                note.title = action.value
+                note.save()
+                continue
+            }
+            const disabledName = `disabled:${action.name}`
+            const isLabel = action.kind === "label"
+            const hasDisabled = isLabel ? note.hasOwnedLabel(disabledName) : note.hasRelation(disabledName)
+            const name = hasDisabled ? disabledName : action.name
+            if (action.value === null) {
+                if (isLabel) note.removeLabel(name)
+                else note.removeRelation(name)
+                continue
+            }
+            if (isLabel) {
+                note.setLabel(name, action.value)
+                continue
+            }
+            const target = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${action.value}`)
+            note.setRelation(name, target && !target.isDeleted ? target.noteId : action.value)
+        }
+    }, [tamFileIdLabel, addonId, actions])
 }
 
 // =========================================================================
@@ -900,6 +1148,11 @@ async function syncAddon(addonId, options = {}) {
     const manifest = await fetchManifest(fetchUrl)
     const m = normalizeManifest(manifest)
     if (isSelf && !m.root) throw new Error(`TAM: manifest for ${addonId} is missing required 'root' field`)
+    // Collected before anything is rewritten: the live title/labels/relations it
+    // compares against are gone once resolveManifest has run.
+    const metadataPrompt = wasInstalled && !isSelf
+        ? await collectMetadataPrompt(addonId, m, manifest.name || addonId)
+        : null
     const pendingPrompts = await collectPendingPrompts(addonId, m)
     if (pendingPrompts.length > 0) {
         if (!database.installedAddons[addonId]) database.installedAddons[addonId] = {}
@@ -965,6 +1218,9 @@ async function syncAddon(addonId, options = {}) {
     await saveDatabase(database)
     if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
     if (isSelf) return
+    // The baseline advances here rather than when the user answers: the prompt
+    // below carries both values it needs, so it stays applicable either way.
+    await saveMetadataBaseline(addonId, declaredMetadata(m))
     const hookContext = { previousVersion, newVersion: manifest.latestVersion }
     if (!wasInstalled) {
         await recordSettingsBaseline(addonId, m)
@@ -997,11 +1253,13 @@ async function syncAddon(addonId, options = {}) {
     // rather than replacing them, so an addon that also ships persistent content
     // notes keeps their whole-file diffs alongside it.
     const settingsPrompt = await collectSettingsPrompt(addonId, m, meta.name || addonId)
-    if (settingsPrompt) {
+    const extraPrompts = [metadataPrompt, settingsPrompt].filter(Boolean)
+    if (extraPrompts.length > 0) {
         database = await loadDatabase()
         const persistence = database.installedAddons[addonId].persistence || {}
-        const others = (persistence.pendingPrompts || []).filter(p => p.source !== settingsPromptSource)
-        persistence.pendingPrompts = [...others, settingsPrompt]
+        const replacedSources = new Set(extraPrompts.map(p => p.source))
+        const others = (persistence.pendingPrompts || []).filter(p => !replacedSources.has(p.source))
+        persistence.pendingPrompts = [...others, ...extraPrompts]
         database.installedAddons[addonId].persistence = persistence
         await saveDatabase(database)
     }

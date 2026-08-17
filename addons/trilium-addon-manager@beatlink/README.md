@@ -302,23 +302,29 @@ are attached under the reserved `"persistence"` parent keyword in `children[]`, 
 
 #### `settings` *(optional)*
 
-Names the pair of notes that make up a [libsettings](../../libs/libsettings/README.md)-style
-settings pair, so TAM reviews the addon's settings **per setting** on update instead of diffing the
-config note as a wall of JSON:
+Names the notes that make up a [libsettings](../../libs/libsettings/README.md)-style settings set,
+so TAM reviews the addon's settings **per setting** on update instead of diffing the config note as
+a wall of JSON:
 
 ```json
 "settings": {
   "schema": "schema",
+  "defaults": "defaults",
   "config": "config"
 }
 ```
 
-* `schema` is the local ID of the addon's `schema.json` — **structural**, so every update replaces it
-  and ships whatever the defaults have become.
+* `schema` is the local ID of the addon's `schema.json` — **structural**, so every update replaces
+  it and ships whatever the field set has become. It describes fields only; it carries no values.
+* `defaults` is the local ID of its `defaults.json` — also **structural**, and the source every
+  setting's shipped value now lives in. It must ship content (`sourceUrl` or `content`).
 * `config` is the local ID of its `config.json` — attached under the reserved `"persistence"` parent,
   so it holds the user's answers and is never overwritten. It must ship **no content of its own**
   (`"sourceUrl": null`, no `content`); TAM creates it empty, which libsettings reads as `{}`.
-  `validate` enforces all of this.
+
+The config note must also carry a `{"from": "config", "type": "sourceConfig", "to": "defaults"}`
+relation — that is what puts the defaults note underneath it in libsettings' source chain, and what
+TAM itself walks to find the shipped values. `validate` enforces all of this.
 
 Declaring it changes three things, all described under
 [per-setting review](#per-setting-review-manifestsettings): the config note stops being whole-file
@@ -582,7 +588,10 @@ cascade-uninstall-if-unused check.
 `persistence` holds **`pendingPrompts`** — the update-review diffs collected during a
 sync (plus any settings entry, and the item list an `updateReview` hook returned in their place),
 cleared once the user applies them — and, for an addon declaring
-[`settings`](#settings-optional), **`settingsBaseline`**: the shipped defaults as of the last review,
+[`settings`](#settings-optional), **`metadataBaseline`**: what the manifest declared about each
+note's title, labels and relations at the last sync (see
+[per-note metadata review](#per-note-metadata-review-titles-labels-and-relations)),
+**`settingsBaseline`**: the merged read-only sources as of the last review,
 which is what makes a per-setting review able to tell "the user chose this" from "this default moved
 upstream" (see [per-setting review](#per-setting-review-manifestsettings)). The baseline lives here
 rather than inside the user's own `config.json` because it is TAM's bookkeeping, not their data:
@@ -694,7 +703,7 @@ for a clean slate.
 7. The Database record is updated: merged in place (never resetting `manuallyInstalled`/`enabled`) if already installed, written fresh only for a genuine first install. `updateAvailable` is explicitly cleared on the merge path.
 8. A brand-new (non-self) install is left disabled; an already-installed addon's `enabled` state is untouched.
 9. The addon's own lifecycle hooks run, if it declares any (see [`hooks`](#hooks-optional)): `postInstall` on a first install, or `postUpdate` followed by the `updateReview` collect pass on an update. TAM's own record is exempt — a hook for TAM would run mid-self-replacement. Hooks only run on this top-level call, never for a dependency resolved along the way by `ensureDependencyExport`, which only ever resolves the exports a consumer asked for rather than the whole addon.
-10. The settings review runs last for an addon declaring [`settings`](#settings-optional): on a first install it just records the shipped defaults as the `settingsBaseline`; on an update it adopts defaults the user never diverged from, then appends one per-setting entry to the pending prompts if anything is left to decide (see [per-setting review](#per-setting-review-manifestsettings)). Being last and additive is what lets it coexist with both the whole-file diff and an `updateReview` hook.
+10. The settings review runs last for an addon declaring [`settings`](#settings-optional): on a first install it just records the merged defaults sources as the `settingsBaseline`; on an update it adopts defaults the user never diverged from, then appends one per-setting entry to the pending prompts if anything is left to decide (see [per-setting review](#per-setting-review-manifestsettings)). Being last and additive is what lets it coexist with both the whole-file diff and an `updateReview` hook.
 
 There is no cascade to a dependent when its own dependency updates: a dependency's notes resolve in
 place (the real note id a dependent's clone points at never changes across a version bump), so there's
@@ -838,7 +847,8 @@ Before an update, for each persistent note:
 
 After reinstallation, if there are pending prompts, TAM shows the **Update Review** screen:
 - Each changed note is shown with two side-by-side panels: **Keep Mine** (current) and **Use New Default** (incoming).
-- The default selection is **Keep Mine**.
+- The default selection is **Keep Mine**, unless the row itself says otherwise (a per-setting or
+  per-metadata row the user never diverged from starts on **Use New Default** — see below).
 - The user can switch any note to "Use New Default" before clicking Apply.
 - Choosing "Use New Default" writes the new content to the persistent note. Choosing "Keep Mine" leaves it untouched.
 - Once all choices are applied, the review is dismissed and the addon UI reloads.
@@ -855,20 +865,23 @@ by TAM itself — no hook note, no code in the addon:
 
 1. Its config note is **excluded** from whole-file diffing (a config note ships empty, so diffing it
    would offer to replace everything the user ever saved with `{}`).
-2. On a **first install**, TAM records the shipped defaults as that addon's `settingsBaseline`.
-3. On an **update**, TAM compares the schema's defaults against that baseline. A scalar whose stored
-   value still equals the default it shipped with is one the user never touched, so the new default
-   is adopted **silently**.
-4. Anything left over becomes one Update Review entry with a row per setting: **Keep Mine** against
-   the user's value, **Use New Default** against the new shipped one. Choosing the new default takes
-   the shipped value for a scalar, or drops a registry entry's override so it tracks the shipped
-   entry again. Either way the baseline advances, so the same question is never asked twice.
+2. On a **first install**, TAM records the merged read-only sources — everything under the config
+   note in its `sourceConfig` chain — as that addon's `settingsBaseline`.
+3. On an **update**, TAM compares those sources against that baseline. **Every default that moved
+   gets a row**, whether or not the user ever customized it — an update that brings new defaults is
+   shown key by key rather than silently adopted.
+4. The entry has one row per setting: **Keep Mine** against what the user has today, **Use New
+   Default** against the new shipped value. A row the user never customized starts on Use New
+   Default (it is already following the source); one that conflicts starts on Keep Mine.
+5. **Use New Default** drops the user's override — the scalar's key, or a registry entry's shadowing
+   entry — so the setting tracks the defaults source again. **Keep Mine** *pins* what they have
+   today into `config.json`, which is what stops an untouched setting from following the new default.
+   Either way the baseline advances, so the same question is never asked twice.
 
-An item is only raised when the **shipped** side changed since the baseline *and* the user's stored
-value differs from where it landed. Everything else stays silent: a setting never saved, a value
-that already equals the new default, a customization made against a default that has not moved, a
-field new in this version (no baseline to diff), and — for registries — entries the user added
-themselves, deleted (a removal is never resurrected), or that the addon no longer ships. An install
+An item is only raised when the **shipped** side changed since the baseline. Everything else stays
+silent: a value that already equals the new default, a customization made against a default that has
+not moved, a field new in this version (no baseline to diff), and — for registries — entries the
+user deleted (a removal is never resurrected) or that the addon no longer ships. An install
 predating this feature has no baseline, so its first update records one and reviews nothing: there
 is genuinely no way to know which of its stored values were deliberate.
 
@@ -878,6 +891,32 @@ reconciling per entry, so "use the new default" could only mean discarding the u
 TAM reads all of this through the very same `libSettingsCore.js` note that libsettings' own frontend
 half uses, wired under `lib-tam.js` in TAM's manifest, so "the user changed this" means exactly what
 the settings form that wrote the file meant by it.
+
+### Per-note metadata review: titles, labels and relations
+
+Content is not the only thing an update rewrites. `resolveNotes` sets every declared title, and
+`applyLabels`/`applyRelation` set every declared label and relation — so a note the user renamed, or
+a label they retargeted, is silently reverted on the next update. That metadata gets the same
+key-by-key review a settings document does, for every addon, with nothing to declare:
+
+1. Before the sync rewrites anything, TAM reads the live title, label values and relation targets of
+   every note the manifest declares.
+2. It compares what the manifest declares **now** against `metadataBaseline` — what it declared at
+   the last sync, kept on the addon's own database record.
+3. Every declaration that moved becomes one Update Review row: `<note>: title`,
+   `<note>: label <name>`, `<note>: relation <type>`. A declaration the manifest **dropped** shows
+   `(removed)` as its incoming side; one it **added** shows `(none)` as the current side.
+4. A row starts on **Use New Default** when the live value still matches the old declaration (the
+   user never touched it), and on **Keep Mine** when it does not.
+5. **Use New Default** makes the note match the manifest — which is also the only way a label or
+   relation the manifest no longer declares is ever removed. **Keep Mine** writes the pre-update
+   value back, since the sync has already overwritten it by the time the user answers.
+
+A row is only raised where the *declaration* changed: a title the user renamed against a manifest
+that still says the same thing is left alone and never asked about. An install predating this
+feature has no baseline, so its first update records one and reviews nothing. The baseline advances
+at sync time, not when the user answers — each row already carries both values, so it stays
+applicable either way.
 
 ### Replacing the diff with per-item review
 
@@ -911,7 +950,7 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 - Every relative `sourceUrl` resolves to a real file on disk (a local-dev-only check — absolute URLs are exempt).
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
 - `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
-- `manifest.settings`, when present, names a `schema` and a `config` that both exist in `manifest.notes`. The schema must not be attached under the reserved `"persistence"` parent (it ships new defaults every update); the config must be, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). A mime other than `application/json` on either is a warning.
+- `manifest.settings`, when present, names a `schema`, a `defaults` and a `config` that all exist in `manifest.notes`. The schema and defaults notes must not be attached under the reserved `"persistence"` parent (both ship anew every update), and the defaults note must ship content; the config must be persistent, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). The config must carry a `sourceConfig` relation to the defaults note, or libsettings would read no defaults at all. A mime other than `application/json` on any of them is a warning.
 - Every `manifest.hooks` entry names a known phase, points at a note that exists in `manifest.notes`, is a frontend script (`text/jsx` or `env=frontend`), and is not attached under the reserved `"persistence"` parent. An `updateReview` hook on an addon with no persistent notes is a warning.
 
 Run in CI before every publish. Exits with code 1 if any errors are found.

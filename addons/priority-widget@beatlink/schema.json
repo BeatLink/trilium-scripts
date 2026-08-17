@@ -3,45 +3,12 @@
         "type": "reference",
         "label": "Active Profile",
         "description": "Which priority profile the picker dropdown offers. Switching profiles changes both the dropdown options and the note label they are written to, so notes tagged under one profile keep their old label until re-set under the new one.",
-        "registry": "profiles",
-        "default": "moscow"
+        "registry": "profiles"
     },
     "profiles": {
         "type": "registry",
         "label": "Profiles",
         "description": "The selectable priority profiles. Each profile has its own note label and its own ordered registry of priority levels; only the profile chosen in Active Profile is offered by the picker.",
-        "default": {
-            "standard": {
-                "name": "Standard",
-                "label": "priority",
-                "priorities": {
-                    "4-critical": { "key": "4-critical", "title": "Critical", "color": "red", "enabled": true },
-                    "3-high": { "key": "3-high", "title": "High", "color": "darkorange", "enabled": true },
-                    "2-medium": { "key": "2-medium", "title": "Medium", "color": "gold", "enabled": true },
-                    "1-low": { "key": "1-low", "title": "Low", "color": "cyan", "enabled": true }
-                }
-            },
-            "moscow": {
-                "name": "MoSCoW",
-                "label": "priority",
-                "priorities": {
-                    "4-critical": { "key": "4-critical", "title": "Must Do", "color": "red", "enabled": true },
-                    "3-high": { "key": "3-high", "title": "Should Do", "color": "darkorange", "enabled": true },
-                    "2-medium": { "key": "2-medium", "title": "Could Do", "color": "gold", "enabled": true },
-                    "1-low": { "key": "1-low", "title": "Want To Do", "color": "cyan", "enabled": true }
-                }
-            },
-            "color": {
-                "name": "Color",
-                "label": "color",
-                "priorities": {
-                    "red": { "key": "red", "title": "Critical", "color": "", "enabled": true },
-                    "darkorange": { "key": "darkorange", "title": "High", "color": "", "enabled": true },
-                    "gold": { "key": "gold", "title": "Medium", "color": "", "enabled": true },
-                    "cyan": { "key": "cyan", "title": "Low", "color": "", "enabled": true }
-                }
-            }
-        },
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -92,7 +59,6 @@
         "type": "registry",
         "label": "Exclude Filters",
         "description": "Notes matching any enabled filter's search query are hidden from the Priority picker widget and skipped by the Missing Priorities triage list.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",

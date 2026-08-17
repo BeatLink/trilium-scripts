@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/blockurl@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/blockurl@beatlink/_tam_manifest_.json",
@@ -63,6 +63,13 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/blockurl@beatlink/schema.json"
             },
             {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/blockurl@beatlink/defaults.json"
+            },
+            {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
@@ -117,6 +124,10 @@
             {
                 "parent": "script",
                 "child": "schema"
+            },
+            {
+                "parent": "script",
+                "child": "defaults"
             },
             {
                 "parent": "root",
@@ -198,6 +209,11 @@
                 "from": "settings",
                 "type": "configNote",
                 "to": "config"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -230,6 +246,7 @@
         "readmeNote": "readme",
         "settings": {
             "schema": "schema",
+            "defaults": "defaults",
             "config": "config"
         }
     }

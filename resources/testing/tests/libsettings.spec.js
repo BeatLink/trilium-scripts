@@ -1,21 +1,22 @@
 "use strict";
 /* Backend test for libsettings@beatlink's persistence/merge engine.
 
-libSettings.js is a stateless, schema-driven settings engine: it merges a
-persisted config note against schema defaults (`loadSettings`) and writes back
-only the deltas that differ from the shipped defaults (`saveSettings`). The
-subtle, easy-to-regress behaviour lives in the `registry` field type -- a
-registry's shipped entries live in the schema `default`, and config.json stores
-ONLY additions/edits (`entries`) plus deleted shipped ids (`removedIds`), so a
-newly-shipped entry reaches existing installs for free and an untouched shipped
-entry is never duplicated into config.json.
+libSettings.js is a stateless, schema-driven settings engine: schema.json says
+what the fields are, and an ordered chain of config sources -- each pointing at
+the next one down through a `sourceConfig` relation -- says what they hold, the
+last source winning. `loadSettings` merges that chain; `saveSettings` writes back
+only what the top (writable) source changes about the ones below it. The subtle,
+easy-to-regress behaviour lives in the `registry` field type, where a source
+stores ONLY additions/edits (`entries`) plus deleted ids (`removedIds`), so an
+entry added to defaults.json reaches existing installs for free and an untouched
+one is never duplicated into config.json.
 
 These tests exercise that engine directly on the backend. libSettings.js is
 installed through TAM (so it's a real code note in the tree), then loaded and
 evaluated inside a single /api/script/exec call, which hands back its exported
 `loadSettings`/`saveSettings` -- no browser needed, the engine is backend JS.
-Each case creates its own throwaway schema + config notes, runs the round-trip,
-and asserts on both the merged runtime map and the filtered persisted shape.
+Each case creates its own throwaway schema + defaults + config notes, runs the
+round-trip, and asserts on both the merged runtime map and the persisted delta.
 */
 
 const { test, expect, installViaTam } = require("../testing");
@@ -68,15 +69,16 @@ async function backendAnchor(tri) {
 //      fresh CommonJS-style wrapper to recover its `module.exports`
 //      (loadSettings/saveSettings) without depending on require()'s note-title
 //      resolution (which needs the caller to be anchored under that note),
-//   2. creates two throwaway JSON code notes under root -- one schema, one
-//      config -- seeded with the caller-supplied JSON,
+//   2. creates three throwaway JSON code notes under root -- schema, defaults
+//      and config -- seeded with the caller-supplied JSON, with the config note
+//      naming the defaults note as its lower-priority source,
 //   3. invokes `body({ loadSettings, saveSettings, schemaNoteId, configNoteId,
 //      readConfig })`, returns its result, then deletes the throwaway notes.
 // `body` is stringified and re-parsed on the backend, so it must be
 // self-contained (no closure over this file's scope).
-async function runWithLib(tri, schemaJson, configJson, body) {
+async function runWithLib(tri, schemaJson, defaultsJson, configJson, body) {
     const anchor = await backendAnchor(tri);
-    const script = `(schemaContent, configContent, bodySrc) => {
+    const script = `(schemaContent, defaultsContent, configContent, bodySrc) => {
         const libNote = api.getNoteWithLabel("TAMFILEID", "libsettings@beatlink/backend")
             || api.searchForNotes("note.title = 'libSettings.js'")[0];
         const src = libNote.getContent();
@@ -87,8 +89,11 @@ async function runWithLib(tri, schemaJson, configJson, body) {
 
         const schemaNote = api.createTextNote("root", "test-schema", "").note;
         schemaNote.setContent(schemaContent);
+        const defaultsNote = api.createTextNote("root", "test-defaults", "").note;
+        defaultsNote.setContent(defaultsContent);
         const configNote = api.createTextNote("root", "test-config", "").note;
         configNote.setContent(configContent);
+        configNote.setRelation("sourceConfig", defaultsNote.noteId);
         const schemaNoteId = schemaNote.noteId;
         const configNoteId = configNote.noteId;
         const readConfig = () => JSON.parse(api.getNote(configNoteId).getContent() || "{}");
@@ -98,6 +103,7 @@ async function runWithLib(tri, schemaJson, configJson, body) {
             return fn({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig });
         } finally {
             api.getNote(schemaNoteId).deleteNote();
+            defaultsNote.deleteNote();
             api.getNote(configNoteId).deleteNote();
         }
     }`;
@@ -105,6 +111,7 @@ async function runWithLib(tri, schemaJson, configJson, body) {
     // own return value is under executionResult.
     const res = await tri.execScript(script, [
         JSON.stringify(schemaJson),
+        JSON.stringify(defaultsJson),
         JSON.stringify(configJson),
         body.toString(),
     ], anchor);
@@ -113,13 +120,13 @@ async function runWithLib(tri, schemaJson, configJson, body) {
 }
 
 // A minimal schema mirroring area-picker's shape: a `list` of items plus a
-// scalar, and a `registry` with two shipped entries.
+// scalar, and a `registry` -- with the values every one of them ships in the
+// defaults source rather than in the schema, which only describes the fields.
 const SCHEMA = {
-    theme: { type: "string", label: "Theme", default: "light" },
+    theme: { type: "string", label: "Theme" },
     areas: {
         type: "list",
         label: "Areas",
-        default: [{ key: "a", title: "Alpha" }],
         itemSchema: {
             key: { type: "string", label: "Key", default: "" },
             title: { type: "string", label: "Title", default: "" },
@@ -128,64 +135,77 @@ const SCHEMA = {
     prefixes: {
         type: "registry",
         label: "Prefixes",
-        default: {
-            "shipped-1": { text: "One" },
-            "shipped-2": { text: "Two" },
-        },
         itemSchema: {
             text: { type: "string", label: "Text", default: "" },
         },
     },
 };
 
-test("loadSettings fills defaults from schema when config is empty", async ({ tri }) => {
-    const result = await runWithLib(tri, SCHEMA, {}, ({ loadSettings, schemaNoteId, configNoteId }) => {
+const DEFAULTS = {
+    theme: "light",
+    areas: [{ key: "a", title: "Alpha" }],
+    prefixes: {
+        "shipped-1": { text: "One" },
+        "shipped-2": { text: "Two" },
+    },
+};
+
+test("loadSettings fills every field from the defaults source when config is empty", async ({ tri }) => {
+    const result = await runWithLib(tri, SCHEMA, DEFAULTS, {}, ({ loadSettings, schemaNoteId, configNoteId }) => {
         return loadSettings(schemaNoteId, configNoteId);
     });
     expect(result.theme).toBe("light");
     expect(result.areas).toEqual([{ key: "a", title: "Alpha" }]);
-    // A registry merges shipped entries into a flat runtime map.
+    // A registry merges the entries of every source into a flat runtime map.
     expect(result.prefixes).toEqual({
         "shipped-1": { text: "One" },
         "shipped-2": { text: "Two" },
     });
 });
 
-test("stored scalar overrides the schema default", async ({ tri }) => {
-    const result = await runWithLib(tri, SCHEMA, { theme: "dark" }, ({ loadSettings, schemaNoteId, configNoteId }) => {
+test("a field no source holds falls back to its type's empty value", async ({ tri }) => {
+    const result = await runWithLib(tri, SCHEMA, {}, {}, ({ loadSettings, schemaNoteId, configNoteId }) => {
+        return loadSettings(schemaNoteId, configNoteId);
+    });
+    expect(result.theme).toBe("");
+    expect(result.areas).toEqual([]);
+    expect(result.prefixes).toEqual({});
+});
+
+test("the last source wins on conflict", async ({ tri }) => {
+    const result = await runWithLib(tri, SCHEMA, DEFAULTS, { theme: "dark" }, ({ loadSettings, schemaNoteId, configNoteId }) => {
         return loadSettings(schemaNoteId, configNoteId);
     });
     expect(result.theme).toBe("dark");
 });
 
-test("saveSettings persists only deltas that differ from shipped defaults", async ({ tri }) => {
-    // Load defaults, change one scalar, save, and read the raw persisted config:
-    // an untouched registry must NOT be duplicated into config.json.
-    const persisted = await runWithLib(tri, SCHEMA, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
+test("saveSettings persists only what the writable source changes", async ({ tri }) => {
+    // Load, change one scalar, save, and read the raw persisted config: nothing
+    // the lower source already says may be copied into it.
+    const persisted = await runWithLib(tri, SCHEMA, DEFAULTS, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
         const values = loadSettings(schemaNoteId, configNoteId);
         values.theme = "dark";
         saveSettings(schemaNoteId, configNoteId, values);
         return readConfig();
     });
-    expect(persisted.theme).toBe("dark");
-    // Registry entries equal to their shipped baseline are elided.
-    expect(persisted.prefixes).toEqual({ entries: {}, removedIds: [] });
+    expect(persisted).toEqual({ theme: "dark" });
 });
 
-test("editing a shipped registry entry stores it under entries, keyed by its id", async ({ tri }) => {
-    const persisted = await runWithLib(tri, SCHEMA, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
+test("editing a registry entry stores it under entries, keyed by its id", async ({ tri }) => {
+    const persisted = await runWithLib(tri, SCHEMA, DEFAULTS, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
         const values = loadSettings(schemaNoteId, configNoteId);
         values.prefixes["shipped-1"].text = "Edited";
         saveSettings(schemaNoteId, configNoteId, values);
         return readConfig();
     });
-    // Only the edited entry is persisted; the untouched one keeps tracking shipped.
+    // Only the edited entry is persisted; the untouched one keeps tracking the
+    // defaults source.
     expect(persisted.prefixes.entries).toEqual({ "shipped-1": { text: "Edited" } });
     expect(persisted.prefixes.removedIds).toEqual([]);
 });
 
-test("deleting a shipped registry entry records its id in removedIds", async ({ tri }) => {
-    const persisted = await runWithLib(tri, SCHEMA, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
+test("deleting a registry entry records its id in removedIds", async ({ tri }) => {
+    const persisted = await runWithLib(tri, SCHEMA, DEFAULTS, {}, ({ loadSettings, saveSettings, schemaNoteId, configNoteId, readConfig }) => {
         const values = loadSettings(schemaNoteId, configNoteId);
         delete values.prefixes["shipped-2"];
         saveSettings(schemaNoteId, configNoteId, values);
@@ -195,28 +215,41 @@ test("deleting a shipped registry entry records its id in removedIds", async ({ 
     expect(persisted.prefixes.entries).toEqual({});
 });
 
-test("a removed shipped entry stays removed across a load/save round-trip", async ({ tri }) => {
+test("a removed entry stays removed across a load/save round-trip", async ({ tri }) => {
     // Persist a removedIds config, then reload: the deleted entry must not
-    // reappear from the shipped defaults.
+    // reappear from the defaults source.
     const config = { prefixes: { entries: {}, removedIds: ["shipped-2"] } };
-    const merged = await runWithLib(tri, SCHEMA, config, ({ loadSettings, schemaNoteId, configNoteId }) => {
+    const merged = await runWithLib(tri, SCHEMA, DEFAULTS, config, ({ loadSettings, schemaNoteId, configNoteId }) => {
         return loadSettings(schemaNoteId, configNoteId);
     });
     expect(merged.prefixes).toEqual({ "shipped-1": { text: "One" } });
 });
 
-test("a newly-shipped registry entry reaches an existing install for free", async ({ tri }) => {
+test("an entry newly added to the defaults source reaches an existing install for free", async ({ tri }) => {
     // Existing install persisted an edit to shipped-1 before shipped-3 existed.
-    // Loading against a schema that now also ships shipped-3 must surface it.
-    const grownSchema = JSON.parse(JSON.stringify(SCHEMA));
-    grownSchema.prefixes.default["shipped-3"] = { text: "Three" };
+    // Loading against defaults that now also ship shipped-3 must surface it.
+    const grownDefaults = JSON.parse(JSON.stringify(DEFAULTS));
+    grownDefaults.prefixes["shipped-3"] = { text: "Three" };
     const config = { prefixes: { entries: { "shipped-1": { text: "Edited" } }, removedIds: [] } };
-    const merged = await runWithLib(tri, grownSchema, config, ({ loadSettings, schemaNoteId, configNoteId }) => {
+    const merged = await runWithLib(tri, SCHEMA, grownDefaults, config, ({ loadSettings, schemaNoteId, configNoteId }) => {
         return loadSettings(schemaNoteId, configNoteId);
     });
     expect(merged.prefixes).toEqual({
         "shipped-1": { text: "Edited" },
         "shipped-2": { text: "Two" },
         "shipped-3": { text: "Three" },
+    });
+});
+
+test("a defaults source stating registry entries as a plain map is read the same way", async ({ tri }) => {
+    // A hand-written defaults.json lists its entries flat; only the writable
+    // source ever has to use the { entries, removedIds } wrapper.
+    const wrapped = { prefixes: { entries: { "shipped-1": { text: "One" }, "shipped-2": { text: "Two" } }, removedIds: [] } };
+    const merged = await runWithLib(tri, SCHEMA, wrapped, {}, ({ loadSettings, schemaNoteId, configNoteId }) => {
+        return loadSettings(schemaNoteId, configNoteId);
+    });
+    expect(merged.prefixes).toEqual({
+        "shipped-1": { text: "One" },
+        "shipped-2": { text: "Two" },
     });
 });

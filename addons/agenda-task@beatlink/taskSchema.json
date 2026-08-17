@@ -1,9 +1,10 @@
 {
-    "_categories": ["Settings"],
+    "_categories": [
+        "Settings"
+    ],
     "startDatetimeLabel": {
         "type": "string",
         "label": "Start Datetime Label",
-        "default": "startDateTime",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Start"
@@ -11,7 +12,6 @@
     "startDateLabel": {
         "type": "string",
         "label": "Start Date Label",
-        "default": "startDate",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Start"
@@ -19,7 +19,6 @@
     "startTimeLabel": {
         "type": "string",
         "label": "Start Time Label",
-        "default": "startTime",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Start"
@@ -27,7 +26,6 @@
     "dueDatetimeLabel": {
         "type": "string",
         "label": "Due Datetime Label",
-        "default": "dueDateTime",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Due"
@@ -35,7 +33,6 @@
     "dueDateLabel": {
         "type": "string",
         "label": "Due Date Label",
-        "default": "endDate",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Due"
@@ -43,7 +40,6 @@
     "dueTimeLabel": {
         "type": "string",
         "label": "Due Time Label",
-        "default": "endTime",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Due"
@@ -51,7 +47,6 @@
     "durationLabel": {
         "type": "string",
         "label": "Duration Label",
-        "default": "duration",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Task"
@@ -59,7 +54,6 @@
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
-        "default": "recurrence",
         "category": "Settings",
         "tab": "Settings",
         "subgroup": "Task"
@@ -70,22 +64,42 @@
         "label": "Reschedule Options",
         "description": "The reschedule buttons offered by the Task pane's Actions section. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is button order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Option" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Option"
+            },
             "mode": {
-                "type": "select", "label": "Mode", "default": "days",
+                "type": "select",
+                "label": "Mode",
+                "default": "days",
                 "options": [
-                    { "value": "days", "label": "Days From Now" },
-                    { "value": "recurrence", "label": "Recurrence Rule" }
+                    {
+                        "value": "days",
+                        "label": "Days From Now"
+                    },
+                    {
+                        "value": "recurrence",
+                        "label": "Recurrence Rule"
+                    }
                 ]
             },
-            "days": { "type": "number", "label": "Days From Now", "default": 0, "showWhen": { "mode": "days" } },
-            "recurrence": { "type": "string", "label": "Recurrence Rule", "default": "", "showWhen": { "mode": "recurrence" } }
-        },
-        "default": {
-            "today": { "name": "Today", "mode": "days", "days": 0 },
-            "tomorrow": { "name": "Tomorrow", "mode": "days", "days": 1 },
-            "next-weekend": { "name": "Next Weekend", "mode": "recurrence", "recurrence": "FREQ=WEEKLY;BYDAY=SA" },
-            "end-of-month": { "name": "End of Month", "mode": "recurrence", "recurrence": "FREQ=MONTHLY;BYMONTHDAY=-1" }
+            "days": {
+                "type": "number",
+                "label": "Days From Now",
+                "default": 0,
+                "showWhen": {
+                    "mode": "days"
+                }
+            },
+            "recurrence": {
+                "type": "string",
+                "label": "Recurrence Rule",
+                "default": "",
+                "showWhen": {
+                    "mode": "recurrence"
+                }
+            }
         }
     }
 }
