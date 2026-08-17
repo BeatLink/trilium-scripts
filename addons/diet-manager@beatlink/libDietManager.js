@@ -2,7 +2,7 @@
  * Diet Manager data model. Pure functions over the JSON document stored in the
  * addon's persisted Database note:
  *   {
- *     foods: { [id]: { id, name, servingSize, servingUnit, nutrients: {...} } },
+ *     foods: { [id]: { id, name, servingSize, servingUnit, tags: [...], nutrients: {...} } },
  *     recipes: { [id]: { id, name, servings, ingredients: [{ foodId, amount }] } },
  *     diary: { [date]: [{ id, kind: "food"|"recipe", refId, servings, loggedAt }] }
  *   }
@@ -41,14 +41,31 @@ function normalizeNutrients(raw) {
     return nutrients
 }
 
+// Category tags: trimmed, de-duplicated case-insensitively, kept in sorted order.
+function normalizeTags(raw) {
+    if (!Array.isArray(raw)) return []
+    const byLower = new Map()
+    for (const tag of raw) {
+        const trimmed = typeof tag === "string" ? tag.trim() : ""
+        if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed)
+    }
+    return [...byLower.values()].sort((a, b) => a.localeCompare(b))
+}
+
 function normalizeFood(food) {
     return {
         id: typeof food?.id === "string" && food.id ? food.id : newId(),
         name: typeof food?.name === "string" ? food.name : "",
         servingSize: Number.isFinite(Number(food?.servingSize)) ? Number(food.servingSize) : 100,
         servingUnit: typeof food?.servingUnit === "string" && food.servingUnit ? food.servingUnit : "g",
+        tags: normalizeTags(food?.tags),
         nutrients: normalizeNutrients(food?.nutrients)
     }
+}
+
+// Every tag in use across the food database, sorted, for pickers and filters.
+function allTags(foods) {
+    return normalizeTags(Object.values(foods).flatMap(food => food.tags))
 }
 
 function normalizeIngredient(ingredient) {
@@ -199,7 +216,9 @@ module.exports = {
     NUTRIENTS,
     newId,
     emptyNutrients,
+    normalizeTags,
     normalizeFood,
+    allTags,
     normalizeRecipe,
     normalizeDiaryEntry,
     parseDatabase,

@@ -32,7 +32,25 @@
 }
 
 .diet-manager-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
+}
+
+.diet-manager-toolbar select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-toolbar-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
 }
 
 .diet-manager-table {
@@ -53,6 +71,63 @@
     padding: 4px 8px;
     border-bottom: 1px solid var(--main-border-color);
     vertical-align: middle;
+}
+
+.diet-manager-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.diet-manager-sort-arrow {
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+.diet-manager-group-row th {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.1));
+}
+
+.diet-manager-tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+}
+
+.diet-manager-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.diet-manager-tag-remove {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 0;
+}
+
+.diet-manager-tag-remove:hover {
+    color: var(--menu-item-hover-text-color, #c0392b);
+}
+
+.diet-manager-tag-add {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.diet-manager-tag-add input {
+    flex: 1;
 }
 
 .diet-manager-cell-actions {
