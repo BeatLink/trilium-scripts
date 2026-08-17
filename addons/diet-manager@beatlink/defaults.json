@@ -1,6 +1,7 @@
 {
     "renderNoteId": "",
     "usdaApiKey": "",
+    "prefillGroceryComment": false,
     "targetCalories": 2000,
     "targetProtein": 100,
     "targetCarbs": 250,
