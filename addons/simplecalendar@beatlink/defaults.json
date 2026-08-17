@@ -1,0 +1,8 @@
+{
+    "mode": "search",
+    "feedUrl": "",
+    "searchQuery": "#startDateTime",
+    "startDateLabel": "startDateTime",
+    "dueDateLabel": "dueDateTime",
+    "recurrenceLabel": "recurrence"
+}

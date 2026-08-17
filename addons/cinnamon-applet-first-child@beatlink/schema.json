@@ -2,13 +2,11 @@
     "apiKey": {
         "type": "string",
         "label": "API Key",
-        "description": "Shared secret checked against the applet's configured API key",
-        "default": "CHANGE_ME"
+        "description": "Shared secret checked against the applet's configured API key"
     },
     "parentNoteId": {
         "type": "note",
         "label": "Parent Note",
-        "description": "The first child of this note (in Trilium sort order) is surfaced",
-        "default": ""
+        "description": "The first child of this note (in Trilium sort order) is surfaced"
     }
 }

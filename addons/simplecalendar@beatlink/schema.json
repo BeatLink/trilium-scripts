@@ -4,39 +4,39 @@
         "label": "Mode",
         "description": "Where events come from",
         "options": [
-            {"value": "search", "label": "Trilium Search"},
-            {"value": "url", "label": "External Feed URL"}
-        ],
-        "default": "search"
+            {
+                "value": "search",
+                "label": "Trilium Search"
+            },
+            {
+                "value": "url",
+                "label": "External Feed URL"
+            }
+        ]
     },
     "feedUrl": {
         "type": "string",
         "label": "Feed URL",
-        "description": "Used when Mode is 'External Feed URL'",
-        "default": ""
+        "description": "Used when Mode is 'External Feed URL'"
     },
     "searchQuery": {
         "type": "string",
         "label": "Search Query",
-        "description": "Trilium search query for notes to show (used when Mode is 'Trilium Search')",
-        "default": "#startDateTime"
+        "description": "Trilium search query for notes to show (used when Mode is 'Trilium Search')"
     },
     "startDateLabel": {
         "type": "string",
         "label": "Start Date Label",
-        "description": "Label holding each note's start datetime",
-        "default": "startDateTime"
+        "description": "Label holding each note's start datetime"
     },
     "dueDateLabel": {
         "type": "string",
         "label": "Due Date Label",
-        "description": "Label holding each note's due datetime",
-        "default": "dueDateTime"
+        "description": "Label holding each note's due datetime"
     },
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
-        "description": "Label holding an RRULE string, if any",
-        "default": "recurrence"
+        "description": "Label holding an RRULE string, if any"
     }
 }

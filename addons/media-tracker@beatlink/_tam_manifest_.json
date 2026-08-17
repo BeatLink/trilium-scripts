@@ -5,10 +5,10 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/media-tracker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/media-tracker@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [
@@ -24,14 +24,14 @@
                 "title": "mediaTracker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.jsx"
+                "sourceUrl": "mediaTracker.jsx"
             },
             {
                 "id": "style",
                 "title": "mediaTracker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.css"
+                "sourceUrl": "mediaTracker.css"
             },
             {
                 "id": "settings-page",
@@ -45,49 +45,56 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "backend",
                 "title": "mediaTrackerBackend.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTrackerBackend.js"
+                "sourceUrl": "mediaTrackerBackend.js"
             },
             {
                 "id": "autosync",
                 "title": "autoSync.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/autoSync.js"
+                "sourceUrl": "autoSync.js"
             },
             {
                 "id": "lib-tracker",
                 "title": "libMediaTracker.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/libMediaTracker.js"
+                "sourceUrl": "libMediaTracker.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -95,88 +102,274 @@
                 "title": "libSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
-            { "parent": "root", "child": "launcher" },
-            { "parent": "launcher", "child": "view" },
-            { "parent": "view", "child": "style" },
-            { "parent": "view", "child": "libsettings-ui" },
-            { "parent": "launcher", "child": "settings-page" },
-            { "parent": "settings-page", "child": "settings" },
-            { "parent": "settings", "child": "libsettings-ui" },
-            { "parent": "launcher", "child": "schema" },
-            { "parent": "persistence", "child": "config" },
-            { "parent": "launcher", "child": "backend" },
-            { "parent": "backend", "child": "libsettings-backend" },
-            { "parent": "backend", "child": "lib-tracker" },
-            { "parent": "launcher", "child": "autosync" },
-            { "parent": "autosync", "child": "libsettings-backend" },
-            { "parent": "autosync", "child": "backend" },
-            { "parent": "libsettings-ui", "child": "libsettings-style" },
-            { "parent": "libsettings-ui", "child": "colorpicker" },
-            { "parent": "colorpicker", "child": "colorpicker-css" },
-            { "parent": "launcher", "child": "readme" }
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "view"
+            },
+            {
+                "parent": "view",
+                "child": "style"
+            },
+            {
+                "parent": "view",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "launcher",
+                "child": "backend"
+            },
+            {
+                "parent": "backend",
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "backend",
+                "child": "lib-tracker"
+            },
+            {
+                "parent": "launcher",
+                "child": "autosync"
+            },
+            {
+                "parent": "autosync",
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "autosync",
+                "child": "backend"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            }
         ],
         "relations": [
-            { "from": "settings", "type": "configNote", "to": "config" },
-            { "from": "settings", "type": "schemaNote", "to": "schema" },
-            { "from": "view", "type": "schemaNote", "to": "schema" },
-            { "from": "view", "type": "settingsNote", "to": "settings" },
-            { "from": "backend", "type": "schemaNote", "to": "schema" },
-            { "from": "backend", "type": "settingsNote", "to": "settings" },
-            { "from": "launcher", "type": "renderNote", "to": "view" },
-            { "from": "settings-page", "type": "renderNote", "to": "settings" },
-            { "from": "view", "type": "settingsPageNote", "to": "settings-page" },
-            { "from": "settings", "type": "trackerPageNote", "to": "launcher" }
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "view",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "view",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "backend",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "backend",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "view"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "view",
+                "type": "settingsPageNote",
+                "to": "settings-page"
+            },
+            {
+                "from": "settings",
+                "type": "trackerPageNote",
+                "to": "launcher"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
         ],
         "labels": [
-            { "note": "backend", "name": "customRequestHandler", "value": "mediaTracker" },
-            { "note": "autosync", "name": "run", "value": "hourly" },
-            { "note": "autosync", "name": "iconClass", "value": "bx bx-sync" },
-            { "note": "settings", "name": "mediaTrackerConfig", "value": "" },
-            { "note": "view", "name": "mediaTrackerRender", "value": "" },
-            { "note": "style", "name": "appCss", "value": "" },
-            { "note": "libsettings-style", "name": "appCss", "value": "" },
-            { "note": "colorpicker-css", "name": "appCss", "value": "" },
-            { "note": "launcher", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "view", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "backend", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "lib-tracker", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "schema", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "config", "name": "iconClass", "value": "bx bx-movie-play" },
-            { "note": "settings-page", "name": "iconClass", "value": "bx bx-cog" },
-            { "note": "readme", "name": "iconClass", "value": "bx bx-movie-play" }
+            {
+                "note": "backend",
+                "name": "customRequestHandler",
+                "value": "mediaTracker"
+            },
+            {
+                "note": "autosync",
+                "name": "run",
+                "value": "hourly"
+            },
+            {
+                "note": "autosync",
+                "name": "iconClass",
+                "value": "bx bx-sync"
+            },
+            {
+                "note": "settings",
+                "name": "mediaTrackerConfig",
+                "value": ""
+            },
+            {
+                "note": "view",
+                "name": "mediaTrackerRender",
+                "value": ""
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "launcher",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "view",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "backend",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "lib-tracker",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "schema",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "config",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-movie-play"
+            }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
