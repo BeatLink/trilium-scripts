@@ -4,9 +4,10 @@
     the configured Label Name (default: priority).
 */
 
-import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { getActiveContextNote, currentNote } from "trilium:api"
-import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
+import { resolveConfigNotes } from "libSettingsUI.jsx"
+import { getActiveProfile, assignPriority, isExcludedFromPicker } from "priorityRegistry.jsx"
 
 const NONE_OPTION = { key: "none", title: "None" }
 
@@ -19,16 +20,30 @@ export default defineWidget({
         const [priorityColors, setPriorityColors] = useState({})
         const [label, setLabel] = useState("priority")
         const [dropdownValue, setDropdownValue] = useState("none")
+        const [excluded, setExcluded] = useState(false)
+        const [reload, setReload] = useState(0)
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
+        // The label definition can be owned by the note, by its template, or by an
+        // inheritable ancestor label, so reload on any attribute change reaching this note.
+        useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+            if (!note) return
+            const owners = [note, ...note.getNotesToInheritAttributesFrom()].filter(Boolean)
+            const affects = attr => owners.some(owner => owner.noteId === attr.noteId)
+                || (attr.isInheritable && owners.some(owner => owner.hasAncestor(attr.noteId, true)))
+            if (loadResults.getAttributeRows().some(affects)) setReload(count => count + 1)
+        })
         useEffect(() => {
             (async () => {
                 const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
-                const { selected, profiles } = await loadSettings(schemaNoteId, configNoteId)
-                // A `selected` pointing at a deleted profile would otherwise throw
-                // on destructure; fall back to the first profile so the picker
-                // still works rather than disappearing with no explanation.
-                const profile = profiles[selected] ?? Object.values(profiles)[0]
+
+                if (await isExcludedFromPicker(schemaNoteId, configNoteId, noteId)) {
+                    setExcluded(true)
+                    return
+                }
+                setExcluded(false)
+
+                const profile = await getActiveProfile(schemaNoteId, configNoteId)
                 if (!profile) { return }
                 const { label, priorities } = profile
 
@@ -38,38 +53,31 @@ export default defineWidget({
                         .getLabelValue(`label:${label}`) ? true : false
                 )
 
+                const options = priorities.filter(p => p.enabled).map(p => ({ key: p.key, title: p.title }))
+
                 const currentPriority = (await getActiveContextNote()).getLabelValue(label) ?? "none"
                 // The note's label can point at a key that no longer exists (the
-                // priority was renamed/removed from settings since it was set) —
-                // surface that as its own dropdown option instead of silently
-                // coercing to "None", which would hide that the note's data is
-                // stale rather than actually unset.
+                // priority was renamed/removed/disabled from settings since it was
+                // set) — surface that as its own dropdown option instead of
+                // silently coercing to "None", which would hide that the note's
+                // data is stale rather than actually unset.
                 const isInvalid = currentPriority !== "none"
-                    && !priorities.some(priority => priority.key === currentPriority)
+                    && !options.some(priority => priority.key === currentPriority)
 
                 setExistingPriorities([
                     NONE_OPTION,
-                    ...priorities.map(priority => ({ key: priority.key, title: priority.title })),
+                    ...options,
                     ...(isInvalid ? [{ key: currentPriority, title: `⚠ Invalid: ${currentPriority}` }] : [])
                 ])
                 setPriorityColors(Object.fromEntries(priorities.map(priority => [priority.key, priority.color])))
                 setDropdownValue(currentPriority)
             })()
-        }, [noteId])
-        const savePriority = (priority, color) => {
-            api.runOnBackend((noteId, label, priority, color) => {
-                if (priority != "none") {
-                    api.getNote(noteId).setLabel(label, priority)
-                    if (color) {
-                        api.getNote(noteId).setLabel("color", color)
-                    } else {
-                        api.getNote(noteId).removeLabel("color")
-                    }
-                } else {
-                    api.getNote(noteId).removeLabel(label)
-                    api.getNote(noteId).removeLabel("color")
-                }
-            }, [note.noteId, label, priority, color])
+        }, [noteId, reload])
+
+        if (excluded) return null
+
+        const savePriority = (priority) => {
+            assignPriority(note.noteId, label, priority, priorityColors[priority])
             setDropdownValue(priority)
         }
         return (
@@ -82,7 +90,7 @@ export default defineWidget({
                                 class="dropdown-component form-control"
                                 values={existingPriorities}
                                 currentValue={dropdownValue}
-                                onChange={value => { savePriority(value, priorityColors[value]) }}
+                                onChange={value => { savePriority(value) }}
                                 keyProperty="key" titleProperty="title"
                             />
                         </div>

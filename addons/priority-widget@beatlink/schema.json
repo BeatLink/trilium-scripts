@@ -3,45 +3,12 @@
         "type": "reference",
         "label": "Active Profile",
         "description": "Which priority profile the picker dropdown offers. Switching profiles changes both the dropdown options and the note label they are written to, so notes tagged under one profile keep their old label until re-set under the new one.",
-        "registry": "profiles",
-        "default": "moscow"
+        "registry": "profiles"
     },
     "profiles": {
         "type": "registry",
         "label": "Profiles",
-        "description": "The selectable priority profiles. Each profile has its own note label and its own ordered list of priority levels; only the profile chosen in Active Profile is offered by the picker.",
-        "default": {
-            "standard": {
-                "name": "Standard",
-                "label": "priority",
-                "priorities": [
-                    { "key": "4-critical", "title": "Critical", "color": "red" },
-                    { "key": "3-high", "title": "High", "color": "darkorange" },
-                    { "key": "2-medium", "title": "Medium", "color": "gold" },
-                    { "key": "1-low", "title": "Low", "color": "cyan" }
-                ]
-            },
-            "moscow": {
-                "name": "MoSCoW",
-                "label": "priority",
-                "priorities": [
-                    { "key": "4-critical", "title": "Must Do", "color": "red" },
-                    { "key": "3-high", "title": "Should Do", "color": "darkorange" },
-                    { "key": "2-medium", "title": "Could Do", "color": "gold" },
-                    { "key": "1-low", "title": "Want To Do", "color": "cyan" }
-                ]
-            },
-            "color": {
-                "name": "Color",
-                "label": "color",
-                "priorities": [
-                    { "key": "red", "title": "Critical", "color": "" },
-                    { "key": "darkorange", "title": "High", "color": "" },
-                    { "key": "gold", "title": "Medium", "color": "" },
-                    { "key": "cyan", "title": "Low", "color": "" }
-                ]
-            }
-        },
+        "description": "The selectable priority profiles. Each profile has its own note label and its own ordered registry of priority levels; only the profile chosen in Active Profile is offered by the picker.",
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -56,15 +23,15 @@
                 "default": "priority"
             },
             "priorities": {
-                "type": "list",
+                "type": "registry",
                 "label": "Priorities",
                 "description": "The priority levels this profile offers, in display order.",
-                "default": [],
+                "default": {},
                 "itemSchema": {
                     "key": {
                         "type": "string",
                         "label": "Key",
-                        "description": "Stable identifier stored on tagged notes as the label value. The numeric prefix exists so notes sort by priority — display order is this list's order, so reordering never rewrites a note. Changing a key after notes are tagged orphans their label.",
+                        "description": "Stable identifier stored on tagged notes as the label value. The numeric prefix exists so notes sort by priority — display order is this registry's own key order, so reordering never rewrites a note. Changing a key after notes are tagged orphans their label.",
                         "default": ""
                     },
                     "title": {
@@ -77,8 +44,37 @@
                         "label": "Color",
                         "description": "Written to the note's #color label alongside the priority. Leave unset to not touch #color — as the Color profile does, since its keys are already colors.",
                         "default": ""
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "label": "Enabled",
+                        "description": "Whether this priority level appears in the picker dropdown and in the Missing Priorities triage page.",
+                        "default": true
                     }
                 }
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Priority picker widget and skipped by the Missing Priorities triage list.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #priority or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
             }
         }
     }
