@@ -45,6 +45,40 @@
     color: var(--muted-text-color) !important;
 }
 
+/* The optional category bar sits above the tab bar — a second, heavier
+   grouping level. An empty category (no tabs assigned yet) is shown but
+   disabled/greyed rather than hidden, so the full set stays visible. */
+.lst-categories {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    margin: 1rem 0 0.6rem 0 !important;
+}
+
+.lst-category {
+    cursor: pointer !important;
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.375rem !important;
+    background-color: var(--accented-background-color) !important;
+    color: var(--main-text-color) !important;
+    padding: 0.4rem 0.9rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+}
+
+.lst-category-active {
+    background-color: var(--active-item-background-color, var(--main-background-color)) !important;
+    color: var(--active-item-text-color, var(--main-text-color)) !important;
+    border-color: var(--main-border-color) !important;
+}
+
+.lst-category:disabled {
+    cursor: default !important;
+    opacity: 0.45 !important;
+}
+
 .lst-tabbed {
     display: flex !important;
     flex-direction: column !important;
@@ -240,4 +274,23 @@
         padding-left: 0.75rem !important;
         margin-left: 0.25rem !important;
     }
+}
+
+/* A `subgroup` clusters a tab's fields under a labelled fieldset — a third,
+   lightweight grouping level *inside* a tab, for tabs with many related
+   scalar fields (e.g. the label-name vocabulary split into Start / Due / Task). */
+.lst-subgroup {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    padding: 0.25rem 1rem 0.75rem 1rem !important;
+    margin: 1rem 0 !important;
+}
+
+.lst-subgroup-legend {
+    padding: 0 0.5rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    color: var(--muted-text-color) !important;
 }

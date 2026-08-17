@@ -8,138 +8,117 @@ import {
     NoteAutocomplete
 } from "trilium:preact"
 import { ColorPicker } from "ColorPicker.jsx"
+import { isPlainObject, blankItem, mergeSchemas, mergeSources, filterBySchema, titleFor } from "libSettingsCore.js"
 
-function isPlainObject(value) {
-    return !!value && typeof value === "object" && !Array.isArray(value)
-}
 
-// A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (not `AddonData:`-tracked), so it gets fully
-// overwritten on every TAM update just like the rest of the addon, meaning a
-// newly-added shipped entry reaches existing installs for free. The
-// persisted (config.json) shape for a registry field is therefore not the
-// flat runtime map itself but `{ entries, removedIds }`: `entries` holds
-// only additions/edits that differ from the shipped version (keyed by the
-// same id to shadow a specific shipped entry), and `removedIds` records
-// which shipped ids the user deleted — an untouched shipped entry is never
-// duplicated into config.json, so it keeps tracking future shipped edits
-// until the user actually changes it. `mergeRegistryDefaults` reconstructs
-// the flat runtime map (shipped, minus removed, with entries overlaid) that
-// the rest of this module and the UI both work with; `filterRegistryBySchema`
-// is the inverse, run on save. Kept in exact lockstep with the identically-
-// named functions in libsettings-backend.js.
-// A registry field can itself nest further `list`/`registry` fields in its
-// `itemSchema` (e.g. a colour/prefix variant's `children`, one flat
-// label-value map per variant — see libsettings@beatlink's README "Nesting"
-// section). The shipped baseline for such a nested field lives inside its
-// *parent item's own* shipped default (`shippedItem[key]`, e.g.
-// `colors.default.priority.children`), never in the nested field's own
-// schema `default` (which is only the blank starting point for a brand-new
-// item added through the UI, always `{}`) — so `mergeDefaults`/
-// `filterBySchema` thread a `shippedNode` parameter through every level of
-// recursion instead of re-deriving "shipped" from `def.default` past the
-// top level. Kept in exact lockstep with the identically-named functions in
-// libsettings-backend.js.
-function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
-    const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
-    const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
-    const merged = {}
-    for (const [id, item] of Object.entries(shipped)) {
-        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item, null)
-    }
-    for (const [id, item] of Object.entries(storedEntries)) {
-        merged[id] = mergeDefaults(itemSchema, shipped[id] ?? null, item)
-    }
-    return merged
-}
-
-function filterRegistryBySchema(itemSchema, shipped, effective) {
-    const entries = {}
-    const removedIds = []
-    for (const [id, item] of Object.entries(effective)) {
-        const shippedItem = shipped[id] ?? null
-        const filteredItem = filterBySchema(itemSchema, item, shippedItem)
-        const shippedFiltered = shippedItem
-            ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem, null), shippedItem)
-            : null
-        if (shippedFiltered === null || JSON.stringify(shippedFiltered) !== JSON.stringify(filteredItem)) {
-            entries[id] = filteredItem
+// Every source under a config note, lowest priority first and the note itself
+// last: each source may name further sources through its own `sourceConfig`
+// relations, and its own fields through a `schemaNote` relation, so one addon's
+// config can layer over another's. Depth-first and post-order, so a source is
+// always read before whatever points at it; a cycle stops at the note it
+// revisits. One backend hop for the whole chain — it walks relations and reads
+// note content, neither of which the frontend can do directly.
+async function loadSources(configNoteId) {
+    return await api.runOnBackend((rootId) => {
+        const readJson = (noteId) => {
+            const note = noteId ? api.getNote(noteId) : null
+            if (!note) return {}
+            try {
+                return JSON.parse(note.getContent() || "{}")
+            } catch (e) {
+                return {}
+            }
         }
-    }
-    for (const id of Object.keys(shipped)) {
-        if (!(id in effective)) removedIds.push(id)
-    }
-    return { entries, removedIds }
-}
-
-function mergeDefaults(schema, shippedNode, storedNode) {
-    const values = {}
-    for (const [key, def] of Object.entries(schema)) {
-        const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
-        if (def.type === "list") {
-            const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
-            values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            values[key] = mergeRegistryDefaults(def.itemSchema, shippedValue || {}, storedNode?.[key])
-        } else {
-            values[key] = (storedNode && key in storedNode) ? storedNode[key] : shippedValue
+        const sources = []
+        const seen = new Set()
+        const visit = (noteId) => {
+            if (!noteId || seen.has(noteId)) return
+            seen.add(noteId)
+            const note = api.getNote(noteId)
+            if (!note) return
+            for (const relation of note.getOwnedRelations("sourceConfig")) visit(relation.value)
+            sources.push({
+                configNoteId: noteId,
+                schema: readJson(note.getRelationValue("schemaNote")),
+                stored: readJson(noteId)
+            })
         }
-    }
-    return values
+        visit(rootId)
+        return sources
+    }, [configNoteId])
 }
 
-function filterBySchema(schema, values, shippedNode) {
-    const filtered = {}
-    for (const key of Object.keys(schema)) {
-        const def = schema[key]
-        if (def.type === "list") {
-            const list = Array.isArray(values?.[key]) ? values[key] : []
-            filtered[key] = list.map(item => filterBySchema(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            const effective = isPlainObject(values?.[key]) ? values[key] : {}
-            const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : (def.default || {})
-            filtered[key] = filterRegistryBySchema(def.itemSchema, shippedValue || {}, effective)
-        } else {
-            filtered[key] = values[key]
-        }
-    }
-    return filtered
-}
-
-async function loadSchema(schemaNoteId) {
+// The merged schema and values of a config note's whole source chain, with
+// `schemaNoteId`'s fields on top of whatever the chain itself declares.
+async function resolveSettings(schemaNoteId, configNoteId) {
     const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [schemaNoteId])
-    return JSON.parse(content || "{}")
+    const sources = await loadSources(configNoteId)
+    const schema = mergeSchemas([...sources.map(s => s.schema), JSON.parse(content || "{}")])
+    return { sources, schema, values: mergeSources(schema, sources.map(s => s.stored)) }
 }
 
-async function loadValues(schema, configNoteId) {
-    const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [configNoteId])
-    const stored = content ? JSON.parse(content) : {}
-    return mergeDefaults(schema, null, stored)
-}
-
-async function persistValues(schema, configNoteId, values) {
-    const filtered = filterBySchema(schema, values, null)
+// Writes only what `values` changes about the read-only sources below the config
+// note — the config note is the one writable source in its chain.
+async function persistValues(sources, schema, configNoteId, values) {
+    const base = mergeSources(schema, sources.slice(0, -1).map(s => s.stored))
     await api.runOnBackend(
         (id, content) => api.getNote(id).setContent(content),
-        [configNoteId, JSON.stringify(filtered, null, 4)]
+        [configNoteId, JSON.stringify(filterBySchema(schema, values, base), null, 4)]
     )
+}
+
+// Resolves the pair of note ids every settings consumer needs, from whichever
+// note is calling. Two wirings exist and both appear across addons, so this
+// accepts either:
+//
+//   - a *settings* note (the render-note case, what `SettingsPage` uses): the
+//     schema and config hang off this note directly, as `schemaNote` and
+//     `configNote`.
+//   - a *widget* script note: it carries `schemaNote` itself but reaches config
+//     indirectly, via its `settingsNote` relation — so the config lookup needs a
+//     backend hop to read a relation off a note that isn't the current one.
+//
+// `note` is required and must be the *consumer's* own note — do not default it
+// to `api.currentNote`. Inside this module `api.currentNote` is the library's
+// note, not the settings/widget note that owns the `schemaNote` and
+// `configNote` relations, so a default silently resolves nothing and
+// strands the caller on its loading state. Settings notes pass `api.currentNote`
+// from their own module; widgets pass the `currentNote` they import from
+// `trilium:api`.
+//
+// The config note is a persistent note (attached under the reserved "persistence"
+// parent); the `configNote` relation points at it directly and TAM never
+// overwrites its content — it reviews it per setting instead, see the README.
+//
+// Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
+// relation is absent — callers already gate their render on that.
+export async function resolveConfigNotes(note) {
+    const schemaNoteId = await note.getRelationValue("schemaNote")
+    const settingsNoteId = await note.getRelationValue("settingsNote")
+    // No `settingsNote` means this *is* the settings note: read config locally.
+    const configNoteId = settingsNoteId
+        ? await api.runOnBackend(
+            (id) => api.getNote(id).getRelationValue("configNote"),
+            [settingsNoteId]
+        )
+        : (await note.getRelationTarget("configNote"))?.noteId
+    return { schemaNoteId, configNoteId }
 }
 
 // Exported so other frontend code (e.g. a note-context-aware widget) can read merged
 // settings without duplicating the schema/config-loading logic.
 export async function loadSettings(schemaNoteId, configNoteId) {
-    const schema = await loadSchema(schemaNoteId)
-    return loadValues(schema, configNoteId)
+    return (await resolveSettings(schemaNoteId, configNoteId)).values
 }
 
 // The write-side counterpart, for frontend code that needs to persist a
 // programmatic edit itself (e.g. a library function called from a widget,
-// not just `SettingsForm`'s own Save button/autosave) — mirrors
+// not just `SettingsForm`'s own Save button) — mirrors
 // `libsettings-backend.js`'s `saveSettings` exactly, just backend-note-read
 // via `api.runOnBackend` like every other frontend function in this file.
 export async function saveSettings(schemaNoteId, configNoteId, values) {
-    const schema = await loadSchema(schemaNoteId)
-    await persistValues(schema, configNoteId, values)
+    const { sources, schema } = await resolveSettings(schemaNoteId, configNoteId)
+    await persistValues(sources, schema, configNoteId, values)
 }
 
 // `registries` is the full top-level values object (every schema key's
@@ -152,9 +131,9 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
 // passes its own entry id down; `ListItems` passes its index for signature
 // symmetry) — `checklist` needs it to filter a sibling registry down to just
 // the entries that reference this one. `onRegistriesChange` replaces the
-// *entire* top-level values object and persists immediately; only
-// `checklist` uses it, since toggling one edits a sibling top-level field
-// rather than this field's own value.
+// *entire* top-level values object (staged like any other edit — Save persists
+// it); only `checklist` uses it, since toggling one edits a sibling top-level
+// field rather than this field's own value.
 function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }) {
     switch (def.type) {
         case "boolean":
@@ -266,17 +245,6 @@ function matchesShowWhen(def, item) {
 // field's value — resolved through a `reference` field to the *referenced*
 // entry's own name (rather than showing a raw reference id) when that first
 // field is itself a `reference`.
-function titleFor(itemSchema, item, registries) {
-    if ("name" in itemSchema) return item.name || "Untitled"
-    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
-    if (!firstKey) return "Untitled"
-    const rawValue = item[firstKey]
-    if (firstDef.type === "reference") {
-        const referenced = registries?.[firstDef.registry]?.[rawValue]
-        return referenced?.name || rawValue || "Untitled"
-    }
-    return rawValue || "Untitled"
-}
 
 // One labeled field row per itemSchema key (skipping a field whose `showWhen`
 // doesn't match this item), used by both ListItems and RegistryItems so a
@@ -348,10 +316,8 @@ function ListItems({ itemSchema, items, onChange, registries, onRegistriesChange
     }
 
     function addItem() {
-        const blank = {}
-        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
         setExpandedKeys(prev => new Set(prev).add(items.length))
-        onChange([...items, blank])
+        onChange([...items, blankItem(itemSchema)])
     }
 
     function removeItem(index) {
@@ -420,11 +386,9 @@ function RegistryItems({ itemSchema, items, onChange, registries, onRegistriesCh
     }
 
     function addItem() {
-        const blank = {}
-        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
         const id = generateRegistryId()
         setExpandedKeys(prev => new Set(prev).add(id))
-        onChange({ ...items, [id]: blank })
+        onChange({ ...items, [id]: blankItem(itemSchema) })
     }
 
     function moveItem(index, direction) {
@@ -478,9 +442,21 @@ function resolveTab(def) {
     return (def.type === "list" || def.type === "registry") ? (def.label || "General") : "General"
 }
 
-// Self-contained: loads schema.json + config.json itself, renders one field per schema
-// entry, and owns its own Save button. The consuming addon just places this wherever
-// it wants in its own settings widget.
+// A field's category is an optional second grouping level *above* tabs: a
+// field with `"category": "X"` puts its tab inside category X's tab row. A
+// field with no `category` is uncategorized (returns null). Categories only
+// take effect when the schema declares a top-level `_categories` array (the
+// ordered list of every category label, empty ones included) — see
+// SettingsForm.
+function resolveCategory(def) {
+    return def.category || null
+}
+
+// Self-contained: resolves the config note's whole source chain itself (see
+// `loadSources`), renders one field per merged-schema entry, and owns its own
+// Save button — which writes only what the user changed about the read-only
+// sources below. The consuming addon just places this wherever it wants in its
+// own settings widget.
 //
 // Entries are grouped by `resolveTab` into an ordered map (first-occurrence
 // order), and when there's more than one group they become top-level tabs —
@@ -488,39 +464,48 @@ function resolveTab(def) {
 // together; a schema with only one group (the common case: just a handful of
 // scalar fields, or just one list/registry) renders directly with no tab bar.
 //
-// A field marked `autosave: true` persists on every edit instead of only on
-// Save — see `handleChange` below. The Save button
-// itself is only rendered if at least one field isn't `autosave`; a schema
-// that's entirely autosave fields has nothing left for it to do.
-export function SettingsForm({ schemaNoteId, configNoteId }) {
+// Every edit stages in local state; nothing is written to config.json until the
+// Save button is clicked (`save` below persists the whole document at once).
+//
+// `extraPanels` lets a consumer inject its own non-schema content into the
+// same category/tab structure: each entry is `{ category, tab, render }`,
+// where `render()` returns the tab's body (any JSX — a custom widget the
+// schema can't express). Its `tab` joins the given `category`'s tab row (after
+// the schema tabs already there); when active, `render()` is shown in place of
+// schema fields. An extra panel naming a category not in `_categories` falls
+// under the first declared category, same as a field would. Purely additive:
+// no `extraPanels` and the form behaves exactly as before.
+// `only` restricts the form to a single tab (by its resolved label): the
+// category/tab nav is hidden and just that tab's fields render directly — for
+// embedding one tab of a larger schema on its own page while the full schema
+// still edits elsewhere. Fields on other tabs are still loaded/merged/persisted
+// (it's a display filter, not a schema subset), so Save writes the whole doc.
+//
+// `onSaved(values)` (optional) fires after a successful Save, for a consumer
+// that needs to run a side-effect off the just-persisted config — e.g. writing
+// derived labels onto notes once the config that describes them is on disk.
+export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], only = null, onSaved = null }) {
     const [schema, setSchema] = useState(null)
+    const [sources, setSources] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
     const [activeTab, setActiveTab] = useState(null)
+    const [activeCategory, setActiveCategory] = useState(null)
 
     useEffect(() => {
         (async () => {
-            const loadedSchema = await loadSchema(schemaNoteId)
-            setSchema(loadedSchema)
-            setValues(await loadValues(loadedSchema, configNoteId))
+            const resolved = await resolveSettings(schemaNoteId, configNoteId)
+            setSchema(resolved.schema)
+            setSources(resolved.sources)
+            setValues(resolved.values)
         })()
     }, [schemaNoteId, configNoteId])
 
     async function save() {
-        await persistValues(schema, configNoteId, values)
+        await persistValues(sources, schema, configNoteId, values)
+        if (onSaved) await onSaved(values)
         setSaveStatus("saved")
         setTimeout(() => setSaveStatus(null), 2000)
-    }
-
-    // A field marked `autosave: true` persists immediately on every edit
-    // instead of waiting on the Save button below — same full-document
-    // `persistValues` write either way (there's no such thing as writing
-    // "just one field" to config.json), just triggered right away instead of
-    // on click. Silent by design (no save-status flash): the explicit Save
-    // button's flash means "you have a pending edit, and it's now saved";
-    // an autosave field never has a pending edit to report on.
-    function persistNow(updatedValues) {
-        persistValues(schema, configNoteId, updatedValues)
     }
 
     if (!schema || !values) return <div class="lst-loading">Loading settings...</div>
@@ -529,24 +514,70 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
     // other (it stays in `values` and rides every save) — it's just never
     // rendered into a tab. For state a widget writes programmatically and
     // wants durable in the config note, without a place in the editor UI.
-    const entries = Object.entries(schema).filter(([, def]) => !def.hidden)
+    const entries = Object.entries(schema).filter(([key, def]) => !key.startsWith("_") && !def.hidden)
     const tabOrder = []
     const tabEntries = {}
+    // A tab's category is that of the first field that lands on it — a schema
+    // shouldn't split one tab across categories, but if it did the first wins.
+    const tabCategory = {}
+    // A tab backed by an `extraPanels` entry rather than schema fields maps to
+    // its render function here; a tab is never both (a schema tab and an extra
+    // panel sharing one label would collide, so consumers give panels their
+    // own tab names).
+    const extraRender = {}
     for (const entry of entries) {
         const tabLabel = resolveTab(entry[1])
         if (!(tabLabel in tabEntries)) {
             tabEntries[tabLabel] = []
             tabOrder.push(tabLabel)
+            tabCategory[tabLabel] = resolveCategory(entry[1])
         }
         tabEntries[tabLabel].push(entry)
     }
+    for (const panel of extraPanels) {
+        const tabLabel = panel.tab
+        if (!(tabLabel in tabEntries) && !(tabLabel in extraRender)) {
+            tabOrder.push(tabLabel)
+            tabCategory[tabLabel] = panel.category || null
+        }
+        extraRender[tabLabel] = panel.render
+    }
     const tabs = tabOrder.map(label => ({ key: label, label }))
-    const useTabs = tabs.length > 1
-    const activeKey = useTabs && tabs.some(t => t.key === activeTab) ? activeTab : tabs[0]?.key
-    // Nothing ever needs the explicit button if every field autosaves — the
-    // common case for a schema that's entirely element-library-shaped, no
-    // profile-identity-style fields that want a deliberate Save.
-    const needsSaveButton = entries.some(([, def]) => !def.autosave)
+
+    // Categories are the optional second grouping level: active only when the
+    // schema declares a top-level `_categories` array (the ordered category
+    // list, empty ones included). When active, the top row is the category bar
+    // and the tab bar below it is scoped to the active category; a tab whose
+    // field carries no `category` (or names one not in `_categories`) falls
+    // under the first declared category so no field is ever unreachable.
+    const declaredCategories = Array.isArray(schema._categories) ? schema._categories : []
+    // `only` collapses everything to a single tab: no category bar, no tab bar.
+    const useCategories = declaredCategories.length > 0 && !only
+    const tabsForCategory = (cat) => tabs.filter(t => {
+        const c = tabCategory[t.key]
+        const resolved = (c && declaredCategories.includes(c)) ? c : declaredCategories[0]
+        return resolved === cat
+    })
+
+    const activeCat = useCategories
+        ? (declaredCategories.includes(activeCategory)
+            ? activeCategory
+            : (declaredCategories.find(c => tabsForCategory(c).length > 0) || declaredCategories[0]))
+        : null
+    const visibleTabs = only
+        ? tabs.filter(t => t.key === only)
+        : (useCategories ? tabsForCategory(activeCat) : tabs)
+
+    // With `only`, never show the tab bar even for the one matching tab.
+    const useTabs = !only && visibleTabs.length > 1
+    const activeKey = visibleTabs.some(t => t.key === activeTab) ? activeTab : visibleTabs[0]?.key
+    // The Save button shows whenever there's at least one field to save. Under
+    // `only`, scope that to the visible tab — an embedded single-tab panel gets
+    // its own Save when that tab has fields, and none when it doesn't.
+    const saveScopeEntries = only
+        ? (tabEntries[only] || [])
+        : entries
+    const needsSaveButton = saveScopeEntries.length > 0
 
     // A group field (list/registry) keeps its own heading above a full-width
     // widget — a fixed left-hand label column doesn't make sense next to
@@ -564,9 +595,7 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
         const isGroup = def.type === "list" || def.type === "registry"
 
         function handleChange(v) {
-            const updated = { ...values, [key]: v }
-            setValues(updated)
-            if (def.autosave) persistNow(updated)
+            setValues({ ...values, [key]: v })
         }
 
         return (
@@ -588,35 +617,99 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
                     value={values[key]}
                     onChange={handleChange}
                     registries={values}
-                    onRegistriesChange={v => { setValues(v); persistNow(v) }}
+                    onRegistriesChange={v => setValues(v)}
                 />
             </div>
         )
     }
 
+    // Render a tab's schema entries, optionally split into sub-groups. A field
+    // may carry a `subgroup` string; entries sharing one are rendered under a
+    // labelled sub-heading (a fieldset within the tab), in first-seen group
+    // order, with entries keeping their original order inside each group.
+    // Entries with no `subgroup` render first, ungrouped and unheaded, so a tab
+    // that uses no sub-groups behaves exactly as before (a flat field stack).
+    function renderTabEntries(entries, tabLabel) {
+        const hasSubgroups = entries.some(([, def]) => def.subgroup)
+        if (!hasSubgroups) return entries.map(entry => renderEntry(entry, tabLabel))
+
+        const ungrouped = []
+        const groupOrder = []
+        const byGroup = {}
+        for (const entry of entries) {
+            const name = entry[1].subgroup
+            if (!name) { ungrouped.push(entry); continue }
+            if (!(name in byGroup)) { byGroup[name] = []; groupOrder.push(name) }
+            byGroup[name].push(entry)
+        }
+        return (
+            <>
+                {ungrouped.map(entry => renderEntry(entry, tabLabel))}
+                {groupOrder.map(name => (
+                    <fieldset class="lst-subgroup" key={name}>
+                        <legend class="lst-subgroup-legend">{name}</legend>
+                        {byGroup[name].map(entry => renderEntry(entry, tabLabel))}
+                    </fieldset>
+                ))}
+            </>
+        )
+    }
+
+    // The content of whichever tab is active: an extra panel's own render
+    // output if it owns this tab, otherwise the schema fields grouped onto it.
+    const activeContent = extraRender[activeKey]
+        ? extraRender[activeKey]()
+        : renderTabEntries(tabEntries[activeKey] || [], activeKey)
+
+    // The panel body for whichever tabs are in scope: a tab bar plus the
+    // active tab's content when there's more than one tab, otherwise just the
+    // single tab's content stacked directly (no bar), or an empty-state line
+    // when the active category has no tabs at all.
+    const panelBody = visibleTabs.length === 0 ? (
+        <p class="lst-list-empty">Nothing here yet.</p>
+    ) : useTabs ? (
+        <div class="lst-tabbed">
+            <div class="lst-tabbed-tabs">
+                {visibleTabs.map(tab => (
+                    <button
+                        type="button"
+                        key={tab.key}
+                        class={`lst-tab${tab.key === activeKey ? " lst-tab-active" : ""}`}
+                        onClick={() => setActiveTab(tab.key)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+            <div class="lst-tabbed-panel">
+                {activeContent}
+            </div>
+        </div>
+    ) : (
+        activeContent
+    )
+
     return (
         <div class="lst-panel">
-            {useTabs ? (
-                <div class="lst-tabbed">
-                    <div class="lst-tabbed-tabs">
-                        {tabs.map(tab => (
+            {useCategories && (
+                <div class="lst-categories">
+                    {declaredCategories.map(cat => {
+                        const empty = tabsForCategory(cat).length === 0
+                        return (
                             <button
                                 type="button"
-                                key={tab.key}
-                                class={`lst-tab${tab.key === activeKey ? " lst-tab-active" : ""}`}
-                                onClick={() => setActiveTab(tab.key)}
+                                key={cat}
+                                class={`lst-category${cat === activeCat ? " lst-category-active" : ""}`}
+                                disabled={empty}
+                                onClick={() => { setActiveCategory(cat); setActiveTab(null) }}
                             >
-                                {tab.label}
+                                {cat}
                             </button>
-                        ))}
-                    </div>
-                    <div class="lst-tabbed-panel">
-                        {(tabEntries[activeKey] || []).map(entry => renderEntry(entry, activeKey))}
-                    </div>
+                        )
+                    })}
                 </div>
-            ) : (
-                entries.map(entry => renderEntry(entry, tabs[0]?.key))
             )}
+            {panelBody}
             {needsSaveButton && (
                 <div class="lst-actions">
                     <Button
@@ -627,5 +720,30 @@ export function SettingsForm({ schemaNoteId, configNoteId }) {
                 </div>
             )}
         </div>
+    )
+}
+
+// The whole of a typical addon's settings note: resolve this note's schema and
+// config, then render the form. Every addon's settings.jsx was otherwise the
+// same twenty lines of resolve-then-render boilerplate differing only by
+// function name, so they now just re-export this. Extra props (`extraPanels`,
+// `only`, `onSaved`) pass straight through to `SettingsForm`, which is what lets
+// an addon needing more than a bare form — template-picker's Scan button — still
+// use this rather than hand-rolling the resolution again.
+export function SettingsPage({ note, ...props }) {
+    const [notes, setNotes] = useState(null)
+
+    useEffect(() => {
+        (async () => setNotes(await resolveConfigNotes(note)))()
+    }, [note])
+
+    if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>
+
+    return (
+        <SettingsForm
+            schemaNoteId={notes.schemaNoteId}
+            configNoteId={notes.configNoteId}
+            {...props}
+        />
     )
 }
