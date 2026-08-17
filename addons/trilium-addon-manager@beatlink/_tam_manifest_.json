@@ -5,14 +5,12 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.2.6",
+    "latestVersion": "8.0.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/trilium-addon-manager@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
-        "dependencies": [],
-        "exports": {},
         "notes": [
             {
                 "id": "root",
@@ -61,109 +59,11 @@
                 "sourceUrl": "TAM.jsx"
             },
             {
-                "id": "tam-shared-jsx",
-                "title": "TAMShared.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "TAMShared.jsx"
-            },
-            {
-                "id": "tam-listviews-jsx",
-                "title": "TAMListViews.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "TAMListViews.jsx"
-            },
-            {
-                "id": "tam-detailsettings-jsx",
-                "title": "TAMDetailAndSettings.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "TAMDetailAndSettings.jsx"
-            },
-            {
-                "id": "tam-dialogs-jsx",
-                "title": "TAMDialogs.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "TAMDialogs.jsx"
-            },
-            {
-                "id": "tam-commands-jsx",
-                "title": "TAMCommands.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "TAMCommands.jsx"
-            },
-            {
                 "id": "lib-tam",
-                "title": "libTAM.js",
+                "title": "lib-tam.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "lib-tam.js"
-            },
-            {
-                "id": "libtam-database",
-                "title": "libTAMDatabase.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMDatabase.js"
-            },
-            {
-                "id": "libtam-network",
-                "title": "libTAMNetwork.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMNetwork.js"
-            },
-            {
-                "id": "libtam-catalog",
-                "title": "libTAMCatalog.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMCatalog.js"
-            },
-            {
-                "id": "libtam-manifestutils",
-                "title": "libTAMManifestUtils.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMManifestUtils.js"
-            },
-            {
-                "id": "libtam-noteresolver",
-                "title": "libTAMNoteResolver.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMNoteResolver.js"
-            },
-            {
-                "id": "libtam-sync",
-                "title": "libTAMSync.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMSync.js"
-            },
-            {
-                "id": "libtam-persistence",
-                "title": "libTAMPersistence.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMPersistence.js"
-            },
-            {
-                "id": "libtam-uninstall",
-                "title": "libTAMUninstall.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMUninstall.js"
-            },
-            {
-                "id": "libtam-lifecycle",
-                "title": "libTAMLifecycle.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libTAMLifecycle.js"
             },
             {
                 "id": "marked",
@@ -171,6 +71,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "marked.min.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "tam-css",
@@ -184,7 +91,8 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [
@@ -209,176 +117,20 @@
                 "child": "tam-jsx"
             },
             {
-                "parent": "tam-jsx",
-                "child": "tam-shared-jsx"
-            },
-            {
-                "parent": "tam-jsx",
-                "child": "tam-listviews-jsx"
-            },
-            {
-                "parent": "tam-jsx",
-                "child": "tam-detailsettings-jsx"
-            },
-            {
-                "parent": "tam-jsx",
-                "child": "tam-dialogs-jsx"
-            },
-            {
-                "parent": "tam-jsx",
-                "child": "tam-commands-jsx"
+                "parent": "source-code",
+                "child": "tam-css"
             },
             {
                 "parent": "tam-jsx",
                 "child": "lib-tam"
             },
             {
-                "parent": "tam-listviews-jsx",
-                "child": "tam-shared-jsx"
-            },
-            {
-                "parent": "tam-detailsettings-jsx",
-                "child": "tam-shared-jsx"
-            },
-            {
-                "parent": "tam-detailsettings-jsx",
-                "child": "lib-tam"
-            },
-            {
-                "parent": "tam-dialogs-jsx",
-                "child": "tam-shared-jsx"
-            },
-            {
-                "parent": "tam-commands-jsx",
-                "child": "lib-tam"
-            },
-            {
-                "parent": "tam-commands-jsx",
-                "child": "tam-shared-jsx"
-            },
-            {
                 "parent": "lib-tam",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-network"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-catalog"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-noteresolver"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-sync"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-persistence"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-uninstall"
-            },
-            {
-                "parent": "lib-tam",
-                "child": "libtam-lifecycle"
-            },
-            {
-                "parent": "libtam-catalog",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-catalog",
-                "child": "libtam-network"
-            },
-            {
-                "parent": "libtam-manifestutils",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-noteresolver",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-noteresolver",
-                "child": "libtam-network"
-            },
-            {
-                "parent": "libtam-noteresolver",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "libtam-noteresolver",
                 "child": "marked"
             },
             {
-                "parent": "libtam-sync",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-sync",
-                "child": "libtam-network"
-            },
-            {
-                "parent": "libtam-sync",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "libtam-sync",
-                "child": "libtam-noteresolver"
-            },
-            {
-                "parent": "libtam-sync",
-                "child": "libtam-lifecycle"
-            },
-            {
-                "parent": "libtam-sync",
-                "child": "libtam-persistence"
-            },
-            {
-                "parent": "libtam-persistence",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-persistence",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "libtam-uninstall",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-uninstall",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "libtam-lifecycle",
-                "child": "libtam-database"
-            },
-            {
-                "parent": "libtam-lifecycle",
-                "child": "libtam-manifestutils"
-            },
-            {
-                "parent": "libtam-lifecycle",
-                "child": "libtam-network"
-            },
-            {
-                "parent": "libtam-lifecycle",
-                "child": "libtam-persistence"
-            },
-            {
-                "parent": "source-code",
-                "child": "tam-css"
+                "parent": "lib-tam",
+                "child": "libsettings-core"
             },
             {
                 "parent": "root",
@@ -397,17 +149,17 @@
                 "to": "root"
             },
             {
-                "from": "libtam-database",
+                "from": "lib-tam",
                 "type": "database",
                 "to": "database"
             },
             {
-                "from": "libtam-database",
+                "from": "lib-tam",
                 "type": "addonRoot",
                 "to": "addons"
             },
             {
-                "from": "libtam-database",
+                "from": "lib-tam",
                 "type": "addonPersistence",
                 "to": "addon-data"
             }
@@ -444,77 +196,7 @@
                 "value": "bx bx-customize"
             },
             {
-                "note": "tam-shared-jsx",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "tam-listviews-jsx",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "tam-detailsettings-jsx",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "tam-dialogs-jsx",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "tam-commands-jsx",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
                 "note": "lib-tam",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-database",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-network",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-catalog",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-manifestutils",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-noteresolver",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-sync",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-persistence",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-uninstall",
-                "name": "iconClass",
-                "value": "bx bx-customize"
-            },
-            {
-                "note": "libtam-lifecycle",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             },
