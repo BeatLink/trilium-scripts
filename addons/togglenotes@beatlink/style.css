@@ -1,0 +1,138 @@
+.launcher-settings {
+    padding: 1rem;
+}
+
+.launcher-settings h3 {
+    margin: 0 0 1rem 0;
+}
+
+.launcher-settings section {
+    background-color: var(--card-background-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.launcher-settings section h4 {
+    margin: 0 0 0.25rem 0;
+}
+
+.launcher-settings section > label {
+    display: block;
+    color: var(--muted-text-color);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ---------- Launcher list ---------- */
+
+.item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.item {
+    background-color: var(--main-background-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.item .field {
+    flex: 1;
+    min-width: 0;
+}
+
+.item .field .form-group,
+.item .field input {
+    width: 100%;
+    margin: 0;
+}
+
+/* action buttons row */
+.item .controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.25rem;
+    width: fit-content;
+    flex-shrink: 0;
+}
+
+.item .controls .btn {
+    min-width: unset;
+    width: auto;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin: 0;
+}
+
+/* ---------- Loading state ---------- */
+
+.lnch-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--muted-text-color);
+}
+
+/* ---------- Actions row ---------- */
+
+.list-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 1rem 0;
+}
+
+#x-launchers-widget {
+    .launcher-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        justify-content: start;
+        padding: 0.5rem;
+
+        .btn.btn-secondary {
+            display: grid;
+            grid-template-columns: 1.25rem auto;
+            justify-content: center; /* centers the icon+text block in the button */
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn.btn-secondary .tn-icon {
+            justify-self: center; /* centers icon in its fixed column */
+        }
+
+        .btn, button {
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.25rem 2rem;
+            margin: 0;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: left;
+
+            svg, i, .bx {
+                flex-shrink: 0;
+                width: 1.25rem;
+                text-align: center;
+            }
+
+            span {
+                flex: 0;
+                min-width: fit-content;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    }
+}

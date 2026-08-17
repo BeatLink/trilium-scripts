@@ -1,0 +1,183 @@
+{
+    "id": "togglenotes@beatlink",
+    "name": "ToggleNote",
+    "description": "Configurable buttons to quickly add or remove the current note as a child of one or more parent notes. Supports exclusive mode and placement in either the right pane or left pane launchbar.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/togglenotes@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.2",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/togglenotes@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "togglenote",
+                "title": "ToggleNote",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings-jsx",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "config-js",
+                "title": "config.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "config.js"
+            },
+            {
+                "id": "settings-json",
+                "title": "Settings.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "Settings.json"
+            },
+            {
+                "id": "leftpane-jsx",
+                "title": "leftpane.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "leftpane.jsx"
+            },
+            {
+                "id": "launcherbuttons-jsx",
+                "title": "LauncherButtons.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "LauncherButtons.jsx"
+            },
+            {
+                "id": "lib-js",
+                "title": "lib.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib.js"
+            },
+            {
+                "id": "rightpane-jsx",
+                "title": "rightpane.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "rightpane.jsx"
+            },
+            {
+                "id": "startup-js",
+                "title": "startup.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "startup.js"
+            },
+            {
+                "id": "style-css",
+                "title": "style.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "style.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "togglenote"
+            },
+            {
+                "parent": "togglenote",
+                "child": "settings-jsx"
+            },
+            {
+                "parent": "settings-jsx",
+                "child": "config-js"
+            },
+            {
+                "parent": "persistence",
+                "child": "settings-json"
+            },
+            {
+                "parent": "togglenote",
+                "child": "leftpane-jsx"
+            },
+            {
+                "parent": "leftpane-jsx",
+                "child": "launcherbuttons-jsx"
+            },
+            {
+                "parent": "launcherbuttons-jsx",
+                "child": "lib-js"
+            },
+            {
+                "parent": "lib-js",
+                "child": "config-js"
+            },
+            {
+                "parent": "togglenote",
+                "child": "rightpane-jsx"
+            },
+            {
+                "parent": "rightpane-jsx",
+                "child": "launcherbuttons-jsx"
+            },
+            {
+                "parent": "togglenote",
+                "child": "startup-js"
+            },
+            {
+                "parent": "togglenote",
+                "child": "style-css"
+            },
+            {
+                "parent": "togglenote",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "togglenote",
+                "type": "renderNote",
+                "to": "settings-jsx"
+            },
+            {
+                "from": "config-js",
+                "type": "configNote",
+                "to": "settings-json"
+            },
+            {
+                "from": "startup-js",
+                "type": "launcherLaunchbarNote",
+                "to": "leftpane-jsx"
+            }
+        ],
+        "labels": [
+            {
+                "note": "rightpane-jsx",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "startup-js",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "style-css",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
