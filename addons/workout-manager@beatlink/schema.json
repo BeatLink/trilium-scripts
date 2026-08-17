@@ -1,0 +1,41 @@
+{
+    "renderNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Render Note",
+        "description": "An existing note to turn into a second view of the workout manager. Selecting it converts that note into a render note pointing at the widget; clearing it reverts the previously-chosen note to a text note.",
+        "tab": "Render Note"
+    },
+    "weightUnit": {
+        "type": "select",
+        "label": "Weight Unit",
+        "description": "Label shown beside every weight. Recorded numbers are never converted, so switching this relabels existing data rather than recalculating it.",
+        "options": [
+            { "value": "kg", "label": "Kilograms (kg)" },
+            { "value": "lb", "label": "Pounds (lb)" }
+        ],
+        "tab": "Units"
+    },
+    "distanceUnit": {
+        "type": "select",
+        "label": "Distance Unit",
+        "description": "Label shown beside every cardio distance. Recorded numbers are never converted.",
+        "options": [
+            { "value": "km", "label": "Kilometres (km)" },
+            { "value": "mi", "label": "Miles (mi)" }
+        ],
+        "tab": "Units"
+    },
+    "defaultRest": {
+        "type": "number",
+        "label": "Default Rest (seconds)",
+        "description": "Rest seeded into a new routine entry. Each entry can still be given its own.",
+        "tab": "Targets"
+    },
+    "weeklyTarget": {
+        "type": "number",
+        "label": "Workouts Per Week",
+        "description": "How many sessions a week the Stats tab measures each week against.",
+        "tab": "Targets"
+    }
+}
