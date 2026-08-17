@@ -20,6 +20,15 @@ Click **Save** to persist your changes.
 If the active note's `#area` label points at a key that is disabled or not listed, the dropdown shows
 "⚠ Invalid: \<key\>" rather than reporting the note as having no area.
 
+### What updates do to your areas
+
+Thirteen areas ship with the addon. Each one keeps tracking future versions for as long as you leave
+it alone: if a later version renames or recolors one, the change reaches your install on the next
+update without asking. Once you edit an area it is yours, and is never overwritten. Should a later
+version change that same area, TAM's **Update Review** shows your version against the new one, one
+area at a time, and asks which you want rather than deciding for you. Areas you added are never
+touched, and an area you deleted stays deleted.
+
 ## Missing Areas
 
 A separate page (its own launcher note, "Missing Areas") lists every non-hidden note that has no

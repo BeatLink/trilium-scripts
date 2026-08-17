@@ -4,7 +4,7 @@
     the configured Label Name (default: priority).
 */
 
-import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { getActiveContextNote, currentNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { getActiveProfile, assignPriority, isExcludedFromPicker } from "priorityRegistry.jsx"
@@ -21,8 +21,18 @@ export default defineWidget({
         const [label, setLabel] = useState("priority")
         const [dropdownValue, setDropdownValue] = useState("none")
         const [excluded, setExcluded] = useState(false)
+        const [reload, setReload] = useState(0)
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
+        // The label definition can be owned by the note, by its template, or by an
+        // inheritable ancestor label, so reload on any attribute change reaching this note.
+        useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+            if (!note) return
+            const owners = [note, ...note.getNotesToInheritAttributesFrom()].filter(Boolean)
+            const affects = attr => owners.some(owner => owner.noteId === attr.noteId)
+                || (attr.isInheritable && owners.some(owner => owner.hasAncestor(attr.noteId, true)))
+            if (loadResults.getAttributeRows().some(affects)) setReload(count => count + 1)
+        })
         useEffect(() => {
             (async () => {
                 const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
@@ -62,7 +72,7 @@ export default defineWidget({
                 setPriorityColors(Object.fromEntries(priorities.map(priority => [priority.key, priority.color])))
                 setDropdownValue(currentPriority)
             })()
-        }, [noteId])
+        }, [noteId, reload])
 
         if (excluded) return null
 
