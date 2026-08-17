@@ -1,0 +1,56 @@
+{
+    "searchProviders": {
+        "type": "registry",
+        "label": "Search Providers",
+        "description": "Engines the New Tab box can send a query to. %s in the URL is replaced with the URL-encoded query.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Provider"
+            },
+            "urlTemplate": {
+                "type": "string",
+                "label": "URL Template",
+                "description": "Search URL with %s where the query goes.",
+                "default": "https://example.com/search?q=%s"
+            }
+        }
+    },
+    "defaultProvider": {
+        "type": "reference",
+        "label": "Default Search Provider",
+        "description": "The provider the New Tab box starts on. Pick another one per search from its dropdown.",
+        "registry": "searchProviders"
+    },
+    "newTabParent": {
+        "type": "select",
+        "label": "New Tab Location",
+        "description": "Where a New Tab files the Web View note it creates.",
+        "options": [
+            {
+                "value": "current",
+                "label": "Under the note the button was pressed from"
+            },
+            {
+                "value": "specific",
+                "label": "Under a specific note"
+            }
+        ]
+    },
+    "newTabParentNoteId": {
+        "type": "note",
+        "label": "Specific Note",
+        "description": "Used when New Tab Location is set to \"Under a specific note\"."
+    },
+    "showSaveButton": {
+        "type": "boolean",
+        "label": "Save Button",
+        "description": "Adds a Save button to the toolbar that files the page you are reading as a Web View note somewhere permanent."
+    },
+    "saveParentNoteId": {
+        "type": "note",
+        "label": "Save Location",
+        "description": "Where Save files the note. Left empty, it uses the note labelled #inbox."
+    }
+}
