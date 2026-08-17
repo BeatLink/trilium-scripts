@@ -1,0 +1,34 @@
+#right-pane .body-wrapper:has(#x-area-picker-widget),
+#right-pane .card-body:has(#x-area-picker-widget) {
+    contain: none !important;
+    overflow: visible !important;
+}
+
+
+#x-area-picker-widget {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+
+    & div {
+        width: 100% !important
+    }
+
+    & button {
+        width: 100% !important;
+        text-align: left;
+        anchor-name: --x-area-picker-anchor;
+    }
+
+    & ul {
+        position: fixed !important;
+        position-anchor: --x-area-picker-anchor;
+        width: anchor-size(width) !important;
+
+        /*left: 50% !important;
+        transform: translate(-50%, 0) !important;*/
+    }
+}

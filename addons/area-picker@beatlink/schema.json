@@ -1,0 +1,54 @@
+{
+    "areas": {
+        "type": "registry",
+        "label": "Areas",
+        "description": "The life areas shown in the Area picker dropdown, in display order.",
+        "itemSchema": {
+            "key": {
+                "type": "string",
+                "label": "Key",
+                "description": "Stable identifier stored on tagged notes as #area. Carries no ordering — display order is this registry's own key order — so reordering areas never rewrites a note. Changing a key after notes are tagged orphans their #area label.",
+                "default": ""
+            },
+            "title": {
+                "type": "string",
+                "label": "Title",
+                "default": ""
+            },
+            "color": {
+                "type": "color",
+                "label": "Color",
+                "default": "gray"
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "description": "Whether this area appears in the picker dropdown and in the Missing Areas triage page.",
+                "default": true
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Area picker widget and skipped by the Missing Areas triage list.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #area or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
+            }
+        }
+    }
+}

@@ -1,0 +1,117 @@
+.area-picker-page {
+    padding: 16px;
+}
+
+.area-picker-page-heading {
+    margin: 0 0 12px;
+}
+
+.area-picker-page-progress {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.area-picker-page-card {
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.area-picker-page-title {
+    font-size: 1.15em;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.area-picker-page-title:hover {
+    text-decoration: underline;
+}
+
+.area-picker-page-path {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+.area-picker-page-preview {
+    opacity: 0.8;
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--main-border-color, #ccc);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+    border-radius: 0 4px 4px 0;
+}
+
+.area-picker-page-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.area-picker-page-option-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    cursor: pointer;
+}
+
+.area-picker-page-option-btn:hover:not(:disabled) {
+    border-color: var(--main-text-color, #333);
+}
+
+.area-picker-page-option-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.area-picker-page-noareas {
+    opacity: 0.7;
+}
+
+.area-picker-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.area-picker-page-nav {
+    background: none;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    padding: 6px 12px;
+    opacity: 0.85;
+    cursor: pointer;
+}
+
+.area-picker-page-nav:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.area-picker-page-nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.area-picker-page-done {
+    padding: 12px 0;
+    margin-bottom: 8px;
+}
+
+.area-picker-page-restart {
+    background: none;
+    border: none;
+    opacity: 0.75;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 8px;
+}
+
+.area-picker-page-restart:hover {
+    opacity: 1;
+}
