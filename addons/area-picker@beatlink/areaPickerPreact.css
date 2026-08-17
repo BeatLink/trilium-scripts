@@ -12,23 +12,23 @@
     align-items: center;
     gap: 1rem;
     width: 100%;
-}
 
-#x-area-picker-widget div {
-    width: 100% !important
-}
+    & div {
+        width: 100% !important
+    }
 
-#x-area-picker-widget button {
-    width: 100% !important;
-    text-align: left;
-    anchor-name: --x-template-picker-anchor;
-}
+    & button {
+        width: 100% !important;
+        text-align: left;
+        anchor-name: --x-area-picker-anchor;
+    }
 
-#x-area-picker-widget ul {
-    position: fixed !important;
-    position-anchor: --x-template-picker-anchor;
-    width: anchor-size(width) !important;
+    & ul {
+        position: fixed !important;
+        position-anchor: --x-area-picker-anchor;
+        width: anchor-size(width) !important;
 
-    /*left: 50% !important;
-    transform: translate(-50%, 0) !important;*/
+        /*left: 50% !important;
+        transform: translate(-50%, 0) !important;*/
+    }
 }

@@ -1,72 +1,74 @@
-/*
-    This is a custom widget that allows you to set the priority of a note.
-    Add this to a JS Frontend file and set label of #widget.
-    Set a #priorityLabel= label for the label to store the priority of each note
-*/
+import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
+import { getAreas, assignArea } from "areaRegistry.jsx"
+import { isExcludedFromPicker } from "pickerRegistry.jsx"
+import { resolveConfigNotes } from "libSettingsUI.jsx"
 
-import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
-import { searchForNotes, getActiveContextNote, currentNote, log } from "trilium:api"
-import { loadSettings } from "libSettingsUI.jsx"
-
-const NONE_OPTION = { label: "none", title: "None" }
+const NONE_OPTION = { key: "none", title: "None" }
 
 export default defineWidget({
     parent: "right-pane",
     position: 2,
     render() {
-        let defaultDropdownOption = [{ noteId: "none", name: "No Area Found" }]
         const [visible, setVisible] = useState(false)
-        const [existingAreas, setExistingAreas] = useState(defaultDropdownOption)
-        const [areaColors, setAreaColors] = useState({})
+        const [existingAreas, setExistingAreas] = useState([NONE_OPTION])
+        const [areasByKey, setAreasByKey] = useState({})
         const [dropdownValue, setDropdownValue] = useState("none")
+        const [excluded, setExcluded] = useState(false)
+        const [reload, setReload] = useState(0)
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
+        // #label:area and #area can be owned by the note, by its template, or by an
+        // inheritable ancestor label, so reload on any attribute change reaching this note.
+        useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+            if (!note) return
+            const owners = [note, ...note.getNotesToInheritAttributesFrom()].filter(Boolean)
+            const affects = attr => owners.some(owner => owner.noteId === attr.noteId)
+                || (attr.isInheritable && owners.some(owner => owner.hasAncestor(attr.noteId, true)))
+            if (loadResults.getAttributeRows().some(affects)) setReload(count => count + 1)
+        })
         useEffect(() => {
             (async () => {
-                const schemaNoteId = await currentNote.getRelationValue("schemaNote")
-                const settingsNoteId = await currentNote.getRelationValue("settingsNote")
-                const configNoteId = await api.runOnBackend((settingsNoteId) => {
-                    return api.getNote(settingsNoteId).getRelationValue("AddonData:config")
-                }, [settingsNoteId])
-                const { areas } = await loadSettings(schemaNoteId, configNoteId)
+                const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
 
                 setVisible(
                     (await getActiveContextNote())
                         .getLabelValue("label:area") ? true : false
                 )
 
+                if (await isExcludedFromPicker(schemaNoteId, configNoteId, noteId)) {
+                    setExcluded(true)
+                    return
+                }
+                setExcluded(false)
+
+                const areas = await getAreas(schemaNoteId, configNoteId)
+                const options = areas.filter(a => a.enabled).map(a => ({ key: a.key, title: a.title }))
+
+                setAreasByKey(Object.fromEntries(areas.map(a => [a.key, a])))
+
                 const currentArea = (await getActiveContextNote()).getLabelValue("area") ?? "none"
                 // The note's #area label can point at a key that no longer exists
-                // (the area was renamed/removed from settings since it was set) —
+                // (the area was renamed/removed/disabled since it was set) —
                 // surface that as its own dropdown option instead of silently
                 // coercing to "None", which would hide that the note's data is
                 // stale rather than actually unset.
-                const isInvalid = currentArea !== "none" && !areas.some(area => area.key === currentArea)
+                const isInvalid = currentArea !== "none" && !options.some(a => a.key === currentArea)
 
                 setExistingAreas([
                     NONE_OPTION,
-                    ...areas.map(area => ({ label: area.key, title: area.title })),
-                    ...(isInvalid ? [{ label: currentArea, title: `⚠ Invalid: ${currentArea}` }] : [])
+                    ...options,
+                    ...(isInvalid ? [{ key: currentArea, title: `⚠ Invalid: ${currentArea}` }] : [])
                 ])
-                setAreaColors(Object.fromEntries(areas.map(area => [area.key, area.color])))
                 setDropdownValue(currentArea)
             })()
-        }, [noteId])
-        const saveArea = (area, color) => {
-            api.runOnBackend((noteId, area, color) => {
-                if (area != "none") {
-                    api.getNote(noteId).setLabel("area", area)
-                    if (color) {
-                        api.getNote(noteId).setLabel("color", color)
-                    } else {
-                        api.getNote(noteId).removeLabel("color")
-                    }
-                } else {
-                    api.getNote(noteId).removeLabel("area")
-                    api.getNote(noteId).removeLabel("color")
-                }
-            }, [note.noteId, area, color])
-            setDropdownValue(area)
+        }, [noteId, reload])
+
+        if (excluded) return null
+
+        const saveArea = (key) => {
+            assignArea(note.noteId, key, areasByKey[key]?.color)
+            setDropdownValue(key)
         }
         return (
             <>
@@ -75,12 +77,11 @@ export default defineWidget({
                     <RightPanelWidget id="x-area-picker" title="Area">
                         <div id="x-area-picker-widget">
                             <FormDropdownList
-                                class="dropdown-component"
+                                class="dropdown-component form-control"
                                 values={existingAreas}
                                 currentValue={dropdownValue}
-                                onChange={value => { saveArea(value, areaColors[value]) }}
-                                keyProperty="label" titleProperty="title"
-                                class="form-control"
+                                onChange={value => { saveArea(value) }}
+                                keyProperty="key" titleProperty="title"
                             />
                         </div>
                     </RightPanelWidget>

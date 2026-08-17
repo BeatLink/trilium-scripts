@@ -1,19 +1,8 @@
-import { useState, useEffect } from "trilium:preact"
-import { SettingsForm } from "libSettingsUI.jsx"
+import { SettingsPage } from "libSettingsUI.jsx"
 
+// `note` must be passed from this module — inside libsettings, `api.currentNote`
+// is the library's own note, not this settings note. Two registry fields in
+// the schema (`areas`, `excludeFilters`) render as two tabs automatically.
 export default function AreaPickerSettings() {
-    const [schemaNoteId, setSchemaNoteId] = useState(null)
-    const [configNoteId, setConfigNoteId] = useState(null)
-
-    useEffect(() => {
-        (async () => {
-            setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
-            setConfigNoteId(target.noteId)
-        })()
-    }, [])
-
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
-
-    return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
+    return <SettingsPage note={api.currentNote} />
 }
