@@ -1,11 +1,11 @@
 {
     "id": "hoist-note@beatlink",
     "name": "Hoist Note",
-    "description": "Quick focus actions for the current note: a launchbar button that toggles hoisting, and a Note Actions right-pane widget with Zen Mode and Hoist Note buttons.",
+    "description": "A launchbar button that toggles hoisting on the current note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/hoist-note@beatlink/_tam_manifest_.json",
@@ -17,27 +17,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "setupButtons.js"
-            },
-            {
-                "id": "hoistNote",
-                "title": "hoistNote.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "hoistNote.js"
-            },
-            {
-                "id": "note-actions",
-                "title": "noteActions.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "noteActions.jsx"
-            },
-            {
-                "id": "note-actions-css",
-                "title": "noteActions.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "noteActions.css"
             },
             {
                 "id": "readme",
@@ -55,26 +34,7 @@
             },
             {
                 "parent": "root",
-                "child": "hoistNote"
-            },
-            {
-                "parent": "root",
-                "child": "note-actions"
-            },
-            {
-                "parent": "root",
-                "child": "note-actions-css"
-            },
-            {
-                "parent": "root",
                 "child": "readme"
-            }
-        ],
-        "relations": [
-            {
-                "from": "setupButtons",
-                "type": "hoistNoteScript",
-                "to": "hoistNote"
             }
         ],
         "labels": [
@@ -82,16 +42,6 @@
                 "note": "setupButtons",
                 "name": "run",
                 "value": "frontendStartup"
-            },
-            {
-                "note": "note-actions",
-                "name": "widget",
-                "value": ""
-            },
-            {
-                "note": "note-actions-css",
-                "name": "appCss",
-                "value": ""
             }
         ],
         "readmeNote": "readme"
