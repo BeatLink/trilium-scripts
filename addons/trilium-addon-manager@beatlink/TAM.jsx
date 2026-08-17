@@ -10,7 +10,8 @@
 import {
     useActiveNoteContext,
     useState,
-    useEffect
+    useEffect,
+    useRef
 } from "trilium:preact"
 
 import {
@@ -25,8 +26,8 @@ const libTAMjs = require("lib-tam.js")
 // type-color palette, command labels, and the useAddonFilter hook.
 // =========================================================================
 
-// Same palette as scripts/generate_pages.py's TYPE_COLORS, so TAM's own UI
-// matches the GitHub Pages catalog's badge colors exactly.
+// Same palette as tamhelper.js's TYPE_COLORS, so TAM's own UI matches the
+// GitHub Pages catalog's badge colors exactly.
 const TYPE_COLORS = {
     widget: "#2563eb",
     theme: "#7c3aed",
@@ -37,6 +38,32 @@ const TYPE_COLORS = {
 }
 
 const TAM_ID = "trilium-addon-manager@beatlink"
+
+// Commands the activity log does not open itself for. These are either the page
+// doing its own housekeeping (load-addons runs on every mount, so treating it as
+// activity pops the log open every time TAM is selected), navigation, or a step
+// that only prepares a dialog. Everything else is real work worth watching.
+const QUIET_COMMANDS = new Set([
+    "load-addons",
+    "browse-catalog",
+    "visit-catalog-website",
+    "request-uninstall"
+])
+
+// What each diagnosis code means in one line, shown in the table's Issue column
+// so a row explains itself without a trip to the docs.
+const ISSUE_TITLES = {
+    "duplicate-id": "Duplicate TAMFILEID",
+    "orphaned-note": "Orphaned note",
+    "unclaimed-note": "Unclaimed note",
+    "dead-source": "Source unreachable",
+    "unverifiable-source": "Source carries no hashes",
+    "partial-sync": "Sync half-failed",
+    "missing-note": "Note not installed",
+    "content-drift": "Content doesn't match manifest",
+    "broken-wiring": "Wiring not applied",
+    "duplicate-child-title": "Duplicate child name breaks the script bundle"
+}
 
 function typeColor(type) {
     return TYPE_COLORS[type] || "#6b7280"
@@ -59,6 +86,139 @@ function TamButton({ icon, text, onClick, className = "" }) {
     )
 }
 
+// The diagnosis, one row per problem, each with its own repair. Nothing has been
+// changed at this point - the audit is read-only, and a row only acts when its
+// button is pressed.
+function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
+    return (
+        <div className="TAM-validation-results">
+            <h4>
+                Diagnostics — {issues.length === 0 ? "no issues found" : `${issues.length} issue(s) found`}
+            </h4>
+            {reloadRequired && (
+                <p className="TAM-diagnostics-reload">
+                    <i className="bx bx-refresh"></i>{" "}
+                    TAM repaired its own notes. The old code is still the code running — reload Trilium
+                    to pick up the repaired version.
+                </p>
+            )}
+            {issues.length > 0 && (
+                <>
+                    <p className="no-readme">
+                        Each repair acts on that row alone. Your settings aren't touched: a persistent
+                        note that differs still goes through the usual Keep Mine / Use New prompt.
+                    </p>
+                    <table className="TAM-diagnostics-table">
+                        <thead>
+                            <tr>
+                                <th>Addon</th>
+                                <th>Issue</th>
+                                <th>Item</th>
+                                <th>Details</th>
+                                <th>Repair</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {issues.map((issue, index) => (
+                                <tr key={`${issue.addonId}/${issue.code}/${issue.target}/${index}`}>
+                                    <td>{issue.addonId}</td>
+                                    <td>{ISSUE_TITLES[issue.code] || issue.code}</td>
+                                    <td><code>{issue.target}</code></td>
+                                    <td>{issue.detail}</td>
+                                    <td>
+                                        {issue.fixes.length === 0
+                                            ? <span className="TAM-diagnostics-manual">by hand</span>
+                                            : (
+                                                <div className="TAM-diagnostics-fixes">
+                                                    {issue.fixes.map(fix => (
+                                                        <TamButton
+                                                            key={fix.kind}
+                                                            className={fix.kind === "uninstall" ? "btn-ghost" : ""}
+                                                            icon={fix.kind === "uninstall" ? "bx bx-trash" : "bx bx-wrench"}
+                                                            text={fix.label}
+                                                            onClick={() => onRepair(issue, fix)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </>
+            )}
+            <div className="TAM-validation-buttons">
+                {issues.length > 0 && <TamButton
+                    className="btn-ghost"
+                    icon="bx bx-copy"
+                    text="Copy to Clipboard"
+                    onClick={() => navigator.clipboard.writeText(
+                        issues.map(issue => `${issue.addonId}: [${issue.code}] ${issue.target} - ${issue.detail}`).join("\n")
+                    )}
+                />}
+                <TamButton className="btn-ghost" icon="bx bx-x" text="Dismiss" onClick={onDismiss} />
+            </div>
+        </div>
+    )
+}
+
+// TAM's activity log, shown in place of a blocking spinner overlay: a long
+// update-all or repair says what it is doing rather than covering the screen.
+//
+// It subscribes to lib-tam's log bus rather than being handed entries as props,
+// so a line written deep inside a sync appears the moment it is written, without
+// every caller having to thread progress state back out.
+function ActivityLog({ busyLabel, onDismiss }) {
+    const [entries, setEntries] = useState(() => libTAMjs.getLogEntries())
+    const bodyRef = useRef(null)
+
+    useEffect(() => libTAMjs.subscribeToLog(() => setEntries(libTAMjs.getLogEntries())), [])
+
+    // Follow the tail as lines arrive, scrolling the log's own box rather than
+    // the page.
+    useEffect(() => {
+        const body = bodyRef.current
+        if (body) body.scrollTop = body.scrollHeight
+    }, [entries])
+
+    // Dismissable while work is still running: closing the page only stops you
+    // watching it, it never cancels the command, and the log keeps filling up
+    // behind it.
+    useEffect(() => {
+        function onKeyDown(e) {
+            if (e.key === "Escape") onDismiss()
+        }
+        document.addEventListener("keydown", onKeyDown)
+        return () => document.removeEventListener("keydown", onKeyDown)
+    }, [onDismiss])
+
+    return (
+        <div className="TAM-log">
+            {/* Everything lives in the header: the page opens itself when work
+                starts, so it has to say when it's finished too - otherwise it
+                sits over the UI looking like something is still happening. */}
+            <div className="TAM-log-head">
+                {busyLabel
+                    ? <><Spinner /><span>{busyLabel}…</span></>
+                    : <span>Activity log — nothing is running</span>}
+                <button className="TAM-log-action" onClick={() => libTAMjs.clearLog()}>Clear</button>
+                <button className="TAM-log-action" title="Dismiss (Esc)" onClick={onDismiss}>Close</button>
+            </div>
+            <div className="TAM-log-body" ref={bodyRef}>
+                {entries.length === 0
+                    ? <div className="TAM-log-empty">Nothing logged yet.</div>
+                    : entries.map((entry, index) => (
+                        <div key={index} className={`TAM-log-line TAM-log-${entry.level}`}>
+                            <span className="TAM-log-time">{entry.time}</span>
+                            <span className="TAM-log-message">{entry.message}</span>
+                        </div>
+                    ))}
+            </div>
+        </div>
+    )
+}
+
 function BackLink({ onClick, text = "All Addons" }) {
     return <a className="back" onClick={onClick}>← {text}</a>
 }
@@ -75,16 +235,15 @@ const COMMAND_LABELS = {
     "visit-catalog-website": "Opening website",
     "install-addon": "Installing addon",
     "install-by-url": "Installing addon",
-    "request-uninstall": "Checking for external references",
+    "request-uninstall": "Preparing uninstall",
     "delete-addon": "Uninstalling addon",
     "update-addon": "Updating addon",
     "resolve-prompts": "Applying update",
     "update-all": "Updating all addons",
     "enable-addon": "Updating addon",
     "check-updates": "Checking for updates",
-    "validate-database": "Validating database",
-    "cleanup-persistence": "Cleaning up persisted data",
-    "sweep-orphans": "Sweeping orphaned notes",
+    "run-diagnostics": "Running diagnostics",
+    "repair-issue": "Applying repair",
     "reinitialize-database": "Reinitializing database"
 }
 
@@ -103,12 +262,9 @@ function computeStats(addons, catalogs) {
         if (!addonData.installedVersion) continue
         installedCount++
         if (addonData.updateAvailable) updateCount++
-        const persistence = addonData.persistence
-        const hasPersisted = persistence && (
-            persistence.rootNote ||
-            (persistence.persistenceNotes && Object.keys(persistence.persistenceNotes).length > 0)
-        )
-        if (hasPersisted) persistedCount++
+        // An addon holds user data if its manifest attaches anything under the reserved
+        // "persistence" parent keyword.
+        if (addonData.manifest?.children?.some(c => c.parent === "persistence")) persistedCount++
     }
     return { catalogCount: catalogs.length, installedCount, persistedCount, updateCount }
 }
@@ -173,38 +329,81 @@ function useAddonFilter(items) {
 }
 
 // =========================================================================
-// Dialogs: full-screen overlays — the promptOnUpdate keep-mine/use-new review,
-// and the external-references-would-dangle warning shown before an uninstall.
+// Dialogs: full-screen overlays — the update keep-mine/use-new review, and the
+// dangling-references/delete-my-data questions asked before an uninstall.
 // =========================================================================
 
+// A hook-produced item's values are arbitrary JSON, not necessarily strings.
+function formatPromptValue(value) {
+    return typeof value === "string" ? value : JSON.stringify(value, null, 2)
+}
+
+// One prompt is either a whole-note content diff (TAM's built-in producer, one
+// boolean decision) or a list of items an addon's own updateReview hook produced
+// (one boolean per item key). Both render as the same Keep Mine / Use New pair.
+function PromptChoice({ selected, onSelect, current, incoming }) {
+    return (
+        <div className="TAM-prompt-options">
+            <div
+                className={`TAM-prompt-option${!selected ? " TAM-prompt-selected" : ""}`}
+                onClick={() => onSelect(false)}
+            >
+                <label>Keep Mine</label>
+                <pre className="TAM-prompt-content">{current}</pre>
+            </div>
+            <div
+                className={`TAM-prompt-option${selected ? " TAM-prompt-selected" : ""}`}
+                onClick={() => onSelect(true)}
+            >
+                <label>Use New Default</label>
+                <pre className="TAM-prompt-content">{incoming}</pre>
+            </div>
+        </div>
+    )
+}
+
 function PromptReview({ prompts, onResolve }) {
+    // An item may pre-select its own side: a setting whose default moved but which
+    // the user never customized is already following the new value, so its row
+    // starts on Use New Default rather than silently pinning the old one.
     const [decisions, setDecisions] = useState(
-        Object.fromEntries(prompts.map(p => [p.noteLocalId, false]))
+        Object.fromEntries(prompts.map(p => [
+            p.noteLocalId,
+            p.items ? Object.fromEntries(p.items.map(item => [item.key, !!item.defaultSelected])) : false
+        ]))
     )
 
     return (
         <div className="TAM-prompt-review">
             <h3>Update Review</h3>
-            <p>The following files were updated. Choose which version to keep for each:</p>
+            <p>The following changed upstream. Choose which version to keep for each:</p>
             {prompts.map(prompt => (
                 <div key={prompt.noteLocalId} className="TAM-prompt-item">
                     <h4>{prompt.title}</h4>
-                    <div className="TAM-prompt-options">
-                        <div
-                            className={`TAM-prompt-option${!decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
-                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: false })}
-                        >
-                            <label>Keep Mine</label>
-                            <pre className="TAM-prompt-content">{prompt.currentContent}</pre>
+                    {prompt.items ? prompt.items.map(item => (
+                        <div key={item.key} className="TAM-prompt-field">
+                            <h5>{item.label ?? item.key}</h5>
+                            <PromptChoice
+                                selected={decisions[prompt.noteLocalId][item.key]}
+                                onSelect={value => setDecisions({
+                                    ...decisions,
+                                    [prompt.noteLocalId]: {
+                                        ...decisions[prompt.noteLocalId],
+                                        [item.key]: value
+                                    }
+                                })}
+                                current={formatPromptValue(item.current)}
+                                incoming={formatPromptValue(item.incoming)}
+                            />
                         </div>
-                        <div
-                            className={`TAM-prompt-option${decisions[prompt.noteLocalId] ? " TAM-prompt-selected" : ""}`}
-                            onClick={() => setDecisions({ ...decisions, [prompt.noteLocalId]: true })}
-                        >
-                            <label>Use New Default</label>
-                            <pre className="TAM-prompt-content">{prompt.newContent}</pre>
-                        </div>
-                    </div>
+                    )) : (
+                        <PromptChoice
+                            selected={decisions[prompt.noteLocalId]}
+                            onSelect={value => setDecisions({ ...decisions, [prompt.noteLocalId]: value })}
+                            current={prompt.currentContent}
+                            incoming={prompt.newContent}
+                        />
+                    )}
                 </div>
             ))}
             <TamButton icon="bx bx-check" text="Apply" onClick={() => onResolve(decisions)} />
@@ -212,27 +411,47 @@ function PromptReview({ prompts, onResolve }) {
     )
 }
 
-function ExternalReferenceWarning({ addonId, references, onProceed, onCancel }) {
+// Shown before an uninstall only when there's something to decide: dangling
+// references, stored data, or both. With neither, the uninstall runs unprompted
+// exactly as it always has.
+function UninstallDialog({ addonId, references, hasData, onProceed, onCancel }) {
+    const [deleteData, setDeleteData] = useState(false)
+
     return (
         <div className="TAM-prompt-review">
-            <h3>External References Found</h3>
-            <p>
-                The following note(s) outside of <strong>{addonId}</strong> reference note(s) that will
-                be deleted. Uninstalling anyway will leave those relations pointing at a note that no
-                longer exists.
-            </p>
-            <ul className="TAM-external-ref-list">
-                {references.map((ref, i) => (
-                    <li key={i}>
-                        <strong>{ref.sourceTitle}</strong> —{" "}
-                        <code>~{ref.relationName}</code> →{" "}
-                        <strong>{ref.targetTitle}</strong>
-                    </li>
-                ))}
-            </ul>
+            <h3>Uninstall {addonId}</h3>
+            {references.length > 0 && (
+                <>
+                    <p>
+                        The following note(s) outside of <strong>{addonId}</strong> reference note(s) that will
+                        be deleted. Uninstalling anyway will leave those relations pointing at a note that no
+                        longer exists.
+                    </p>
+                    <ul className="TAM-external-ref-list">
+                        {references.map((ref, i) => (
+                            <li key={i}>
+                                <strong>{ref.sourceTitle}</strong> —{" "}
+                                <code>~{ref.relationName}</code> →{" "}
+                                <strong>{ref.targetTitle}</strong>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
+            {hasData && (
+                <label className="TAM-uninstall-data">
+                    <input
+                        type="checkbox"
+                        checked={deleteData}
+                        onChange={e => setDeleteData(e.target.checked)}
+                    />
+                    Also delete this addon's stored data. Left unchecked, its settings and saved
+                    content stay under Addon Data and are picked up again if you reinstall it.
+                </label>
+            )}
             <div className="TAM-validation-buttons">
                 <TamButton className="btn-ghost" icon="bx bx-x" text="Cancel" onClick={onCancel} />
-                <TamButton icon="bx bx-trash" text="Uninstall Anyway" onClick={onProceed} />
+                <TamButton icon="bx bx-trash" text="Uninstall" onClick={() => onProceed(deleteData)} />
             </div>
         </div>
     )
@@ -540,7 +759,7 @@ function NewUrlForm({ placeholder, buttonIcon, buttonText, onSave }) {
 
 function SettingsView({
     addons, catalogs, onAddCatalog, onDeleteCatalog, onVisitCatalogWebsite, onBrowseCatalog, onInstallByUrl, onCheckUpdates, onUpdateAll,
-    onValidate, onCleanup, onSweepOrphans, onReinitialize, anyUpdateAvailable
+    onDiagnose, onShowLog, onReinitialize, anyUpdateAvailable
 }) {
     const stats = computeStats(addons, catalogs)
     return (
@@ -592,10 +811,9 @@ function SettingsView({
                 <h3>Maintenance</h3>
                 <div className="TAM-maintenance-actions">
                     <TamButton className="btn-ghost" icon="bx bx-sync" text="Check for Updates" onClick={onCheckUpdates} />
-                    {anyUpdateAvailable && <TamButton icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
-                    <TamButton className="btn-ghost" icon="bx bx-shield-quarter" text="Validate Database" onClick={onValidate} />
-                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Clean Up Empty Persistence Roots" onClick={onCleanup} />
-                    <TamButton className="btn-ghost" icon="bx bx-broom" text="Sweep Orphaned Notes" onClick={onSweepOrphans} />
+                    {anyUpdateAvailable && <TamButton className="btn-ghost" icon="bx bx-sync" text="Update All Addons" onClick={onUpdateAll} />}
+                    <TamButton className="btn-ghost" icon="bx bx-first-aid" text="Run Diagnostics" onClick={onDiagnose} />
+                    <TamButton className="btn-ghost" icon="bx bx-terminal" text="Show Activity Log" onClick={onShowLog} />
                     <TamButton
                         className="btn-ghost"
                         icon="bx bx-trash"
@@ -626,11 +844,11 @@ function SettingsView({
 // reading them itself:
 // - resolveDisplayNote(): currentNote only resolves correctly in the note it physically
 //   executes in (this note), so RepoManager owns that read and injects it in.
-// - dialogActions: the handful of setters (setExternalRefWarning/setView/setValidationTitle/
-//   setValidationIssues) that a few commands need to update — these are pure UI-dialog state
+// - dialogActions: the handful of setters (setUninstallPrompt/setView/setDiagnostics/
+//   setReloadRequired) that a few commands need to update — these are pure UI-dialog state
 //   that belongs to RepoManager, not to this data layer.
 function useTamCommands(resolveDisplayNote, dialogActions) {
-    const { setExternalRefWarning, setView, setValidationTitle, setValidationIssues } = dialogActions
+    const { setUninstallPrompt, setView, setDiagnostics, setReloadRequired } = dialogActions
 
     const [command, setCommand] = useState(null)
     const [addons, setAddons] = useState(null)
@@ -668,17 +886,6 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         const merged = {}
         for (const entries of results) for (const e of entries) merged[e.id] = e
         setCatalogAddons(merged)
-    }
-
-    // Bare-id dependency resolution during a sync needs a { [id]: manifestSourceUrl }
-    // map to look uninstalled deps up against — same derivation as RepoManager builds for
-    // install. Update/reinstall/update-all all resolve dependencies too (a freshly
-    // added dependency of an already-installed addon is otherwise unresolvable, since
-    // its own `dependencies` entries are bare ids with no URL), so they must thread
-    // this through just like install does — not doing so is what left new deps
-    // "could not be resolved (not installed, and no manifestSourceUrl available)".
-    function buildCatalogContext() {
-        return Object.fromEntries(Object.values(catalogAddons).map(e => [e.id, e.manifestSourceUrl]))
     }
 
     // Shared tail of most mutating commands: reload state, return to the note the widget
@@ -743,10 +950,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     }
 
     async function handleInstallAddon(command) {
-        await libTAMjs.syncAddon(command.addon, {
-            manifestSourceUrl: command.manifestSourceUrl,
-            catalogContext: command.catalogContext
-        })
+        await libTAMjs.syncAddon(command.addon, { manifestSourceUrl: command.manifestSourceUrl })
         await reloadAndActivate()
     }
 
@@ -757,34 +961,26 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleRequestUninstall(command) {
         const references = await libTAMjs.findExternalReferences(command.addon)
-        if (references.length > 0) {
-            setExternalRefWarning({ addonId: command.addon, references })
+        const hasData = await libTAMjs.hasPersistentData(command.addon)
+        if (references.length > 0 || hasData) {
+            setUninstallPrompt({ addonId: command.addon, references, hasData })
         } else {
             setCommand({ command: "delete-addon", addon: command.addon })
         }
     }
 
     async function handleDeleteAddon(command) {
-        await libTAMjs.uninstallAddon(command.addon)
+        await libTAMjs.uninstallAddon(command.addon, { deleteData: !!command.deleteData })
         await reload()
         setView({ type: "list" })
         await activateNote(await resolveDisplayNote())
         window.location.reload()
     }
 
+    // Shared by update-addon and reinstall-addon — both are just syncAddon followed
+    // by the same pending-prompt check.
     async function handleUpdateAddon(command) {
-        await libTAMjs.syncAddon(command.addon, { catalogContext: buildCatalogContext() })
-        const prompts = await libTAMjs.getPendingPrompts(command.addon)
-        if (prompts.length > 0) {
-            setPendingPrompts(prompts)
-            setPromptAddonId(command.addon)
-        } else {
-            await reloadAndActivate()
-        }
-    }
-
-    async function handleReinstallAddon(command) {
-        await libTAMjs.syncAddon(command.addon, { catalogContext: buildCatalogContext() })
+        await libTAMjs.syncAddon(command.addon)
         const prompts = await libTAMjs.getPendingPrompts(command.addon)
         if (prompts.length > 0) {
             setPendingPrompts(prompts)
@@ -796,8 +992,8 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleResolvePrompts(command) {
         const { addonId, decisions } = command
-        for (const [noteLocalId, useNew] of Object.entries(decisions)) {
-            await libTAMjs.resolvePrompt(addonId, noteLocalId, useNew)
+        for (const [noteLocalId, decision] of Object.entries(decisions)) {
+            await libTAMjs.resolvePrompt(addonId, noteLocalId, decision)
         }
         await libTAMjs.clearPendingPrompts(addonId)
         await advancePromptQueue(promptQueue)
@@ -810,12 +1006,11 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
             .filter(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
             .map(a => a.id)
 
-        const catalogContext = buildCatalogContext()
         const queue = []
         for (let i = 0; i < targets.length; i++) {
             const addonId = targets[i]
             setProgressDetail(`${addonId} (${i + 1}/${targets.length})`)
-            await libTAMjs.syncAddon(addonId, { catalogContext })
+            await libTAMjs.syncAddon(addonId)
             const prompts = await libTAMjs.getPendingPrompts(addonId)
             if (prompts.length > 0) queue.push(addonId)
         }
@@ -833,23 +1028,17 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         await reload()
     }
 
-    async function handleValidateDatabase() {
-        setValidationTitle("Database Validation")
-        setValidationIssues(await libTAMjs.validateDatabase())
+    async function handleRunDiagnostics() {
+        setDiagnostics(await libTAMjs.diagnose())
     }
 
-    async function handleCleanupPersistence() {
-        await libTAMjs.cleanupEmptyPersistenceRoots()
-        await reload()
-    }
-
-    async function handleSweepOrphans() {
-        const removedTamFileIds = await libTAMjs.sweepOrphanedNotes()
-        setValidationTitle("Orphaned Notes")
-        setValidationIssues(removedTamFileIds.map(tamFileId => ({
-            addonId: tamFileId.split("/")[0],
-            message: `removed orphaned note '${tamFileId}'`
-        })))
+    // Re-runs the audit after each repair rather than striking the row out: one
+    // fix routinely settles several rows (a re-sync clears every finding for that
+    // addon at once), so anything else would leave the table lying.
+    async function handleRepairIssue(command) {
+        const { requiresReload } = await libTAMjs.repairIssue(command.issue, command.fix)
+        if (requiresReload) setReloadRequired(true)
+        setDiagnostics(await libTAMjs.diagnose())
         await reload()
     }
 
@@ -871,14 +1060,13 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         "request-uninstall": handleRequestUninstall,
         "delete-addon": handleDeleteAddon,
         "update-addon": handleUpdateAddon,
-        "reinstall-addon": handleReinstallAddon,
+        "reinstall-addon": handleUpdateAddon,
         "resolve-prompts": handleResolvePrompts,
         "update-all": handleUpdateAll,
         "enable-addon": handleEnableAddon,
         "check-updates": handleCheckUpdates,
-        "validate-database": handleValidateDatabase,
-        "cleanup-persistence": handleCleanupPersistence,
-        "sweep-orphans": handleSweepOrphans,
+        "run-diagnostics": handleRunDiagnostics,
+        "repair-issue": handleRepairIssue,
         "reinitialize-database": handleReinitializeDatabase
     }
 
@@ -918,15 +1106,21 @@ async function resolveDisplayNote() {
 export default function RepoManager() {
     const { note } = useActiveNoteContext()
     const [view, setView] = useState({ type: "list" })
-    const [validationIssues, setValidationIssues] = useState(null)
-    const [validationTitle, setValidationTitle] = useState("Database Validation")
-    const [externalRefWarning, setExternalRefWarning] = useState(null) // { addonId, references }
+    // The log is a page rather than a permanent panel: it opens itself when a
+    // command starts, so pressing something still shows you what it's doing, and
+    // is dismissable at any point - including mid-run, which only stops you
+    // watching. Reopen it from the header any time.
+    const [logOpen, setLogOpen] = useState(false)
+    // null until diagnostics have been run at least once; [] means a clean run.
+    const [diagnostics, setDiagnostics] = useState(null)
+    const [reloadRequired, setReloadRequired] = useState(false)
+    const [uninstallPrompt, setUninstallPrompt] = useState(null) // { addonId, references, hasData }
 
     const {
         addons, catalogs, catalogBrowse, catalogAddons,
         pendingPrompts, promptAddonId, promptQueue,
         pendingCommand, progressDetail, dispatch
-    } = useTamCommands(resolveDisplayNote, { setExternalRefWarning, setView, setValidationTitle, setValidationIssues })
+    } = useTamCommands(resolveDisplayNote, { setUninstallPrompt, setView, setDiagnostics, setReloadRequired })
 
     // Trigger loading of addons on page load.
     useEffect(() => {
@@ -934,11 +1128,21 @@ export default function RepoManager() {
         dispatch({ command: "load-addons" })
     }, [note])
 
+    const isBusy = Boolean(pendingCommand && !QUIET_COMMANDS.has(pendingCommand.command))
+
+    // Opens on the transition into activity rather than while it runs, so a
+    // dismissal mid-run sticks until the next thing you press.
+    const wasBusyRef = useRef(false)
+    useEffect(() => {
+        if (isBusy && !wasBusyRef.current) setLogOpen(true)
+        wasBusyRef.current = isBusy
+    }, [isBusy])
+
     if (!addons) {
         return <div>Loading addons...</div>
     }
 
-    if (externalRefWarning) {
+    if (uninstallPrompt) {
         return (
             <div className="TAM-body">
                 <header>
@@ -947,15 +1151,16 @@ export default function RepoManager() {
                     </div>
                 </header>
                 <main>
-                    <ExternalReferenceWarning
-                        addonId={externalRefWarning.addonId}
-                        references={externalRefWarning.references}
-                        onProceed={() => {
-                            const addonId = externalRefWarning.addonId
-                            setExternalRefWarning(null)
-                            dispatch({ command: "delete-addon", addon: addonId })
+                    <UninstallDialog
+                        addonId={uninstallPrompt.addonId}
+                        references={uninstallPrompt.references}
+                        hasData={uninstallPrompt.hasData}
+                        onProceed={deleteData => {
+                            const addonId = uninstallPrompt.addonId
+                            setUninstallPrompt(null)
+                            dispatch({ command: "delete-addon", addon: addonId, deleteData })
                         }}
-                        onCancel={() => setExternalRefWarning(null)}
+                        onCancel={() => setUninstallPrompt(null)}
                     />
                 </main>
             </div>
@@ -990,15 +1195,10 @@ export default function RepoManager() {
 
     const anyUpdateAvailable = Object.values(addons).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
 
-    // Dependency resolution during install needs to look up bare-id deps
-    // against whatever catalogs are known — built once from the merged
-    // catalogAddons map so it covers every added catalog, not just one.
-    const catalogContext = Object.fromEntries(Object.values(catalogAddons).map(e => [e.id, e.manifestSourceUrl]))
     const handleInstall = entryData => dispatch({
         command: "install-addon",
         addon: entryData.id,
-        manifestSourceUrl: entryData.manifestSourceUrl,
-        catalogContext
+        manifestSourceUrl: entryData.manifestSourceUrl
     })
 
     let bodyContent
@@ -1018,9 +1218,8 @@ export default function RepoManager() {
                 onInstallByUrl={url => dispatch({ command: "install-by-url", url })}
                 onCheckUpdates={() => dispatch({ command: "check-updates" })}
                 onUpdateAll={() => dispatch({ command: "update-all" })}
-                onValidate={() => dispatch({ command: "validate-database" })}
-                onCleanup={() => dispatch({ command: "cleanup-persistence" })}
-                onSweepOrphans={() => dispatch({ command: "sweep-orphans" })}
+                onDiagnose={() => dispatch({ command: "run-diagnostics" })}
+                onShowLog={() => setLogOpen(true)}
                 onReinitialize={() => dispatch({ command: "reinitialize-database" })}
             />
         )
@@ -1082,11 +1281,11 @@ export default function RepoManager() {
                 <div className="hdr-right">
                     <div className="hdr-links">
                         <a onClick={() => dispatch({ command: "check-updates" })}>Check for Updates</a>
+                        {anyUpdateAvailable && (
+                            <a onClick={() => dispatch({ command: "update-all" })}>Update All</a>
+                        )}
                         <a onClick={() => setView({ type: "settings" })}>Settings</a>
                     </div>
-                    {anyUpdateAvailable && (
-                        <TamButton icon="bx bx-sync" text="Update All" onClick={() => dispatch({ command: "update-all" })} />
-                    )}
                 </div>
             </div>
         )
@@ -1112,64 +1311,31 @@ export default function RepoManager() {
         )
     }
 
-    // browse-catalog already shows its own inline Spinner in CatalogBrowseView —
-    // the blocking overlay is for everything else, where nothing on screen
-    // otherwise indicates a long-running mutation is in flight.
-    const showProgressOverlay = pendingCommand && pendingCommand.command !== "browse-catalog"
+    // The log's header is what says work is in flight; CatalogBrowseView draws
+    // its own inline spinner for the one command that needs it.
+    const busyLabel = isBusy ? (progressDetail || commandLabel(pendingCommand)) : null
 
     return (
         <div className="TAM-body">
             <header>{headerContent}</header>
-            {showProgressOverlay && (
-                <div className="TAM-progress-overlay">
-                    <Spinner />
-                    <p>{progressDetail || commandLabel(pendingCommand)}…</p>
-                </div>
-            )}
             <main>
-                {validationIssues !== null && (
-                    <div className="TAM-validation-results">
-                        <h4>
-                            {validationTitle} —{" "}
-                            {validationIssues.length === 0
-                                ? "no issues found"
-                                : `${validationIssues.length} issue(s) found`}
-                        </h4>
-                        {validationIssues.length > 0 && (
-                            <>
-                                <p className="no-readme">
-                                    {validationTitle === "Orphaned Notes"
-                                        ? "Already removed — nothing further to do."
-                                        : "There's no offline repair anymore — reinstall/update the affected addon(s) below to fix these."}
-                                </p>
-                                <pre className="TAM-validation-content">
-                                    {validationIssues.map(issue => `${issue.addonId}: ${issue.message}`).join("\n")}
-                                </pre>
-                            </>
+                {diagnostics !== null && (
+                    <DiagnosticsTable
+                        issues={diagnostics}
+                        reloadRequired={reloadRequired}
+                        onRepair={(issue, fix) => dispatch(
+                            // Uninstall goes through TAM's normal uninstall flow, so the
+                            // dangling-reference and delete-my-data questions still get asked.
+                            fix.kind === "uninstall"
+                                ? { command: "request-uninstall", addon: issue.addonId }
+                                : { command: "repair-issue", issue, fix }
                         )}
-                        <div className="TAM-validation-buttons">
-                            {validationIssues.length > 0 && <TamButton
-                                className="btn-ghost"
-                                icon="bx bx-copy"
-                                text="Copy to Clipboard"
-                                onClick={e => {
-                                    const text = validationIssues
-                                        .map(issue => `${issue.addonId}: ${issue.message}`)
-                                        .join("\n")
-                                    navigator.clipboard.writeText(text)
-                                }}
-                            />}
-                            <TamButton
-                                className="btn-ghost"
-                                icon="bx bx-x"
-                                text="Dismiss"
-                                onClick={e => { setValidationIssues(null) }}
-                            />
-                        </div>
-                    </div>
+                        onDismiss={() => setDiagnostics(null)}
+                    />
                 )}
                 {bodyContent}
             </main>
+            {logOpen && <ActivityLog busyLabel={busyLabel} onDismiss={() => setLogOpen(false)} />}
         </div>
     )
 }
