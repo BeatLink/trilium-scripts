@@ -1,11 +1,11 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and, as of 1.6.0, the AreaCollection container template that agenda-structure@beatlink used to ship - agenda-structure still instantiates it, resolving it live by title, so moving it here means the picker owns every bundled template in one place. Existing agenda-structure installs must run migrate-areacollection-from-structure.js once before updating either addon.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. As of 1.9.0 it also ships one empty root container note per bundled item template (Ideas Root / Goal Root / Routine Root / Task Root / Future Root / Project Root / Note Root), carrying only the template's icon and #viewType=list. They are children of the AreaCollection template, so Trilium deep-duplicates the whole set into every note created from it and a new Area comes out already holding its type roots - standing in for the roots that used to be provisioned automatically. Each registry row gained a Root Note field so other addons can resolve a template's root.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.8.0",
+    "latestVersion": "1.10.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
@@ -201,10 +201,59 @@
             },
             {
                 "id": "tpl-area",
-                "title": "AreaCollection",
+                "title": "Area",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/templates/areaCollection.html"
+            },
+            {
+                "id": "root-idea",
+                "title": "Ideas",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-goal",
+                "title": "Goals",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-routine",
+                "title": "Routines",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-task",
+                "title": "Tasks",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-future",
+                "title": "Future",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-project",
+                "title": "Projects",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-note",
+                "title": "Notes",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
             }
         ],
         "children": [
@@ -343,6 +392,34 @@
             {
                 "parent": "templates-root",
                 "child": "tpl-area"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-idea"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-goal"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-routine"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-task"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-future"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-project"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-note"
             }
         ],
         "relations": [
@@ -627,6 +704,111 @@
                 "note": "tpl-area",
                 "name": "type",
                 "value": "areacollection"
+            },
+            {
+                "note": "root-idea",
+                "name": "iconClass",
+                "value": "bx bx-bulb"
+            },
+            {
+                "note": "root-idea",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-idea",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-goal",
+                "name": "iconClass",
+                "value": "bx bxs-star-half"
+            },
+            {
+                "note": "root-goal",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-goal",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-routine",
+                "name": "iconClass",
+                "value": "bx bx-sync"
+            },
+            {
+                "note": "root-routine",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-routine",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-task",
+                "name": "iconClass",
+                "value": "bx bx-check"
+            },
+            {
+                "note": "root-task",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-task",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-future",
+                "name": "iconClass",
+                "value": "bx bx-time-five"
+            },
+            {
+                "note": "root-future",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-future",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-project",
+                "name": "iconClass",
+                "value": "bx bx-check-double"
+            },
+            {
+                "note": "root-project",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-project",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-note",
+                "name": "iconClass",
+                "value": "bx bx-notepad"
+            },
+            {
+                "note": "root-note",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-note",
+                "name": "label:area",
+                "value": "single"
             }
         ],
         "readmeNote": "readme",

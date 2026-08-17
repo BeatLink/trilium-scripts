@@ -17,6 +17,12 @@
                 "description": "The #template note this row assigns. Filled in by Scan; a row whose note no longer exists is skipped by the picker.",
                 "default": ""
             },
+            "rootNoteId": {
+                "type": "note",
+                "label": "Root Note",
+                "description": "Optional: the container note that collects this template's notes. The addon ships one per bundled template under its own Templates note; point this at wherever you moved yours. Leave blank if this template has no root.",
+                "default": ""
+            },
             "enabled": {
                 "type": "boolean",
                 "label": "Enabled",

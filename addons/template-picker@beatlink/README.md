@@ -28,6 +28,8 @@ Open the addon's settings note and use the **Templates** tab:
   key off it rather than owning their own type vocabulary.
 - **Bucket Icon**, if set, is used by other addons that scaffold one folder per template (a BoxIcons
   class without the leading `bx`, e.g. `bx-check`).
+- **Root Note**, if set, is the container note collecting this template's notes — see
+  [Bundled roots](#bundled-roots). Scan does not fill it in; point it at your root yourself.
 
 Click **Save** to persist your changes.
 
@@ -51,14 +53,36 @@ same way but one setting at a time, so nothing you configured is ever replaced w
 Seven are **item templates** — **Ideas**, **Goal**, **Routine**, **Task**, **Future**, **Project**,
 **Note** — moved here from `agenda@beatlink` in 1.5.0.
 
-The eighth, **AreaCollection**, is a **container** template, moved here from
-[`agenda-structure@beatlink`](../agenda-structure@beatlink/README.md) in 1.6.0 so every bundled
-template note lives in one addon. It carries `#viewType=list` and `#type=areacollection`, and
-agenda-structure's Workflow Setup instantiates it on each Area root — resolving it live by title, so
-it keeps working from here. It is not meant to be picked as an item's own type: leave its registry
-row **disabled**, or agenda-structure will scaffold a type root for it alongside the real item types.
-The remaining two structural templates (`TypeCollection`, `Special`) still ship with
-agenda-structure.
+The eighth, **AreaCollection**, is a **container** template: it carries `#viewType=list` and
+`#type=areacollection`, and is meant for the per-area root notes that
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)'s triage queues walk. It is not
+meant to be picked as an item's own type — leave its registry row **disabled**.
+
+## Bundled roots
+
+Since 1.9.0 the addon also ships one **root container note** per bundled item template — **Ideas Root**,
+**Goal Root**, **Routine Root**, **Task Root**, **Future Root**, **Project Root**, **Note Root** —
+as **children of the AreaCollection template**, so every note you create from that template gets its
+own copy of the whole set. Trilium deep-duplicates a template's children into the instance, so a new
+Area comes out already holding its Ideas / Goal / Routine / Task / Future / Project / Note roots,
+ready to file into.
+
+Each root is an empty text note carrying the matching template's `#iconClass`, `#viewType=list`, and
+a `#label:area=single` promoted-attribute definition (the same one the templates carry), so `#area`
+is a settable field on the root itself. Nothing files notes into them automatically.
+
+Two consequences of how Trilium templates work:
+
+- The copy happens **on creation only**. Attaching `~template` to a note that already exists does not
+  retroactively give it the roots — create the note from the template instead.
+- The originals live under the AreaCollection template (inside the persisted **Templates** note), so
+  editing one changes what *future* areas get, never the copies already made.
+
+They stand in for the type roots that used to be provisioned for you, so the containers still exist
+now that no addon scaffolds a notebook structure. Set a template's **Root Note** in the registry if
+you want a single global root resolvable from the registry, and if you use
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md), add its
+`#agendaOrganizeType=<templateNoteId>` identity label to a root for its queues to see it.
 
 ## Missing Templates
 
@@ -78,16 +102,6 @@ A filter with a blank query is ignored; an unparseable query is skipped rather t
 
 The `#noTemplatePicker` label is no longer read. To hide a template, scan once and untick its
 **Enabled** box.
-
-## Upgrading from 1.5.x, if you already have agenda-structure@beatlink installed
-
-Version 1.6.0 takes over the **AreaCollection** template that used to ship with
-`agenda-structure@beatlink`. If you already have agenda-structure installed, **run
-[`migrate-areacollection-from-structure.js`](migrate-areacollection-from-structure.js) once,
-manually, before updating either addon** — it re-tags your existing AreaCollection note so this addon
-adopts it in place. Skipping it means agenda-structure's next sync deletes the note (persistent
-placement does not protect a note dropped from the manifest), breaking every Area root's `~template`.
-A fresh install with no prior agenda-structure has nothing to migrate.
 
 ## Upgrading from 1.4.x, if you already have agenda@beatlink installed
 
