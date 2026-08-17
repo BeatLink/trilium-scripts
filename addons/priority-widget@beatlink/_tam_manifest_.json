@@ -5,10 +5,10 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.0.0",
+    "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/priority-widget@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "exports": {
@@ -27,49 +27,56 @@
                 "title": "priority-widget@beatlink",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/priority-widget@beatlink.jsx"
+                "sourceUrl": "priority-widget@beatlink.jsx"
             },
             {
                 "id": "style",
                 "title": "style.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/style.css"
+                "sourceUrl": "style.css"
             },
             {
                 "id": "registry",
                 "title": "priorityRegistry.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/priorityRegistry.jsx"
+                "sourceUrl": "priorityRegistry.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -84,42 +91,49 @@
                 "title": "priorityPickerPage",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/priorityPickerPage.jsx"
+                "sourceUrl": "priorityPickerPage.jsx"
             },
             {
                 "id": "missing-style",
                 "title": "priorityPickerPage.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/priorityPickerPage.css"
+                "sourceUrl": "priorityPickerPage.css"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -142,6 +156,10 @@
             {
                 "parent": "launcher",
                 "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
             },
             {
                 "parent": "persistence",
@@ -181,7 +199,15 @@
             },
             {
                 "parent": "missing-page",
+                "child": "defaults"
+            },
+            {
+                "parent": "missing-page",
                 "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -248,6 +274,11 @@
                 "from": "missing-launcher",
                 "type": "renderNote",
                 "to": "missing-page"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -282,6 +313,11 @@
                 "value": ""
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
