@@ -13,28 +13,74 @@ import { loadSettings } from "libSettingsUI.jsx"
 
 const {
     newRow,
+    newTransaction,
     parseBudget,
     serializeBudget,
     computeTotals,
-    grandTotal,
+    grandTotals,
     updateRow,
     removeRow,
     addRow,
     moveRow,
+    addTransaction,
+    updateTransaction,
+    removeTransaction,
+    monthOf,
+    currentDate,
+    currentMonth,
+    shiftMonth,
+    formatMonth,
+    formatDate,
+    transactionsForMonth,
+    rowOptions,
+    monthlyReport,
+    monthlyTrend,
     resolveColumns,
     parentIds,
     importBudget,
     exportBudget,
-    formatAmount
+    formatAmount,
+    roundAmount,
+    amountStep
 } = require("libBudget.js")
 
+// How many months the report's trend covers, ending at the month being viewed.
+const TREND_MONTHS = 6
+
 function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle, onChange, onAdd, onRemove, onMove }) {
-    const info = totals[row.id] || { total: 0, isLeaf: true, over: false }
+    const info = totals[row.id] || { income: 0, expense: 0, balance: 0, isLeaf: true, over: false }
     const hasChildren = row.children.length > 0
     const isCollapsed = collapsed.has(row.id)
 
-    // In computed mode a parent's amount is derived, so its cell is read-only.
-    const amountDerived = hasChildren && settings.rollupMode === "computed"
+    // In computed mode a parent's amounts are derived, so its cells are read-only.
+    const derived = hasChildren && settings.rollupMode === "computed"
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
+
+    const amountCell = column => (
+        <td className="budget-cell-amount" key={column}>
+            {derived ? (
+                <span className="budget-derived">{money(info[column])}</span>
+            ) : (
+                <input
+                    type="number"
+                    step={amountStep(settings.decimals)}
+                    className="budget-input budget-input-amount"
+                    value={row[column]}
+                    // Trimmed on entry, so what's stored is what's shown rather
+                    // than a figure the display quietly rounds off.
+                    onInput={e => onChange(row.id, { [column]: roundAmount(e.target.value, settings.decimals) })}
+                />
+            )}
+            {settings.rollupMode === "cap" && hasChildren && (
+                <span className="budget-subtotal">
+                    {money(column === "income" ? info.childrenIncome : info.childrenExpense)} used
+                </span>
+            )}
+            {settings.rollupMode === "additive" && hasChildren && (
+                <span className="budget-subtotal">incl. {money(row[column])} own</span>
+            )}
+        </td>
+    )
 
     return (
         <>
@@ -59,36 +105,12 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
                     </div>
                 </td>
                 {columns.map(column => {
-                    if (column.key === "amount") return (
-                        <td className="budget-cell-amount" key={column.key}>
-                            {amountDerived ? (
-                                <span className="budget-derived">{formatAmount(info.total, settings.currency, settings.locale)}</span>
-                            ) : (
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="budget-input budget-input-amount"
-                                    value={row.amount}
-                                    onInput={e => onChange(row.id, { amount: parseFloat(e.target.value) || 0 })}
-                                />
-                            )}
-                        </td>
-                    )
-                    if (column.key === "total") return (
-                        <td className="budget-cell-total" key={column.key}>
-                            <span className={info.over ? "budget-total budget-total-over" : "budget-total"}>
-                                {formatAmount(info.total, settings.currency, settings.locale)}
+                    if (column.key === "income" || column.key === "expense") return amountCell(column.key)
+                    if (column.key === "balance") return (
+                        <td className="budget-cell-balance" key={column.key}>
+                            <span className={info.balance < 0 ? "budget-total budget-net-negative" : "budget-total"}>
+                                {money(info.balance)}
                             </span>
-                            {settings.rollupMode === "cap" && hasChildren && (
-                                <span className="budget-subtotal">
-                                    {formatAmount(info.childrenTotal, settings.currency, settings.locale)} used
-                                </span>
-                            )}
-                            {settings.rollupMode === "additive" && hasChildren && (
-                                <span className="budget-subtotal">
-                                    incl. {formatAmount(row.amount, settings.currency, settings.locale)} own
-                                </span>
-                            )}
                         </td>
                     )
                     return (
@@ -130,6 +152,384 @@ function BudgetRow({ row, depth, totals, collapsed, settings, columns, onToggle,
     )
 }
 
+// Shared by the Transactions and Report tabs, which always show the same month.
+function MonthNav({ month, settings, onChange }) {
+    return (
+        <div className="budget-month-nav">
+            <button
+                className="budget-month-step bx bx-chevron-left"
+                title="Previous month"
+                onClick={() => onChange(shiftMonth(month, -1))}
+            />
+            <span className="budget-month-label">{formatMonth(month, settings.locale)}</span>
+            <button
+                className="budget-month-step bx bx-chevron-right"
+                title="Next month"
+                onClick={() => onChange(shiftMonth(month, 1))}
+            />
+            <input
+                type="month"
+                className="budget-month-input"
+                value={month}
+                onChange={e => e.target.value && onChange(e.target.value)}
+            />
+            <button className="budget-month-today" onClick={() => onChange(currentMonth())}>
+                This month
+            </button>
+        </div>
+    )
+}
+
+function TransactionsTab({ doc, month, settings, onMonth, onChange, onRemove, onAdd }) {
+    // Sorted for reading rather than in storage, so the document keeps the
+    // order things were entered in and a re-dated transaction just moves.
+    const monthly = useMemo(
+        () => [...transactionsForMonth(doc.transactions, month)].sort((a, b) => a.date.localeCompare(b.date)),
+        [doc.transactions, month]
+    )
+    const options = useMemo(() => rowOptions(doc.rows), [doc.rows])
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
+    const income = monthly.reduce((sum, t) => sum + t.income, 0)
+    const spent = monthly.reduce((sum, t) => sum + t.expense, 0)
+
+    return (
+        <>
+            <MonthNav month={month} settings={settings} onChange={onMonth} />
+            <table className="budget-table">
+                <thead>
+                    <tr>
+                        <th className="budget-cell-date">Date</th>
+                        <th>Description</th>
+                        <th className="budget-cell-amount">Income</th>
+                        <th className="budget-cell-amount">Expense</th>
+                        <th className="budget-cell-balance">Balance</th>
+                        <th className="budget-cell-row">Budget Row</th>
+                        <th className="budget-cell-actions" />
+                    </tr>
+                </thead>
+                <tbody>
+                    {monthly.map(transaction => {
+                        // A row deleted since the transaction was recorded leaves a
+                        // dangling id; the select falls back to unassigned, which is
+                        // exactly how the report counts it.
+                        const known = options.some(option => option.id === transaction.rowId)
+                        const balance = transaction.income - transaction.expense
+                        return (
+                            <tr className="budget-row" key={transaction.id}>
+                                <td className="budget-cell-date">
+                                    <input
+                                        type="date"
+                                        className="budget-input"
+                                        value={transaction.date}
+                                        // Committed values only, and never blank: an empty date
+                                        // would drop the transaction out of every month's view.
+                                        onChange={e => onChange(transaction.id, { date: e.target.value || transaction.date })}
+                                    />
+                                </td>
+                                <td>
+                                    <input
+                                        type="text"
+                                        className="budget-input"
+                                        value={transaction.description}
+                                        placeholder="Description"
+                                        onInput={e => onChange(transaction.id, { description: e.target.value })}
+                                    />
+                                </td>
+                                {["income", "expense"].map(column => (
+                                    <td className="budget-cell-amount" key={column}>
+                                        <input
+                                            type="number"
+                                            step={amountStep(settings.decimals)}
+                                            className="budget-input budget-input-amount"
+                                            value={transaction[column]}
+                                            onInput={e => onChange(transaction.id, { [column]: roundAmount(e.target.value, settings.decimals) })}
+                                        />
+                                    </td>
+                                ))}
+                                <td className="budget-cell-balance">
+                                    <span className={balance < 0 ? "budget-total budget-net-negative" : "budget-total"}>
+                                        {money(balance)}
+                                    </span>
+                                </td>
+                                <td className="budget-cell-row">
+                                    <select
+                                        className={known ? "budget-input budget-row-select" : "budget-input budget-row-select budget-off"}
+                                        value={known ? transaction.rowId : ""}
+                                        onChange={e => onChange(transaction.id, { rowId: e.target.value || null })}
+                                    >
+                                        <option value="">-- unbudgeted --</option>
+                                        {options.map(option => (
+                                            <option value={option.id} key={option.id}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                </td>
+                                <td className="budget-cell-actions">
+                                    <button
+                                        className="budget-action budget-action-remove bx bx-trash"
+                                        title="Remove transaction"
+                                        onClick={() => onRemove(transaction.id)}
+                                    />
+                                </td>
+                            </tr>
+                        )
+                    })}
+                    {monthly.length === 0 && (
+                        <tr><td colSpan={7} className="budget-empty">Nothing recorded this month.</td></tr>
+                    )}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td className="budget-grand-label" colSpan={2}>Month Total</td>
+                        <td className="budget-cell-amount budget-grand-total budget-income-text">{money(income)}</td>
+                        <td className="budget-cell-amount budget-grand-total">{money(spent)}</td>
+                        <td className={income - spent < 0
+                            ? "budget-cell-balance budget-grand-total budget-net-negative"
+                            : "budget-cell-balance budget-grand-total"}>
+                            {money(income - spent)}
+                        </td>
+                        <td colSpan={2} />
+                    </tr>
+                </tfoot>
+            </table>
+            <div className="budget-toolbar">
+                <Button icon="bx-plus" text="Add Transaction" onClick={onAdd} />
+            </div>
+        </>
+    )
+}
+
+// The month's plan adherence as one proportional bar. A month with nothing to
+// measure renders an empty track rather than dividing by zero.
+function SplitBar({ onBudget, offBudget }) {
+    const total = onBudget + offBudget
+    const share = value => (total > 0 ? `${(value / total) * 100}%` : "0%")
+    return (
+        <div className="budget-split-bar">
+            <div className="budget-split-on" style={{ width: share(onBudget) }} />
+            <div className="budget-split-off" style={{ width: share(offBudget) }} />
+        </div>
+    )
+}
+
+// Budgeted vs actual for one amount column. Variance is signed so that negative
+// always means off plan: overspent for expenses, short for income.
+function VarianceTable({ entries, money, emptyText }) {
+    return (
+        <table className="budget-table">
+            <thead>
+                <tr>
+                    <th className="budget-cell-title">Row</th>
+                    <th className="budget-cell-amount">Budgeted</th>
+                    <th className="budget-cell-amount">Actual</th>
+                    <th className="budget-cell-amount">Variance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {entries.map(entry => (
+                    <tr className={entry.offPlan ? "budget-row budget-row-over" : "budget-row"} key={entry.id}>
+                        <td className="budget-cell-title">
+                            <span style={{ paddingLeft: `${entry.depth * 20}px` }}>{entry.title || "Untitled"}</span>
+                        </td>
+                        <td className="budget-cell-amount">{money(entry.budgeted)}</td>
+                        <td className="budget-cell-amount">{money(entry.actual)}</td>
+                        <td className={entry.offPlan ? "budget-cell-amount budget-total-over" : "budget-cell-amount"}>
+                            {money(entry.variance)}
+                        </td>
+                    </tr>
+                ))}
+                {entries.length === 0 && (
+                    <tr><td colSpan={4} className="budget-empty">{emptyText}</td></tr>
+                )}
+            </tbody>
+        </table>
+    )
+}
+
+function ReportTab({ doc, month, settings, onMonth }) {
+    const report = useMemo(
+        () => monthlyReport(doc.rows, doc.transactions, month, settings.rollupMode),
+        [doc, month, settings.rollupMode]
+    )
+    const trend = useMemo(
+        () => monthlyTrend(doc.rows, doc.transactions, month, TREND_MONTHS, settings.rollupMode),
+        [doc, month, settings.rollupMode]
+    )
+    const trendPeak = Math.max(...trend.map(entry => entry.onBudget + entry.offBudget), 0)
+    const percent = value => (report.spent > 0 ? `${Math.round((value / report.spent) * 100)}%` : "-")
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
+
+    return (
+        <>
+            <MonthNav month={month} settings={settings} onChange={onMonth} />
+
+            {/* Kept per column: on plus off across both would add money in to
+                money out. Spending's row partitions exactly; income's cannot,
+                since a shortfall never was cash. */}
+            <table className="budget-table budget-matrix">
+                <thead>
+                    <tr>
+                        <th />
+                        <th className="budget-cell-amount">On budget</th>
+                        <th className="budget-cell-amount">Off budget</th>
+                        <th className="budget-cell-amount">Actual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr className="budget-row">
+                        <td className="budget-matrix-label">Income</td>
+                        <td className="budget-cell-amount budget-on-text">{money(report.onBudgetIncome)}</td>
+                        <td className="budget-cell-amount budget-off-text">
+                            {money(report.offBudgetIncome)}
+                            <span className="budget-summary-parts">
+                                {money(report.shortfall)} short · {money(report.surplus)} above plan
+                                · {money(report.unassigned.income)} unbudgeted
+                            </span>
+                        </td>
+                        <td className="budget-cell-amount budget-income-text">{money(report.income)}</td>
+                    </tr>
+                    <tr className="budget-row">
+                        <td className="budget-matrix-label">Spending</td>
+                        <td className="budget-cell-amount budget-on-text">{money(report.onBudgetExpense)}</td>
+                        <td className="budget-cell-amount budget-off-text">
+                            {money(report.offBudgetExpense)}
+                            <span className="budget-summary-parts">
+                                {money(report.overspent)} over · {money(report.unassigned.expense)} unbudgeted
+                            </span>
+                        </td>
+                        <td className="budget-cell-amount">{money(report.spent)}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td className="budget-matrix-label budget-grand-label">Balance</td>
+                        <td colSpan={2} className="budget-matrix-note">
+                            {percent(report.onBudgetExpense)} of spending stayed within its allocation
+                        </td>
+                        <td className={report.balance < 0
+                            ? "budget-cell-amount budget-grand-total budget-net-negative"
+                            : "budget-cell-amount budget-grand-total"}>
+                            {money(report.balance)}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+            <SplitBar onBudget={report.onBudgetExpense} offBudget={report.offBudgetExpense} />
+
+            <h4 className="budget-report-heading">What went off budget</h4>
+            <table className="budget-table">
+                <thead>
+                    <tr>
+                        <th className="budget-cell-title">Record</th>
+                        <th className="budget-cell-amount">Overspent</th>
+                        <th className="budget-cell-amount">Income short</th>
+                        <th className="budget-cell-amount">Income above plan</th>
+                        <th className="budget-cell-amount">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {report.offBudgetDetail.map(entry => (
+                        <tr className="budget-row" key={entry.id ?? "unbudgeted"}>
+                            <td className="budget-cell-title">{entry.title}</td>
+                            <td className="budget-cell-amount">{entry.overspent > 0 ? money(entry.overspent) : ""}</td>
+                            <td className="budget-cell-amount">{entry.shortfall > 0 ? money(entry.shortfall) : ""}</td>
+                            <td className="budget-cell-amount">{entry.surplus > 0 ? money(entry.surplus) : ""}</td>
+                            <td className="budget-cell-amount budget-total-over">{money(entry.total)}</td>
+                        </tr>
+                    ))}
+                    {report.offBudgetDetail.length === 0 && (
+                        <tr><td colSpan={5} className="budget-empty">Everything this month went to plan.</td></tr>
+                    )}
+                </tbody>
+            </table>
+
+            <h4 className="budget-report-heading">Expenses: budgeted vs actual</h4>
+            <VarianceTable entries={report.perRowExpense} money={money} emptyText="No expense rows yet." />
+
+            <h4 className="budget-report-heading">Income: budgeted vs actual</h4>
+            <VarianceTable entries={report.perRowIncome} money={money} emptyText="No income rows yet." />
+
+            <h4 className="budget-report-heading">Income this month</h4>
+            <table className="budget-table">
+                <thead>
+                    <tr>
+                        <th className="budget-cell-date">Date</th>
+                        <th>Description</th>
+                        <th className="budget-cell-amount">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {[...report.incomeTransactions]
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map(transaction => (
+                            <tr className="budget-row" key={transaction.id}>
+                                <td className="budget-cell-date">{formatDate(transaction.date, settings.locale)}</td>
+                                <td>{transaction.description || "Untitled"}</td>
+                                <td className="budget-cell-amount budget-income-text">{money(transaction.income)}</td>
+                            </tr>
+                        ))}
+                    {report.incomeTransactions.length === 0 && (
+                        <tr><td colSpan={3} className="budget-empty">No income recorded this month.</td></tr>
+                    )}
+                </tbody>
+            </table>
+
+            <h4 className="budget-report-heading">Last {TREND_MONTHS} months</h4>
+            <table className="budget-table budget-trend">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th className="budget-cell-trend">Spending split</th>
+                        <th className="budget-cell-amount">On budget</th>
+                        <th className="budget-cell-amount">Off budget</th>
+                        <th className="budget-cell-amount">Income</th>
+                        <th className="budget-cell-amount">Spent</th>
+                        <th className="budget-cell-amount">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {trend.map(entry => {
+                        const total = entry.onBudget + entry.offBudget
+                        return (
+                            <tr className="budget-row" key={entry.month}>
+                                <td>
+                                    <button className="budget-trend-month" onClick={() => onMonth(entry.month)}>
+                                        {formatMonth(entry.month, settings.locale)}
+                                    </button>
+                                </td>
+                                <td className="budget-cell-trend">
+                                    {/* Bars are scaled against the busiest month in the window, so
+                                        the series is comparable month to month rather than each
+                                        row filling its own width. */}
+                                    <div
+                                        className="budget-split-bar budget-split-bar-trend"
+                                        style={{ width: trendPeak > 0 ? `${(total / trendPeak) * 100}%` : "0%" }}
+                                    >
+                                        <div
+                                            className="budget-split-on"
+                                            style={{ width: total > 0 ? `${(entry.onBudget / total) * 100}%` : "0%" }}
+                                        />
+                                        <div
+                                            className="budget-split-off"
+                                            style={{ width: total > 0 ? `${(entry.offBudget / total) * 100}%` : "0%" }}
+                                        />
+                                    </div>
+                                </td>
+                                <td className="budget-cell-amount budget-on-text">{money(entry.onBudget)}</td>
+                                <td className="budget-cell-amount budget-off-text">{money(entry.offBudget)}</td>
+                                <td className="budget-cell-amount budget-income-text">{money(entry.income)}</td>
+                                <td className="budget-cell-amount">{money(entry.spent)}</td>
+                                <td className={entry.balance < 0 ? "budget-cell-amount budget-net-negative" : "budget-cell-amount"}>
+                                    {money(entry.balance)}
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+        </>
+    )
+}
+
 /*
  * Rendered as the whole body of any note using the Budget template, which
  * carries `~renderNote` pointing here (template attributes are inherited by
@@ -142,46 +542,48 @@ function BudgetTable() {
     const noteId = useNoteProperty(note, "noteId")
 
     const [settings, setSettings] = useState(null)
-    const [rows, setRows] = useState(null)
+    const [doc, setDoc] = useState(null)
     const [collapsed, setCollapsed] = useState(() => new Set())
+    const [tab, setTab] = useState("budget")
+    const [month, setMonth] = useState(() => currentMonth())
 
     useEffect(() => {
         (async () => {
             const schemaNoteId = await currentNote.getRelationValue("schemaNote")
             const settingsNote = await currentNote.getRelationTarget("settingsNote")
-            const configNote = await settingsNote.getRelationTarget("AddonData:config")
+            const configNote = await settingsNote.getRelationTarget("configNote")
             setSettings(await loadSettings(schemaNoteId, configNote.noteId))
         })()
     }, [])
 
     useEffect(() => {
         (async () => {
-            if (!noteId || !note) { setRows(null); return }
+            if (!noteId || !note) { setDoc(null); return }
             const content = (await note.getBlob()).content
-            setRows(parseBudget(content).rows)
+            setDoc(parseBudget(content))
             setCollapsed(new Set())
         })()
     }, [noteId, note])
 
-    // Single mutation path: apply `mutator` to the current rows, set state, and
-    // write the document back to the note's own content.
+    // Single mutation path: apply `mutator` to the current document, set state,
+    // and write it back to the note's own content.
     const mutate = useCallback(mutator => {
-        setRows(current => {
+        setDoc(current => {
             const next = mutator(current)
             api.runOnBackend(
                 (id, content) => api.getNote(id).setContent(content),
-                [noteId, serializeBudget({ rows: next })]
+                [noteId, serializeBudget(next)]
             )
             return next
         })
     }, [noteId])
 
-    const onChange = useCallback((id, changes) => mutate(rows => updateRow(rows, id, changes)), [mutate])
-    const onRemove = useCallback(id => mutate(rows => removeRow(rows, id)), [mutate])
-    const onMove = useCallback((id, delta) => mutate(rows => moveRow(rows, id, delta)), [mutate])
+    const onChange = useCallback((id, changes) => mutate(doc => ({ ...doc, rows: updateRow(doc.rows, id, changes) })), [mutate])
+    const onRemove = useCallback(id => mutate(doc => ({ ...doc, rows: removeRow(doc.rows, id) })), [mutate])
+    const onMove = useCallback((id, delta) => mutate(doc => ({ ...doc, rows: moveRow(doc.rows, id, delta) })), [mutate])
 
     const onAdd = useCallback(parentId => {
-        mutate(rows => addRow(rows, parentId, newRow()))
+        mutate(doc => ({ ...doc, rows: addRow(doc.rows, parentId, newRow()) }))
         // A row added to a collapsed parent would otherwise be invisible.
         if (parentId) setCollapsed(current => {
             const next = new Set(current)
@@ -190,16 +592,32 @@ function BudgetTable() {
         })
     }, [mutate])
 
+    const onTransactionChange = useCallback(
+        (id, changes) => mutate(doc => ({ ...doc, transactions: updateTransaction(doc.transactions, id, changes) })),
+        [mutate]
+    )
+    const onTransactionRemove = useCallback(
+        id => mutate(doc => ({ ...doc, transactions: removeTransaction(doc.transactions, id) })),
+        [mutate]
+    )
+    // New entries land in the month being viewed — today if that's the current
+    // month, else the 1st, so they never file themselves into a month you can't
+    // see.
+    const onTransactionAdd = useCallback(() => {
+        const date = monthOf(currentDate()) === month ? currentDate() : `${month}-01`
+        mutate(doc => ({ ...doc, transactions: addTransaction(doc.transactions, newTransaction({ date })) }))
+    }, [mutate, month])
+
     // Downloads the note's document as a .json file named after the note.
     const onExport = useCallback(() => {
-        const blob = new Blob([exportBudget(rows)], { type: "application/json" })
+        const blob = new Blob([exportBudget(doc)], { type: "application/json" })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url
         link.download = `${note?.title || "budget"}.json`
         link.click()
         URL.revokeObjectURL(url)
-    }, [rows, note])
+    }, [doc, note])
 
     // Replaces the whole document, so a non-empty budget confirms first.
     const onImport = useCallback(() => {
@@ -216,17 +634,19 @@ function BudgetTable() {
                 api.showError(`Could not import budget: ${e.message}`)
                 return
             }
-            if (rows.length > 0 && !await api.showConfirmDialog(
-                `Replace all ${rows.length} top-level row(s) with ${imported.length} imported row(s)? This cannot be undone.`
+            if ((doc.rows.length > 0 || doc.transactions.length > 0) && !await api.showConfirmDialog(
+                `Replace all ${doc.rows.length} top-level row(s) and ${doc.transactions.length} transaction(s) `
+                + `with ${imported.rows.length} imported row(s) and ${imported.transactions.length} transaction(s)? `
+                + `This cannot be undone.`
             )) return
             mutate(() => imported)
             setCollapsed(new Set())
-            api.showMessage(`Imported ${imported.length} top-level row(s).`)
+            api.showMessage(`Imported ${imported.rows.length} top-level row(s) and ${imported.transactions.length} transaction(s).`)
         }
         input.click()
-    }, [rows, mutate])
+    }, [doc, mutate])
 
-    const parents = useMemo(() => (rows ? parentIds(rows) : []), [rows])
+    const parents = useMemo(() => (doc ? parentIds(doc.rows) : []), [doc])
 
     const onExpandAll = useCallback(() => setCollapsed(new Set()), [])
     const onCollapseAll = useCallback(() => setCollapsed(new Set(parents)), [parents])
@@ -240,8 +660,8 @@ function BudgetTable() {
     }, [])
 
     const totals = useMemo(
-        () => (rows && settings ? computeTotals(rows, settings.rollupMode) : {}),
-        [rows, settings]
+        () => (doc && settings ? computeTotals(doc.rows, settings.rollupMode) : {}),
+        [doc, settings]
     )
 
     // Only the visible columns are rendered; order follows the stored config.
@@ -249,79 +669,123 @@ function BudgetTable() {
         () => resolveColumns(settings?.columns).filter(c => c.visible),
         [settings]
     )
-    const showTotalColumn = columns.some(c => c.key === "total")
 
-    if (!rows || !settings) return <div className="budget-table-widget">Loading...</div>
+    if (!doc || !settings) return <div className="budget-table-widget">Loading...</div>
+
+    const tabs = [
+        { key: "budget", label: "Budget" },
+        { key: "transactions", label: "Transactions" },
+        { key: "report", label: "Report" }
+    ]
+
+    const planned = grandTotals(doc.rows, totals)
+    const money = value => formatAmount(value, settings.currency, settings.locale, settings.decimals)
+
+    /* Each figure lands under its own column; a column that's been hidden takes
+       its figure with it, and the label spans whatever is left. */
+    const footerCell = column => {
+        if (column.key === "income") return <td className="budget-cell-amount budget-grand-total budget-income-text" key={column.key}>{money(planned.income)}</td>
+        if (column.key === "expense") return <td className="budget-cell-amount budget-grand-total" key={column.key}>{money(planned.expense)}</td>
+        if (column.key === "balance") return (
+            <td className={planned.balance < 0
+                ? "budget-cell-balance budget-grand-total budget-net-negative"
+                : "budget-cell-balance budget-grand-total"} key={column.key}>
+                {money(planned.balance)}
+            </td>
+        )
+        return <td key={column.key} />
+    }
 
     return (
         <div className="budget-table-widget">
-            <table className="budget-table">
-                <thead>
-                    <tr>
-                        <th className="budget-cell-title">Title</th>
-                        {columns.map(column => (
-                            <th className={`budget-cell-${column.key}`} key={column.key}>{column.label}</th>
-                        ))}
-                        <th className="budget-cell-actions" />
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map(row => (
-                        <BudgetRow
-                            key={row.id}
-                            row={row}
-                            depth={0}
-                            totals={totals}
-                            collapsed={collapsed}
-                            settings={settings}
-                            columns={columns}
-                            onToggle={onToggle}
-                            onChange={onChange}
-                            onAdd={onAdd}
-                            onRemove={onRemove}
-                            onMove={onMove}
-                        />
-                    ))}
-                    {rows.length === 0 && (
-                        <tr><td colSpan={columns.length + 2} className="budget-empty">No rows yet.</td></tr>
-                    )}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td className="budget-cell-title budget-grand-label">Grand Total</td>
-                        {/* The total lands under whichever position the Total column now
-                            occupies; with that column hidden it falls back to the last cell
-                            so the figure is never dropped. */}
-                        {columns.map(column => (
-                            column.key === "total" ? (
-                                <td className="budget-cell-total budget-grand-total" key={column.key}>
-                                    {formatAmount(grandTotal(rows, totals), settings.currency, settings.locale)}
-                                </td>
-                            ) : <td key={column.key} />
-                        ))}
-                        <td className={showTotalColumn ? "" : "budget-cell-total budget-grand-total"}>
-                            {!showTotalColumn && formatAmount(grandTotal(rows, totals), settings.currency, settings.locale)}
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div className="budget-toolbar">
-                <Button icon="bx-plus" text="Add Row" onClick={() => onAdd(null)} />
-                <Button
-                    icon="bx-expand-vertical"
-                    text="Expand All"
-                    onClick={onExpandAll}
-                    disabled={collapsed.size === 0}
-                />
-                <Button
-                    icon="bx-collapse-vertical"
-                    text="Collapse All"
-                    onClick={onCollapseAll}
-                    disabled={collapsed.size === parents.length}
-                />
-                <Button icon="bx-import" text="Import JSON" onClick={onImport} />
-                <Button icon="bx-export" text="Export JSON" onClick={onExport} />
+            <div className="budget-tabs">
+                {tabs.map(entry => (
+                    <button
+                        className={tab === entry.key ? "budget-tab budget-tab-active" : "budget-tab"}
+                        key={entry.key}
+                        onClick={() => setTab(entry.key)}
+                    >
+                        {entry.label}
+                    </button>
+                ))}
             </div>
+
+            {tab === "budget" && (
+                <>
+                    <table className="budget-table">
+                        <thead>
+                            <tr>
+                                <th className="budget-cell-title">Title</th>
+                                {columns.map(column => (
+                                    <th className={`budget-cell-${column.key}`} key={column.key}>{column.label}</th>
+                                ))}
+                                <th className="budget-cell-actions" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {doc.rows.map(row => (
+                                <BudgetRow
+                                    key={row.id}
+                                    row={row}
+                                    depth={0}
+                                    totals={totals}
+                                    collapsed={collapsed}
+                                    settings={settings}
+                                    columns={columns}
+                                    onToggle={onToggle}
+                                    onChange={onChange}
+                                    onAdd={onAdd}
+                                    onRemove={onRemove}
+                                    onMove={onMove}
+                                />
+                            ))}
+                            {doc.rows.length === 0 && (
+                                <tr><td colSpan={columns.length + 2} className="budget-empty">No rows yet.</td></tr>
+                            )}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td className="budget-cell-title budget-grand-label">Budget Total</td>
+                                {columns.map(footerCell)}
+                                <td />
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div className="budget-toolbar">
+                        <Button icon="bx-plus" text="Add Row" onClick={() => onAdd(null)} />
+                        <Button
+                            icon="bx-expand-vertical"
+                            text="Expand All"
+                            onClick={onExpandAll}
+                            disabled={collapsed.size === 0}
+                        />
+                        <Button
+                            icon="bx-collapse-vertical"
+                            text="Collapse All"
+                            onClick={onCollapseAll}
+                            disabled={collapsed.size === parents.length}
+                        />
+                        <Button icon="bx-import" text="Import JSON" onClick={onImport} />
+                        <Button icon="bx-export" text="Export JSON" onClick={onExport} />
+                    </div>
+                </>
+            )}
+
+            {tab === "transactions" && (
+                <TransactionsTab
+                    doc={doc}
+                    month={month}
+                    settings={settings}
+                    onMonth={setMonth}
+                    onChange={onTransactionChange}
+                    onRemove={onTransactionRemove}
+                    onAdd={onTransactionAdd}
+                />
+            )}
+
+            {tab === "report" && (
+                <ReportTab doc={doc} month={month} settings={settings} onMonth={setMonth} />
+            )}
         </div>
     )
 }
