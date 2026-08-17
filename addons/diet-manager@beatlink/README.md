@@ -34,6 +34,24 @@ blocking the other source's results.
 
 Nutrition can always be entered manually instead, regardless of lookup availability.
 
+### Categories
+
+Each food can carry any number of free-form **categories** (e.g. `Protein`, `Snack`, `Dairy`),
+added in the food form: type a name and press Enter or **Add**. The field autocompletes against
+categories already used elsewhere, so the vocabulary stays consistent without being a fixed list.
+Categories are de-duplicated case-insensitively and always shown in alphabetical order.
+
+The Foods tab uses them three ways:
+
+- **Filter** — the dropdown in the toolbar narrows the table to one category, or to
+  `(uncategorized)` for foods with none.
+- **Group by category** — the checkbox splits the table into a section per category, each with its
+  own count. A food in several categories appears in each of their sections.
+- **Sort** — click any column header (including **Categories**) to sort by it; click again to
+  reverse.
+
+The Diary tab's food picker is also grouped by category.
+
 ## Recipes
 
 The **Recipes** tab builds recipes out of foods already in your database. A recipe has a name, a
@@ -84,6 +102,7 @@ The whole database is one JSON code note:
             "name": "Chicken Breast",
             "servingSize": 100,
             "servingUnit": "g",
+            "tags": ["Meat", "Protein"],
             "nutrients": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6,
                 "fiber": 0, "sugar": 0, "saturatedFat": 1, "sodium": 74, "cholesterol": 85
@@ -106,6 +125,7 @@ The whole database is one JSON code note:
 }
 ```
 
+A food's `tags` array is its categories; a food saved before categories existed simply has none.
 Diary entries are keyed by ISO date (`YYYY-MM-DD`). A recipe's own nutrition is never stored — it's
 always recomputed from its current ingredients at render time, same as a diary entry's contribution
 is always recomputed from the food or recipe it references.
