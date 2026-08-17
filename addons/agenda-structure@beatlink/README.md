@@ -1,8 +1,8 @@
 # Agenda Structure
 
 The notebook **scaffolder**, split out of [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)
-into its own addon: the **Workflow Setup** provisioner, the three structural templates it instantiates,
-and the **Structure Editor** settings page that hosts the button.
+into its own addon: the **Workflow Setup** provisioner, the structural templates it instantiates, and
+the **Structure Editor** settings page that hosts the button.
 
 It provisions containers and owns the structural identity labels. It does not triage, file, or move
 items — that is the Organize page's job, in the addon this was split from.
@@ -33,6 +33,11 @@ same way every other addon's is.
 Both owners also *write* those lists, so a local copy would silently drift. Both reads degrade
 gracefully: each returns an empty vocabulary when its owner isn't installed, and Setup then
 provisions only what it can — with neither present, the three singletons alone.
+
+As of 2.0.0 `template-picker@beatlink` also ships the **AreaCollection** template note itself (see
+[The structural templates](#the-structural-templates)). That read degrades the same way: Setup
+resolves it by title, and an Area root simply gets no `~template` when template-picker isn't
+installed.
 
 ## Relationship to `agenda-organize@beatlink`
 
@@ -102,24 +107,41 @@ moves, reconciles or deletes an item branch. Re-running Setup cannot disturb any
   `#area` onto the area dimension's stable keys — stripping the legacy `<NN>-` prefix and applying
   `AREA_ALIASES` for folded areas. Idempotent: an already-stable value resolves to itself.
 - **Structural templates** are resolved live **by title** (`AreaCollection`, `TypeCollection`,
-  `Special`), so provisioning degrades gracefully if one is missing — the note is still created and
-  tagged, just without a `~template` relation.
+  `Special`), wherever they ship from, so provisioning degrades gracefully if one is missing — the
+  note is still created and tagged, just without a `~template` relation.
 - **Provisioning never deletes.** It creates, adopts and re-asserts derived attributes; that's all.
   Orphans and duplicates are surfaced in Organize's **Invalid Roots** table for an explicit
   merge-or-delete decision.
 
 ## The structural templates
 
-Ships three templates, under `persistence` so no uninstall or prune sweep touches them:
+Three templates back the three kinds of container. All three are resolved **by title** at provision
+time, so where the note ships from is not part of the contract:
 
-| Template | Used by | Marker |
-|---|---|---|
-| `AreaCollection` | Area roots | `#area` + `#type=areacollection` |
-| `TypeCollection` | Type roots | `#type=typecollection`, no `#area` |
-| `Special` | Inbox / My Day / Agenda | `#type=special` |
+| Template | Used by | Marker | Shipped by |
+|---|---|---|---|
+| `AreaCollection` | Area roots | `#area` + `#type=areacollection` | `template-picker@beatlink` |
+| `TypeCollection` | Type roots | `#type=typecollection`, no `#area` | this addon |
+| `Special` | Inbox / My Day / Agenda | `#type=special` | this addon |
+
+The two this addon ships live under `persistence`, so no uninstall or prune sweep touches them.
 
 A Type root is a **container**, not an instance of the type it holds — which is why its own
 `~template` is `TypeCollection` rather than the template it collects.
+
+**`AreaCollection` moved out in 2.0.0**, to `template-picker@beatlink`, so every bundled template
+note lives in one addon and the picker's Scan sees a single Templates container. Nothing about
+provisioning changed — it was already resolved by title. If you had agenda-structure installed
+before 2.0.0, **run `template-picker@beatlink`'s
+[`migrate-areacollection-from-structure.js`](../template-picker@beatlink/migrate-areacollection-from-structure.js)
+once, manually, before updating either addon**: it re-tags the existing note's `#TAMFILEID` so
+template-picker adopts it. Skipping it means this addon's next sync prunes the note — being under
+`persistence` does not protect a note that has been dropped from the manifest, because
+`pruneRemovedNotes` builds its exempt set from the *current* manifest.
+
+Keep AreaCollection's row **disabled** in template-picker's registry. Setup provisions one type root
+per *enabled* registry entry, so an enabled AreaCollection row would scaffold a type root for a
+container template.
 
 > **Note on `#TAMFILEID` and templates.** Every note templated from one of these inherits the
 > template's labels, including `#TAMFILEID`. TAM must therefore resolve addon ownership with the
@@ -136,4 +158,4 @@ A Type root is a **container**, not an instance of the type it holds — which i
 | `provision.js` | The walk: find-or-create per node, the two migrations, the identity labels. |
 | `structureSettings.js` | `getConfigIds()` label discovery, for this addon's own config and the two cross-addon reads. |
 | `structureEditor.jsx` | The Structure Editor page; hosts the Workflow Setup button. |
-| `templates/` | The three structural template note bodies. |
+| `templates/` | The `TypeCollection` and `Special` note bodies. `AreaCollection`'s ships with `template-picker@beatlink`. |

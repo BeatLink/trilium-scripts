@@ -1,11 +1,11 @@
 {
     "id": "agenda-structure@beatlink",
     "name": "Agenda Structure",
-    "description": "The notebook scaffolder split out of agenda-organize@beatlink: provisions the opinionated GTD structure and owns the structural identity labels every other agenda addon reads. Workflow Setup provisions two PARALLEL top-level trees, each exactly one level deep - one note per Area and one note per enabled template - alongside the Inbox / My Day / Agenda singletons, by find-or-create, adopting notes you already made by hand rather than duplicating them. Neither tree nests the other: a filed item lives in both at once as a Trilium clone, one branch under the Area root matching its #area and one under the Type root matching its ~template. Setup provisions CONTAINERS only and never creates, moves or deletes an item branch, so re-running it cannot disturb anything you have filed; the per-item cloning is agenda-organize@beatlink's job. Also ships the three structural templates (AreaCollection / TypeCollection / Special) the containers are instances of, and re-keys notes left on a stale area slug after an area reorder. Neither classification vocabulary is owned here: the Area list is read cross-addon from agenda@beatlink's `dimensions` registry (#agendaConfig) and the Type list from template-picker@beatlink's template registry (#templatePickerConfig), because both owners also write them and a local copy would silently drift. Both reads degrade gracefully - with neither installed, Setup still provisions the three singletons.",
+    "description": "The notebook scaffolder split out of agenda-organize@beatlink: provisions the opinionated GTD structure and owns the structural identity labels every other agenda addon reads. Workflow Setup provisions two PARALLEL top-level trees, each exactly one level deep - one note per Area and one note per enabled template - alongside the Inbox / My Day / Agenda singletons, by find-or-create, adopting notes you already made by hand rather than duplicating them. Neither tree nests the other: a filed item lives in both at once as a Trilium clone, one branch under the Area root matching its #area and one under the Type root matching its ~template. Setup provisions CONTAINERS only and never creates, moves or deletes an item branch, so re-running it cannot disturb anything you have filed; the per-item cloning is agenda-organize@beatlink's job. Also ships two of the structural templates (TypeCollection / Special) the containers are instances of, and re-keys notes left on a stale area slug after an area reorder. As of 2.0.0 the third, AreaCollection, ships with template-picker@beatlink instead, so every bundled template note lives in one addon; Setup resolves all three live by title, so an Area root simply gets no ~template when template-picker isn't installed. Neither classification vocabulary is owned here: the Area list is read cross-addon from agenda@beatlink's `dimensions` registry (#agendaConfig) and the Type list from template-picker@beatlink's template registry (#templatePickerConfig), because both owners also write them and a local copy would silently drift. Both reads degrade gracefully - with neither installed, Setup still provisions the three singletons.",
     "author": "beatlink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-structure@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-structure@beatlink/_tam_manifest_.json",
@@ -66,13 +66,6 @@
                 "title": "Templates",
                 "type": "text",
                 "mime": "text/html"
-            },
-            {
-                "id": "tpl-area",
-                "title": "AreaCollection",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-structure@beatlink/templates/areaCollection.html"
             },
             {
                 "id": "tpl-typecollection",
@@ -153,7 +146,6 @@
 
             { "parent": "persistence", "child": "structure-config" },
             { "parent": "persistence", "child": "templates-root" },
-            { "parent": "templates-root", "child": "tpl-area" },
             { "parent": "templates-root", "child": "tpl-typecollection" },
             { "parent": "templates-root", "child": "tpl-special" },
 
@@ -198,12 +190,6 @@
 
             { "note": "libsettings-style", "name": "appCss", "value": "" },
             { "note": "colorpicker-css", "name": "appCss", "value": "" },
-
-            { "note": "tpl-area", "name": "template", "value": "" },
-            { "note": "tpl-area", "name": "iconClass", "value": "bx bxs-circle" },
-            { "note": "tpl-area", "name": "viewType", "value": "list" },
-            { "note": "tpl-area", "name": "label:area", "value": "single" },
-            { "note": "tpl-area", "name": "type", "value": "areacollection" },
 
             { "note": "tpl-typecollection", "name": "template", "value": "" },
             { "note": "tpl-typecollection", "name": "iconClass", "value": "bx bx-folder" },

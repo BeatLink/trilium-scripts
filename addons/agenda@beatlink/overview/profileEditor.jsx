@@ -1,8 +1,6 @@
 import { useState, useEffect } from "trilium:preact"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
-import { RescheduleOptionsPanel } from "rescheduleOptions.jsx"
-import { TaskLabelsPanel } from "taskLabelsPanel.jsx"
 
 
 // Preselect the Collect › Inbox Note setting to Trilium's own inbox the first
@@ -56,23 +54,11 @@ export default function ProfileEditor() {
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    // Panels the schema can't express on its own, injected into SettingsForm's
-    // category/tab nav. The Organize-note picker and the Workflow Setup button
-    // moved out to agenda-organize@beatlink's own editor, along with the Organize
-    // config keys. Everything else groups by its own schema `category`.
-    const extraPanels = [
-        {
-            category: "Settings",
-            tab: "Reschedule Options",
-            render: () => <RescheduleOptionsPanel />
-        },
-        {
-            category: "Settings",
-            tab: "Settings",
-            render: () => <TaskLabelsPanel />
-        }
-    ]
-
+    // Every tab here comes from the schema's own `category`/`tab` keys. The
+    // Organize-note picker and the Workflow Setup button moved out to
+    // agenda-organize@beatlink's own editor along with the Organize config keys;
+    // the Task label and Reschedule Options panels moved out to
+    // agenda-task@beatlink's own Task Settings page along with #agendaTaskConfig.
     return (
         <div className="profile-editor">
             <h2>Agenda Editor</h2>
@@ -89,7 +75,6 @@ export default function ProfileEditor() {
             <SettingsForm
                 schemaNoteId={schemaNoteId}
                 configNoteId={configNoteId}
-                extraPanels={extraPanels}
             />
         </div>
     )

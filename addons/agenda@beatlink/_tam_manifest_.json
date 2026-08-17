@@ -1,11 +1,11 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile agenda system for TriliumNext, in two widgets sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config) and Note Actions (a right-pane widget on every note with Zen Mode and Hoist Note quick actions). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. Three sibling addons split out of this one and each own their own settings note: agenda-task@beatlink (the Task pane; #agendaTaskConfig) whose recurrence/reschedule code this addon clones back in, agenda-myday@beatlink (the My Day focus panel and timer; #agendaMyDayConfig) which clones this addon's query engine to find due tasks, and agenda-organize@beatlink (the GTD notebook provisioner and triage page; #agendaOrganizeConfig) which reads the dimensions registry back out of #agendaConfig so the two never drift.",
+    "description": "A schema-driven, multi-profile agenda system for TriliumNext, in two widgets sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config) and Note Actions (a right-pane widget on every note with Zen Mode and Hoist Note quick actions). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. Three sibling addons split out of this one and each own their own settings note: agenda-task@beatlink (the Task pane; #agendaTaskConfig), which this addon no longer references at all - it shares only a label vocabulary, declared independently on both sides, agenda-myday@beatlink (the My Day focus panel and timer; #agendaMyDayConfig) which clones this addon's query engine to find due tasks, and agenda-organize@beatlink (the GTD notebook provisioner and triage page; #agendaOrganizeConfig) which reads the dimensions registry back out of #agendaConfig so the two never drift.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "6.0.1",
+    "latestVersion": "8.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
@@ -111,41 +111,6 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaQuery.js"
             },
             {
-                "id": "lib-task",
-                "title": "libAgendaTask.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libAgendaTask.js"
-            },
-            {
-                "id": "lib-task-settings",
-                "title": "agendaTaskSettings.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/agendaTaskSettings.js"
-            },
-            {
-                "id": "task-labels-panel",
-                "title": "taskLabelsPanel.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/taskLabelsPanel.jsx"
-            },
-            {
-                "id": "lib-recurrence",
-                "title": "libRecurrence.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/libRecurrence.js"
-            },
-            {
-                "id": "recurrence-picker",
-                "title": "recurrencePicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/recurrencePicker.jsx"
-            },
-            {
                 "id": "overview",
                 "title": "agendaOverview.jsx",
                 "type": "code",
@@ -174,25 +139,11 @@
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/profileEditor.jsx"
             },
             {
-                "id": "reschedule-options",
-                "title": "rescheduleOptions.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/rescheduleOptions.jsx"
-            },
-            {
                 "id": "profile-editor-css",
                 "title": "profileEditor.css",
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/profileEditor.css"
-            },
-            {
-                "id": "togglebutton",
-                "title": "FormToggleButton.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-task@beatlink/FormToggleButton.jsx"
             },
             {
                 "id": "readme",
@@ -264,13 +215,6 @@
                 "type": "code",
                 "mime": "application/javascript",
                 "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
-            },
-            {
-                "id": "librrule-lib",
-                "title": "rrule.min.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
             }
         ],
         "children": [
@@ -380,10 +324,6 @@
             },
             {
                 "parent": "lib-query",
-                "child": "lib-task"
-            },
-            {
-                "parent": "lib-query",
                 "child": "lib-config"
             },
             {
@@ -401,18 +341,6 @@
             {
                 "parent": "lib-overview",
                 "child": "libcalendar-lib"
-            },
-            {
-                "parent": "lib-task",
-                "child": "lib-recurrence"
-            },
-            {
-                "parent": "lib-task-settings",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "lib-recurrence",
-                "child": "librrule-lib"
             },
             {
                 "parent": "overview",
@@ -440,42 +368,6 @@
             },
             {
                 "parent": "profile-editor",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "reschedule-options"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "task-labels-panel"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "lib-task-settings"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "recurrence-picker"
-            },
-            {
-                "parent": "recurrence-picker",
-                "child": "togglebutton"
-            },
-            {
-                "parent": "recurrence-picker",
-                "child": "lib-task"
-            },
-            {
-                "parent": "task-labels-panel",
-                "child": "lib-task-settings"
-            },
-            {
-                "parent": "task-labels-panel",
                 "child": "libsettings-ui"
             }
         ],
@@ -593,11 +485,6 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "task-labels-panel",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "settings",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -623,21 +510,6 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "lib-task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-task-settings",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-recurrence",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "overview",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -654,11 +526,6 @@
             },
             {
                 "note": "profile-editor-css",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "recurrence-picker",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

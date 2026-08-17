@@ -174,9 +174,11 @@ async function migrateStructuralLabels(areaList) {
 }
 
 // Resolve a bundled template note id by its title (must carry #template).
-// Returns "" if not found, so provisioning degrades gracefully when a template
-// note is missing — the note is still created/tagged, just without a template
-// relation.
+// Searched tree-wide, not under this addon's own Templates container, so it
+// finds AreaCollection where template-picker@beatlink ships it just as readily
+// as the two this addon ships. Returns "" if not found, so provisioning
+// degrades gracefully when a template note is missing — the note is still
+// created/tagged, just without a template relation.
 async function resolveTemplateId(title) {
     return api.runOnBackend((title) => {
         const results = api.searchForNotes(`#template note.title = "${title}"`)

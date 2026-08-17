@@ -85,7 +85,10 @@
 // The two collection templates are told apart by the labels their notes carry:
 // an AreaCollection has #area plus #type=areacollection, a TypeCollection has
 // #type=typecollection and no #area (it spans every area).
-// None of the three are ever offered as an assignable item template.
+// None of the three is meant to be assigned as an item's own type. Two of them
+// ship with this addon; AreaCollection ships with template-picker@beatlink,
+// where its registry row must stay DISABLED or Setup would scaffold a type root
+// for a container template. All three are resolved by title, not by location.
 const AREA_TEMPLATE_TITLE = "AreaCollection"
 const TYPE_TEMPLATE_TITLE = "TypeCollection"
 const SPECIAL_TEMPLATE_TITLE = "Special"

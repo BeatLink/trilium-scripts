@@ -1,7 +1,6 @@
 import {
     FormDropdownList,
     FormCheckbox,
-    Button,
     defineWidget,
     RightPanelWidget,
     useActiveNoteContext,
@@ -14,7 +13,7 @@ import {
 import { Collapsible } from "Collapsible.jsx"
 import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, rescheduleAllTasks, getSectionState, saveSectionState } = require("libAgendaOverview.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, getSectionState, saveSectionState } = require("libAgendaOverview.js")
 
 const VIEW_TYPES = [
     { key: "list", title: "List" },
@@ -289,17 +288,6 @@ function AgendaOverviewWidgetJSX() {
                     expanded={sectionState.colors !== false}
                     onToggle={toggleSection("colors")}
                 />
-
-                <div>
-                    <label>Actions</label>
-                    <div>
-                        <Button
-                            icon="bx bx-rocket"
-                            text="Start All Tasks Today"
-                            onClick={e => { rescheduleAllTasks(ids.profileContext, ids.constants, ids.icalNoteId) }}
-                        />
-                    </div>
-                </div>
             </div>
         </RightPanelWidget>
     )
