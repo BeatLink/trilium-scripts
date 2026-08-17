@@ -1,0 +1,60 @@
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  packages = [
+    pkgs.nodejs
+    pkgs.gh
+    pkgs.playwright-driver.browsers
+  ];
+
+  shellHook = ''
+    tamhelper()            { node "$(git rev-parse --show-toplevel)/resources/scripts/tamhelper.js" "$@"; }
+    validate()             { tamhelper validate "$@"; }
+    ci()                   { validate && tam_to_zip --all; }
+    generate_pages()       { tamhelper generate-pages "$@"; }
+    generate_readme()      { tamhelper generate-readme "$@"; }
+    zip_to_tam()           { tamhelper zip-to-tam "$@"; }
+    tam_to_zip()           { tamhelper tam-to-zip "$@"; }
+    publish_release()      { tamhelper publish-release "$@"; }
+    publish()              { tamhelper publish "$@"; }
+
+    export -f tamhelper validate ci generate_pages generate_readme zip_to_tam tam_to_zip publish_release publish
+
+    # Reinstall the toolchain's npm deps (marked, playwright) into
+    # resources/node_modules on every shell entry -- `npm ci` wipes node_modules
+    # and installs fresh from package-lock.json, so a truncated/corrupt prior
+    # install (seen once as a NUL-padded playwright/lib/runner/index.js) can
+    # never persist across runs. No build step, just the runtime libraries the
+    # scripts require(). package.json lives in resources/, so install there --
+    # node's require() walk finds resources/node_modules from any script under
+    # resources/ regardless of the shell's cwd.
+    _tsroot="$(git rev-parse --show-toplevel 2>/dev/null)"
+    if [ -f "$_tsroot/resources/package.json" ] && [ -f "$_tsroot/resources/package-lock.json" ]; then
+      echo "  Installing npm dependencies (npm ci: marked, playwright, @playwright/test)..."
+      (cd "$_tsroot/resources" && npm ci --no-audit --no-fund --silent)
+    fi
+    unset _tsroot
+
+    # playwright-driver.browsers ships prebuilt browser binaries matching the
+    # revision the pinned `playwright` npm package expects -- point at it
+    # directly instead of `playwright install` (which would try to download
+    # into $HOME/.cache and fails offline/in sandboxes), and skip the
+    # host-requirements probe that otherwise complains about a NixOS host.
+    export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+    export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+
+    echo ""
+    echo "  Trilium Scripts Dev Shell"
+    echo ""
+    echo "  validate                       Validate addon structure"
+    echo "  ci                             Run validate then tam_to_zip --all"
+    echo "  zip_to_tam <zip>               Convert Trilium export ZIP to _tam_manifest_.json"
+    echo "  tam_to_zip <manifest>          Convert _tam_manifest_.json to a Trilium ZIP import"
+    echo "  tam_to_zip --all               Convert every addon's manifest to a ZIP (used by CI)"
+    echo "  generate_pages                 Build GitHub Pages site (resources/docs/)"
+    echo "  publish                        Resolve + hash every manifest into resources/docs/ (incl. catalog.json)"
+    echo "  generate_readme                Regenerate README.md's addon table from manifests"
+    echo "  publish_release                Upload *.zip to a new versioned + the 'latest' GitHub release (used by CI)"
+    echo ""
+  '';
+}

@@ -1,6 +1,9 @@
-docs/
+resources/docs/
 *.zip
+node_modules/
 resources/testing/data/
 resources/testing/.server.pid
 resources/testing/server.log
- 
+test-results/
+playwright-report/
+**/__pycache__

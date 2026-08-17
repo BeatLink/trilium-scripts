@@ -1,217 +1,118 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+- Read existing files before writing. Don't re-read unless changed.
+- Thorough in reasoning, concise in output.
+- Skip files over 100KB unless required.
+- No sycophantic openers or closing fluff.
+- No emojis or em-dashes.
+- Comments: one sentence on one line, max. The only exception is a module's top-level overview
+  comment, which may be longer.
+- Do not guess APIs, versions, flags, commit SHAs, or package names. Verify by reading code or docs before asserting.
+
+## Token/context management
+
+- Use `Read` with `offset`/`limit` to scope reads instead of pulling whole large files when only a
+  section is needed.
+- Prefer `grep`/glob-style targeted search over dumping whole directories for context.
+- Prefer direct tools (`grep`, `find`, `Read`) over spawning a subagent.
+- Do not spawn subagents for tasks doable in one or two direct tool calls. Reserve subagents for
+  genuinely open-ended exploration (5+ searches with no clear target) or real parallelism.
+- Keep this file and the other `.claude/rules/` files lean — they're loaded every turn, so bloat
+  costs tokens on every message, not just once. Prune stale entries when found.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 ## What this repo is
 
-A collection of widgets, themes, and scripts for TriliumNext Notes, distributed through a custom
-addon manager called **TAM** (Trilium Addon Manager, `addons/trilium-addon-manager@beatlink/`).
-Addons live under `addons/`, each described by a `_tam_manifest_.json`. TAM installs addons
-**directly from this repo**: each manifest's own `manifestSourceUrl` is exactly what TAM fetches
-over the network, with no separate build/inlining step. CI publishes a GitHub Pages catalog
-(https://beatlink.github.io/trilium-scripts/, incl. `catalog.json`) and cuts a versioned GitHub
-Release containing every addon's `{id}.zip` on every push to `main`.
+Widgets, themes, and scripts for TriliumNext Notes, distributed via a custom addon manager, **TAM**
+(`addons/trilium-addon-manager@beatlink/` — see its `MANIFEST.md` for the full manifest schema and
+`ARCHITECTURE.md` for how it resolves one). Each
+addon lives at `addons/{name}@{author}/_tam_manifest_.json`, installed by TAM directly from this
+repo (no build step).
 
-Every directory under `addons/` is named `name@author` and has a `_tam_manifest_.json`.
+## Commands
 
-## Development commands
-
-Python tooling (`python3`/`gh`) is only available inside the Nix dev shell, not the bare PATH.
+Inside `nix-shell resources/nix/`:
 
 ```bash
-nix-shell --run "python3 resources/scripts/validate.py"
+validate                       # lint all manifests — closest thing to a test suite; run after any manifest/source edit
+tam_to_zip <manifest-dir>      # manifest -> Trilium-importable ZIP
+zip_to_tam <zip>                # Trilium export ZIP -> starting manifest + source files
+generate_pages                 # rebuild resources/docs/ (incl. catalog.json)
+generate_readme                # regenerate README.md's addon table
 ```
 
-Inside `nix-shell`, these shell functions are defined (see `shell.nix`):
+## Adding/editing an addon
 
-```bash
-validate                       # resources/scripts/validate.py — lint all _tam_manifest_.json files, exit 1 on error
-ci                             # validate && tam_to_zip --all
-generate_pages                 # resources/scripts/generate_pages.py — build docs/ (GitHub Pages incl. catalog.json) and regenerate README.md
-zip_to_tam <zip>               # resources/scripts/zip_to_tam.py — Trilium export ZIP -> _tam_manifest_.json + flat source files
-tam_to_zip <manifest-dir>      # resources/scripts/tam_to_zip.py addons/{id}/ [--out x.zip] — manifest -> Trilium-importable ZIP
-tam_to_zip --all               # same script, all-addons mode — CI-only: {id}.zip for every addon under --addons-dir into --out-dir
-publish_release                # resources/scripts/publish_release.py — CI-only: cuts a new versioned release + refreshes 'latest', both carrying every {id}.zip
-backfill_manifest_source_url   # resources/scripts/backfill_manifest_source_url.py — one-time: add manifestSourceUrl to every addon missing one
-```
+* Make Changes
+* Use Validate
+* Update Readme and documentation
+* Bump versions
 
-Scripts live in `resources/scripts/`, not `scripts/`, and all invocations assume cwd is the repo
-root, not the scripts directory.
+## Trilium scripting reference
 
-`validate` is the closest thing to a test suite here — always run it after editing any
-`_tam_manifest_.json` or adding/removing addon source files. Addon identity is the manifest's own
-`id` field, not the directory name.
+* Scripts overview: https://docs.triliumnotes.org/user-guide/scripts
 
-There is no build framework; `validate` is purely static (manifest shape, not runtime behavior).
-CI (`.github/workflows/publish.yml`) runs `validate` → `tam_to_zip --all` → `publish_release`;
-`.github/workflows/pages.yml` runs `generate_pages`. Running an addon inside a real Trilium
-instance (next section) is a local/dev-time tool, not wired into CI.
-
-## Testing against a real Trilium instance
-
-`resources/testing/` (see its own `README.md`) is a standalone harness built entirely from this
-repo's `flake.nix` (Trilium's repo as a flake input) — no manually-cloned Trilium checkout needed.
-
-```bash
-nix develop            # once per shell session
-trilium_seed           # once — builds resources/testing/data/document.db with TAM installed
-trilium_server start   # boots that snapshot in-memory on http://127.0.0.1:8090 — never corrupts it
-trilium_server stop
-```
-
-Once running, `resources/testing/trilium_client.py` is a stdlib HTTP client: `exec_script(...)` runs
-arbitrary backend JS via Trilium's `/api/script/exec`, `import_zip(...)` imports a `tam_to_zip.py`
-ZIP, `get_note`/`search_notes` read state back via ETAPI. The seed database has
-`noAuthentication=true`, so no token/login needed. This is a headless layer only — note-tree/
-database-state verification, not rendered-widget verification.
-
-## Manifest-driven addon architecture
-
-Every TAM addon is a `_tam_manifest_.json`, by convention at `addons/{id}/` (id format
-`name@author`), declaring a tree of Trilium notes rather than raw exported files:
-
-- **`manifestSourceUrl`** (top-level) — the URL TAM fetches this manifest from (for this repo's own
-  addons, a `raw.githubusercontent.com/.../refs/heads/main/addons/{id}/_tam_manifest_.json` URL).
-  This is what makes an addon installable — TAM never discovers an addon by filesystem position.
-  `zip_to_tam.py` auto-fills it when run inside a git working copy with a `github.com` origin;
-  `resources/scripts/backfill_manifest_source_url.py` backfills it for existing addons (re-run if an
-  addon's folder moves). Hand-author it for anything not authored via `zip_to_tam.py`.
-- **`notes[]`** — one entry per note (`id` = local id, `title`, Trilium `type`, `mime`, `sourceUrl`).
-  `sourceUrl` is a relative path (resolved via `new URL(sourceUrl, manifestSourceUrl)`, like an HTML
-  `<base href>`) or a full `http(s)://` URL. Add `"binary": true` for a non-text note (e.g. a
-  `type: "file"` note with mime `audio/wav`, see `libtimer@beatlink`) — fetched as raw bytes, no
-  base64. Add `"renderAsHTML": true` on a note whose source is plain markdown (e.g. `README.md`) that
-  should install as a rendered `text`/`text/html` note (see `whitebluenext@beatlink`'s `readme`
-  note) — the source file itself stays hand-editable markdown.
-- **Note identity: `#TAMFILEID`** — every note TAM creates/resolves carries a permanent,
-  non-inheritable label `#TAMFILEID="{addonId}/{localId}"` (e.g. `#TAMFILEID="libical@kewisch/lib"`).
-  This is the sole canonical way to find "which real note is local id X of addon Y" —
-  `api.getNoteWithLabel("TAMFILEID", value)`. Resolution is find-or-create; nothing about note
-  identity is cached in TAM's Database. `tam_to_zip.py` bakes `#TAMFILEID` into every exported note
-  at build time so a manually-imported addon (notably TAM itself) is self-identifying from import.
-  See `trilium-addon-manager@beatlink/README.md`'s "Note Identity" section for the full design.
-- **JS/JSX code note mime** encodes execution environment: `application/javascript;env=frontend` or
-  `;env=backend`. **There is no `env=hybrid`** — a note can only `require()` another note of the
-  same environment. A library needed from both environments ships as **two separate notes** (same
-  `sourceUrl`, one `env=frontend` one `env=backend`, export names `lib`/`backend` per
-  `libnotification@beatlink`'s convention) — duplicates the note, not the source file. **Every addon
-  needs exactly one `root`**; make the two environment variants children of a plain empty `root` text
-  note (see `libical@kewisch`, `libcalendar@beatlink`) — `deleteAddon` only deletes the subtree rooted
-  at `manifest.root`, so an independent top-level note would leak forever. `require()` matches the
-  literal note title verbatim; the separate `sanitizeVariableName` mechanism in `script.ts` also
-  exposes every child note as a bare pseudo-global (`highlight.min.js` → `highlightminjs`), in
-  addition to `require()`, not instead of it.
-- **`children[]`** — parent/child tree, local (`{parent, child}`) or cross-addon
-  (`{parent, addon, child}`, `child` resolved through the dependency's `exports` map). A local note
-  can be listed under more than one parent in the same manifest (a same-addon clone, e.g. a shared
-  settings-resolver note under several widgets — see `agenda@beatlink`'s `agenda-settings`, 4
-  parents). The first `{parent, child}` occurrence is where the note resolves; later occurrences are
-  wired as clones via `api.ensureNoteIsPresentInParent`. `tam_to_zip.py`'s `process_manifest` mirrors
-  this first-occurrence-is-real ordering.
-- **`relations[]`** / **`labels[]`** — Trilium relations/labels applied after note creation, same
-  local-vs-cross-addon shape.
-- **`dependencies[]`** / **`exports{}`** — declares and exposes notes for other addons to clone/link.
-  Each `dependencies[]` entry is a bare id string (resolved against what's installed, or the catalog
-  the consumer was installed from) or `{"id": "...", "manifestSourceUrl": "..."}` for a dependency
-  from elsewhere. A dependency doesn't need a matching `children`/`relations` entry — a
-  static-resource-only vendor library (see `libfullcalendar@arshaw`) can be referenced by a fixed
-  `custom/...` URL baked into the consumer's code and appear only in `dependencies[]`. `tam_to_zip.py`
-  can only bundle a dependency into an offline ZIP if a matching sibling `addons/{dep-id}/` exists
-  locally.
-- **`skipOnUpdate`** (note never overwritten on update) / **`promptOnUpdate`** (user shown a
-  Keep-Mine-vs-Use-New-Default diff on update) — only meaningful on notes also tracked by an
-  `AddonData:key` relation. To make a note persistent + promptable: `"promptOnUpdate": true` on the
-  note, plus `{"from": "root", "type": "AddonData:<local-note-id>", "to": "<local-note-id>"}`
-  (see `templates@beatlink`, `drawio@siriusxt`) — key matches the note's local manifest id by
-  convention.
-- **`latestVersion`** must be bumped on any manifest structure/content change — it's the only thing
-  that makes TAM show existing installs an update prompt.
-- **`settingsNote`** (optional, sibling of `root`) — local id TAM's "Settings" button navigates to.
-  Must point at the `render`-type note (typically `root`), not the raw JSX note — activating a JSX
-  note directly opens its source. See `cinnamon-applet-agenda@beatlink`.
-- **`readmeNote`** (optional) — local id of a `README.md` note shipped in the installed tree, rendered
-  with `marked` on the addon's detail page. Only resolvable once installed; browsing an uninstalled
-  addon's catalog entry links out to its GitHub homepage instead.
-- **`allowExternalReferences`** (optional, default false) — before uninstall, TAM warns about any
-  relation pointing *into* the addon's subtree from outside it (it would dangle post-delete). Set
-  `true` to skip the warning for an addon whose own code re-establishes such a relation on every load
-  (see `expanded@beatlink`'s `runOnBranchChange` on Trilium's real root note).
-- **`type`** — `widget`/`script`/`theme` are user-facing and shown in TAM's addon list; `library` is
-  hidden and TAM-managed only, installed/removed automatically via `dependencies[]`. If a library is
-  independently useful to a user, split it into a thin user-facing addon wrapping a hidden
-  `type: "library"` (see `notifications@beatlink` / `libnotification@beatlink`).
-
-TAM itself is `libTAM.js` + `trilium-addon-manager@beatlink`'s render note; see that addon's
-`README.md` for the full sync/persistence state machine. Rules:
-
-- **One entry point.** `syncAddon(addonId, options)` handles fresh install, version update, and TAM
-  self-update through the same call. `options.manifestSourceUrl` is required for a fresh install,
-  optional for an update (falls back to the stored record).
-- **`database.installedAddons` is a flat map keyed by `addonId` alone**, never nested under a
-  catalog. `database.catalogs` is just an array of URLs — catalog contents are never cached;
-  `fetchCatalogAddons` fetches every listed manifest fresh each time.
-- **Each installed addon's Database record stores its own manifest structure** (same shape as
-  `_tam_manifest_.json`'s `manifest`, minus per-note `sourceUrl`), plus a `meta` sub-object
-  (name/description/author/license/type/homepage) for list/detail rendering without a live catalog.
-  Irreducible per-install fields: `installedVersion`, `manifestSourceUrl`, `manuallyInstalled`.
-  `enabled` is cached (derivable from `disabled:`-prefixed labels, but read on every list render).
-- **`dependents` is computed, never stored** — `getDependents` scans every other installed addon's
-  `manifest.dependencies` for the reverse edge. Used by `checkForAddonUpdates`'s update-propagation
-  through hidden `library` addons, and by `uninstallAddon`'s cascade-uninstall-if-now-unused check.
-- **`checkForAddonUpdates` fetches each installed addon's own `manifestSourceUrl` directly** and
-  compares `latestVersion` vs `installedVersion`, best-effort per addon.
-- **Persisted user data (`AddonData:` notes)** lives in a `persistence` sub-object on the addon's
-  record — the one part allowed to survive `deleteAddon`. A record can exist for an addonId that
-  isn't installed at all; every "is this addon installed" check tests `installedVersion` presence,
-  not record existence. A persisted note's content is unconditionally protected from `resolveNotes`'
-  overwrite, independent of `skipOnUpdate`/`promptOnUpdate`.
-- **`libTAMjs.validateDatabase()`** (TAM's "Validate Database" button) is a read-only audit —
-  duplicate `#TAMFILEID`s, missing dependencies, unresolvable `root`/`settingsNote`, missing
-  persisted notes, mismatched `AddonData:` relations. **There is no offline "repair" path** — reinstall
-  the flagged addon instead (`syncAddon` reconciles fresh via `#TAMFILEID`).
-
-### `api.currentNote` vs `api.startNote` vs the active-note-context
-
-- **`api.currentNote`** — the note whose *code* is currently executing; changes per module inside a
-  bundle (a shared library note sees itself, not the importer).
-- **`api.startNote`** (also `startNote` from `"trilium:api"`) — the note that kicked off execution
-  (e.g. the `widget`-labeled note Trilium loaded); constant across every module in that bundle.
-- **`useActiveNoteContext()`'s `note`** (Preact-only) — the note currently open in the main editor
-  pane; unrelated to the above.
-
-Rule: code reading relations the *manifest* places on a specific note (not the note the function is
-written in) must use `startNote`, never `currentNote`. See `agenda@beatlink/agendaSettings.jsx`'s
-`getAgendaSettings()`.
-
-### Library note titles must be fully qualified
-
-`require("Title")` and the implicit bundle-global (punctuation stripped) both resolve by exact note
-**title** — a global identifier shared across every addon that clones it. Never use a generic title
-(`lib`, `libsettings`); use a fully-qualified one matching what consumers `require()`/`import`
-(`libSettings.js`, `libNotificationBackend.js`, `FormToggleButton.jsx`), including secondary exports
-(`-Backend`/`-UI` suffix, not a duplicate base name). Renaming a shipped library's title is a breaking
-change — bump its `latestVersion` and update every consumer's `require()`/`import` string and
-`latestVersion` together.
-
-## Workflow for adding/editing an addon
-
-1. Hand-edit `_tam_manifest_.json` and the flat source files directly (the common path), or
-2. Develop inside Trilium, export via **Trilium → Export**, then `zip_to_tam <export.zip>` to
-   generate a starting `_tam_manifest_.json` + source files. Fill in the `FILL_IN` placeholders
-   (`id`/`name`/`description`/`author`/`homepage`/`type`) by hand, and strip the raw Trilium export
-   wrapper from `text`/`html` note content to match sibling notes' `sourceUrl` content.
-
-Always run `validate` before considering the change done. Use `tam_to_zip addons/{id}/` for a ZIP
-without waiting for CI.
-
-## Destructive actions require confirmation
-
-Always confirm with the user before deleting a file, including `zip_to_tam` cleanup (e.g. the
-original exported ZIP), even when it looks like obvious tidying. Exceptions: the file was generated
-this session and is trivially regenerable, or the user explicitly authorized the deletion. This
-matters most for untracked files, since git can't recover them.
-
-## Maintaining this file
-
-Keep this file up to date as the repo evolves: when a task reveals a convention, gotcha, or workflow
-not already captured here, update the relevant section in the same session.
+- Script API intro (frontend vs backend `api`): https://docs.triliumnotes.org/user-guide/scripts/script-api
+- Frontend `Api` reference: https://docs.triliumnotes.org/script-api/frontend/interfaces/Api
+- Backend `Api` reference: https://docs.triliumnotes.org/script-api/backend/interfaces/Api
+- Source: https://github.com/TriliumNext/Trilium (search `frontend_script_api` / `backend_script_api`
+  for the API implementations)
