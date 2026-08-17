@@ -8,108 +8,8 @@ import {
     NoteAutocomplete
 } from "trilium:preact"
 import { ColorPicker } from "ColorPicker.jsx"
+import { isPlainObject, mergeDefaults, filterBySchema, titleFor } from "libSettingsCore.js"
 
-function isPlainObject(value) {
-    return !!value && typeof value === "object" && !Array.isArray(value)
-}
-
-// A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (under addonRoot, not persistenceRoot), so it gets fully
-// overwritten on every TAM update just like the rest of the addon, meaning a
-// newly-added shipped entry reaches existing installs for free. The
-// persisted (config.json) shape for a registry field is therefore not the
-// flat runtime map itself but `{ entries, removedIds }`: `entries` holds
-// only additions/edits that differ from the shipped version (keyed by the
-// same id to shadow a specific shipped entry), and `removedIds` records
-// which shipped ids the user deleted — an untouched shipped entry is never
-// duplicated into config.json, so it keeps tracking future shipped edits
-// until the user actually changes it. `mergeRegistryDefaults` reconstructs
-// the flat runtime map (shipped, minus removed, with entries overlaid) that
-// the rest of this module and the UI both work with; `filterRegistryBySchema`
-// is the inverse, run on save. Kept in exact lockstep with the identically-
-// named functions in libsettings-backend.js.
-// A registry field can itself nest further `list`/`registry` fields in its
-// `itemSchema` (e.g. a colour/prefix variant's `children`, one flat
-// label-value map per variant — see libsettings@beatlink's README "Nesting"
-// section). The shipped baseline for such a nested field lives inside its
-// *parent item's own* shipped default (`shippedItem[key]`, e.g.
-// `colors.default.priority.children`), never in the nested field's own
-// schema `default` (which is only the blank starting point for a brand-new
-// item added through the UI, always `{}`) — so `mergeDefaults`/
-// `filterBySchema` thread a `shippedNode` parameter through every level of
-// recursion instead of re-deriving "shipped" from `def.default` past the
-// top level. Kept in exact lockstep with the identically-named functions in
-// libsettings-backend.js.
-function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
-    const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
-    const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
-    const merged = {}
-    for (const [id, item] of Object.entries(shipped)) {
-        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item, null)
-    }
-    for (const [id, item] of Object.entries(storedEntries)) {
-        merged[id] = mergeDefaults(itemSchema, shipped[id] ?? null, item)
-    }
-    return merged
-}
-
-function filterRegistryBySchema(itemSchema, shipped, effective) {
-    const entries = {}
-    const removedIds = []
-    for (const [id, item] of Object.entries(effective)) {
-        const shippedItem = shipped[id] ?? null
-        const filteredItem = filterBySchema(itemSchema, item, shippedItem)
-        const shippedFiltered = shippedItem
-            ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem, null), shippedItem)
-            : null
-        if (shippedFiltered === null || JSON.stringify(shippedFiltered) !== JSON.stringify(filteredItem)) {
-            entries[id] = filteredItem
-        }
-    }
-    for (const id of Object.keys(shipped)) {
-        if (!(id in effective)) removedIds.push(id)
-    }
-    return { entries, removedIds }
-}
-
-function mergeDefaults(schema, shippedNode, storedNode) {
-    const values = {}
-    for (const [key, def] of Object.entries(schema)) {
-        // Keys starting with `_` are schema-level metadata (e.g. `_categories`,
-        // the ordered category list SettingsForm reads), not fields — they
-        // carry no per-user value, so they never enter the merged/persisted map.
-        if (key.startsWith("_")) continue
-        const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
-        if (def.type === "list") {
-            const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
-            values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            values[key] = mergeRegistryDefaults(def.itemSchema, shippedValue || {}, storedNode?.[key])
-        } else {
-            values[key] = (storedNode && key in storedNode) ? storedNode[key] : shippedValue
-        }
-    }
-    return values
-}
-
-function filterBySchema(schema, values, shippedNode) {
-    const filtered = {}
-    for (const key of Object.keys(schema)) {
-        if (key.startsWith("_")) continue
-        const def = schema[key]
-        if (def.type === "list") {
-            const list = Array.isArray(values?.[key]) ? values[key] : []
-            filtered[key] = list.map(item => filterBySchema(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            const effective = isPlainObject(values?.[key]) ? values[key] : {}
-            const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : (def.default || {})
-            filtered[key] = filterRegistryBySchema(def.itemSchema, shippedValue || {}, effective)
-        } else {
-            filtered[key] = values[key]
-        }
-    }
-    return filtered
-}
 
 async function loadSchema(schemaNoteId) {
     const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [schemaNoteId])
@@ -128,22 +28,12 @@ async function writeStored(configNoteId, stored) {
     )
 }
 
-// `_`-prefixed keys of the *stored* document are this library's own bookkeeping
-// (currently only `_shipped`, the lifecycle hook's baseline — see
-// `runSettingsHook`), not schema fields: `mergeDefaults` never surfaces them in
-// the runtime values and `filterBySchema` rebuilds the document from schema keys
-// alone, so they have to be carried across explicitly or a Save would erase them.
-function storedMeta(stored) {
-    return Object.fromEntries(Object.entries(stored).filter(([key]) => key.startsWith("_")))
-}
-
 async function loadValues(schema, configNoteId) {
     return mergeDefaults(schema, null, await loadStored(configNoteId))
 }
 
 async function persistValues(schema, configNoteId, values) {
-    const stored = await loadStored(configNoteId)
-    await writeStored(configNoteId, { ...storedMeta(stored), ...filterBySchema(schema, values, null) })
+    await writeStored(configNoteId, filterBySchema(schema, values, null))
 }
 
 // Resolves the pair of note ids every settings consumer needs, from whichever
@@ -165,8 +55,9 @@ async function persistValues(schema, configNoteId, values) {
 // from their own module; widgets pass the `currentNote` they import from
 // `trilium:api`.
 //
-// The config note is a persistent note (under the addon's persistenceRoot); the
-// `configNote` relation points at it directly and TAM never overwrites its content.
+// The config note is a persistent note (attached under the reserved "persistence"
+// parent); the `configNote` relation points at it directly and TAM never
+// overwrites its content — it reviews it per setting instead, see the README.
 //
 // Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
 // relation is absent — callers already gate their render on that.
@@ -198,184 +89,6 @@ export async function loadSettings(schemaNoteId, configNoteId) {
 export async function saveSettings(schemaNoteId, configNoteId, values) {
     const schema = await loadSchema(schemaNoteId)
     await persistValues(schema, configNoteId, values)
-}
-
-// =========================================================================
-// TAM lifecycle hook — the whole of a consumer's manifest `hooks` behaviour.
-// =========================================================================
-
-// schema.json ships fresh defaults on every TAM update, config.json never gets
-// overwritten — but once a config has been saved even once it holds a value for
-// *every* scalar key, so "stored differs from the current default" cannot tell a
-// deliberate user choice apart from a default that moved upstream. `_shipped` is
-// the missing side of that comparison: the shipped defaults as of the last time
-// a hook looked, kept in the stored document (never in the merged runtime values
-// — `mergeDefaults` skips `_`-prefixed keys) and carried across saves by
-// `persistValues`. Diffing shipped-then against shipped-now is what keeps the
-// Update Review down to what actually changed upstream, instead of re-asking
-// about every customization on every update.
-const SHIPPED_KEY = "_shipped"
-
-// One prompt entry covers the whole config note; TAM only needs a stable key.
-const PROMPT_ID = "libsettings"
-
-const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-
-// `list` is excluded from the whole hook: a stored list replaces its default
-// wholesale rather than reconciling per entry, so "use the new default" could
-// only mean discarding the user's entries. `checklist` stores nothing of its own.
-function isReviewable(key, def) {
-    return !key.startsWith("_") && def.type !== "list" && def.type !== "checklist"
-}
-
-// The shipped baseline of every reviewable field, in the same shape the schema
-// declares it: a plain value for a scalar, the shipped entry map for a registry.
-function shippedDefaults(schema) {
-    const shipped = {}
-    for (const [key, def] of Object.entries(schema)) {
-        if (isReviewable(key, def)) shipped[key] = def.default
-    }
-    return shipped
-}
-
-// Registry entries are compared in their *runtime* (merged, flat) shape rather
-// than as stored: a shipped entry may omit any itemSchema key it is happy to
-// default, and a nested registry is stored as an `{ entries, removedIds }` delta
-// but shipped as a flat map — only after `mergeDefaults` are the two sides
-// comparable at all.
-function registryItems(key, def, storedField, shippedNow, shippedThen) {
-    const items = []
-    const storedEntries = isPlainObject(storedField?.entries) ? storedField.entries : {}
-    const removedIds = Array.isArray(storedField?.removedIds) ? storedField.removedIds : []
-    for (const [id, storedItem] of Object.entries(storedEntries)) {
-        if (removedIds.includes(id)) continue
-        // Only ids the addon still ships are reviewable — an entry the user
-        // added themselves, or one dropped from the schema since, has no
-        // upstream version to offer. An id that is shipped for the first time
-        // in this version (no `then`) while the user already had one under it
-        // does, hence no matching guard for that side.
-        const now = shippedNow[id]
-        if (!now) continue
-        const nowMerged = mergeDefaults(def.itemSchema, now, null)
-        const then = shippedThen[id]
-        if (then && sameJson(mergeDefaults(def.itemSchema, then, null), nowMerged)) continue
-        const currentMerged = mergeDefaults(def.itemSchema, now, storedItem)
-        if (sameJson(currentMerged, nowMerged)) continue
-        items.push({
-            key: `${key}.${id}`,
-            label: `${def.label ?? key}: ${currentMerged.name ?? id}`,
-            current: currentMerged,
-            incoming: nowMerged,
-            field: key,
-            id
-        })
-    }
-    return items
-}
-
-// Everything the user would have to decide about, given what shipped last time.
-// `field`/`id` are internal — `collect` strips them, `apply` recomputes this
-// list to get them back rather than parsing them out of `key`.
-function reviewItems(schema, stored, baseline) {
-    const items = []
-    for (const [key, def] of Object.entries(schema)) {
-        // A field with no baseline is new in this version: nothing to diff.
-        if (!isReviewable(key, def) || !(key in baseline)) continue
-        if (def.type === "registry") {
-            items.push(...registryItems(key, def, stored[key], def.default || {}, baseline[key] || {}))
-        } else if (key in stored && !sameJson(def.default, baseline[key]) && !sameJson(stored[key], def.default)) {
-            // A key absent from stored has never been persisted, so it already
-            // tracks whatever the schema currently defaults to.
-            items.push({ key, label: def.label ?? key, current: stored[key], incoming: def.default, field: key, id: null })
-        }
-    }
-    return items
-}
-
-// A scalar still holding exactly the default it shipped with is one the user
-// never touched, so a changed default is theirs for free — no review. Registry
-// entries need no equivalent: an untouched shipped entry is never copied into
-// config.json in the first place, so it already tracks its shipped version.
-// Mutates `stored`; returns whether anything moved.
-function adoptUnchangedDefaults(schema, stored, baseline) {
-    let changed = false
-    for (const [key, def] of Object.entries(schema)) {
-        if (!isReviewable(key, def) || def.type === "registry") continue
-        if (!(key in stored) || !(key in baseline)) continue
-        if (sameJson(def.default, baseline[key]) || !sameJson(stored[key], baseline[key])) continue
-        stored[key] = def.default
-        changed = true
-    }
-    return changed
-}
-
-// `true` for an item means "use the new default": a scalar takes the shipped
-// value, a registry entry drops its override so it goes back to tracking the
-// shipped one. `false` (or absent) leaves the user's version exactly as is.
-function applySelections(schema, stored, baseline, selections) {
-    for (const item of reviewItems(schema, stored, baseline)) {
-        if (!selections[item.key]) continue
-        if (item.id === null) {
-            stored[item.field] = item.incoming
-        } else if (isPlainObject(stored[item.field]?.entries)) {
-            delete stored[item.field].entries[item.id]
-        }
-    }
-}
-
-// The entry point every consumer's hook note calls (see libsettings-hook.js).
-// `note` is the hook note itself — it carries the `schemaNote`/`configNote`
-// relations, exactly like a settings note — and `context` is TAM's
-// `#tamHookContext` payload. Covers `postInstall`, `postUpdate` and both
-// `updateReview` passes; `preUninstall` is a no-op, since TAM asks about
-// deleting stored data itself and the phase is read-only by contract.
-export async function runSettingsHook(note, context) {
-    const { schemaNoteId, configNoteId } = await resolveConfigNotes(note)
-    if (!schemaNoteId || !configNoteId) {
-        console.error("libsettings: hook note is missing its schemaNote or configNote relation")
-        return undefined
-    }
-    const schema = await loadSchema(schemaNoteId)
-    const stored = await loadStored(configNoteId)
-    const shipped = shippedDefaults(schema)
-    // No baseline means this install predates the hook (or is brand new): there
-    // is nothing to diff against, so every phase can only record where things
-    // stand now and adopt nothing.
-    const baseline = isPlainObject(stored[SHIPPED_KEY]) ? stored[SHIPPED_KEY] : null
-    const snapshot = () => writeStored(configNoteId, { ...stored, [SHIPPED_KEY]: shipped })
-
-    switch (context?.phase) {
-        case "postInstall":
-            await snapshot()
-            return undefined
-        case "postUpdate":
-            // The baseline deliberately survives this phase: the collect pass
-            // runs straight after and still needs to see the old defaults.
-            if (!baseline) await snapshot()
-            else if (adoptUnchangedDefaults(schema, stored, baseline)) await writeStored(configNoteId, stored)
-            return undefined
-        case "collect": {
-            const items = baseline ? reviewItems(schema, stored, baseline) : []
-            if (items.length === 0) {
-                await snapshot()
-                return []
-            }
-            // Nothing is written here — the baseline only moves once the user
-            // has actually answered, so an update they never applied is asked
-            // about again rather than silently forgotten.
-            return [{
-                noteLocalId: PROMPT_ID,
-                title: "Settings",
-                items: items.map(({ key, label, current, incoming }) => ({ key, label, current, incoming }))
-            }]
-        }
-        case "apply":
-            if (baseline) applySelections(schema, stored, baseline, context.selections || {})
-            await snapshot()
-            return undefined
-        default:
-            return undefined
-    }
 }
 
 // `registries` is the full top-level values object (every schema key's
@@ -502,17 +215,6 @@ function matchesShowWhen(def, item) {
 // field's value — resolved through a `reference` field to the *referenced*
 // entry's own name (rather than showing a raw reference id) when that first
 // field is itself a `reference`.
-function titleFor(itemSchema, item, registries) {
-    if ("name" in itemSchema) return item.name || "Untitled"
-    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
-    if (!firstKey) return "Untitled"
-    const rawValue = item[firstKey]
-    if (firstDef.type === "reference") {
-        const referenced = registries?.[firstDef.registry]?.[rawValue]
-        return referenced?.name || rawValue || "Untitled"
-    }
-    return rawValue || "Untitled"
-}
 
 // One labeled field row per itemSchema key (skipping a field whose `showWhen`
 // doesn't match this item), used by both ListItems and RegistryItems so a

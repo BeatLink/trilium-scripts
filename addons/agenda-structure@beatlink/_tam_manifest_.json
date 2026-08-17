@@ -5,7 +5,7 @@
     "author": "beatlink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-structure@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-structure@beatlink/_tam_manifest_.json",
@@ -59,7 +59,7 @@
                 "title": "structureConfig.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-structure@beatlink/structureConfig.json"
+                "sourceUrl": null
             },
             {
                 "id": "templates-root",
@@ -111,6 +111,13 @@
                 "renderAsHTML": true
             },
             {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+            },
+            {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
@@ -140,64 +147,226 @@
             }
         ],
         "children": [
-            { "parent": "root", "child": "structure-editor-page" },
-            { "parent": "root", "child": "structure-schema" },
-            { "parent": "root", "child": "readme" },
-
-            { "parent": "persistence", "child": "structure-config" },
-            { "parent": "persistence", "child": "templates-root" },
-            { "parent": "templates-root", "child": "tpl-typecollection" },
-            { "parent": "templates-root", "child": "tpl-special" },
-
-            { "parent": "structure-editor-page", "child": "structure-editor" },
-            { "parent": "structure-editor", "child": "provision" },
-            { "parent": "structure-editor", "child": "structure-settings" },
-            { "parent": "structure-editor", "child": "dimensions" },
-            { "parent": "structure-editor", "child": "libsettings-ui" },
-            { "parent": "structure-editor", "child": "libsettings-style" },
-            { "parent": "dimensions", "child": "libsettings-ui" },
-
-            { "parent": "provision", "child": "structure" },
-            { "parent": "provision", "child": "registry" },
-            { "parent": "provision", "child": "structure-settings" },
-
-            { "parent": "registry", "child": "libsettings-ui" },
-            { "parent": "registry", "child": "picker-registry" },
-            { "parent": "picker-registry", "child": "libsettings-ui" },
-            { "parent": "libsettings-ui", "child": "colorpicker" },
-            { "parent": "colorpicker", "child": "colorpicker-css" }
+            {
+                "parent": "root",
+                "child": "structure-editor-page"
+            },
+            {
+                "parent": "root",
+                "child": "structure-schema"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "structure-config"
+            },
+            {
+                "parent": "persistence",
+                "child": "templates-root"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-typecollection"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-special"
+            },
+            {
+                "parent": "structure-editor-page",
+                "child": "structure-editor"
+            },
+            {
+                "parent": "structure-editor",
+                "child": "provision"
+            },
+            {
+                "parent": "structure-editor",
+                "child": "structure-settings"
+            },
+            {
+                "parent": "structure-editor",
+                "child": "dimensions"
+            },
+            {
+                "parent": "structure-editor",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "structure-editor",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "provision",
+                "child": "structure"
+            },
+            {
+                "parent": "provision",
+                "child": "registry"
+            },
+            {
+                "parent": "provision",
+                "child": "structure-settings"
+            },
+            {
+                "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "picker-registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            }
         ],
         "relations": [
-            { "from": "structure-editor-page", "type": "renderNote", "to": "structure-editor" },
-            { "from": "structure-editor-page", "type": "configNote", "to": "structure-config" },
-            { "from": "structure-editor-page", "type": "schemaNote", "to": "structure-schema" },
-            { "from": "templates-root", "type": "template", "to": "tpl-special" }
+            {
+                "from": "structure-editor-page",
+                "type": "renderNote",
+                "to": "structure-editor"
+            },
+            {
+                "from": "structure-editor-page",
+                "type": "configNote",
+                "to": "structure-config"
+            },
+            {
+                "from": "structure-editor-page",
+                "type": "schemaNote",
+                "to": "structure-schema"
+            },
+            {
+                "from": "templates-root",
+                "type": "template",
+                "to": "tpl-special"
+            }
         ],
         "labels": [
-            { "note": "structure-editor-page", "name": "agendaStructureConfig", "value": "" },
-
-            { "note": "structure-editor-page", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "structure-editor", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "structure", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "provision", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "structure-settings", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "structure-schema", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "structure-config", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "dimensions", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "readme", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "picker-registry", "name": "iconClass", "value": "bx bx-sitemap" },
-            { "note": "templates-root", "name": "iconClass", "value": "bx bx-sitemap" },
-
-            { "note": "libsettings-style", "name": "appCss", "value": "" },
-            { "note": "colorpicker-css", "name": "appCss", "value": "" },
-
-            { "note": "tpl-typecollection", "name": "template", "value": "" },
-            { "note": "tpl-typecollection", "name": "iconClass", "value": "bx bx-folder" },
-            { "note": "tpl-typecollection", "name": "viewType", "value": "list" },
-            { "note": "tpl-typecollection", "name": "type", "value": "typecollection" },
-
-            { "note": "tpl-special", "name": "template", "value": "" },
-            { "note": "tpl-special", "name": "type", "value": "special" }
-        ]
+            {
+                "note": "structure-editor-page",
+                "name": "agendaStructureConfig",
+                "value": ""
+            },
+            {
+                "note": "structure-editor-page",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "structure-editor",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "structure",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "provision",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "structure-settings",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "structure-schema",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "structure-config",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "picker-registry",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "templates-root",
+                "name": "iconClass",
+                "value": "bx bx-sitemap"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "iconClass",
+                "value": "bx bx-folder"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "tpl-typecollection",
+                "name": "type",
+                "value": "typecollection"
+            },
+            {
+                "note": "tpl-special",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-special",
+                "name": "type",
+                "value": "special"
+            }
+        ],
+        "settings": {
+            "schema": "structure-schema",
+            "config": "structure-config"
+        }
     }
 }

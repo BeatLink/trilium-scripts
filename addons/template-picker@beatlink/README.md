@@ -44,6 +44,10 @@ This addon ships eight ready-made templates under its own **Templates** containe
 your edits survive updates. Run **Scan** to register them in your dropdown if they aren't there
 already.
 
+When a later version changes a bundled template you have edited, TAM's **Update Review** shows both
+versions and lets you choose; **Keep Mine** is the default. Your saved settings are reviewed the
+same way but one setting at a time, so nothing you configured is ever replaced wholesale.
+
 Seven are **item templates** — **Ideas**, **Goal**, **Routine**, **Task**, **Future**, **Project**,
 **Note** — moved here from `agenda@beatlink` in 1.5.0.
 

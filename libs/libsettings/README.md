@@ -3,7 +3,7 @@
 Stateless, schema-driven settings engine for TriliumNext addons — inspired by Cinnamon's
 `settings-schema.json` model. An addon defines its own `schema.json` (what fields exist, their type,
 label, description, and default) and keeps its own persisted `config.json` (a
-[persistent note under its `persistenceRoot`](../trilium-addon-manager@beatlink/README.md#persistence)); this
+[persistent note](../../addons/trilium-addon-manager@beatlink/README.md#persistence)); this
 library reads/merges/saves those two notes for you, and can render a settings form from that same
 schema.
 
@@ -48,8 +48,9 @@ first read, so there's nothing to duplicate between the two files.
 Use `type: "list"` when an addon needs a variable number of entries that each carry several fields
 (e.g. one profile per table to total, one entry per webhook). Each stored value is an array of
 objects; each object is validated/defaulted against `itemSchema`, recursively — this works the same
-way at any depth `mergeDefaults`/`filterBySchema` are applied in both
-[`libsettings-backend.js`](libsettings-backend.js) and [`libsettings-ui.jsx`](libsettings-ui.jsx).
+way at any depth `mergeDefaults`/`filterBySchema` are applied — in
+[`libsettings-core.js`](libsettings-core.js) for the frontend and TAM, and in
+[`libsettings-backend.js`](libsettings-backend.js) for backend scripts.
 
 ```json
 {
@@ -110,7 +111,7 @@ position instead).
 A `registry`'s `default` isn't just "the value when the key is missing" (as for every other field
 type) — it's also the *shipped* entry set, reconciled against the user's own additions/edits/deletions
 on every read and write. This works because `schema.json` is a normal addon-shipped note (structural,
-*not* under `persistenceRoot`), so it gets fully overwritten on every TAM update — same mechanism as any other
+*never* under the reserved `"persistence"` parent), so it gets fully overwritten on every TAM update — same mechanism as any other
 shipped note — meaning a new default entry you add to `default` in a later addon version reaches
 existing installs automatically, without a migration:
 
@@ -507,107 +508,78 @@ Useful for frontend library code that needs to persist a programmatic edit itsel
 into a shared library function that reads, patches, and writes settings, not just edits made through
 `SettingsForm` directly.
 
-## TAM lifecycle hook
+## Update review — TAM owns it
 
-`config.json` is a persistent note, so TAM never overwrites it — which is the point, but it also
-means a default you change in a later version only ever reaches *new* installs. `schema.json` is
-structural and does get overwritten, so both versions of the truth are already on disk; what was
-missing is a moment to compare them. [`libsettings-hook.js`](libsettings-hook.js) is that moment: a
-ready-made [TAM lifecycle hook](../../addons/trilium-addon-manager@beatlink/README.md#hooks-optional)
-a consumer points its `manifest.hooks` at, needing no per-addon code.
+`config.json` is persistent, so TAM never overwrites it; `schema.json` is structural, so every update
+replaces it with whatever the defaults have become. Reconciling those two on update is
+**[TAM's](../../addons/trilium-addon-manager@beatlink/README.md#per-setting-review-manifestsettings)
+job, not this library's**, and needs no code in your addon. Declare the pair in your manifest:
 
-### Wiring
+```json
+"settings": {
+    "schema": "schema",
+    "config": "config"
+}
+```
 
-Ship the hook as a structural note of your own, give it the same `schemaNote` / `configNote`
-relations a settings note carries, and wire `libSettingsUI.jsx` as its **direct** child (that is
-what `require()` resolves against):
+with the config note attached under the reserved `"persistence"` parent and shipping **no content of
+its own** (`"sourceUrl": null`, no `content`) — TAM creates it empty, which this library reads as
+`{}`. `validate` enforces both. See
+[`duplicate-finder@beatlink`](../../addons/duplicate-finder@beatlink/) and
+[`area-picker@beatlink`](../../addons/area-picker@beatlink/) for the wiring in a real manifest.
+
+That gets you, for free:
+
+* the config note **excluded** from TAM's whole-file diff (a persistent note shipping `{}` would
+  otherwise be offered for whole-file replacement on every update, wiping every saved setting);
+* a changed default the user never diverged from **adopted silently**;
+* anything genuinely in conflict raised as one Update Review row per setting, with Keep Mine against
+  the user's value and Use New Default against the new shipped one.
+
+Registry entries reconcile as [Shipped entries](#shipped-entries--registry-fields-the-addon-itself-ships-entries-into)
+already describes: untouched shipped entries track upstream automatically and never appear in the
+review at all, user-added and user-deleted ones are left alone, and only an entry the user *edited*
+whose shipped version *also* changed is worth a question. `list` fields are excluded from review
+entirely, since a stored list replaces its default wholesale.
+
+### `libsettings-core.js`
+
+The schema semantics — how defaults, shipped entries and a stored config combine into the runtime
+values, and how they come apart on save — live in
+[`libsettings-core.js`](libsettings-core.js), a plain `env=frontend` module. Both
+[`libsettings-ui.jsx`](libsettings-ui.jsx) and TAM's own `lib-tam.js` require it, so the review and
+the form agree exactly on what "the user changed this" means. Since TAM reuses any note carrying the
+same `#TAMSOURCEURL`, that is one note in the database no matter how many addons wire it.
+
+Consumers wire it as a **direct** child of `libSettingsUI.jsx` (that is what `require()` resolves
+against):
 
 ```json
 {
     "notes": [
         {
-            "id": "settings-hook",
-            "title": "libSettingsHook.js",
+            "id": "libsettings-core",
+            "title": "libSettingsCore.js",
             "type": "code",
             "mime": "application/javascript;env=frontend",
-            "sourceUrl": ".../libs/libsettings/libsettings-hook.js"
+            "sourceUrl": ".../libs/libsettings/libsettings-core.js"
         }
     ],
     "children": [
-        {"parent": "root", "child": "settings-hook"},
-        {"parent": "settings-hook", "child": "libsettings-ui"}
-    ],
-    "relations": [
-        {"from": "settings-hook", "type": "schemaNote", "to": "schema"},
-        {"from": "settings-hook", "type": "configNote", "to": "config"}
-    ],
-    "hooks": {
-        "postInstall": "settings-hook",
-        "postUpdate": "settings-hook",
-        "updateReview": "settings-hook"
-    }
+        {"parent": "libsettings-ui", "child": "libsettings-core"}
+    ]
 }
 ```
 
-All three phases point at the same note — it dispatches on `phase` itself. `preUninstall` is not
-implemented: the phase is read-only by contract and TAM already asks the user about deleting stored
-data. See [`duplicate-finder@beatlink`](../../addons/duplicate-finder@beatlink/) for the full
-wiring in a real manifest.
-
-### `_shipped` — the baseline that makes this work
-
-Once a config has been saved even once it holds a value for *every* scalar key, so "stored differs
-from the current default" cannot tell a deliberate user choice apart from a default that moved
-upstream. So the hook keeps a snapshot of the defaults it last saw under a `_shipped` key of
-`config.json`:
-
-```json
-{
-    "_shipped": {"caseInsensitiveTitle": false, "excludeFilters": {"tamNotes": {"name": "Addon-owned notes", "query": "#TAMFILEID"}}},
-    "caseInsensitiveTitle": true,
-    "excludeFilters": {"entries": {}, "removedIds": []}
-}
-```
-
-`_` marks it as schema-level metadata the same way `_categories` does, so it never appears in the
-merged runtime values — `mergeDefaults` skips it, and consumers never see it. It *is* deliberately
-preserved across saves (`filterBySchema` rebuilds the document from schema keys alone, so both
-`saveSettings` implementations copy `_`-prefixed keys across explicitly).
-
-### What each phase does
-
-| Phase | Behaviour |
-|-------|-----------|
-| `postInstall` | Records the baseline. A fresh install has customized nothing, so its first update has nothing to review. |
-| `postUpdate` | **Silently adopts** every scalar whose stored value is still exactly the default it shipped with — the user never touched it, so a changed default is theirs for free. The baseline deliberately survives this phase; the collect pass runs next and still needs the old defaults. |
-| `updateReview` `collect` | Returns one prompt entry, `Settings`, with one item per genuine conflict (below). Empty means nothing changed upstream, and the baseline advances. |
-| `updateReview` `apply` | *Use New Default* takes the shipped value for a scalar, or drops a registry entry's override so it goes back to tracking the shipped one; *Keep Mine* leaves the stored value alone. Either way the baseline advances, so the same question is never asked twice. |
-
-An item is only raised when the **shipped** side changed since the baseline *and* the user's stored
-value differs from where it landed. Everything else stays silent: a key the user has never saved (it
-already tracks the default), a value that happens to equal the new default, a customization made
-against a default that hasn't moved, and any field that is new in this version (no baseline to diff
-against). Registry entries add three more: an entry the user added themselves, one they deleted
-(`removedIds` — a removal is never resurrected), and one the addon no longer ships.
-
-An install predating the hook has no baseline at all, so its first hooked update records one and
-reviews nothing — there is genuinely no way to know which of its stored values were deliberate.
-
-`list` fields are excluded entirely: a stored list replaces its default wholesale rather than
-reconciling per entry, so "use the new default" could only mean discarding the user's entries.
-`checklist` stores nothing of its own. Both are skipped by every phase.
-
-### `runSettingsHook(note, context)`
-
-The exported function `libsettings-hook.js` is a shim around, if you need to call it from a hook of
-your own that does other work too. `note` is the hook note (it carries the relations); `context` is
-TAM's `#tamHookContext` payload, parsed. Read the label from the backend rather than off
-`api.startNote` — TAM writes it immediately before invoking the hook, and froca has no guarantee of
-having caught up.
+[`libsettings-backend.js`](libsettings-backend.js) still carries its own copy of those helpers, and
+has to: Trilium only bundles a child module whose script env matches its parent's, so a backend
+script can never require a frontend note however the notes are wired. Those two must be changed
+together.
 
 ## See it in use
 
-[`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and
-[`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/) both consume this library —
-their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `configNote`) a
-consumer needs to declare, with `config.json` placed under the addon's `persistenceRoot`.
+[`cinnamon-applet-agenda@beatlink`](../../addons/cinnamon-applet-agenda@beatlink/) and
+[`cinnamon-applet-inbox@beatlink`](../../addons/cinnamon-applet-inbox@beatlink/) both consume this
+library — their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `configNote`)
+a consumer needs to declare, with `config.json` attached under the reserved `"persistence"` parent
+and named by `manifest.settings`.
