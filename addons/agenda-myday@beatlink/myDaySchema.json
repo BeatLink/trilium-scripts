@@ -2,7 +2,7 @@
     "myDayNoteId": {
         "type": "note",
         "label": "My Day Note",
-        "description": "The note that collects today's tasks. Required: the panel only appears while this note is active, so it stays hidden until you set it. Adding a suggestion appends it here, and tasks already linked here stop being suggested.",
+        "description": "The text note that collects today's tasks, edited in place at the top of the right-pane panel. Required: the panel prompts for it until you set it. Adding a suggestion appends it here, and tasks already linked here stop being suggested.",
         "category": "Execute",
         "tab": "My Day"
     },

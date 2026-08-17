@@ -1,18 +1,37 @@
 # Agenda My Day
 
 The My Day focus panel, originally split out of [`agenda@beatlink`](../agenda@beatlink/README.md) and
-now fully standalone. It ships **two right-pane widgets**: the main panel, shown only while the **My
-Day note** is active and modelled on Microsoft To Do's My Day page, and a small **per-task panel**
-shown on task notes themselves.
+now fully standalone. It ships **two right-pane widgets**: the main panel, shown on every note and
+modelled on Microsoft To Do's My Day page, and a small **per-task panel** shown on task notes
+themselves.
 
-The main panel carries:
+The main panel carries, top to bottom:
 
-- a list of **suggested tasks** to add to your day, grouped into **Earlier** (overdue), **Today**, and
-  **Next 7 Days**. Each row has a `+` that appends the task to your My Day note as a todo item and
-  clones it under that note;
+- your **My Day note itself, edited in place as rich text**. The note is the panel, so today's list is
+  always on screen and is never navigated to;
 - a **countdown timer** with selectable durations and start / select / end sounds;
+- a collapsible **Suggestions** section listing tasks to add to your day, grouped into **Earlier**
+  (overdue), **Today**, and **Next 7 Days**. Each row has a `+` that appends the task to your My Day
+  note as a todo item and clones it under that note;
 - an optional loop that **files tasks into the My Day note** as their start time arrives (every 30s);
 - an optional loop that **sends a desktop notification** as each task comes due (every 15s).
+
+## The embedded editor
+
+Trilium bundles CKEditor and does not expose it to script notes, so there is no import that reaches
+the editor class. The panel instead **borrows the class and its fully built configuration from
+whichever text editor the app has already created** — the note detail's own — and builds a second
+instance inside the panel with it. It is captured once per page load, from
+`api.getActiveContextTextEditor()` on mount and from every `textEditorRefreshed` event thereafter.
+
+Consequence: **until a text note has been opened once in the session there is nothing to borrow**, and
+the panel shows the My Day note read-only. It upgrades to a live editor the moment you open any text
+note. Which editor you get — floating toolbar or classic — follows your Trilium editor-type setting,
+since that is what the borrowed class is.
+
+Edits are written back to the note about a second after you stop typing. Content changed elsewhere —
+by the `+` button, by a prune, or in the note detail — is pulled into the panel, but never while the
+panel's editor has focus, which would move your cursor.
 
 ## The per-task panel
 
@@ -35,13 +54,8 @@ not a code dependency, so `agenda-task@beatlink` need not be installed.
 
 ## Visibility
 
-The main panel renders **only when the active note is your My Day note** (the **My Day Note**
-setting). Everywhere else it returns `null`. No note ships with this addon, so **the panel stays
-hidden until you point that setting at a note of your own**.
-
-The two background loops — **Add Tasks When Due** and **Send Due Notifications** — are deliberately
-kept *outside* that gate, so they keep firing wherever you are in the tree. Only the suggestion query
-is skipped while the panel is off screen.
+The main panel renders **on every note**. No note ships with this addon, so until you point **My Day
+Note** at a text note of your own the panel shows a prompt to do so in place of the editor.
 
 ## Suggestions
 
@@ -74,9 +88,7 @@ what makes completed and rescheduled tasks disappear from the page. Clones are r
 rather than the client cache, because a completed task is archived and archived children are filtered
 out of the client's view.
 
-The prune is **not** gated on visibility, since tasks are usually completed from their own note
-rather than from My Day. It also runs when the panel becomes visible, catching changes made while it
-wasn't mounted.
+It also runs once when the panel mounts, catching changes made while Trilium wasn't open.
 
 Labels are checked per note rather than by searching `#agendaMyDay`, because completing a task
 archives it and archived notes drop out of search results - a search would report every completed
@@ -102,7 +114,7 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 
 | Setting | Effect |
 |---------|--------|
-| **My Day Note** | The note that collects today's tasks. **Required** — the panel stays hidden until this is set. |
+| **My Day Note** | The text note that collects today's tasks, edited in place in the panel. **Required** — the panel prompts for it until this is set. |
 | **Enable Timer Sounds** | Whether the timer plays its start / select / end sounds. |
 | **Add Tasks When Due** | Append each task to the My Day note as its start time arrives. |
 | **Send Due Notifications** | Send a desktop notification as each task's start time arrives. |
