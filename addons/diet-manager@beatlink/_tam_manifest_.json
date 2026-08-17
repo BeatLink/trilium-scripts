@@ -1,0 +1,306 @@
+{
+    "id": "diet-manager@beatlink",
+    "name": "Diet Manager",
+    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. Foods can be measured in several units at once (100 g or 1 tortilla), foods and recipes sort, filter and group by nestable categories, and a manually maintained grocery list tracks what to buy. All data is a single persisted JSON note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/diet-manager@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "2.13.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/diet-manager@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-page",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "diet-manager@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "dietManagerWidget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "dietManagerWidget.jsx"
+            },
+            {
+                "id": "lib",
+                "title": "libDietManager.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libDietManager.js"
+            },
+            {
+                "id": "usda-lib",
+                "title": "libUsda.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libUsda.js"
+            },
+            {
+                "id": "off-lib",
+                "title": "libOpenFoodFacts.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libOpenFoodFacts.js"
+            },
+            {
+                "id": "style",
+                "title": "dietManager.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "dietManager.css"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "database",
+                "title": "database.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "database.json"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "widget"
+            },
+            {
+                "parent": "launcher",
+                "child": "style"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "persistence",
+                "child": "database"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            },
+            {
+                "parent": "widget",
+                "child": "lib"
+            },
+            {
+                "parent": "widget",
+                "child": "usda-lib"
+            },
+            {
+                "parent": "widget",
+                "child": "off-lib"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "widget",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings",
+                "child": "lib"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            }
+        ],
+        "relations": [
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "widget",
+                "type": "database",
+                "to": "database"
+            },
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "widget"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
+            }
+        ],
+        "labels": [
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "widget",
+                "name": "dietManagerRender",
+                "value": ""
+            },
+            {
+                "note": "launcher",
+                "name": "iconClass",
+                "value": "bx bx-restaurant"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
+    }
+}
