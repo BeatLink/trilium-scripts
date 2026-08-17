@@ -1,0 +1,29 @@
+name: Publish Addons
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate
+        run: node resources/scripts/tamhelper.js validate
+
+      - name: Build addon ZIPs
+        run: node resources/scripts/tamhelper.js tam-to-zip --all
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node resources/scripts/tamhelper.js publish-release

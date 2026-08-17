@@ -1,0 +1,19 @@
+{
+  "name": "trilium-scripts-toolchain",
+  "version": "1.0.0",
+  "description": "TAM addon toolchain + Trilium testing harness (Node.js)",
+  "private": true,
+  "type": "commonjs",
+  "bin": {
+    "tamhelper": "scripts/tamhelper.js"
+  },
+  "scripts": {
+    "tamhelper": "node scripts/tamhelper.js",
+    "test": "playwright test --config testing/playwright.config.js"
+  },
+  "dependencies": {
+    "marked": "^12.0.2",
+    "@playwright/test": "1.61.1",
+    "playwright": "1.61.1"
+  }
+}
