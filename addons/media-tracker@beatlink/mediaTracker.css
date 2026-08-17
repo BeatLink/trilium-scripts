@@ -1,8 +1,10 @@
 .mt-view {
-    padding: 12px 16px;
-    max-width: 900px;
-    margin: 0 auto;
+    padding: 12px 1rem;
     font-size: 14px;
+    /* Some Trilium themes disable selection inside widgets; re-enable it so
+       titles, codes, and links can be copied by hand. */
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .mt-tabs {
@@ -26,6 +28,23 @@
     border-bottom-color: var(--main-text-color);
 }
 
+/* Pushed to the far end of the tab row: it navigates away rather than switching
+   tabs, so it shouldn't sit among the tabs it isn't peer to. */
+.mt-tab-right {
+    margin-left: auto;
+}
+
+.mt-settings-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.mt-settings-head h3 {
+    margin: 0;
+}
+
 .mt-btn {
     padding: 6px 12px;
     border: 1px solid var(--main-border-color);
@@ -42,6 +61,17 @@
 
 .mt-btn-primary {
     font-weight: 600;
+}
+
+/* Shown in place of Add when a search result is already tracked. Not a button:
+   there is nothing to click, so it must not look actionable. Same green as the
+   "watched" status so the palette stays consistent. */
+.mt-added {
+    color: rgb(46, 160, 87);
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+    cursor: default;
+    white-space: nowrap;
 }
 
 .mt-toolbar {
@@ -75,14 +105,210 @@
     border-color: var(--main-text-color);
 }
 
+/* One block per collection group in Settings: its collections, then a box to add
+   another directly into that group. */
+.mt-group-section {
+    margin: 14px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.mt-group-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.mt-group-section .mt-tag-list {
+    max-height: 220px;
+    margin-bottom: 6px;
+}
+
+.mt-diag pre {
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 6px 8px;
+    margin: 4px 0 0;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
+/* Collection manage actions sit beside the Collection dropdown. */
+.mt-chip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mt-chip-action {
+    padding: 3px 7px;
+    line-height: 1;
+}
+
+/* The settings genre list is longer than a row's collection picker and is the
+   whole point of its tab, so it gets more room. */
+.mt-genre-list {
+    max-height: 320px;
+}
+
+/* --- controls --- */
+
+.mt-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.mt-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted-text-color, gray);
+    font-size: 12px;
+    margin: 0;
+}
+
+/* --- collections --- */
+
+.mt-tag {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.18);
+    border: 1px solid var(--main-border-color);
+    font-size: 11px;
+}
+
+/* The collection picker: every known collection listed with its membership,
+   plus a field to create a new one. */
+.mt-tag-picker {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
+}
+
+/* Group sections sit side by side when there is room, so Mood and Franchise can
+   be edited without scrolling past each other. */
+.mt-tag-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.mt-tag-group {
+    min-width: 150px;
+}
+
+.mt-tag-group-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted-text-color, gray);
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--main-border-color);
+    margin-bottom: 4px;
+}
+
+/* Inside a group the list is already bounded by its section, so it drops the
+   standalone list's own margin and taller scroll cap. */
+.mt-tag-group .mt-tag-list {
+    margin-bottom: 0;
+    max-height: 132px;
+}
+
+/* One collection per line: a wrapping row is hard to scan and hard to hit
+   accurately when names vary in length. */
+.mt-tag-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 176px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+
+.mt-tag-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    margin: 0;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Full-width hover target, so the whole line is clickable rather than just the
+   checkbox and its text. */
+.mt-tag-option:hover {
+    background: rgba(127, 127, 127, 0.14);
+}
+
+.mt-tag-edit {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.mt-tag-edit .mt-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* A text-weight action that shouldn't compete with the row's real buttons. */
+.mt-linkbtn {
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted-text-color, gray);
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mt-linkbtn:hover {
+    color: var(--main-text-color);
+}
+
+.mt-group {
+    margin-bottom: 14px;
+}
+
+.mt-group-head {
+    font-weight: 600;
+    padding: 6px 0 4px;
+    border-bottom: 2px solid var(--main-border-color);
+    margin-bottom: 4px;
+}
+
 /* --- rows --- */
+
+/* A title and its expandable episode grid. The border lives on the item so an
+   expanded row and its grid read as one block instead of two. */
+.mt-item {
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.mt-item-open {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.06));
+}
 
 .mt-row {
     display: flex;
     gap: 12px;
     align-items: flex-start;
     padding: 10px 0;
-    border-bottom: 1px solid var(--main-border-color);
 }
 
 .mt-poster {
@@ -155,6 +381,43 @@
     color: var(--main-text-color);
 }
 
+/* Status palette. Translucent fills rather than solid colours so they composite
+   over both the light and dark Trilium themes without hard-coding a background,
+   and the border carries the hue at higher contrast than the fill alone. */
+.mt-status-planned {
+    background: rgba(128, 128, 128, 0.16);
+    border-color: rgba(128, 128, 128, 0.55);
+}
+
+.mt-status-watching {
+    background: rgba(56, 132, 255, 0.16);
+    border-color: rgba(56, 132, 255, 0.6);
+}
+
+.mt-status-watched {
+    background: rgba(46, 160, 87, 0.16);
+    border-color: rgba(46, 160, 87, 0.6);
+}
+
+.mt-status-dropped {
+    background: rgba(219, 72, 72, 0.16);
+    border-color: rgba(219, 72, 72, 0.6);
+}
+
+/* The rating input is otherwise an unlabelled number box sitting next to the
+   status dropdown, which reads as mystery UI. The star marks what it is. */
+.mt-rating-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+
+.mt-rating-star {
+    color: var(--muted-text-color, gray);
+    font-size: 13px;
+}
+
 .mt-rating {
     width: 52px;
 }
@@ -171,13 +434,156 @@
     flex: 1;
 }
 
+/* --- details page --- */
+
+.mt-details-nav {
+    margin-bottom: 12px;
+}
+
+.mt-details-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.mt-details-poster {
+    width: 140px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.mt-details-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.mt-details-title {
+    margin: 0 0 6px;
+}
+
+.mt-overview-full {
+    margin: 8px 0 0;
+    line-height: 1.5;
+}
+
+/* The row title doubles as the link into the details page, so it has to look
+   like text rather than a button. */
+.mt-row-title-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--main-text-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.mt-row-title-link:hover {
+    text-decoration: underline;
+}
+
+.mt-section {
+    margin-bottom: 16px;
+}
+
+.mt-section h4 {
+    margin: 0 0 8px;
+}
+
+.mt-cast {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.mt-cast-member {
+    width: 92px;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.mt-cast-photo {
+    width: 92px;
+    height: 138px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+
+.mt-cast-name {
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.mt-season-toggle {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    padding: 6px 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--main-text-color);
+    border-bottom: 1px solid var(--main-border-color);
+    cursor: pointer;
+}
+
+.mt-season-overview {
+    margin: 8px 0;
+}
+
+.mt-season-actions {
+    margin: 8px 0;
+}
+
+.mt-episode {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.mt-episode-on {
+    background: rgba(46, 160, 87, 0.08);
+}
+
+.mt-episode-check {
+    padding-top: 2px;
+}
+
+.mt-episode-still {
+    width: 100px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.mt-episode-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.mt-episode-title {
+    font-weight: 600;
+}
+
+.mt-episode-overview {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
 /* --- episodes --- */
 
+/* Indented to sit under the row's poster, so it reads as belonging to that row.
+   No border of its own: .mt-item provides it. */
 .mt-episodes {
-    border: 1px solid var(--main-border-color);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 12px;
+    padding: 0 0 12px 58px;
 }
 
 .mt-episodes-head {
@@ -233,11 +639,107 @@
     margin: 0 0 8px;
 }
 
+.mt-code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
+.mt-archive {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--main-border-color);
+}
+
+.mt-archive h5 {
+    margin: 0 0 6px;
+}
+
+.mt-compare-list {
+    max-height: 420px;
+    overflow-y: auto;
+    margin: 8px 0;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.mt-compare-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    font-size: 12px;
+}
+
+.mt-compare-row:last-child {
+    border-bottom: none;
+}
+
+.mt-compare-state {
+    width: 14px;
+    text-align: center;
+    color: rgb(46, 160, 87);
+    font-weight: 600;
+}
+
+/* A watch Trilium doesn't have yet: deleting it from Trakt would lose it. */
+.mt-compare-missing .mt-compare-state {
+    color: rgb(219, 72, 72);
+}
+
+.mt-compare-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mt-compare-delete {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+.mt-archive-table {
+    font-size: 12px;
+    border-collapse: collapse;
+}
+
+.mt-archive-table td {
+    padding: 1px 12px 1px 0;
+}
+
+.mt-archive-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .mt-code {
     font-family: monospace;
     font-size: 24px;
     letter-spacing: 3px;
-    padding: 8px 0;
+    padding: 4px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+}
+
+/* Widget text is not selectable by default in some Trilium themes, which makes
+   a code you are meant to copy by hand unusable. */
+.mt-selectable {
+    user-select: all;
+    -webkit-user-select: all;
+    cursor: text;
+}
+
+.mt-link {
+    color: var(--link-color, #4a9eff);
+    text-decoration: underline;
+    word-break: break-all;
 }
 
 /* --- states --- */
