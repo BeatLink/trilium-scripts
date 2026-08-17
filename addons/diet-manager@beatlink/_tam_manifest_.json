@@ -1,37 +1,37 @@
 {
-    "id": "recipes@beatlink",
-    "name": "Recipes",
+    "id": "diet-manager@beatlink",
+    "name": "Diet Manager",
     "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. All data is a single persisted JSON note.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/recipes@beatlink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/diet-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/recipes@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/diet-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [
             {
                 "id": "launcher",
-                "title": "recipes@beatlink",
+                "title": "diet-manager@beatlink",
                 "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "widget",
-                "title": "recipesWidget.jsx",
+                "title": "dietManagerWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "recipesWidget.jsx"
+                "sourceUrl": "dietManagerWidget.jsx"
             },
             {
                 "id": "lib",
-                "title": "libRecipes.js",
+                "title": "libDietManager.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "libRecipes.js"
+                "sourceUrl": "libDietManager.js"
             },
             {
                 "id": "usda-lib",
@@ -49,10 +49,10 @@
             },
             {
                 "id": "style",
-                "title": "recipes.css",
+                "title": "dietManager.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "recipes.css"
+                "sourceUrl": "dietManager.css"
             },
             {
                 "id": "schema",
@@ -252,6 +252,11 @@
             {
                 "note": "style",
                 "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "widget",
+                "name": "dietManagerRender",
                 "value": ""
             },
             {

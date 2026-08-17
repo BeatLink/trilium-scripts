@@ -1,5 +1,5 @@
 /*
- * Recipes data model. Pure functions over the JSON document stored in the
+ * Diet Manager data model. Pure functions over the JSON document stored in the
  * addon's persisted Database note:
  *   {
  *     foods: { [id]: { id, name, servingSize, servingUnit, nutrients: {...} } },
