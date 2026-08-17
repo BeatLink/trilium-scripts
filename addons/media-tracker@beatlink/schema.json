@@ -1,0 +1,233 @@
+{
+    "libraryRootNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Library Root",
+        "description": "Required. The note that hosts your library: its Database child note holds every tracked title. Selecting it converts that note into a render note showing the tracker; clearing it reverts the previously-chosen note to a text note.",
+        "tab": "Library"
+    },
+    "collectionGroups": {
+        "type": "string",
+        "hidden": true,
+        "label": "Collection Groups",
+        "description": "JSON holding the collection groups and which group each collection belongs to. Managed by the Collections tab.",
+        "tab": "Library"
+    },
+    "viewGroupFilters": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Group Filters",
+        "description": "Remembered per-group Library filters. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "autoSyncStremio": {
+        "type": "boolean",
+        "label": "Auto-Import From Stremio",
+        "description": "Run a Stremio import automatically on a schedule. Requires being logged in to Stremio on the Import tab.",
+        "tab": "Import"
+    },
+    "autoSyncTrakt": {
+        "type": "boolean",
+        "label": "Auto-Import From Trakt",
+        "description": "Run a Trakt import automatically on a schedule. Requires having authorized Trakt on the Import tab.",
+        "tab": "Import"
+    },
+    "autoSyncHours": {
+        "type": "number",
+        "label": "Hours Between Auto-Imports",
+        "description": "Minimum hours to wait between automatic imports. The check runs hourly, so 1 imports every hour and 24 once a day.",
+        "tab": "Import"
+    },
+    "autoSyncLastRun": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Auto-Import",
+        "description": "Timestamp of the last automatic import. Managed automatically.",
+        "tab": "Import"
+    },
+    "autoSyncLastResult": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Auto-Import Result",
+        "description": "Outcome of the last automatic import, shown on the Import tab. Managed automatically.",
+        "tab": "Import"
+    },
+    "genresEnabled": {
+        "type": "boolean",
+        "label": "Enable Genres",
+        "description": "Show the Genre filter and fetch genres from TMDB. Turn this off to categorise everything with your own collections instead.",
+        "tab": "Library"
+    },
+    "hiddenGenres": {
+        "type": "string",
+        "hidden": true,
+        "label": "Hidden Genres",
+        "description": "Comma-separated genres to leave out of the Library's genre filter. Managed by the Genres tab.",
+        "tab": "Library"
+    },
+    "viewGenreFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Genre Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewStatusFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Status Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewTypeFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Type Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewCollectionFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Collection Filter",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewSortKey": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Sort",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewSortDesc": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Sort Direction",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "viewGrouped": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Grouping",
+        "description": "Remembered Library view state. Managed by the widget, not edited here.",
+        "tab": "Library"
+    },
+    "defaultStatus": {
+        "type": "select",
+        "label": "Status For New Titles",
+        "description": "Applied to a title added by hand from search. Imports set status from the source instead.",
+        "options": [
+            {
+                "value": "planned",
+                "label": "Planned"
+            },
+            {
+                "value": "watching",
+                "label": "Watching"
+            },
+            {
+                "value": "watched",
+                "label": "Watched"
+            },
+            {
+                "value": "dropped",
+                "label": "Dropped"
+            }
+        ],
+        "tab": "Library"
+    },
+    "posterSize": {
+        "type": "select",
+        "label": "Poster Size",
+        "description": "TMDB image width used for poster URLs stored with each title.",
+        "options": [
+            {
+                "value": "w185",
+                "label": "Small (w185)"
+            },
+            {
+                "value": "w342",
+                "label": "Medium (w342)"
+            },
+            {
+                "value": "w500",
+                "label": "Large (w500)"
+            }
+        ],
+        "tab": "Library"
+    },
+    "tmdbApiKey": {
+        "type": "string",
+        "label": "TMDB API Key",
+        "description": "Free v3 API key from https://www.themoviedb.org/settings/api. Required for search, posters, and episode lists.",
+        "tab": "TMDB"
+    },
+    "traktClientId": {
+        "type": "string",
+        "label": "Trakt Client ID",
+        "description": "Create an API app at https://trakt.tv/oauth/applications. Use urn:ietf:wg:oauth:2.0:oob as the redirect URI.",
+        "tab": "Trakt"
+    },
+    "traktClientSecret": {
+        "type": "string",
+        "label": "Trakt Client Secret",
+        "description": "Client secret from the same Trakt API app.",
+        "tab": "Trakt"
+    },
+    "traktAccessToken": {
+        "type": "string",
+        "label": "Access Token",
+        "description": "Filled in automatically after you authorize. Clear it to force re-authorization.",
+        "tab": "Trakt"
+    },
+    "traktRefreshToken": {
+        "type": "string",
+        "label": "Refresh Token",
+        "description": "Filled in automatically. Used to renew the access token without re-authorizing.",
+        "tab": "Trakt"
+    },
+    "traktTokenExpiresAt": {
+        "type": "number",
+        "label": "Token Expires At",
+        "description": "Unix seconds. Managed automatically.",
+        "tab": "Trakt"
+    },
+    "stremioEmail": {
+        "type": "string",
+        "label": "Stremio Email",
+        "description": "Login email for your Stremio account.",
+        "tab": "Stremio"
+    },
+    "stremioPassword": {
+        "type": "string",
+        "label": "Stremio Password",
+        "description": "Only used to obtain an auth key. Cleared automatically once login succeeds.",
+        "tab": "Stremio"
+    },
+    "stremioAuthKey": {
+        "type": "string",
+        "label": "Stremio Auth Key",
+        "description": "Filled in automatically after a successful login. Clear it to force re-login.",
+        "tab": "Stremio"
+    },
+    "importMarksWatched": {
+        "type": "boolean",
+        "label": "Imports Set Watched Status",
+        "description": "An imported title with watch history is marked watched (movies) or watching (shows with unwatched episodes).",
+        "tab": "Import"
+    },
+    "importFetchMetadata": {
+        "type": "boolean",
+        "label": "Fetch TMDB Metadata On Import",
+        "description": "Look up each newly imported title on TMDB for poster, overview, runtime, and genres. Slower, and needs a TMDB key.",
+        "tab": "Import"
+    },
+    "importOverwriteRatings": {
+        "type": "boolean",
+        "label": "Let Imports Overwrite My Ratings",
+        "description": "Off by default so a re-import never clobbers a rating you set in Trilium. Import is one-way; nothing is ever written back to Trakt or Stremio.",
+        "tab": "Import"
+    }
+}
