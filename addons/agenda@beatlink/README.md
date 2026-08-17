@@ -1,88 +1,158 @@
 # Agenda
 
-A complete task/agenda system, wiring together every `lib*@beatlink` piece built for it into three
-widgets plus two editor pages:
+A schema-driven, multi-profile task/agenda system for TriliumNext, built around the Overview widget.
+The Task widget (start/due dates, duration, recurrence,
+Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
+— install it alongside this one for the full Task pane. The two are fully independent: this addon ships
+none of that addon's code and reads none of its settings, and vice versa. They interoperate only through
+note-label conventions and the `agenda:tasksChanged` event. The My Day focus panel is likewise its own addon,
+[`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md), and the GTD Organize workflow is
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md).
 
-1. **Overview** (`agendaOverview.jsx`, right-pane) — toggle which searches/filters are active and
-   pick the sort/prefix/color for whichever note your profile is filing tasks into; matching notes
-   get re-filed as children of that note, and a calendar feed gets exported automatically.
-2. **Task** (`agendaTask.jsx`, right-pane) — edit a task's start/due dates, duration, recurrence,
-   rank, and quick actions (complete, start today/tomorrow).
-3. **Agenda Now** (`agendaNowLauncher.jsx` + `agendaNowWindow.jsx`, Electron-only) — an
-   always-on-top focus window with a countdown timer, showing whichever tasks you've added to it.
-4. **Profile Editor** (`profileEditor.jsx`, a `render`-type page reachable from the Overview widget
-   or Settings) — build a profile's search/filter groups and pick its sort/prefix/color, by
-   referencing elements from the Element Library rather than hand-editing JSON.
-5. **Element Library** (`elementLibrary.jsx`, same kind of page) — where every search, date rule,
-   filter, sort, prefix, and color actually gets defined. Profiles never embed a rule's definition;
-   they only reference an element here by id, so editing an element updates every profile using it.
-   Date rules are one level deeper than the rest: a dayjs-type filter and a prefix/color interval
-   both reference a shared date rule (e.g. "Overdue") rather than each embedding their own copy of
-   the same `["isBefore","startOfToday"]`-style criteria tuple.
+## Widget
 
-## Setup
+- **Overview** — a right-pane widget whose per-profile search/filter/sort/prefix/color rules re-file
+  the active profile's matching notes under a single shared overview note, shown as a built-in
+  Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
+  Ships the **Agenda Editor** page that edits the whole configuration.
 
-1. Use TAM's **Settings** button (or navigate to this addon's "Settings" note) to open the
-   settings screen. There you can override any of the label names (`startDateTime`, `dueDateTime`,
-   `duration`, `recurrence`, `rank`, etc — defaults match the original system) and, from there, jump
-   to the Profile Editor or Element Library.
-2. Open the Profile Editor, point the shipped "default" profile's **File Tasks Under** at whichever
-   note you want tasks re-filed into, and enable/build out its search and filter groups (referencing
-   the built-in elements, or new ones you add in the Element Library).
-3. Open any note filed under that target — the Overview widget there lets you toggle individual
-   searches/filters and change sort/prefix/color live, without leaving the note.
-4. Any note with a `#startDateTime`-style label matching the profile's searches will show up there,
-   sorted/prefixed/colored per the profile's rules.
-5. Give a note template the `#agendaTaskWidget` label (with no value) to make the Task widget appear
-   on notes cloned from it.
-6. (Electron desktop app only) Use the "Agenda Now" launcher buttons to add the current note to the
-   focus window, or launch the window itself. Configure `agendaNowConfig.json`'s content directly
-   (window size/position, which automatic behaviors are enabled) — see below for why this isn't a
-   `libsettings@beatlink` schema-driven screen.
+The **Note Actions** widget (Zen Mode / Hoist Note quick actions) moved to
+[`hoist-note@beatlink`](../hoist-note@beatlink/README.md), which already owned the hoist toggle.
 
-## Architecture
+My Day (the note-detail countdown timer, and the optional loops that append due tasks and send due
+notifications) moved to [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md). It clones this
+addon's overview/query libraries to resolve which tasks are due from the active profile.
 
-This addon owns exactly two things every other `lib*@beatlink` piece explicitly does *not*:
+## Organize (GTD triage)
 
-- **A `libsettings@beatlink` schema** (`schema.json`/`config.json`/`settings.jsx`) holding the
-  canonical label-name vocabulary (`startDatetimeLabel`, `dueDatetimeLabel`, `durationLabel`,
-  `recurrenceLabel`, `rankLabel`, etc) plus an optional `profileId` string override. `agendaSettings.jsx`
-  loads this once per widget and reshapes it into the `constants` object (uppercase keys) and a
-  `profileContext` (`{ dataNoteId, profileIds }`) every `lib*@beatlink` function expects — those
-  libraries never import settings themselves, they take `constants`/`profileContext` as parameters,
-  so this is the *one* place those label names are defined, top-down, rather than each library
-  depending on a shared constants module bottom-up. If `profileId` is left blank, the shipped
-  `"default"` profile is used.
-- **`agendaData.json` / `agendaNowConfig.json`** — plain JSON notes (not additional
-  `libsettings@beatlink` schemas), edited through the Profile Editor / Element Library pages rather
-  than by hand. `agendaData.json` holds every shared search/filter/sort/prefix/color element plus
-  every profile that references them — its shape doesn't fit a flat schema, and this addon only
-  supports a single active profile at a time — see
-  [libagendaoverview@beatlink's README](../libagendaoverview@beatlink/README.md) for the exact shape,
-  the single-profile caveat, and where a real multi-profile design would go. `agendaNowConfig.json`
-  could be moved to `libsettings@beatlink` later (flattening its one nested `newWindowConfig` object,
-  since `libsettings`' schema has no nested-group field type yet) but wasn't, to keep this addon's
-  scope to the actual widgets rather than also building a second settings screen nobody asked for
-  yet.
+The opinionated Collect → Organize workflow (the triage page) is now a
+separate addon, [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) — install it
+alongside this one for the full GTD flow.
 
-`agendaData.json` is persisted across addon updates via an `AddonData:profile` relation owned by the
-`settings` note (mirroring `AddonData:config`'s existing pattern) — **not** a direct relation from
-every widget straight to the data note. Every widget instead resolves `settingsNote` first, then
-reads `AddonData:profile` off of *that* note, live, whenever it needs the data note's id. This
-indirection matters: TAM's persistence mechanism duplicates a note into permanent storage and rewires
-only the relation literally named `AddonData:<key>` to point at the copy — any other relation that
-had pointed straight at the original note would be left dangling once the original is deleted. Every
-widget resolves its other relations (`schemaNote`, `settingsNote`, `icalNote`, `nowNote`,
-`agendaNowConfig`, `LauncherWidget`, `profileEditorNote`, `elementLibraryNote`) once on mount and
-passes the resolved ids/constants down to whichever shared library functions it calls — none of those
-relations live on the shared libraries themselves, since they're shared, stateless, cloned-by-reference
-notes with no way to know which addon is asking.
+It owns its own settings note (`#agendaOrganizeConfig`: the Organize-note picker and the quick-times)
+and its own **Organize Editor** page, so those tabs are no longer in the Agenda Editor. It reads the
+**`dimensions`** registry back out of this addon's `#agendaConfig`, because Overview's derived
+prefix/color/grouping/filter variants come from the same list Organize's triage queues write to — one
+registry, no drift. Editing that vocabulary still happens here, in the Agenda Editor's **Dimensions**
+tab (and is mirrored on Organize's own Dimensions tab).
 
-## Known limitations
+## Templates
 
-- **Single profile only** (see above).
-- **`#agendaTaskWidget` is a fixed label name**, hardcoded in `agendaTask.jsx`/`agendaNowWindow.jsx`
-  rather than sourced from the settings schema — it's a "which notes opt into this widget" gate, not
-  a data label, so it wasn't included alongside the other label-name settings.
-- **`agendaNowConfig.json` has no dedicated settings UI** — it's edited as raw JSON directly on its
-  note.
+The structural templates the Organize workflow used to scaffold with are gone, apart from
+**AreaCollection** (an area root), which ships with
+[`template-picker@beatlink`](../template-picker@beatlink/README.md); nothing provisions a notebook
+structure any more, so those root notes are yours to create and label. The item templates — Ideas,
+Goal, Routine, Task, Future, Project, Note — ship with [`template-picker@beatlink`](../template-picker@beatlink/README.md) instead
+(a dependency of this addon), since assigning them is entirely its concern now. Each carries
+`#template` (so it is discoverable by Trilium and the Template Picker widget). Template content is
+yours to customize — every template lives under its owning addon's `persistenceRoot`, so a future
+update that changes a default prompts an Update Review rather than overwriting your edits.
+
+Item type is no longer an agenda dimension — it's owned entirely by
+[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry, and assigned via
+its own right-pane widget (a note's `~template` relation, not a `#type` label).
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads that registry (via its
+**`#templatePickerConfig`** anchor) for two things only: which enabled entries get an Organize bucket,
+and which entries are marked **Actionable** — those items flow through the priority/start-date queues.
+There's nothing to configure on agenda's side; add/rename/reorder/enable templates in
+template-picker's own settings and Organize reads the change straight away.
+
+Whether a note's Task editor shows at all (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
+is installed) is the separate **`#agendaTaskWidget`** label, set as an inheritable label on the
+template note so notes created from it get it automatically.
+
+Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
+chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-organize@beatlink/README.md#2-dimensions).
+
+## Shared configuration
+
+The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set (the inbox note, the
+**dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
+those profiles reference). That note is tagged **`#agendaConfig`**; every widget in this addon finds it
+at runtime via `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all of them at
+once. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
+read time, so adding a dimension yields all four with no extra setup and they can never drift from the
+vocabulary.
+
+The three task label names this addon reads — start datetime, due datetime, recurrence — are declared
+in its own `schema.json` under **Settings**. [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
+declares its own copy of that vocabulary in its own `#agendaTaskConfig` note, and
+[`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md) does the same. Renaming a label means
+renaming it in each installed addon that reads it; in exchange none of them reads another's config note
+or ships another's code.
+
+The Agenda Editor groups its tabs under five workflow categories — **Collect**, **Review**,
+**Display Elements**, **Dimensions**, **Settings** — using
+[`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
+per-field `category`):
+
+- **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
+  `#agendaConfig` so collection addons can file into the same place).
+- **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
+  shows).
+- **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
+  profile references by name. Split out of Review because they're a shared library, not per-profile
+  config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
+- **Dimensions** — the classification vocabulary registry (area, priority, any you add). This addon
+  owns it; [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads and mirrors the
+  same registry on its own **Dimensions** tab. Item type lives in template-picker@beatlink's own
+  settings instead, not here.
+- **Settings** — the three task label names this addon reads: start datetime, due datetime and
+  recurrence. The rest of the task vocabulary (the split date/time labels, duration) and the Task pane's
+  Reschedule Options are edited on [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)'s own
+  **Task Settings** page, reachable from TAM's "Addon Settings" button.
+
+### Config migrations
+
+Adding a new default dimension/sort/colour/etc. reaches existing installs for free — a registry's
+entries in `defaults.json` are its *shipped* entry set, reconciled into every install on read/write,
+so no migration is needed for additive changes. Reshaping data the user already owns (renaming a stored
+key, moving a value between fields, dropping a field) is what [`common/migrate.js`](common/migrate.js)
+handles: an ordered list of one-time transforms of the raw persisted config, gated by a
+`#agendaConfigVersion` label on the `#agendaConfig` note so each step runs exactly once per install.
+`getAgendaSettings()` runs any pending steps before the first read, so every widget sees migrated
+config. The shipped list is empty (nothing to reshape yet); adding a step is push-one-entry +
+bump the version.
+
+Task edits (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) is installed) broadcast an
+`agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`; the Overview widget
+subscribes and re-files the overview note live.
+
+## Upgrading from 7.x
+
+Version 8.0.0 finishes the split started in 4.0.0: this addon no longer references
+[`agenda-task@beatlink`](../agenda-task@beatlink/README.md) in any way. Three things change.
+
+- The Agenda Editor's **Settings** category now holds this addon's own three label fields (start
+  datetime, due datetime, recurrence) instead of agenda-task's panels. If you had renamed any label,
+  re-enter the new names here once — this addon previously read them out of a config key that no longer
+  existed, so it was matching on `undefined` and the Start/Due columns, iCal feed and due notifications
+  were silently doing nothing. The full label vocabulary and Reschedule Options keep living on
+  agenda-task's own **Task Settings** page.
+- The Overview's **Start All Tasks Today** button is gone. It was the last caller of agenda-task's
+  reschedule library; per-task reschedule buttons in the Task pane are unaffected.
+- The overview no longer backfills the `durationDisplay`/`recurrenceDisplay` labels on every refile.
+  The two columns stay, populated by agenda-task itself on every task edit; a task never opened in the
+  Task pane since installing shows them blank until it is.
+
+## Upgrading from 3.x
+
+Version 4.0.0 splits the Task widget out into its own addon,
+[`agenda-task@beatlink`](../agenda-task@beatlink/README.md), with its own `#agendaTaskConfig` settings
+note. **Install `agenda-task@beatlink` to keep the Task pane** — this addon no longer ships it. An
+existing install's label-name overrides and Reschedule Options are copied automatically into the new
+settings note on `agenda-task@beatlink`'s first read after both addons are updated; no manual migration
+step is needed.
+
+## Upgrading from 2.x
+
+Version 3.0.0 removes the `type` dimension entirely and requires
+[`template-picker@beatlink`](../template-picker@beatlink/README.md) as a dependency. Item
+classification is now purely a note's `~template` relation; agenda no longer writes `#type`. The seven
+item templates (Ideas/Goal/Routine/Task/Future/Project/Note) moved out of agenda's own manifest into
+template-picker's — **if you already have agenda installed, run
+[`template-picker@beatlink/migrate-templates-from-agenda.js`](../template-picker@beatlink/migrate-templates-from-agenda.js)
+once, manually, before updating**, or TAM's next sync will delete your existing (possibly customized)
+template notes and recreate blank ones under template-picker instead. See that script's own header
+comment for exact steps. Notes that only ever carried `#type` (never `~template`) aren't automatically
+migrated — they'll surface in template-picker's **Missing Templates** page for manual re-triage.
