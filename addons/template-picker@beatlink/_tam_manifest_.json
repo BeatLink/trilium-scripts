@@ -1,20 +1,30 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. As of 1.9.0 it also ships one empty root container note per bundled item template (Ideas Root / Goal Root / Routine Root / Task Root / Future Root / Project Root / Note Root), carrying only the template's icon and #viewType=list. They are children of the AreaCollection template, so Trilium deep-duplicates the whole set into every note created from it and a new Area comes out already holding its type roots - standing in for the roots that used to be provisioned automatically. Each registry row gained a Root Note field so other addons can resolve a template's root.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.1",
+    "latestVersion": "1.11.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/template-picker@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/template-picker@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
-        "settingsNote": "root",
+        "settingsNote": "launcher",
+        "exports": {
+            "registry": "registry",
+            "tpl-idea": "tpl-idea",
+            "tpl-goal": "tpl-goal",
+            "tpl-routine": "tpl-routine",
+            "tpl-task": "tpl-task",
+            "tpl-future": "tpl-future",
+            "tpl-project": "tpl-project",
+            "tpl-note": "tpl-note",
+            "tpl-area": "tpl-area"
+        },
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "template-picker@beatlink",
                 "type": "render",
                 "mime": "text/html",
@@ -49,12 +59,18 @@
                 "sourceUrl": "schema.json"
             },
             {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json",
-                "promptOnUpdate": true
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -64,17 +80,196 @@
                 "sourceUrl": "settings.jsx"
             },
             {
+                "id": "missing-launcher",
+                "title": "Missing Templates",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "missing-page",
+                "title": "templatePickerPage",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "templatePickerPage.jsx"
+            },
+            {
+                "id": "missing-style",
+                "title": "templatePickerPage.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "templatePickerPage.css"
+            },
+            {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
                 "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "picker-registry",
+                "title": "pickerRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libpicker/pickerRegistry.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "templates-root",
+                "title": "Templates",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "tpl-idea",
+                "title": "Ideas",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/ideas.html"
+            },
+            {
+                "id": "tpl-goal",
+                "title": "Goal",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/goal.html"
+            },
+            {
+                "id": "tpl-routine",
+                "title": "Routine",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/routine.html"
+            },
+            {
+                "id": "tpl-task",
+                "title": "Task",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/task.html"
+            },
+            {
+                "id": "tpl-future",
+                "title": "Future",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/future.html"
+            },
+            {
+                "id": "tpl-project",
+                "title": "Project",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/project.html"
+            },
+            {
+                "id": "tpl-note",
+                "title": "Note",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/note.html"
+            },
+            {
+                "id": "tpl-area",
+                "title": "Area",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": "templates/areaCollection.html"
+            },
+            {
+                "id": "root-idea",
+                "title": "Ideas",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-goal",
+                "title": "Goals",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-routine",
+                "title": "Routines",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-task",
+                "title": "Tasks",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-future",
+                "title": "Future",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-project",
+                "title": "Projects",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-note",
+                "title": "Notes",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
             }
         ],
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
                 "child": "widget"
             },
             {
@@ -86,15 +281,19 @@
                 "child": "registry"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "schema"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "settings"
             },
             {
@@ -102,29 +301,146 @@
                 "child": "registry"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             },
             {
+                "parent": "root",
+                "child": "missing-launcher"
+            },
+            {
+                "parent": "missing-launcher",
+                "child": "missing-page"
+            },
+            {
+                "parent": "missing-page",
+                "child": "missing-style"
+            },
+            {
+                "parent": "missing-page",
+                "child": "registry"
+            },
+            {
+                "parent": "missing-page",
+                "child": "schema"
+            },
+            {
+                "parent": "missing-page",
+                "child": "defaults"
+            },
+            {
+                "parent": "missing-page",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
                 "parent": "widget",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
                 "parent": "registry",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "widget",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "registry",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "picker-registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "persistence",
+                "child": "templates-root"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-idea"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-goal"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-routine"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-task"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-future"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-project"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-note"
+            },
+            {
+                "parent": "templates-root",
+                "child": "tpl-area"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-idea"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-goal"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-routine"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-task"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-future"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-project"
+            },
+            {
+                "parent": "tpl-area",
+                "child": "root-note"
             }
         ],
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {
@@ -143,9 +459,29 @@
                 "to": "settings"
             },
             {
-                "from": "root",
+                "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "missing-page",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "missing-page",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "missing-launcher",
+                "type": "renderNote",
+                "to": "missing-page"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -163,14 +499,343 @@
                 "note": "settings",
                 "name": "templatePickerConfig",
                 "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "missing-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "templates-root",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "tpl-idea",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-idea",
+                "name": "iconClass",
+                "value": "bx bx-bulb"
+            },
+            {
+                "note": "tpl-idea",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-idea",
+                "name": "type",
+                "value": "ideas"
+            },
+            {
+                "note": "tpl-goal",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-goal",
+                "name": "iconClass",
+                "value": "bx bxs-star-half"
+            },
+            {
+                "note": "tpl-goal",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-goal",
+                "name": "type",
+                "value": "goal"
+            },
+            {
+                "note": "tpl-routine",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-routine",
+                "name": "iconClass",
+                "value": "bx bx-sync"
+            },
+            {
+                "note": "tpl-routine",
+                "name": "agendaTaskWidget(inheritable)",
+                "value": ""
+            },
+            {
+                "note": "tpl-routine",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-routine",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "tpl-routine",
+                "name": "type",
+                "value": "routine"
+            },
+            {
+                "note": "tpl-task",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-task",
+                "name": "iconClass",
+                "value": "bx bx-check"
+            },
+            {
+                "note": "tpl-task",
+                "name": "agendaTaskWidget(inheritable)",
+                "value": ""
+            },
+            {
+                "note": "tpl-task",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-task",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "tpl-task",
+                "name": "type",
+                "value": "task"
+            },
+            {
+                "note": "tpl-future",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-future",
+                "name": "iconClass",
+                "value": "bx bx-time-five"
+            },
+            {
+                "note": "tpl-future",
+                "name": "agendaTaskWidget(inheritable)",
+                "value": ""
+            },
+            {
+                "note": "tpl-future",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-future",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "tpl-future",
+                "name": "type",
+                "value": "future"
+            },
+            {
+                "note": "tpl-project",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-project",
+                "name": "iconClass",
+                "value": "bx bx-check-double"
+            },
+            {
+                "note": "tpl-project",
+                "name": "agendaTaskWidget(inheritable)",
+                "value": ""
+            },
+            {
+                "note": "tpl-project",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-project",
+                "name": "label:priority",
+                "value": "single,text"
+            },
+            {
+                "note": "tpl-project",
+                "name": "type",
+                "value": "project"
+            },
+            {
+                "note": "tpl-note",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-note",
+                "name": "iconClass",
+                "value": "bx bx-notepad"
+            },
+            {
+                "note": "tpl-note",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-note",
+                "name": "type",
+                "value": "note"
+            },
+            {
+                "note": "tpl-area",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-area",
+                "name": "iconClass",
+                "value": "bx bxs-circle"
+            },
+            {
+                "note": "tpl-area",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "tpl-area",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-area",
+                "name": "type",
+                "value": "areacollection"
+            },
+            {
+                "note": "root-idea",
+                "name": "iconClass",
+                "value": "bx bx-bulb"
+            },
+            {
+                "note": "root-idea",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-idea",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-goal",
+                "name": "iconClass",
+                "value": "bx bxs-star-half"
+            },
+            {
+                "note": "root-goal",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-goal",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-routine",
+                "name": "iconClass",
+                "value": "bx bx-sync"
+            },
+            {
+                "note": "root-routine",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-routine",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-task",
+                "name": "iconClass",
+                "value": "bx bx-check"
+            },
+            {
+                "note": "root-task",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-task",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-future",
+                "name": "iconClass",
+                "value": "bx bx-time-five"
+            },
+            {
+                "note": "root-future",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-future",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-project",
+                "name": "iconClass",
+                "value": "bx bx-check-double"
+            },
+            {
+                "note": "root-project",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-project",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-note",
+                "name": "iconClass",
+                "value": "bx bx-notepad"
+            },
+            {
+                "note": "root-note",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-note",
+                "name": "label:area",
+                "value": "single"
             }
         ],
-        "dependencies": [
-            "libsettings@beatlink"
-        ],
-        "exports": {
-            "registry": "registry"
-        },
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

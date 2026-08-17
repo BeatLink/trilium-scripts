@@ -3,7 +3,6 @@
         "type": "registry",
         "label": "Templates",
         "description": "The templates offered by the picker dropdown, in display order. Run Scan to pull in every #template note you have; each row's Enabled flag controls whether it appears, and the row move controls set the dropdown order.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -17,10 +16,57 @@
                 "description": "The #template note this row assigns. Filled in by Scan; a row whose note no longer exists is skipped by the picker.",
                 "default": ""
             },
+            "rootNoteId": {
+                "type": "note",
+                "label": "Root Note",
+                "description": "Optional: the container note that collects this template's notes. The addon ships one per bundled template under its own Templates note; point this at wherever you moved yours. Leave blank if this template has no root.",
+                "default": ""
+            },
             "enabled": {
                 "type": "boolean",
                 "label": "Enabled",
                 "description": "Whether this template appears in the picker dropdown.",
+                "default": true
+            },
+            "color": {
+                "type": "color",
+                "label": "Color",
+                "description": "Optional: mirrored onto a note's #color label when this template is assigned. Leave blank for no color.",
+                "default": ""
+            },
+            "actionable": {
+                "type": "boolean",
+                "label": "Actionable",
+                "description": "Whether notes using this template represent actionable work (for other addons that flow actionable notes through priority/scheduling queues).",
+                "default": false
+            },
+            "icon": {
+                "type": "string",
+                "label": "Bucket Icon",
+                "description": "BoxIcons class, without the leading \"bx\" (e.g. \"bx-check\"). Used by other addons that scaffold one folder per template. Leave blank for a generic folder icon.",
+                "default": ""
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Template picker widget and skipped by the Missing Templates triage list.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #template or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
                 "default": true
             }
         }
