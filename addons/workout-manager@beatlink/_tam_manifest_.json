@@ -1,0 +1,302 @@
+{
+    "id": "workout-manager@beatlink",
+    "name": "Workout Manager",
+    "description": "An exercise library, reusable routines, and a workout log. Exercises are entered by hand or looked up in the public wger database, and each one is measured the way it is actually trained: weight and reps, bodyweight reps, duration, or cardio duration and distance. Routines plan sets and targets per exercise and start a pre-filled workout in one click, the log records what was really done set by set, and the stats tab tracks weekly volume against a target plus personal bests and full history per exercise. Exercises and routines sort and filter by nestable categories, and an existing training history imports from either of Liftosaur's exports. All data is a single persisted JSON note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workout-manager@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/workout-manager@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-page",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "workout-manager@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "workoutManagerWidget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "workoutManagerWidget.jsx"
+            },
+            {
+                "id": "lib",
+                "title": "libWorkoutManager.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libWorkoutManager.js"
+            },
+            {
+                "id": "wger-lib",
+                "title": "libWger.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libWger.js"
+            },
+            {
+                "id": "liftosaur-lib",
+                "title": "libLiftosaur.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libLiftosaur.js"
+            },
+            {
+                "id": "style",
+                "title": "workoutManager.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "workoutManager.css"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "database",
+                "title": "database.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "database.json"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "widget"
+            },
+            {
+                "parent": "launcher",
+                "child": "style"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "persistence",
+                "child": "database"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            },
+            {
+                "parent": "widget",
+                "child": "lib"
+            },
+            {
+                "parent": "widget",
+                "child": "wger-lib"
+            },
+            {
+                "parent": "widget",
+                "child": "liftosaur-lib"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "widget",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            }
+        ],
+        "relations": [
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "widget",
+                "type": "database",
+                "to": "database"
+            },
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "widget"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
+            }
+        ],
+        "labels": [
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "widget",
+                "name": "workoutManagerRender",
+                "value": ""
+            },
+            {
+                "note": "launcher",
+                "name": "iconClass",
+                "value": "bx bx-dumbbell"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
+    }
+}
