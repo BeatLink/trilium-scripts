@@ -7,10 +7,10 @@ Subcommands (run `tamhelper.js <cmd> -h` for each one's flags):
   validate              Lint every addon manifest before publishing.
   tam-to-zip            Convert a manifest (or --all) into a Trilium ZIP import.
   zip-to-tam            Convert a Trilium export ZIP into a manifest + source files.
-  generate-pages        Build the GitHub Pages site (docs/, incl. catalog.json).
+  generate-pages        Build the GitHub Pages site (resources/docs/).
   generate-readme       Regenerate README.md's addon table from manifests.
   publish-release       Upload built *.zip files to GitHub Releases.
-  backfill-source-url   Add manifestSourceUrl to every manifest missing one.
+  publish               Resolve + hash every manifest into resources/docs/.
 */
 
 const fs = require("fs");
@@ -157,14 +157,25 @@ function uniqueName(base, used) {
 }
 
 
-function depIds(manifestBody) {
-    // Bare dependency ids from a manifest's inner body (string or {id,...}).
-    const out = [];
-    for (const d of manifestBody.dependencies || []) {
-        const did = typeof d === "string" ? d : d.id;
-        if (did) out.push(did);
+// Local ids whose children[] parent chain roots at the reserved "persistence" parent keyword.
+// Empty set when nothing attaches there. MUST stay in sync with persistentLocalIds() in lib-tam.js.
+function persistentLocalIds(m) {
+    const persistent = new Set();
+    const childrenOf = {};
+    for (const c of (m.children || []).filter((c) => c.child)) {
+        (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child);
     }
-    return out;
+    const stack = [...(childrenOf["persistence"] || [])];
+    for (const id of stack) persistent.add(id);
+    while (stack.length) {
+        for (const child of childrenOf[stack.pop()] || []) {
+            if (!persistent.has(child)) {
+                persistent.add(child);
+                stack.push(child);
+            }
+        }
+    }
+    return persistent;
 }
 
 
@@ -175,33 +186,32 @@ function runGit(args, cwd) {
 }
 
 
-const GITHUB_REMOTE_RE = /^(?:git@github\.com:|https:\/\/github\.com\/)(.+?)(?:\.git)?$/;
-
-
-function detectManifestSourceUrl(outDir) {
-    // Best-effort raw.githubusercontent URL this manifest will be reachable at
-    // (tracking the current branch), or null if outDir isn't inside a git working
-    // copy with a github.com origin remote on a named branch.
-    outDir = path.resolve(outDir);
-    let repoRoot = runGit(["rev-parse", "--show-toplevel"], outDir);
-    if (!repoRoot) return null;
-    repoRoot = path.resolve(repoRoot);
-
-    const remoteUrl = runGit(["remote", "get-url", "origin"], repoRoot);
-    if (!remoteUrl) return null;
-    const match = GITHUB_REMOTE_RE.exec(remoteUrl);
-    if (!match) return null;
-
-    const branch = runGit(["symbolic-ref", "--short", "HEAD"], repoRoot);
-    if (!branch) return null; // detached HEAD or other odd state
-
-    const relativeDir = path.relative(repoRoot, outDir);
-    if (relativeDir.startsWith("..") || path.isAbsolute(relativeDir)) return null;
-
-    const parts = relativeDir.split(path.sep).filter(Boolean);
-    const manifestPath = [...parts, MANIFEST_NAME].join("/");
-    return `https://raw.githubusercontent.com/${match[1]}/refs/heads/${branch}/${manifestPath}`;
+async function fetchBuffer(url) {
+    // Every note's sourceUrl is an absolute URL (see lib-tam.js's resolveNotes) --
+    // tam-to-zip fetches the same way TAM itself does at install time, rather than
+    // reading a local file, so a local build always reflects what's actually published.
+    // encodeURI leaves an already-escaped URL untouched but escapes raw special
+    // chars (e.g. "@" in an addon dir name) that otherwise make GitHub/CDN caches
+    // key the request differently -- see lib-tam.js's fetchWithRetry.
+    const response = await fetch(encodeURI(url));
+    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+    return Buffer.from(await response.arrayBuffer());
 }
+
+
+async function readSource(sourceUrl, manifestFile) {
+    // A source manifest names its files relative to itself, so they are read
+    // straight off disk -- the copy about to be published, not whatever an
+    // earlier commit left on the CDN. Only a sourceUrl pointing at someone
+    // else's repo is still fetched.
+    if (/^https?:\/\//.test(sourceUrl)) return await fetchBuffer(sourceUrl);
+    const filePath = path.join(path.dirname(manifestFile), sourceUrl);
+    if (!exists(filePath)) throw new Error(`no such file: ${filePath}`);
+    return fs.readFileSync(filePath);
+}
+
+
+const GITHUB_REMOTE_RE = /^(?:git@github\.com:|https:\/\/github\.com\/)(.+?)(?:\.git)?$/;
 
 
 function loadAddons() {
@@ -240,9 +250,10 @@ function loadAddons() {
 
 const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
+const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
 
 
-function cmdValidate(args) {
+async function cmdValidate(args) {
     const errors = [], warnings = [], fixes = [];
 
     const error = (p, msg) => errors.push(`ERROR   ${p}: ${msg}`);
@@ -320,19 +331,26 @@ function cmdValidate(args) {
             error(manifestFile, `'readme' points to "${readmeRel}" but file not found`);
         }
 
+        // Not authored any more -- publish sets it. A source manifest still
+        // carries it so an install predating the publish phase, refetching the
+        // raw manifest, is told where the published one lives and moves itself
+        // over on its next sync.
+        const publishedUrl = publishedManifestUrl(manifest.id);
         if (!manifest.manifestSourceUrl) {
-            warn(manifestFile, "missing 'manifestSourceUrl' -- addon can't be installed by TAM until this is set");
+            warn(manifestFile, `missing 'manifestSourceUrl' -- should be ${publishedUrl}`);
+        } else if (manifest.manifestSourceUrl !== publishedUrl) {
+            if (args.fix) {
+                manifest.manifestSourceUrl = publishedUrl;
+                writeText(manifestFile, jsonDumps(manifest, 4) + "\n");
+                fixes.push(`FIXED   updated manifestSourceUrl in '${manifestFile}' -> '${publishedUrl}'`);
+            } else {
+                error(manifestFile, `'manifestSourceUrl' is '${manifest.manifestSourceUrl}' but publish serves this manifest at ${publishedUrl}`);
+            }
         }
 
         const m = manifest.manifest;
         if (m == null) {
             continue; // metadata-only addon
-        }
-
-        const rootId = m.root;
-        if (!rootId) {
-            error(manifestFile, "manifest.root is required");
-            continue;
         }
 
         const notes = m.notes;
@@ -353,8 +371,17 @@ function cmdValidate(args) {
             }
         }
 
-        if (!noteIds.has(rootId)) {
-            error(manifestFile, `manifest.root '${rootId}' not found in notes`);
+        // TAM itself bootstraps via a manual ZIP import, so its own manifest is the one
+        // exception that still declares a real root note. Every other addon's root is
+        // synthesized by TAM (ensureAddonAnchor) -- its manifest only ever references it via
+        // the reserved "root" parent keyword in children[], never as a notes[] entry.
+        const rootId = m.root;
+        if (rootId) {
+            if (!noteIds.has(rootId)) {
+                error(manifestFile, `manifest.root '${rootId}' not found in notes`);
+            }
+        } else if (!(m.children || []).some((c) => c.parent === "root")) {
+            error(manifestFile, "manifest.children must attach at least one note to the reserved \"root\" parent");
         }
 
         for (const field of ["settingsNote", "readmeNote"]) {
@@ -364,10 +391,86 @@ function cmdValidate(args) {
             }
         }
 
+        // Local ids whose children[] parent chain roots at the reserved "persistence" parent
+        // keyword -- these are "persistent": created once, prompt-on-update, never touched by
+        // uninstall.
+        const persistentIds = persistentLocalIds(m);
+
         // settingsNote should point at a render note, not the raw code note
         const settingsNote = byId[m.settingsNote];
         if (settingsNote && settingsNote.type === "code") {
             warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
+        }
+
+        // manifest.settings hands TAM the schema/defaults/config trio it reviews per
+        // setting instead of whole-file diffing the config. The schema (fields) and
+        // the defaults (their shipped values) have to be structural, since both ship
+        // anew each update; the config has to be persistent (it holds the user's own
+        // divergences) and must ship no content of its own, or the note would still
+        // be offered for whole-file replacement on every update.
+        if (m.settings) {
+            for (const role of ["schema", "defaults", "config"]) {
+                const localId = m.settings[role];
+                if (!localId) {
+                    error(manifestFile, `manifest.settings.${role} is missing`);
+                    continue;
+                }
+                if (!noteIds.has(localId)) {
+                    error(manifestFile, `manifest.settings.${role} '${localId}' not found in notes`);
+                    continue;
+                }
+                const note = byId[localId];
+                const isPersistent = persistentIds.has(localId);
+                if (role !== "config" && isPersistent) {
+                    error(manifestFile, `manifest.settings.${role} '${localId}' is attached under the reserved "persistence" parent -- it ships anew on every update, so it has to be structural`);
+                }
+                if (role === "defaults" && !note.sourceUrl && !note.content) {
+                    error(manifestFile, `manifest.settings.defaults '${localId}' ships no content (sourceUrl/content) -- it holds every setting's shipped value, which the schema no longer carries`);
+                }
+                if (role === "config") {
+                    if (!isPersistent) {
+                        error(manifestFile, `manifest.settings.config '${localId}' is not attached under the reserved "persistence" parent -- the user's settings would be overwritten on every update`);
+                    }
+                    if (note.sourceUrl || note.content) {
+                        error(manifestFile, `manifest.settings.config '${localId}' ships content (sourceUrl/content) -- declare it empty so TAM reviews it per setting instead of offering to replace the whole file`);
+                    }
+                }
+                if (note.mime && note.mime !== "application/json") {
+                    warn(manifestFile, `manifest.settings.${role} '${localId}' has mime '${note.mime}' -- expected application/json`);
+                }
+            }
+            // libsettings reads a config note's sources off its own `sourceConfig`
+            // relations, so an unlinked defaults note is simply never merged in.
+            const linksDefaults = (m.relations || []).some(
+                (r) => r.from === m.settings.config && r.type === "sourceConfig" && r.to === m.settings.defaults
+            );
+            if (m.settings.defaults && m.settings.config && !linksDefaults) {
+                error(manifestFile, `manifest.settings.config '${m.settings.config}' has no sourceConfig relation to the defaults note '${m.settings.defaults}' -- libsettings would read no defaults at all`);
+            }
+        }
+
+        // TAM runs a hook via FNote.executeScript(), which only hands back a return
+        // value for a frontend note, and hook code has to be replaced on update, so
+        // it can never live under "persistence".
+        for (const [phase, localId] of Object.entries(m.hooks || {})) {
+            if (!HOOK_PHASES.has(phase)) {
+                error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
+                continue;
+            }
+            if (!noteIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
+                continue;
+            }
+            const mime = byId[localId].mime || "";
+            if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
+            }
+            if (persistentIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
+            }
+        }
+        if (m.hooks?.updateReview && persistentIds.size === 0) {
+            warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
         }
 
         // Notes served as static HTTP resources are exempt from the env check.
@@ -389,21 +492,28 @@ function cmdValidate(args) {
             }
         }
 
-        // plain .js notes are never transpiled -- ES export/import will throw
+        // plain .js notes are never transpiled -- ES export/import will throw.
+        // Resource notes are exempt for the same reason they skip the env check:
+        // they are served raw over HTTP and never require()'d, so an ESM bundle
+        // loaded with a dynamic import() is correct rather than broken.
         for (const note of notes) {
             const nid = note.id || note.title || "?";
             const sourceUrl = note.sourceUrl || "";
-            if (sourceUrl.endsWith(".js") && !/^https?:\/\//.test(sourceUrl)) {
-                const sourcePath = path.join(addonDir, sourceUrl);
-                if (exists(sourcePath) && exportRe.test(readText(sourcePath))) {
-                    warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
+            if (sourceUrl.endsWith(".js") && !resourceNoteIds.has(nid)) {
+                try {
+                    const src = (await readSource(sourceUrl, manifestFile)).toString("utf8");
+                    if (exportRe.test(src)) {
+                        warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
+                    }
+                } catch (e) {
+                    warn(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
                 }
             }
         }
 
-        // notes unreachable from root via children[] will never be created
+        // notes unreachable from "root" (or "persistence") via children[] will never be created
         const localChildren = new Set(
-            (m.children || []).filter((c) => c.child && !c.addon).map((c) => c.child)
+            (m.children || []).filter((c) => c.child).map((c) => c.child)
         );
         for (const nid of noteIds) {
             if (nid !== rootId && !localChildren.has(nid)) {
@@ -411,16 +521,12 @@ function cmdValidate(args) {
             }
         }
 
-        // promptOnUpdate no-ops without a matching AddonData: relation
-        const addonDataTargets = new Set(
-            (m.relations || [])
-                .filter((rel) => String(rel.type || "").startsWith("AddonData:"))
-                .map((rel) => rel.to)
-        );
+        // skipOnUpdate/promptOnUpdate are implied by placement under the reserved "persistence"
+        // parent -- redundant there
         for (const note of notes) {
             const nid = note.id || note.title || "?";
-            if (note.promptOnUpdate && !addonDataTargets.has(nid)) {
-                warn(manifestFile, `note '${nid}' sets promptOnUpdate but has no matching 'AddonData:${nid}' relation -- the keep-mine/use-new prompt will never fire`);
+            if (persistentIds.has(nid) && (note.skipOnUpdate || note.promptOnUpdate)) {
+                warn(manifestFile, `note '${nid}' is attached under the reserved "persistence" parent, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
             }
         }
 
@@ -432,24 +538,29 @@ function cmdValidate(args) {
             }
         }
 
-        // sourceUrl files must exist
+        // sourceUrl files must be fetchable
         for (const note of notes) {
             const nid = note.id || note.title || "?";
             const sourceUrl = note.sourceUrl;
-            if (sourceUrl && !/^https?:\/\//.test(sourceUrl)) {
-                if (!exists(path.join(addonDir, sourceUrl))) {
-                    error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' not found on disk`);
+            if (sourceUrl) {
+                try {
+                    await readSource(sourceUrl, manifestFile);
+                } catch (e) {
+                    error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
                 }
             }
         }
 
-        // children references
+        // children references. "root"/"persistence" are reserved parent keywords meaning
+        // "TAM's synthesized structural/persistence anchor" -- never real declared notes.
+        // A cross-addon child (c.addon set) names an export from that OTHER addon's manifest,
+        // not a local id here, so it's exempt from the local noteIds check.
         for (const c of m.children || []) {
             const parent = c.parent, child = c.child;
-            if (parent && !noteIds.has(parent)) {
+            if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
                 error(manifestFile, `children: parent '${parent}' not found in notes`);
             }
-            if (!c.addon && child && !noteIds.has(child)) {
+            if (child && !c.addon && !noteIds.has(child)) {
                 error(manifestFile, `children: child '${child}' not found in notes`);
             }
         }
@@ -460,7 +571,7 @@ function cmdValidate(args) {
             if (fromId && !noteIds.has(fromId)) {
                 error(manifestFile, `relations: from '${fromId}' not found in notes`);
             }
-            if (toId && !rel.addon && !noteIds.has(toId)) {
+            if (toId && !noteIds.has(toId)) {
                 warn(manifestFile, `relations: to '${toId}' not found in notes (may be a literal noteId)`);
             }
         }
@@ -474,26 +585,7 @@ function cmdValidate(args) {
         }
 
         // require()/import targets must be co-installed in the requiring note's subtree
-        validateRequireReachability(manifestFile, m, notes, addonDir, requireRe, importRe, warn);
-
-        // dependencies must be a bare id or {id, manifestSourceUrl}
-        const deps = m.dependencies || [];
-        if (!Array.isArray(deps)) {
-            error(manifestFile, "manifest.dependencies must be an array");
-        } else {
-            for (const dep of deps) {
-                if (typeof dep === "string") {
-                    continue;
-                }
-                if (dep && typeof dep === "object" && typeof dep.id === "string") {
-                    if (!dep.manifestSourceUrl) {
-                        error(manifestFile, `dependencies: entry for '${dep.id}' is missing 'manifestSourceUrl'`);
-                    }
-                } else {
-                    error(manifestFile, `manifest.dependencies entries must be a string or a {id, manifestSourceUrl} object, got: ${JSON.stringify(dep)}`);
-                }
-            }
-        }
+        await validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn);
     }
 
     for (const msg of [...fixes, ...warnings, ...errors]) {
@@ -508,7 +600,7 @@ function cmdValidate(args) {
 }
 
 
-function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe, importRe, warn) {
+async function validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn) {
     // A code note that require()s/imports another note by title resolves it
     // within its own installed subtree. Warn when a target isn't reachable there.
     const idToTitle = {};
@@ -517,37 +609,11 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
     }
     const localTitles = new Set(Object.values(idToTitle).filter(Boolean));
 
-    const localChildEdges = {}, crossEdges = {};
+    const localChildEdges = {};
     for (const c of m.children || []) {
         const parent = c.parent;
-        if (!parent) continue;
-        if (c.addon) {
-            (crossEdges[parent] ||= []).push([c.addon, c.child]);
-        } else if (c.child) {
-            (localChildEdges[parent] ||= []).push(c.child);
-        }
-    }
-
-    const exportTitleCache = new Map();
-    function resolveExportTitle(depId, exportKey) {
-        const key = depId + ":" + exportKey;
-        if (exportTitleCache.has(key)) return exportTitleCache.get(key);
-        let title = null;
-        const depFile = path.join("addons", depId, MANIFEST_NAME);
-        if (exists(depFile)) {
-            try {
-                const dm = JSON.parse(readText(depFile)).manifest || {};
-                const localId = (dm.exports || {})[exportKey] ?? exportKey;
-                for (const dn of dm.notes || []) {
-                    if ((dn.id || dn.title) === localId) {
-                        title = dn.title;
-                        break;
-                    }
-                }
-            } catch { /* ignore */ }
-        }
-        exportTitleCache.set(key, title);
-        return title;
+        if (!parent || !c.child) continue;
+        (localChildEdges[parent] ||= []).push(c.child);
     }
 
     function descendants(startId) {
@@ -567,11 +633,14 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
         const mime = note.mime || "";
         if (!(mime.startsWith("application/javascript") || mime.includes("jsx"))) continue;
         const sourceUrl = note.sourceUrl || "";
-        if (!sourceUrl || /^https?:\/\//.test(sourceUrl)) continue;
-        const sourcePath = path.join(addonDir, sourceUrl);
-        if (!exists(sourcePath)) continue;
+        if (!sourceUrl) continue;
 
-        const src = readText(sourcePath);
+        let src;
+        try {
+            src = (await readSource(sourceUrl, manifestFile)).toString("utf8");
+        } catch (e) {
+            continue; // already reported by the sourceUrl-must-be-fetchable check above
+        }
         const targets = new Set();
         for (const mm of src.matchAll(requireRe)) targets.add(mm[1]);
         for (const mm of src.matchAll(importRe)) targets.add(mm[1]);
@@ -582,19 +651,13 @@ function validateRequireReachability(manifestFile, m, notes, addonDir, requireRe
         const subtree = descendants(nid);
         const reachable = new Set();
         for (const d of subtree) reachable.add(idToTitle[d] || "");
-        for (const parentId of subtree) {
-            for (const [depId, childKey] of crossEdges[parentId] || []) {
-                const t = resolveExportTitle(depId, childKey);
-                if (t) reachable.add(t);
-            }
-        }
 
         for (const t of [...filtered].sort()) {
             if (reachable.has(t)) continue;
             if (localTitles.has(t)) {
                 warn(manifestFile, `note '${nid}': require/import of '${t}' resolves to a local note wired outside this note's subtree -- it won't be found at runtime`);
             } else {
-                warn(manifestFile, `note '${nid}': require/import of '${t}' is not installed in this note's subtree -- wire the providing addon's export under '${nid}' via children[]`);
+                warn(manifestFile, `note '${nid}': require/import of '${t}' is not installed in this note's subtree -- wire it under '${nid}' via children[]`);
             }
         }
     }
@@ -613,35 +676,66 @@ function safeName(title) {
 }
 
 
-function processManifest(fullManifest, addonDir, depsMap) {
+// Local id for the synthetic root entry `processManifest` builds when a manifest has no
+// declared `m.root` -- must match addonAnchorRootLocalId in lib-tam.js, since a ZIP-installed
+// note's #TAMFILEID has to line up with what TAM's own ensureAddonAnchor would create live.
+const SYNTHETIC_ROOT_LOCAL_ID = "__tamAddonRoot__";
+// Same idea for whatever attaches under the reserved "persistence" parent keyword -- must match
+// addonAnchorPersistenceLocalId in lib-tam.js. Live sync parents this under the separate global
+// "Addon Data" anchor; a ZIP export is one tree, so it's nested under the synthetic root here
+// purely as an export approximation.
+const SYNTHETIC_PERSISTENCE_LOCAL_ID = "__tamAddonPersistenceRoot__";
+
+async function processManifest(fullManifest, manifestFile) {
     // Build ZIP entries for one manifest.
     // Returns { rootEntry, zipFiles, warnings, uuidMap }.
     const m = fullManifest.manifest || {};
 
     const notesById = {};
     for (const n of m.notes || []) notesById[n.id] = n;
+
+    // No declared m.root -- every addon but TAM itself. TAM synthesizes this note live
+    // (ensureAddonAnchor); mirror that here purely so the ZIP has a single top-level note to
+    // build around, titled after the addon, content-free, TAM's own icon.
+    const rootLid = m.root || SYNTHETIC_ROOT_LOCAL_ID;
+    if (!m.root) {
+        notesById[rootLid] = { id: rootLid, title: fullManifest.name || fullManifest.id, type: "text", mime: "text/html", sourceUrl: null };
+    }
+
+    const hasPersistence = (m.children || []).some((c) => c.parent === "persistence");
+    const persistenceLid = SYNTHETIC_PERSISTENCE_LOCAL_ID;
+    if (hasPersistence) {
+        notesById[persistenceLid] = { id: persistenceLid, title: "Persistence", type: "text", mime: "text/html", sourceUrl: null };
+    }
+
     const uuidMap = {};
     for (const lid of Object.keys(notesById)) uuidMap[lid] = randChoices(ID_CHARS, 12);
 
-    // A local child listed under >1 parent builds only on first occurrence;
-    // later occurrences become isClone references to the same generated noteId.
-    const childrenMap = {}, seenLocalChildren = new Set();
+    // A child listed under >1 parent builds only on first occurrence; later
+    // occurrences become isClone references to the same generated noteId.
+    const childrenMap = {}, seenChildren = new Set();
     for (const c of m.children || []) {
-        if (c.addon) continue;
         const childLid = c.child;
-        const isCloneRef = seenLocalChildren.has(childLid);
-        seenLocalChildren.add(childLid);
-        (childrenMap[c.parent] ||= []).push([childLid, isCloneRef]);
+        const isCloneRef = seenChildren.has(childLid);
+        seenChildren.add(childLid);
+        // The reserved "root"/"persistence" parent keywords mean "TAM's synthesized anchor" --
+        // redirect to the matching synthetic entry's local id so buildEntry finds its children
+        // under the right key.
+        let parentLid = c.parent;
+        if (!m.root && c.parent === "root") parentLid = rootLid;
+        else if (c.parent === "persistence") parentLid = persistenceLid;
+        (childrenMap[parentLid] ||= []).push([childLid, isCloneRef]);
     }
-
-    const depChildrenMap = {};
-    for (const c of m.children || []) {
-        if (c.addon) (depChildrenMap[c.parent] ||= []).push(c);
+    if (hasPersistence) {
+        (childrenMap[rootLid] ||= []).push([persistenceLid, false]);
     }
 
     const noteLabels = {}, noteRelations = {};
     for (const lbl of m.labels || []) (noteLabels[lbl.note] ||= []).push(lbl);
     for (const rel of m.relations || []) (noteRelations[rel.from] ||= []).push(rel);
+    // The synthetic anchors' own #iconClass -- TAM sets this uniformly on every anchor it owns.
+    if (!m.root) noteLabels[rootLid] = [{ note: rootLid, name: "iconClass", value: "bx bx-customize" }];
+    if (hasPersistence) noteLabels[persistenceLid] = [{ note: persistenceLid, name: "iconClass", value: "bx bx-customize" }];
 
     const zipFiles = [], warnings = [];
     const usedBases = {};
@@ -651,7 +745,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         return uniqueName(base, set);
     }
 
-    function buildEntry(localId, notePosition, dirPrefix, notePath) {
+    async function buildEntry(localId, notePosition, dirPrefix, notePath) {
         const noteDef = notesById[localId];
         const noteUuid = uuidMap[localId];
         // Match Python's dict.get(key, default): a present-but-empty value
@@ -661,8 +755,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         const title = noteDef.title;
 
         const localChildren = childrenMap[localId] || [];
-        const depChildren = depChildrenMap[localId] || [];
-        const hasChildren = Boolean(localChildren.length || depChildren.length);
+        const hasChildren = Boolean(localChildren.length);
         const currentPath = [...notePath, noteUuid];
 
         const ext = noteType === "render" ? ".html" : (MIME_TO_EXT[noteMime] || ".html");
@@ -682,12 +775,11 @@ function processManifest(fullManifest, addonDir, depsMap) {
             content = Buffer.alloc(0);
         } else {
             const sourceUrl = noteDef.sourceUrl;
-            if (sourceUrl && !/^https?:\/\//.test(sourceUrl)) {
-                const src = path.join(addonDir, sourceUrl);
-                if (exists(src)) {
-                    content = fs.readFileSync(src);
-                } else {
-                    warnings.push(`note '${localId}': sourceUrl '${sourceUrl}' not found -- empty content used`);
+            if (sourceUrl) {
+                try {
+                    content = await readSource(sourceUrl, manifestFile);
+                } catch (e) {
+                    warnings.push(`note '${localId}': sourceUrl '${sourceUrl}' could not be read (${e.message}) -- empty content used`);
                     content = Buffer.alloc(0);
                 }
             } else if (noteDef.content != null) {
@@ -721,16 +813,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         }
 
         for (const rel of noteRelations[localId] || []) {
-            let target;
-            if (rel.addon) {
-                target = (depsMap[rel.addon] || {})[rel.to];
-                if (!target) {
-                    warnings.push(`relation '${localId}' type '${rel.type}': dep '${rel.addon}' export '${rel.to}' not resolved -- skipped`);
-                    continue;
-                }
-            } else {
-                target = uuidMap[rel.to] ?? rel.to;
-            }
+            const target = uuidMap[rel.to] ?? rel.to;
             attrs.push({
                 type: "relation", name: rel.type, value: target,
                 isInheritable: false, position: pos,
@@ -757,21 +840,9 @@ function processManifest(fullManifest, addonDir, depsMap) {
             if (isCloneRef) {
                 childEntries.push(cloneEntry(uuidMap[childLid], [...currentPath, uuidMap[childLid]], i * 10));
             } else {
-                childEntries.push(buildEntry(childLid, i * 10, childPrefix, currentPath));
+                childEntries.push(await buildEntry(childLid, i * 10, childPrefix, currentPath));
             }
             i++;
-        }
-
-        let j = localChildren.length + 1;
-        for (const depC of depChildren) {
-            const depNoteId = (depsMap[depC.addon] || {})[depC.child];
-            if (!depNoteId) {
-                warnings.push(`child clone: parent '${localId}' addon '${depC.addon}' export '${depC.child}' not resolved -- skipped`);
-                j++;
-                continue;
-            }
-            childEntries.push(cloneEntry(depNoteId, [depNoteId], j * 10));
-            j++;
         }
 
         const entry = {
@@ -788,8 +859,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
         return entry;
     }
 
-    const rootLid = m.root;
-    const rootEntry = buildEntry(rootLid, 10, "", []);
+    const rootEntry = await buildEntry(rootLid, 10, "", []);
     if (!("dirFileName" in rootEntry)) {
         rootEntry.dirFileName = safeName(notesById[rootLid].title);
     }
@@ -797,22 +867,7 @@ function processManifest(fullManifest, addonDir, depsMap) {
 }
 
 
-function directDeps(mf) {
-    const ids = new Set();
-    for (const c of mf.children || []) {
-        if (c.addon) ids.add(c.addon);
-    }
-    for (const r of mf.relations || []) {
-        if (r.addon) ids.add(r.addon);
-    }
-    // manifest.dependencies is the source of truth for "must be installed",
-    // independent of whether the dep is cloned as a child/relation.
-    for (const id of depIds(mf)) ids.add(id);
-    return ids;
-}
-
-
-function buildZip(manifestPath, outPath, addonsDirArg) {
+async function buildZip(manifestPath, outPath) {
     if (!exists(manifestPath)) {
         die(`ERROR: ${manifestPath} not found`);
     }
@@ -827,113 +882,32 @@ function buildZip(manifestPath, outPath, addonsDirArg) {
     if (!m) {
         die("ERROR: no 'manifest' key -- metadata-only addons cannot be exported as a Trilium ZIP");
     }
-    if (!m.root) {
-        die("ERROR: manifest.root is required");
+    if (!m.root && !(m.children || []).some((c) => c.parent === "root")) {
+        die("ERROR: manifest.children must attach at least one note to the reserved \"root\" parent");
     }
 
-    const addonsDir = addonsDirArg ? addonsDirArg : path.dirname(addonDir);
-
-    function explicitDepIds(mf) {
-        return new Set((mf.dependencies || []).filter((d) => d && typeof d === "object").map((d) => d.id));
-    }
-
-    const allWarnings = [];
-
-    // Discover the full transitive dependency set (deps of deps of ...).
-    const depManifests = {};
-    const allExplicitDepIds = new Set(explicitDepIds(m));
-    const toVisit = [...directDeps(m)], visited = new Set();
-    while (toVisit.length) {
-        const depId = toVisit.pop();
-        if (visited.has(depId)) continue;
-        visited.add(depId);
-
-        const depDir = path.join(addonsDir, depId);
-        const depMpath = path.join(depDir, MANIFEST_NAME);
-        if (!exists(depMpath)) {
-            if (allExplicitDepIds.has(depId)) {
-                allWarnings.push(`dep '${depId}': declared with an explicit manifestSourceUrl, no local sibling folder -- cannot be bundled into an offline ZIP, skipped`);
-            } else {
-                allWarnings.push(`dep '${depId}': manifest not found at ${depMpath} -- skipped`);
-            }
-            continue;
-        }
-        const depFull = JSON.parse(readText(depMpath));
-        const depM = depFull.manifest || {};
-        if (!depM.root) {
-            allWarnings.push(`dep '${depId}': no manifest.root -- skipped`);
-            continue;
-        }
-
-        depManifests[depId] = [depDir, depFull, depM];
-        for (const id of explicitDepIds(depM)) allExplicitDepIds.add(id);
-        for (const id of directDeps(depM)) {
-            if (!visited.has(id)) toVisit.push(id);
-        }
-    }
-
-    // Process deps in dependency order so cross-addon children resolve.
-    const depsMap = {}, depRootEntries = [], depZipFiles = [];
-    const remaining = { ...depManifests };
-    while (Object.keys(remaining).length) {
-        let progressed = false;
-        for (const depId of Object.keys(remaining)) {
-            const [depDir, depFull, depM] = remaining[depId];
-            const dd = directDeps(depM);
-            let subset = true;
-            for (const d of dd) {
-                if (!(d in depsMap)) { subset = false; break; }
-            }
-            if (!subset) continue;
-            const { rootEntry: depRoot, zipFiles: depZf, warnings: depW, uuidMap: depUuids } =
-                processManifest(depFull, depDir, depsMap);
-            depRootEntries.push(depRoot);
-            depZipFiles.push(...depZf);
-            for (const w of depW) allWarnings.push(`[dep:${depId}] ${w}`);
-            const depExports = depM.exports || {};
-            const mapped = {};
-            for (const [exp, lid] of Object.entries(depExports)) {
-                if (lid in depUuids) mapped[exp] = depUuids[lid];
-            }
-            depsMap[depId] = mapped;
-            delete remaining[depId];
-            progressed = true;
-        }
-        if (!progressed) {
-            for (const depId of Object.keys(remaining)) {
-                allWarnings.push(`dep '${depId}': could not resolve its own dependencies (cycle or missing) -- skipped`);
-            }
-            break;
-        }
-    }
-
-    const { rootEntry, zipFiles, warnings } = processManifest(fullManifest, addonDir, depsMap);
-    allWarnings.push(...warnings);
+    const { rootEntry, zipFiles, warnings } = await processManifest(fullManifest, manifestPath);
 
     const triliumMeta = {
         formatVersion: 2, appVersion: TRILIUM_APP_VERSION,
-        files: [rootEntry, ...depRootEntries],
+        files: [rootEntry],
     };
-    const allZipFiles = [...zipFiles, ...depZipFiles];
 
     writeZip(outPath, [
         ["!!!meta.json", Buffer.from(jsonDumps(triliumMeta, 2))],
-        ...allZipFiles,
+        ...zipFiles,
     ]);
 
-    if (allWarnings.length) {
+    if (warnings.length) {
         console.log("Warnings:");
-        for (const w of allWarnings) console.log(`  ${w}`);
+        for (const w of warnings) console.log(`  ${w}`);
     }
 
-    const skipped = allWarnings.filter((w) => w.includes("skipped")).length;
-    const bundled = depRootEntries.length ? `, ${depRootEntries.length} dep(s) bundled` : "";
-    const skippedStr = skipped ? `, ${skipped} skipped` : "";
-    console.log(`Written: ${outPath}  (${allZipFiles.length} content files${bundled}${skippedStr})`);
+    console.log(`Written: ${outPath}  (${zipFiles.length} content files)`);
 }
 
 
-function cmdTamToZip(args) {
+async function cmdTamToZip(args) {
     if (args.all) {
         if (args.manifest || args.out) {
             die("ERROR: --all cannot be combined with a manifest path or --out");
@@ -947,7 +921,7 @@ function cmdTamToZip(args) {
         }
         for (const manifestPath of manifestPaths) {
             const addonId = JSON.parse(readText(manifestPath)).id || "export";
-            buildZip(manifestPath, path.join(outDir, `${addonId}.zip`), args.addonsDir);
+            await buildZip(manifestPath, path.join(outDir, `${addonId}.zip`));
         }
         return;
     }
@@ -959,7 +933,7 @@ function cmdTamToZip(args) {
     if (isDir(manifestPath)) {
         manifestPath = path.join(manifestPath, MANIFEST_NAME);
     }
-    buildZip(manifestPath, args.out || null, args.addonsDir);
+    await buildZip(manifestPath, args.out || null);
 }
 
 
@@ -1038,9 +1012,16 @@ function cmdZipToTam(args) {
         const metaPrefix = (metaRoot && metaRoot !== ".") ? metaRoot + "/" : "";
 
         for (const [entry, localId, parentLocalId, isClone, dirPrefix] of walkEntries(filesArray, null, idMap)) {
+            // The ZIP's own top-level note becomes the reserved "root" parent keyword instead
+            // of a real notes[] entry -- TAM synthesizes this note itself for every addon but
+            // TAM (see lib-tam.js's ensureAddonAnchor). Rewrite its direct children's parent to
+            // "root" and drop the note itself (and any labels/relations declared on it).
+            const effectiveParentLocalId = parentLocalId === rootLocalId ? "root" : parentLocalId;
+            if (localId === rootLocalId) continue;
+
             if (isClone) {
-                if (parentLocalId) {
-                    children.push({ parent: parentLocalId, child: localId });
+                if (effectiveParentLocalId) {
+                    children.push({ parent: effectiveParentLocalId, child: localId });
                 }
                 continue;
             }
@@ -1059,6 +1040,7 @@ function cmdZipToTam(args) {
                 if (dataKey && dataKey in extracted) {
                     const destName = uniqueName(dataFile, usedFilenames);
                     fs.writeFileSync(path.join(outDir, destName), extracted[dataKey]);
+                    // Relative to the manifest, the way a source manifest names every file.
                     sourceUrl = destName;
                 }
             }
@@ -1072,8 +1054,8 @@ function cmdZipToTam(args) {
             if (noteType === "file") note.binary = true;
             notes.push(note);
 
-            if (parentLocalId) {
-                children.push({ parent: parentLocalId, child: localId });
+            if (effectiveParentLocalId) {
+                children.push({ parent: effectiveParentLocalId, child: localId });
             }
 
             for (const attr of entry.attributes || []) {
@@ -1088,14 +1070,11 @@ function cmdZipToTam(args) {
             }
         }
 
-        const manifestSourceUrl = detectManifestSourceUrl(outDir);
         const manifest = {
             id: "FILL_IN", name: "FILL_IN", description: "FILL_IN",
             author: "FILL_IN", homepage: "FILL_IN", license: "GPL-3.0-or-later",
             latestVersion: "1.0.0", type: "widget", readme: "README.md",
-            ...(manifestSourceUrl ? { manifestSourceUrl } : {}),
             manifest: {
-                root: rootLocalId, dependencies: [], exports: {},
                 notes, children, relations, labels,
             },
         };
@@ -1105,11 +1084,6 @@ function cmdZipToTam(args) {
         console.log(`Written: ${outputFile}`);
         console.log(`  ${notes.length} notes, ${children.length} children, ${relations.length} relations, ${labels.length} labels`);
         console.log("  Search for '\"FILL_IN\"' in _tam_manifest_.json and replace with real values");
-        if (manifestSourceUrl) {
-            console.log(`  manifestSourceUrl auto-detected: ${manifestSourceUrl}`);
-        } else {
-            console.log("  manifestSourceUrl NOT set (not inside a git repo with a github.com origin) -- fill in by hand before publishing");
-        }
     } finally {
         fs.rmSync(tmppath, { recursive: true, force: true });
     }
@@ -1180,83 +1154,8 @@ function page(baseHtml, title, body, css = "style.css") {
 }
 
 
-// --- Dependency graph -> Mermaid (same shape as TAM's in-browser widget) ----
-
-function buildDepGraph(addons) {
-    const metas = {};
-    for (const a of addons) metas[a.meta.id] = a.meta;
-    const edges = {};
-    for (const [aid, m] of Object.entries(metas)) {
-        edges[aid] = depIds(m.manifest || {}).filter((d) => d in metas);
-    }
-    return { metas, edges };
-}
-
-
-function nodeId(addonId) {
-    return "n_" + [...addonId].map((c) => /[a-zA-Z0-9]/.test(c) ? c : "_").join("");
-}
-
-
-function mermaidBody(nodeIds, edges, metas, focus = null) {
-    const lines = ["flowchart LR"];
-    for (const aid of nodeIds) {
-        const label = (metas[aid].name || aid).replace(/"/g, "'");
-        lines.push(`    ${nodeId(aid)}["${label}"]`);
-    }
-    const nodeSet = new Set(nodeIds);
-    for (const aid of nodeIds) {
-        for (const dep of edges[aid] || []) {
-            if (nodeSet.has(dep)) {
-                lines.push(`    ${nodeId(aid)} --> ${nodeId(dep)}`);
-            }
-        }
-    }
-    for (const aid of nodeIds) {
-        const color = TYPE_COLORS[metas[aid].type || ""] || "#6b7280";
-        lines.push(`    style ${nodeId(aid)} fill:${color},stroke:${color},color:#fff`);
-    }
-    if (focus) {
-        lines.push(`    style ${nodeId(focus)} stroke:#0f172a,stroke-width:4px`);
-    }
-    return lines.join("\n");
-}
-
-
-function closure(seed, adjacency) {
-    const seen = new Set(), stack = [seed];
-    while (stack.length) {
-        const cur = stack.pop();
-        for (const nxt of adjacency[cur] || []) {
-            if (!seen.has(nxt) && nxt !== seed) {
-                seen.add(nxt);
-                stack.push(nxt);
-            }
-        }
-    }
-    return seen;
-}
-
-
-function mermaidForAddon(addonId, metas, edges) {
-    const dependents = {};
-    for (const aid of Object.keys(metas)) dependents[aid] = [];
-    for (const [aid, deps] of Object.entries(edges)) {
-        for (const dep of deps) dependents[dep].push(aid);
-    }
-    const nodes = new Set([addonId, ...closure(addonId, edges), ...closure(addonId, dependents)]);
-    return mermaidBody([...nodes], edges, metas, addonId);
-}
-
-
-function mermaidBlock(source) {
-    return `<pre class="mermaid">\n${htmlEscape(source)}\n</pre>`;
-}
-
-
 function renderIndex(baseHtml, addons) {
     const typesPresent = [...new Set(addons.map((a) => a.meta.type).filter(Boolean))].sort();
-    const { metas, edges } = buildDepGraph(addons);
 
     const cards = [];
     for (const a of addons) {
@@ -1311,12 +1210,6 @@ function renderIndex(baseHtml, addons) {
       ${filterBtns.join(" ")}
     </div>
   </div>
-  <details class="dep-graph">
-    <summary>Dependency graph</summary>
-    <div class="dep-graph-scroll">
-      ${mermaidBlock(mermaidBody(Object.keys(metas), edges, metas))}
-    </div>
-  </details>
   <div class="grid">
 ${cards.join("\n")}
   </div>
@@ -1357,7 +1250,7 @@ ${cards.join("\n")}
 }
 
 
-function renderAddon(baseHtml, meta, readmeHtml, metas, edges) {
+function renderAddon(baseHtml, meta, readmeHtml) {
     const aid = meta.id;
     const name = meta.name || aid;
     const version = meta.latestVersion || "—";
@@ -1366,7 +1259,7 @@ function renderAddon(baseHtml, meta, readmeHtml, metas, edges) {
     const t = meta.type || "";
     const hp = meta.homepage || "";
     const zipUrl = `${RELEASES}/download/${aid}.zip`;
-    const manifestUrl = meta.manifestSourceUrl || "";
+    const manifestUrl = aid ? publishedManifestUrl(aid) : "";
 
     const authorDisplay = (author && author !== "—")
         ? `<a href="https://github.com/${htmlEscape(author)}" target="_blank">${htmlEscape(author)}</a>`
@@ -1388,18 +1281,9 @@ function renderAddon(baseHtml, meta, readmeHtml, metas, edges) {
         actions += `\n      <a class="btn btn-ghost" href="${htmlEscape(hp)}" target="_blank">Source</a>`;
     }
 
-    let content = readmeHtml
+    const content = readmeHtml
         ? `<div class="readme">${readmeHtml}</div>`
         : '<p class="no-readme">No README available.</p>';
-
-    const hasEdge = Boolean((edges[aid] || []).length) || Object.values(edges).some((deps) => deps.includes(aid));
-    if (hasEdge) {
-        content +=
-            '<div class="dep-graph-section"><h2>Dependencies</h2>' +
-            '<div class="dep-graph-scroll">' +
-            mermaidBlock(mermaidForAddon(aid, metas, edges)) +
-            '</div></div>';
-    }
 
     const body = `<header>
   <div class="hdr">
@@ -1432,11 +1316,10 @@ function cmdGeneratePages(args) {
     const baseHtml = readText(path.join(staticDir, "base.html"));
     const css = readText(path.join(staticDir, "style.css"));
 
-    const docsDir = "docs";
+    const docsDir = path.join("resources", "docs");
     fs.mkdirSync(docsDir, { recursive: true });
 
     const addons = loadAddons();
-    const { metas, edges } = buildDepGraph(addons);
 
     for (const a of addons) {
         const aid = a.meta.id;
@@ -1448,19 +1331,12 @@ function cmdGeneratePages(args) {
                 fs.copyFileSync(full, path.join(pageDir, f));
             }
         }
-        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml, metas, edges));
+        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml));
     }
 
     writeText(path.join(docsDir, "index.html"), renderIndex(baseHtml, addons));
     writeText(path.join(docsDir, "style.css"), css);
-    console.log(`Generated docs/ for ${addons.length} addons`);
-
-    const urls = addons.filter((a) => a.meta.manifestSourceUrl).map((a) => a.meta.manifestSourceUrl);
-    const missing = addons.length - urls.length;
-    writeText(path.join(docsDir, "catalog.json"),
-        jsonDumps({ webUrl: PAGES_URL, "tam-addons": urls }, 2) + "\n");
-    console.log(`Generated docs/catalog.json with ${urls.length} addon(s)` +
-        (missing ? ` (${missing} skipped -- no manifestSourceUrl)` : ""));
+    console.log(`Generated ${docsDir}/ for ${addons.length} addons`);
 }
 
 
@@ -1469,9 +1345,9 @@ const README_END = "<!-- GENERATED:END -->";
 
 
 function cmdGenerateReadme(args) {
-    const basePath = "README_base.md";
+    const basePath = path.join("resources", "README_base.md");
     if (!exists(basePath)) {
-        console.log("WARNING: README_base.md not found -- skipping README generation");
+        console.log(`WARNING: ${basePath} not found -- skipping README generation`);
         return;
     }
     const base = readText(basePath);
@@ -1498,7 +1374,7 @@ function cmdGenerateReadme(args) {
 
     const startIdx = base.indexOf(README_START), endIdx = base.indexOf(README_END);
     if (startIdx === -1 || endIdx === -1) {
-        console.log("WARNING: README_base.md missing GENERATED markers -- skipping README generation");
+        console.log(`WARNING: ${basePath} missing GENERATED markers -- skipping README generation`);
         return;
     }
     const afterStart = startIdx + README_START.length;
@@ -1556,49 +1432,132 @@ function cmdPublishRelease(args) {
 
 
 // ===========================================================================
-// backfill-source-url
+// publish
 // ===========================================================================
 
-function cmdBackfillSourceUrl(args) {
-    if (!isDir("addons")) {
-        die("ERROR: no 'addons/' directory -- run from repo root");
+/*
+ * Turns each hand-authored source manifest into the published one TAM actually
+ * installs from.
+ *
+ * A source manifest names its files by path relative to itself and carries no
+ * URLs of its own; publishing resolves each of those against one commit
+ * (raw.githubusercontent.com/<owner>/<repo>/<sha>/...), so a published URL is
+ * immutable and never serves a stale cached copy the way a refs/heads/main one
+ * does. It also hashes every file, per note and once for the manifest as a
+ * whole, which is what lets TAM detect a change without an author bumping
+ * latestVersion.
+ *
+ * Deliberately offline: only files on disk are hashed. A sourceUrl already
+ * absolute in the source manifest points at someone else's repo, so it is
+ * carried through untouched and contributes its URL (not its content) to the
+ * hash -- fetching it here would make the same commit publish differently
+ * depending on what upstream did that day.
+ */
+
+function sha256(buffer) {
+    return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+
+function canonicalJson(value) {
+    // Key-order-independent serialization, so the hash tracks the manifest's
+    // content rather than the order its keys happen to be written in.
+    if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+    if (value && typeof value === "object") {
+        const keys = Object.keys(value).sort();
+        return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson(value[k])}`).join(",")}}`;
     }
+    return JSON.stringify(value ?? null);
+}
 
-    let updated = 0, skipped = 0;
-    for (const manifestFile of iterManifests()) {
-        const url = detectManifestSourceUrl(path.dirname(manifestFile));
-        if (!url) {
-            console.log(`SKIP  ${manifestFile}: not detectable (no git repo / no github.com origin)`);
-            skipped++;
-            continue;
-        }
 
+function publishedManifestUrl(addonId) {
+    return `${PAGES_URL}${addonId}/${MANIFEST_NAME}`;
+}
+
+
+function resolvePublishBase(args) {
+    // The raw.githubusercontent prefix every relative sourceUrl resolves against,
+    // pinned to one commit: --commit, else CI's GITHUB_SHA, else HEAD.
+    const repoRoot = path.resolve(runGit(["rev-parse", "--show-toplevel"], ".") || die("ERROR: publish must run inside a git working copy"));
+    const remoteUrl = runGit(["remote", "get-url", "origin"], repoRoot);
+    const match = remoteUrl && GITHUB_REMOTE_RE.exec(remoteUrl);
+    if (!match) die("ERROR: publish needs a github.com 'origin' remote to build source URLs from");
+    const commit = args.commit || process.env.GITHUB_SHA || runGit(["rev-parse", "HEAD"], repoRoot);
+    if (!commit) die("ERROR: could not determine the commit to pin published URLs to");
+    // The branch-tracking URL of the same file, which every note also carries as
+    // its `sourceId`: TAM shares one note between addons vendoring the same file
+    // by matching on it, and a commit-pinned URL changes every publish, so it
+    // can't be what that match is made on.
+    const branch = process.env.GITHUB_REF_NAME || runGit(["symbolic-ref", "--short", "HEAD"], repoRoot) || "main";
+    return {
+        repoRoot,
+        commit,
+        baseUrl: `https://raw.githubusercontent.com/${match[1]}/${commit}/`,
+        identityBaseUrl: `https://raw.githubusercontent.com/${match[1]}/refs/heads/${branch}/`
+    };
+}
+
+
+function publishManifest(manifest, manifestFile, repoRoot, baseUrl, identityBaseUrl) {
+    // Returns the published manifest: absolute pinned sourceUrls, a sha per note
+    // whose file is in this repo, and one contentHash over the whole thing.
+    const published = JSON.parse(JSON.stringify(manifest));
+    published.manifestSourceUrl = publishedManifestUrl(published.id);
+    const addonDir = path.dirname(manifestFile);
+    const hashInput = JSON.parse(JSON.stringify(published));
+    delete hashInput.manifestSourceUrl;
+    delete hashInput.contentHash;
+
+    const notes = published.manifest?.notes || [];
+    const hashNotes = hashInput.manifest?.notes || [];
+    for (let i = 0; i < notes.length; i++) {
+        const note = notes[i];
+        if (!note.sourceUrl) continue;
+        if (/^https?:\/\//.test(note.sourceUrl)) continue;
+        const filePath = path.join(addonDir, note.sourceUrl);
+        if (!exists(filePath)) die(`ERROR: ${manifestFile}: note '${note.id}' points at missing file ${note.sourceUrl}`);
+        const relativeToRepo = path.relative(repoRoot, path.resolve(filePath)).split(path.sep).join("/");
+        // encodeURI, not encodeURIComponent: a literal "@" in an addon dir name
+        // is legal in a path and is what every already-installed note carries as
+        // its #TAMSOURCEURL, which sourceId has to keep matching.
+        const encodedPath = encodeURI(relativeToRepo);
+        note.sha = sha256(fs.readFileSync(filePath));
+        note.sourceUrl = baseUrl + encodedPath;
+        note.sourceId = identityBaseUrl + encodedPath;
+        // The pinned URL changes on every commit, so hashing it would report an
+        // update for every addon on every push; the file's own hash is what a
+        // change actually means.
+        hashNotes[i].sourceUrl = note.sha;
+        hashNotes[i].sha = note.sha;
+        delete hashNotes[i].sourceId;
+    }
+    published.contentHash = sha256(Buffer.from(canonicalJson(hashInput), "utf8"));
+    return published;
+}
+
+
+function cmdPublish(args) {
+    const addonsDir = args.addonsDir || "addons";
+    const outDir = args.outDir || path.join("resources", "docs");
+    const { repoRoot, baseUrl, identityBaseUrl, commit } = resolvePublishBase(args);
+
+    const urls = [];
+    let count = 0;
+    for (const manifestFile of iterManifests(addonsDir)) {
         const manifest = JSON.parse(readText(manifestFile));
-        if (manifest.manifestSourceUrl === url) {
-            continue;
-        }
-
-        // Place manifestSourceUrl right after "readme" (or at the end),
-        // matching where zip-to-tam puts it -- cosmetic, keeps manifests uniform.
-        const newManifest = {};
-        let inserted = false;
-        for (const [key, value] of Object.entries(manifest)) {
-            newManifest[key] = value;
-            if (key === "readme") {
-                newManifest.manifestSourceUrl = url;
-                inserted = true;
-            }
-        }
-        if (!inserted) {
-            newManifest.manifestSourceUrl = url;
-        }
-
-        writeText(manifestFile, jsonDumps(newManifest, 4) + "\n");
-        console.log(`SET   ${manifestFile}: ${url}`);
-        updated++;
+        if (!manifest.id) continue;
+        const published = publishManifest(manifest, manifestFile, repoRoot, baseUrl, identityBaseUrl);
+        const pageDir = path.join(outDir, manifest.id);
+        fs.mkdirSync(pageDir, { recursive: true });
+        writeText(path.join(pageDir, MANIFEST_NAME), jsonDumps(published, 4) + "\n");
+        urls.push(published.manifestSourceUrl);
+        count++;
     }
 
-    console.log(`\n${updated} manifest(s) updated, ${skipped} skipped`);
+    writeText(path.join(outDir, "catalog.json"),
+        jsonDumps({ webUrl: PAGES_URL, "tam-addons": urls }, 2) + "\n");
+    console.log(`Published ${count} manifest(s) to ${outDir}/ pinned at ${commit.slice(0, 12)}`);
 }
 
 
@@ -1759,6 +1718,8 @@ function parseArgs(argv) {
         else if (a === "--out") args.out = argv[++i];
         else if (a === "--out-dir") args.outDir = argv[++i];
         else if (a === "--addons-dir") args.addonsDir = argv[++i];
+        else if (a === "--commit") args.commit = argv[++i];
+        else if (a.startsWith("--commit=")) args.commit = a.slice(9);
         else if (a.startsWith("--out=")) args.out = a.slice(6);
         else if (a.startsWith("--out-dir=")) args.outDir = a.slice(10);
         else if (a.startsWith("--addons-dir=")) args.addonsDir = a.slice(13);
@@ -1776,24 +1737,25 @@ commands:
   validate [--fix]                          Lint every addon manifest
   tam-to-zip [manifest] [--out F] [--addons-dir D] [--all] [--out-dir D]
   zip-to-tam <input.zip> [--out DIR]        Convert a Trilium ZIP to a manifest
-  generate-pages                            Build the GitHub Pages site (docs/)
+  generate-pages                            Build the GitHub Pages site (resources/docs/)
+  publish [--addons-dir D] [--out-dir D] [--commit SHA]
+                                            Resolve + hash every manifest into resources/docs/
   generate-readme                           Regenerate README.md's addon table
   publish-release                           Upload *.zip files to GitHub Releases
-  backfill-source-url                       Add manifestSourceUrl where missing
 `;
 
-function main() {
+async function main() {
     const argv = process.argv.slice(2);
     const command = argv[0];
     const args = parseArgs(argv.slice(1));
 
     switch (command) {
         case "validate":
-            cmdValidate(args);
+            await cmdValidate(args);
             break;
         case "tam-to-zip":
             args.manifest = args._[0];
-            cmdTamToZip(args);
+            await cmdTamToZip(args);
             break;
         case "zip-to-tam":
             if (!args._[0]) die("ERROR: input ZIP is required");
@@ -1804,14 +1766,14 @@ function main() {
         case "generate-pages":
             cmdGeneratePages(args);
             break;
+        case "publish":
+            cmdPublish(args);
+            break;
         case "generate-readme":
             cmdGenerateReadme(args);
             break;
         case "publish-release":
             cmdPublishRelease(args);
-            break;
-        case "backfill-source-url":
-            cmdBackfillSourceUrl(args);
             break;
         case undefined:
         case "-h":
@@ -1824,4 +1786,4 @@ function main() {
     }
 }
 
-main();
+main().catch((e) => die(`ERROR: ${e.message}`));

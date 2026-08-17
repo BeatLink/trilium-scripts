@@ -25,6 +25,8 @@ Before implementing:
 - Skip files over 100KB unless required.
 - No sycophantic openers or closing fluff.
 - No emojis or em-dashes.
+- Comments: one sentence on one line, max. The only exception is a module's top-level overview
+  comment, which may be longer.
 - Do not guess APIs, versions, flags, commit SHAs, or package names. Verify by reading code or docs before asserting.
 
 ## Token/context management
@@ -81,19 +83,20 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## What this repo is
 
 Widgets, themes, and scripts for TriliumNext Notes, distributed via a custom addon manager, **TAM**
-(`addons/trilium-addon-manager@beatlink/` — see its README for the full manifest schema). Each
+(`addons/trilium-addon-manager@beatlink/` — see its `MANIFEST.md` for the full manifest schema and
+`ARCHITECTURE.md` for how it resolves one). Each
 addon lives at `addons/{name}@{author}/_tam_manifest_.json`, installed by TAM directly from this
 repo (no build step).
 
 ## Commands
 
-Inside `nix-shell`:
+Inside `nix-shell resources/nix/`:
 
 ```bash
 validate                       # lint all manifests — closest thing to a test suite; run after any manifest/source edit
 tam_to_zip <manifest-dir>      # manifest -> Trilium-importable ZIP
 zip_to_tam <zip>                # Trilium export ZIP -> starting manifest + source files
-generate_pages                 # rebuild docs/ (incl. catalog.json)
+generate_pages                 # rebuild resources/docs/ (incl. catalog.json)
 generate_readme                # regenerate README.md's addon table
 ```
 
