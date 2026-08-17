@@ -2,13 +2,13 @@
 
 A single-command way to boot a real Trilium instance, deploy TAM into it, and drive it with
 Playwright — no manual browser clicking, no locally-cloned Trilium checkout, no separate setup
-steps. Everything is fetched and built by Nix via this repo's [`flake.nix`](../../nix/flake.nix)
+steps. Everything is fetched and built by Nix via this repo's [`flake.nix`](../nix/flake.nix)
 (Trilium's own repo as a flake input).
 
 ## Run it
 
 ```bash
-nix develop ./nix     # once per shell session — builds trilium-server, sets $TRILIUM_SRC, installs deps
+nix develop ./resources/nix   # once per shell session — builds trilium-server, sets $TRILIUM_SRC, installs deps
 run_tests       # the whole flow: seed + start + deploy TAM + run the Playwright suite + stop
 ```
 
@@ -25,7 +25,7 @@ TRILIUM_TESTING_NO_RESEED=1 run_tests   # reuse the existing snapshot (skip the 
 
 The whole harness -- server lifecycle, http client, page wrapper, the
 `test`/`expect` fixtures, and the Playwright lifecycle hook -- lives in one file,
-[`testing.js`](testing.js). `playwright.config.js` (repo root) is the thin
+[`testing.js`](testing.js). `playwright.config.js` (next to it) is the thin
 Playwright entry point that wires it in:
 
 - **globalSetup** (`testing.js`'s default export) calls `prepare()`, which:
@@ -138,11 +138,11 @@ trilium_harness stop
 
 ## Files
 
-- `../../playwright.config.js` — the thin Playwright entry point (points `globalSetup` at
+- `playwright.config.js` — the thin Playwright entry point (points `globalSetup` at
   `testing.js`, sets reporter/timeout/browser opts).
-- `../../nix/flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
+- `../nix/flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
   `run_tests` and `trilium_harness` shell functions.
-- `../../nix/shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
+- `../nix/shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
 - `testing.js` — **the whole harness in one file**: all the primitives (seed / start / stop /
   prepare / http client / page wrapper / addon server / `installViaTam`), the `test`/`expect`
   fixtures, the `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI

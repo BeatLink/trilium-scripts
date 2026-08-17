@@ -5,11 +5,11 @@
   "private": true,
   "type": "commonjs",
   "bin": {
-    "tamhelper": "resources/scripts/tamhelper.js"
+    "tamhelper": "scripts/tamhelper.js"
   },
   "scripts": {
-    "tamhelper": "node resources/scripts/tamhelper.js",
-    "test": "playwright test"
+    "tamhelper": "node scripts/tamhelper.js",
+    "test": "playwright test --config testing/playwright.config.js"
   },
   "dependencies": {
     "marked": "^12.0.2",

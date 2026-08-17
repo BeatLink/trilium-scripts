@@ -1,4 +1,4 @@
-docs/
+resources/docs/
 *.zip
 node_modules/
 resources/testing/data/
