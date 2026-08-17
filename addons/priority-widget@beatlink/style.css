@@ -1,0 +1,30 @@
+#right-pane .body-wrapper:has(#x-priority-picker-widget), #right-pane .card-body:has(#x-priority-picker-widget) {
+    contain: none !important;
+    overflow: visible !important;
+}
+
+#x-priority-picker-widget {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem;
+}
+
+#x-priority-picker-widget div {
+    width: 100% !important
+}
+
+#x-priority-picker-widget button {
+    width: 100% !important;
+    text-align: left;
+    anchor-name: --x-priority-picker-anchor;
+}
+
+#x-priority-picker-widget ul {
+    position: fixed !important;
+    position-anchor: --x-priority-picker-anchor;
+    width: anchor-size(width) !important;
+}

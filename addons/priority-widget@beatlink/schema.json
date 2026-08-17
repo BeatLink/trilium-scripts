@@ -1,0 +1,81 @@
+{
+    "selected": {
+        "type": "reference",
+        "label": "Active Profile",
+        "description": "Which priority profile the picker dropdown offers. Switching profiles changes both the dropdown options and the note label they are written to, so notes tagged under one profile keep their old label until re-set under the new one.",
+        "registry": "profiles"
+    },
+    "profiles": {
+        "type": "registry",
+        "label": "Profiles",
+        "description": "The selectable priority profiles. Each profile has its own note label and its own ordered registry of priority levels; only the profile chosen in Active Profile is offered by the picker.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "description": "The profile's display name, shown in the Active Profile dropdown.",
+                "default": ""
+            },
+            "label": {
+                "type": "string",
+                "label": "Label Name",
+                "description": "The note label this profile reads and writes, without the leading #. The widget only appears on notes that declare it via #label:<name>.",
+                "default": "priority"
+            },
+            "priorities": {
+                "type": "registry",
+                "label": "Priorities",
+                "description": "The priority levels this profile offers, in display order.",
+                "default": {},
+                "itemSchema": {
+                    "key": {
+                        "type": "string",
+                        "label": "Key",
+                        "description": "Stable identifier stored on tagged notes as the label value. The numeric prefix exists so notes sort by priority — display order is this registry's own key order, so reordering never rewrites a note. Changing a key after notes are tagged orphans their label.",
+                        "default": ""
+                    },
+                    "title": {
+                        "type": "string",
+                        "label": "Title",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Color",
+                        "description": "Written to the note's #color label alongside the priority. Leave unset to not touch #color — as the Color profile does, since its keys are already colors.",
+                        "default": ""
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "label": "Enabled",
+                        "description": "Whether this priority level appears in the picker dropdown and in the Missing Priorities triage page.",
+                        "default": true
+                    }
+                }
+            }
+        }
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are hidden from the Priority picker widget and skipped by the Missing Priorities triage list.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #priority or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
+            }
+        }
+    }
+}
