@@ -31,12 +31,10 @@ function NoteActionsWidget(){
 
     return (
         <RightPanelWidget title="Note Actions">
-            <div className="agenda-widget">
-                <div>
-                    {actions.map(({ key, icon, text, onClick }) => (
-                        <Button key={key} icon={icon} text={text} onClick={onClick} />
-                    ))}
-                </div>
+            <div className="hoist-note-actions">
+                {actions.map(({ key, icon, text, onClick }) => (
+                    <Button key={key} icon={icon} text={text} onClick={onClick} />
+                ))}
             </div>
         </RightPanelWidget>
     )

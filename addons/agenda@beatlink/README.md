@@ -1,7 +1,7 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, in two widgets sharing one
-configuration. The Task widget (start/due dates, duration, recurrence,
+A schema-driven, multi-profile task/agenda system for TriliumNext, built around the Overview widget.
+The Task widget (start/due dates, duration, recurrence,
 Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 — install it alongside this one for the full Task pane. The two are fully independent: this addon ships
 none of that addon's code and reads none of its settings, and vice versa. They interoperate only through
@@ -9,21 +9,23 @@ note-label conventions and the `agenda:tasksChanged` event. The My Day focus pan
 [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md), and the GTD Organize workflow is
 [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md).
 
-## Widgets
+## Widget
 
 - **Overview** — a right-pane widget whose per-profile search/filter/sort/prefix/color rules re-file
   the active profile's matching notes under a single shared overview note, shown as a built-in
   Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
   Ships the **Agenda Editor** page that edits the whole configuration.
-- **Note Actions** — a right-pane widget shown on every note with two quick actions, Zen Mode and
-  Hoist Note, independent of the Task widget's actionable-note gating.
+
+The **Note Actions** widget (Zen Mode / Hoist Note quick actions) moved to
+[`hoist-note@beatlink`](../hoist-note@beatlink/README.md), which already owned the hoist toggle.
+
 My Day (the note-detail countdown timer, and the optional loops that append due tasks and send due
 notifications) moved to [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md). It clones this
 addon's overview/query libraries to resolve which tasks are due from the active profile.
 
 ## Organize (GTD triage)
 
-The opinionated Collect → Organize workflow (notebook provisioning + the triage page) is now a
+The opinionated Collect → Organize workflow (the triage page) is now a
 separate addon, [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) — install it
 alongside this one for the full GTD flow.
 
@@ -36,11 +38,11 @@ tab (and is mirrored on Organize's own Dimensions tab).
 
 ## Templates
 
-The three structural templates the Organize workflow scaffolds with — **AreaCollection** (an area
-root), **TypeCollection** (a per-template bucket inside an area), and **Special** (the Inbox / My Day /
-Agenda singletons) — moved to [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)
-along with the provisioner that creates them. The item templates — Ideas, Goal, Routine, Task, Future,
-Project, Note — ship with [`template-picker@beatlink`](../template-picker@beatlink/README.md) instead
+The structural templates the Organize workflow used to scaffold with are gone, apart from
+**AreaCollection** (an area root), which ships with
+[`template-picker@beatlink`](../template-picker@beatlink/README.md); nothing provisions a notebook
+structure any more, so those root notes are yours to create and label. The item templates — Ideas,
+Goal, Routine, Task, Future, Project, Note — ship with [`template-picker@beatlink`](../template-picker@beatlink/README.md) instead
 (a dependency of this addon), since assigning them is entirely its concern now. Each carries
 `#template` (so it is discoverable by Trilium and the Template Picker widget). Template content is
 yours to customize — every template lives under its owning addon's `persistenceRoot`, so a future
@@ -53,7 +55,7 @@ its own right-pane widget (a note's `~template` relation, not a `#type` label).
 **`#templatePickerConfig`** anchor) for two things only: which enabled entries get an Organize bucket,
 and which entries are marked **Actionable** — those items flow through the priority/start-date queues.
 There's nothing to configure on agenda's side; add/rename/reorder/enable templates in
-template-picker's own settings and Organize's buckets follow on the next **Workflow Setup** run.
+template-picker's own settings and Organize reads the change straight away.
 
 Whether a note's Task editor shows at all (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 is installed) is the separate **`#agendaTaskWidget`** label, set as an inheritable label on the

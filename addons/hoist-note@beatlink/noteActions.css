@@ -1,0 +1,21 @@
+/* The right pane clips and contains its cards, which crops the widget's buttons. */
+#right-pane .body-wrapper:has(.hoist-note-actions),
+#right-pane .card-body:has(.hoist-note-actions) {
+    contain: none !important;
+    overflow: visible !important;
+}
+
+.hoist-note-actions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+
+    button {
+        width: 100% !important;
+
+        * {
+            text-align: center;
+        }
+    }
+}

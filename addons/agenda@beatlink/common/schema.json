@@ -102,7 +102,7 @@
             "scaffoldsAreas": {
                 "type": "boolean",
                 "label": "Scaffold A Root Note Per Value",
-                "description": "Workflow Setup builds one notebook root note per value of this dimension.",
+                "description": "This dimension is the one whose values each get a notebook root note.",
                 "default": false
             },
             "values": {

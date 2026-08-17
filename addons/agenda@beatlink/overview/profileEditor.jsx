@@ -55,8 +55,8 @@ export default function ProfileEditor() {
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
     // Every tab here comes from the schema's own `category`/`tab` keys. The
-    // Organize-note picker and the Workflow Setup button moved out to
-    // agenda-organize@beatlink's own editor along with the Organize config keys;
+    // Organize-note picker moved out to agenda-organize@beatlink's own editor
+    // along with the Organize config keys;
     // the Task label and Reschedule Options panels moved out to
     // agenda-task@beatlink's own Task Settings page along with #agendaTaskConfig.
     return (
