@@ -8,17 +8,12 @@ export default function AgendaSettings() {
     useEffect(() => {
         (async () => {
             setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
+            const target = await api.currentNote.getRelationTarget("configNote")
             setConfigNoteId(target.noteId)
         })()
     }, [])
 
     if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
 
-    return (
-        <div>
-            <h3>Cinnamon Applet Agenda Settings</h3>
-            <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
-        </div>
-    )
+    return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
 }
