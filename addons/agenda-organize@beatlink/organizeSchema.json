@@ -1,0 +1,38 @@
+{
+    "organizeNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Organize Note",
+        "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
+        "category": "Organize",
+        "tab": "Organize Note"
+    },
+    "morningTime": {
+        "type": "string",
+        "label": "Morning",
+        "description": "Time (HH:mm) the Organize \"Morning\" button sets on a task's start date.",
+        "category": "Organize",
+        "tab": "Times"
+    },
+    "noonTime": {
+        "type": "string",
+        "label": "Noon",
+        "description": "Time (HH:mm) the Organize \"Noon\" button sets.",
+        "category": "Organize",
+        "tab": "Times"
+    },
+    "eveningTime": {
+        "type": "string",
+        "label": "Evening",
+        "description": "Time (HH:mm) the Organize \"Evening\" button sets.",
+        "category": "Organize",
+        "tab": "Times"
+    },
+    "nightTime": {
+        "type": "string",
+        "label": "Night",
+        "description": "Time (HH:mm) the Organize \"Night\" button sets.",
+        "category": "Organize",
+        "tab": "Times"
+    }
+}

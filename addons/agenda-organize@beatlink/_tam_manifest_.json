@@ -1,0 +1,380 @@
+{
+    "id": "agenda-organize@beatlink",
+    "name": "Agenda Organize",
+    "description": "The Organize triage UI from agenda@beatlink. Nothing provisions the notebook structure any more: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Owns its own settings note (organizeSchema.json/organizeConfig.json) tagged #agendaOrganizeConfig - the Organize note picker and the four quick-times - independent of agenda@beatlink's #agendaConfig. The classification `dimensions` registry deliberately stays in agenda@beatlink and is read cross-addon via #agendaConfig, because agenda's Overview derives its prefix/color/grouping/filter variants from the same list these triage queues write to; a local copy would silently drift. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Every cross-addon read degrades gracefully: until roots carry the identity labels the queues are simply empty.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "3.3.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "organize-editor-page",
+        "notes": [
+            {
+                "id": "organize-page-src",
+                "title": "organizePage.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "organizePage.jsx"
+            },
+            {
+                "id": "organize-lib",
+                "title": "organize.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "organize.js"
+            },
+            {
+                "id": "organize-dimensions",
+                "title": "organizeDimensions.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "organizeDimensions.jsx"
+            },
+            {
+                "id": "organize-settings",
+                "title": "organizeSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "organizeSettings.js"
+            },
+            {
+                "id": "organize-editor-page",
+                "title": "Organize Editor",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "organize-editor",
+                "title": "organizeEditor.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "organizeEditor.jsx"
+            },
+            {
+                "id": "organize-schema",
+                "title": "organizeSchema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "organizeSchema.json"
+            },
+            {
+                "id": "organize-defaults",
+                "title": "organizeDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "organizeDefaults.json"
+            },
+            {
+                "id": "organize-config",
+                "title": "organizeConfig.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "organize-settings-note",
+                "title": "Organize Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "organize-css",
+                "title": "organize.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "organize.css"
+            },
+            {
+                "id": "dimensions",
+                "title": "dimensions.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../agenda@beatlink/common/dimensions.js"
+            },
+            {
+                "id": "registry",
+                "title": "templateRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../template-picker@beatlink/templateRegistry.jsx"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "organize-page-src"
+            },
+            {
+                "parent": "root",
+                "child": "organize-editor-page"
+            },
+            {
+                "parent": "root",
+                "child": "organize-settings-note"
+            },
+            {
+                "parent": "root",
+                "child": "organize-schema"
+            },
+            {
+                "parent": "root",
+                "child": "organize-defaults"
+            },
+            {
+                "parent": "root",
+                "child": "organize-css"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "organize-config"
+            },
+            {
+                "parent": "organize-editor-page",
+                "child": "organize-editor"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "organize-dimensions"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-editor",
+                "child": "dimensions"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-dimensions"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-lib"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "dimensions"
+            },
+            {
+                "parent": "organize-dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-dimensions",
+                "child": "organize-settings"
+            },
+            {
+                "parent": "organize-lib",
+                "child": "registry"
+            },
+            {
+                "parent": "organize-lib",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            }
+        ],
+        "relations": [
+            {
+                "from": "organize-editor-page",
+                "type": "renderNote",
+                "to": "organize-editor"
+            },
+            {
+                "from": "organize-settings-note",
+                "type": "configNote",
+                "to": "organize-config"
+            },
+            {
+                "from": "organize-settings-note",
+                "type": "schemaNote",
+                "to": "organize-schema"
+            },
+            {
+                "from": "organize-config",
+                "type": "sourceConfig",
+                "to": "organize-defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "organize-settings-note",
+                "name": "agendaOrganizeConfig",
+                "value": ""
+            },
+            {
+                "note": "organize-page-src",
+                "name": "agendaOrganizeRender",
+                "value": ""
+            },
+            {
+                "note": "organize-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "organize-page-src",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-editor-page",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-editor",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-lib",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-dimensions",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-settings",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-settings-note",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-schema",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-config",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "organize-css",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-sort-down"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "organize-schema",
+            "defaults": "organize-defaults",
+            "config": "organize-config"
+        }
+    }
+}
