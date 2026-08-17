@@ -1,0 +1,21 @@
+{
+    "matchTitle": true,
+    "matchContent": true,
+    "matchAttributes": true,
+    "normalizeContent": true,
+    "caseInsensitiveTitle": false,
+    "ignoreEmpty": true,
+    "searchRoot": "",
+    "excludeFilters": {
+        "tamNotes": {
+            "name": "Addon-owned notes",
+            "query": "#TAMFILEID",
+            "enabled": true
+        },
+        "templates": {
+            "name": "Templates",
+            "query": "#template",
+            "enabled": true
+        }
+    }
+}
