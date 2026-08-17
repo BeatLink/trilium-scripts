@@ -1,122 +1,143 @@
 {
-    "id": "recipes@beatlink",
-    "name": "Recipes",
-    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. All data is a single persisted JSON note.",
+    "id": "diet-manager@beatlink",
+    "name": "Diet Manager",
+    "description": "A food and recipe database with a daily nutrition diary, built to replace Cronometer. Track foods with per-serving nutrition facts (manually entered or looked up via USDA FoodData Central and Open Food Facts), build recipes out of those foods with nutrition computed automatically per serving, and log servings eaten each day against configurable daily nutrient targets. Foods can be measured in several units at once (100 g or 1 tortilla), foods and recipes sort, filter and group by nestable categories, and a manually maintained grocery list tracks what to buy. All data is a single persisted JSON note.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/recipes@beatlink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/diet-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "2.13.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/diet-manager@beatlink/_tam_manifest_.json",
     "manifest": {
-        "settingsNote": "launcher",
+        "settingsNote": "settings-page",
         "notes": [
             {
                 "id": "launcher",
-                "title": "recipes@beatlink",
+                "title": "diet-manager@beatlink",
                 "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
                 "id": "widget",
-                "title": "recipesWidget.jsx",
+                "title": "dietManagerWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/recipesWidget.jsx"
+                "sourceUrl": "dietManagerWidget.jsx"
             },
             {
                 "id": "lib",
-                "title": "libRecipes.js",
+                "title": "libDietManager.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/libRecipes.js"
+                "sourceUrl": "libDietManager.js"
             },
             {
                 "id": "usda-lib",
                 "title": "libUsda.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/libUsda.js"
+                "sourceUrl": "libUsda.js"
             },
             {
                 "id": "off-lib",
                 "title": "libOpenFoodFacts.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/libOpenFoodFacts.js"
+                "sourceUrl": "libOpenFoodFacts.js"
             },
             {
                 "id": "style",
-                "title": "recipes.css",
+                "title": "dietManager.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/recipes.css"
+                "sourceUrl": "dietManager.css"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "database",
                 "title": "database.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/database.json"
+                "sourceUrl": "database.json"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "settings",
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/recipes@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -137,6 +158,10 @@
                 "child": "schema"
             },
             {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -146,6 +171,10 @@
             },
             {
                 "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
                 "child": "settings"
             },
             {
@@ -163,6 +192,10 @@
             {
                 "parent": "widget",
                 "child": "off-lib"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -219,12 +252,27 @@
                 "from": "launcher",
                 "type": "renderNote",
                 "to": "widget"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
             }
         ],
         "labels": [
             {
                 "note": "style",
                 "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "widget",
+                "name": "dietManagerRender",
                 "value": ""
             },
             {
@@ -241,8 +289,18 @@
                 "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

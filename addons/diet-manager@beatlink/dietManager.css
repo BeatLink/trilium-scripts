@@ -1,0 +1,555 @@
+.diet-manager-widget {
+    padding: 10px 14px 20px 14px;
+}
+
+.diet-manager-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 2px solid var(--main-border-color);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+}
+
+.diet-manager-tabs-spacer {
+    flex: 1;
+}
+
+.diet-manager-tab-btn {
+    background: none;
+    border: none;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--muted-text-color);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.diet-manager-tab-btn-active {
+    color: var(--main-text-color);
+    border-bottom-color: var(--main-border-color);
+    font-weight: 600;
+}
+
+.diet-manager-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+/* Capped so a long food or category name can't stretch the select across the toolbar. */
+.diet-manager-toolbar select {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 220px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-toolbar input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-category-new {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-toolbar-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.diet-manager-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.diet-manager-table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--main-border-color);
+    white-space: nowrap;
+}
+
+.diet-manager-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    vertical-align: middle;
+}
+
+.diet-manager-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.diet-manager-sort-arrow {
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+.diet-manager-group-row th {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.1));
+}
+
+.diet-manager-tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+}
+
+.diet-manager-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.diet-manager-tag-remove {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 0;
+}
+
+.diet-manager-tag-remove:hover {
+    color: var(--menu-item-hover-text-color, #c0392b);
+}
+
+.diet-manager-tag-add {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.diet-manager-suggest {
+    position: relative;
+}
+
+.diet-manager-suggest input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-suggest-grow {
+    flex: 1;
+}
+
+.diet-manager-suggest-unit {
+    width: 90px;
+}
+
+.diet-manager-suggestions {
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 2px 0 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--main-background-color);
+}
+
+.diet-manager-suggestions button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.diet-manager-suggestions button:hover {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+}
+
+.diet-manager-unit-select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    max-width: 160px;
+}
+
+.diet-manager-portion-list {
+    list-style: none;
+    margin: 0 0 8px 0;
+    padding: 0;
+}
+
+.diet-manager-portion-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+}
+
+.diet-manager-portion-row input[type="number"] {
+    width: 90px;
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-suggest-brand {
+    width: 130px;
+}
+
+.diet-manager-grocery-comment {
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-group {
+    margin: 14px 0 4px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-grocery-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.diet-manager-grocery-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-grocery-name {
+    flex: 1;
+}
+
+.diet-manager-grocery-row input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-done .diet-manager-grocery-name {
+    text-decoration: line-through;
+    color: var(--muted-text-color);
+}
+
+.diet-manager-cell-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.diet-manager-action {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.diet-manager-action-remove:hover {
+    color: var(--menu-item-hover-text-color, #c0392b);
+}
+
+.diet-manager-empty {
+    color: var(--muted-text-color);
+    text-align: center;
+    padding: 16px !important;
+}
+
+.diet-manager-form {
+    max-width: 640px;
+}
+
+.diet-manager-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.diet-manager-field-row {
+    display: flex;
+    gap: 12px;
+}
+
+.diet-manager-field-row .diet-manager-field {
+    flex: 1;
+}
+
+.diet-manager-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 6px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+}
+
+.diet-manager-form input[type="text"],
+.diet-manager-form input[type="number"],
+.diet-manager-form input[type="date"],
+.diet-manager-form select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.diet-manager-nutrient-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+    padding: 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.diet-manager-nutrient-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9em;
+}
+
+.diet-manager-nutrient-field input {
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-usda-search {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.diet-manager-usda-search input {
+    flex: 1;
+}
+
+.diet-manager-usda-results {
+    list-style: none;
+    margin: 0 0 12px 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.diet-manager-usda-results li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-usda-results li:last-child {
+    border-bottom: none;
+}
+
+.diet-manager-usda-empty {
+    color: var(--muted-text-color);
+    justify-content: center !important;
+}
+
+.diet-manager-usda-source {
+    color: var(--muted-text-color);
+    font-size: 0.85em;
+}
+
+.diet-manager-error {
+    color: #c0392b;
+    margin-bottom: 8px;
+}
+
+.diet-manager-ingredient-list {
+    list-style: none;
+    margin: 0 0 10px 0;
+    padding: 0;
+}
+
+.diet-manager-ingredient-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-ingredient-name {
+    flex: 1;
+}
+
+.diet-manager-ingredient-row input {
+    width: 80px;
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-add-ingredient {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.diet-manager-add-ingredient select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-add-ingredient input {
+    width: 80px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-preview {
+    padding: 8px 10px;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.1));
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.diet-manager-diary-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.diet-manager-diary-nav input[type="date"] {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-diary-totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.diet-manager-target {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.diet-manager-target-over {
+    border-color: #c0392b;
+    color: #c0392b;
+}
+
+.diet-manager-diary-entries {
+    list-style: none;
+    margin: 0 0 14px 0;
+    padding: 0;
+}
+
+.diet-manager-diary-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-diary-entry-servings {
+    color: var(--muted-text-color);
+}
+
+.diet-manager-diary-entry .diet-manager-action {
+    margin-left: auto;
+}
+
+.diet-manager-hint {
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.diet-manager-ok {
+    color: var(--muted-text-color);
+}
