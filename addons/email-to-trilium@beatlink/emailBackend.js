@@ -22,7 +22,7 @@ const { loadSettings, saveSettings } = require("libSettings.js")
 function getNoteIds() {
     const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
     const settingsNoteId = api.currentNote.getRelationValue("settingsNote")
-    const configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+    const configNoteId = api.getNote(settingsNoteId).getRelationValue("configNote")
     return { schemaNoteId, configNoteId }
 }
 
