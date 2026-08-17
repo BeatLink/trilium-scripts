@@ -5,16 +5,15 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-first-child@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.2",
+    "latestVersion": "1.5.0",
     "type": "script",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/cinnamon-applet-first-child@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-first-child@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
-        "settingsNote": "root",
+        "settingsNote": "launcher",
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "cinnamon-applet-first-child@beatlink",
                 "type": "render",
                 "mime": "text/html",
@@ -35,11 +34,18 @@
                 "sourceUrl": "schema.json"
             },
             {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -53,45 +59,110 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
                 "child": "script"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "schema"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "settings"
             },
             {
                 "parent": "script",
-                "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
             },
             {
                 "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             }
         ],
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {
@@ -110,9 +181,14 @@
                 "to": "settings"
             },
             {
-                "from": "root",
+                "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -120,12 +196,23 @@
                 "note": "script",
                 "name": "customRequestHandler",
                 "value": "first_child_panel"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [
-            "libsettings@beatlink"
-        ],
-        "exports": {},
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
