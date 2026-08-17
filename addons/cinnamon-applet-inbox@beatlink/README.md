@@ -12,7 +12,7 @@ renders a Settings screen with the following fields:
 | `apiKey`      | a random string you choose   | Shared secret checked against the applet's configured API key     |
 | `inboxNoteId` | pick a note                  | The note whose first line should be surfaced (uses a note picker) |
 
-Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
+Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `inboxPanel` (must match the `customRequestHandler` label on `cinnamon-applet-inbox.js`)
