@@ -10,7 +10,7 @@
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/diet-manager@beatlink/_tam_manifest_.json",
     "manifest": {
-        "settingsNote": "launcher",
+        "settingsNote": "settings-page",
         "notes": [
             {
                 "id": "launcher",
@@ -81,6 +81,13 @@
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": "database.json"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -164,6 +171,10 @@
             },
             {
                 "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
                 "child": "settings"
             },
             {
@@ -246,6 +257,11 @@
                 "from": "config",
                 "type": "sourceConfig",
                 "to": "defaults"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
             }
         ],
         "labels": [
@@ -273,6 +289,11 @@
                 "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
             }
         ],
         "readmeNote": "readme",
