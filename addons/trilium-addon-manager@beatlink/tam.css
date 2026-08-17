@@ -14,9 +14,38 @@
    copied rules above via the same palette/spacing/radii. */
 
 
-/*div:has(.TAM-body) {
-    height: 100% !important;
-}*/
+/* Give TAM a bounded height to fill.
+   `height: 100%` only resolves if every ancestor has a definite height, and a
+   `render` note has none: unlike canvas/mermaid/etc, "render" carries no
+   `isFullHeight` in Trilium's TYPE_MAPPINGS, so `.note-detail` never gets the
+   `full-height` class, the scrolling container is never made a flex column, and
+   the render wrapper is left at `height: auto`. TAM would then grow with its
+   content and hand the scrolling back to the page.
+   So the chain is built here instead, mirroring what Trilium's own
+   `.note-detail.full-height` rule does. Every selector is `:has(.TAM-body)`-gated
+   — this file is loaded globally as #appCss, so it must touch the note hosting
+   TAM and nothing else. */
+.scrolling-container:has(.TAM-body),
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    display: flex !important;
+    flex-direction: column !important;
+    /* Flex items default to min-height:auto, which lets content grow the box past
+       its parent instead of scrolling inside it. This is what actually confines
+       the scrolling to TAM. */
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* The scrolling container is sized by the split above it and stays the anchor;
+   everything below it takes the height that's left. */
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    flex: 1 1 auto !important;
+    height: auto !important;
+}
 
 .TAM-body {
 
@@ -36,7 +65,11 @@
         padding: 0 !important;
     }
 
-    display: block !important;
+    /* A column the height of the viewport: the header keeps to its own size and
+       the content takes the rest. The page itself never scrolls - main scrolls
+       inside its own box, as does the activity log when it's open over the top. */
+    display: flex !important;
+    flex-direction: column !important;
     position: relative !important;
     font-family: -apple-system,
     BlinkMacSystemFont,
@@ -47,9 +80,11 @@
     line-height: 1.6 !important;
     color: #1a1a2e !important;
     background: #f1f5f9 !important;
-    height: 100% !important;
-    overflow: auto !important;
-    max-height: 100% !important;
+    /* Fills the height established above rather than asking for 100% of an
+       auto-height parent. */
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
 
     /* Form controls don't inherit font by default in the UA stylesheet even
        after revert — restore it so buttons/inputs match the surrounding text. */
@@ -84,6 +119,7 @@
 
     /* Header --------------------------------------------------------------- */
     & header {
+        flex: 0 0 auto !important;
         background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
         color: #fff !important;
         padding: 28px 0 !important;
@@ -166,6 +202,13 @@
 
     /* Main --------------------------------------------------------------- */
     & main {
+        /* min-height:0 is what actually lets this shrink and scroll - a flex item
+           defaults to min-height:auto, which would grow the column past the
+           viewport and hand the scrolling back to the page. */
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        width: 100% !important;
         max-width: 1100px !important;
         margin: 0 auto !important;
         padding: 28px 24px !important;
@@ -654,24 +697,93 @@
        (install/update/uninstall/etc.) — most of these end in a full page
        reload, but the gap before that (or before a lighter refresh) had
        nothing on screen indicating work was happening. */
-    & .TAM-progress-overlay {
+    /* Activity log ------------------------------------------------------------ */
+    /* A page over the whole widget rather than a docked panel: it opens itself
+       whenever something is running, and is dismissed from its header or Esc.
+       Only the body scrolls - the header stays put, so the way out and the
+       "nothing is running" state are always on screen. */
+    & .TAM-log {
         position: absolute !important;
         inset: 0 !important;
         z-index: 100 !important;
         display: flex !important;
         flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 14px !important;
-        background: rgba(255, 255, 255, 0.85) !important;
-        backdrop-filter: blur(1px) !important;
+        overflow: hidden !important;
+        background: #0f172a !important;
+    }
 
-        & p {
-            color: #334155 !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
+    & .TAM-log-head {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 14px 16px !important;
+        border-bottom: 1px solid #1e293b !important;
+        color: #e2e8f0 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Whatever the head is showing - the busy label or the idle title - sits
+       left and pushes the buttons to the right edge. */
+    & .TAM-log-head > span {
+        margin-right: auto !important;
+    }
+
+    /* Clear and Close are the same kind of thing - both live in the header, both
+       styled alike. */
+    & .TAM-log-action {
+        cursor: pointer !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+
+        &:hover {
+            color: #e2e8f0 !important;
+            border-color: #64748b !important;
         }
     }
+
+    & .TAM-log-body {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        padding: 8px 16px 12px !important;
+        font-family: "SFMono-Regular", Consolas, monospace !important;
+        font-size: 12px !important;
+        line-height: 1.7 !important;
+    }
+
+    & .TAM-log-empty {
+        color: #64748b !important;
+    }
+
+    & .TAM-log-line {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        word-break: break-word !important;
+    }
+
+    & .TAM-log-time {
+        flex: 0 0 auto !important;
+        color: #475569 !important;
+    }
+
+    & .TAM-log-message {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    & .TAM-log-info .TAM-log-message { color: #cbd5e1 !important; }
+    & .TAM-log-step .TAM-log-message { color: #60a5fa !important; font-weight: 600 !important; }
+    & .TAM-log-done .TAM-log-message { color: #4ade80 !important; }
+    & .TAM-log-warn .TAM-log-message { color: #fbbf24 !important; }
+    & .TAM-log-error .TAM-log-message { color: #f87171 !important; }
 
     & .addon-content {
         min-width: 0 !important;
@@ -792,19 +904,67 @@
         }
     }
 
-    & .TAM-validation-content {
-        display: block !important;
-        font-family: "SFMono-Regular", Consolas, monospace !important;
-        font-size: 13px !important;
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        max-height: 300px !important;
-        overflow-y: auto !important;
-        padding: 12px !important;
-        background: #f1f5f9 !important;
+    & .TAM-diagnostics-reload {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+        border: 1px solid #fcd34d !important;
+        background: #fffbeb !important;
         border-radius: 6px !important;
+        font-size: 13px !important;
+        color: #78350f !important;
+    }
+
+    & .TAM-diagnostics-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 13px !important;
         color: #1a1a2e !important;
-        user-select: all !important;
+
+        & th,
+        & td {
+            text-align: left !important;
+            vertical-align: top !important;
+            padding: 8px 10px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        & th {
+            font-weight: 600 !important;
+            color: #64748b !important;
+            white-space: nowrap !important;
+        }
+
+        /* The repair column keeps to its button; Details takes what's left. */
+        & td:last-child {
+            width: 1% !important;
+            white-space: nowrap !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            padding: 1px 5px !important;
+            background: #f1f5f9 !important;
+            border-radius: 4px !important;
+            word-break: break-all !important;
+        }
+    }
+
+    & .TAM-diagnostics-manual {
+        font-size: 12px !important;
+        color: #64748b !important;
+    }
+
+    /* Stacked rather than inline: a row offering both a repoint and an uninstall
+       shouldn't widen the column past the details it belongs to. */
+    & .TAM-diagnostics-fixes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
     }
 
     & .TAM-validation-buttons {
