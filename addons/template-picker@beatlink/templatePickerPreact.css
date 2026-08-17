@@ -1,0 +1,52 @@
+.template-picker-settings {
+    padding: 16px;
+}
+
+.template-picker-blurb {
+    margin-bottom: 1rem;
+}
+
+.template-picker-scan {
+    margin-bottom: 0.5rem;
+}
+
+.template-picker-status {
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+#right-pane .body-wrapper:has(#x-template-picker-widget),
+#right-pane .card-body:has(#x-template-picker-widget) {
+    contain: none !important;
+    overflow: visible !important;
+}
+
+
+#x-template-picker-widget {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem;
+}
+
+#x-template-picker-widget div {
+    width: 100% !important
+}
+
+#x-template-picker-widget button {
+    width: 100% !important;
+    text-align: left;
+    anchor-name: --x-template-picker-anchor;
+}
+
+#x-template-picker-widget ul {
+    position: fixed !important;
+    position-anchor: --x-template-picker-anchor;
+    width: anchor-size(width) !important;
+
+    /*left: 50% !important;
+    transform: translate(-50%, 0) !important;*/
+}
