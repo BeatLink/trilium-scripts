@@ -1,0 +1,75 @@
+{
+    "renderNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Render Note",
+        "description": "An existing note to turn into a second view of the diet manager. Selecting it converts that note into a render note pointing at the widget; clearing it reverts the previously-chosen note to a text note.",
+        "tab": "Render Note"
+    },
+    "usdaApiKey": {
+        "type": "string",
+        "label": "USDA FoodData Central API Key",
+        "description": "Free key from https://fdc.nal.usda.gov/api-key-signup.html. Leave blank to disable food lookup and enter nutrition facts manually.",
+        "tab": "USDA Lookup"
+    },
+    "prefillGroceryComment": {
+        "type": "boolean",
+        "label": "Prefill grocery comments from the food",
+        "description": "When a food is added to the grocery list, start its comment from the food's own comment. The line's copy can still be edited without touching the food.",
+        "tab": "Grocery"
+    },
+    "targetCalories": {
+        "type": "number",
+        "label": "Calories",
+        "tab": "Daily Targets",
+        "subgroup": "Macros"
+    },
+    "targetProtein": {
+        "type": "number",
+        "label": "Protein (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Macros"
+    },
+    "targetCarbs": {
+        "type": "number",
+        "label": "Carbs (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Macros"
+    },
+    "targetFat": {
+        "type": "number",
+        "label": "Fat (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Macros"
+    },
+    "targetFiber": {
+        "type": "number",
+        "label": "Fiber (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Other"
+    },
+    "targetSugar": {
+        "type": "number",
+        "label": "Sugar (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Other"
+    },
+    "targetSaturatedFat": {
+        "type": "number",
+        "label": "Saturated Fat (g)",
+        "tab": "Daily Targets",
+        "subgroup": "Other"
+    },
+    "targetSodium": {
+        "type": "number",
+        "label": "Sodium (mg)",
+        "tab": "Daily Targets",
+        "subgroup": "Other"
+    },
+    "targetCholesterol": {
+        "type": "number",
+        "label": "Cholesterol (mg)",
+        "tab": "Daily Targets",
+        "subgroup": "Other"
+    }
+}
