@@ -1,0 +1,83 @@
+{
+    "id": "drawio@siriusxt",
+    "name": "Draw.io",
+    "description": "Integrates Draw.io diagram editing into TriliumNext \u2014 click any SVG note to edit it inline using the embedded Draw.io editor",
+    "author": "SiriusXT",
+    "homepage": "https://github.com/SiriusXT/trilium-drawio",
+    "license": "MIT",
+    "latestVersion": "0.8.2",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/drawio@siriusxt/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "drawio@siriusxt",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "trilium-drawio",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "trilium-drawio.js"
+            },
+            {
+                "id": "template",
+                "title": "drawio",
+                "type": "image",
+                "mime": "image/svg+xml",
+                "sourceUrl": "drawio.svg"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "widget"
+            },
+            {
+                "parent": "persistence",
+                "child": "template"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "launcher",
+                "type": "templateNote",
+                "to": "template"
+            }
+        ],
+        "labels": [
+            {
+                "note": "widget",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "template",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
