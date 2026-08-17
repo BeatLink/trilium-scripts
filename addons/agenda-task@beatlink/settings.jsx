@@ -1,9 +1,8 @@
 import { SettingsPage } from "libSettingsUI.jsx"
 import { RescheduleOptionsPanel } from "rescheduleOptions.jsx"
 
-// Standalone settings page for this addon, shown via TAM's "Addon Settings"
-// button when installed without agenda@beatlink (whose Agenda Editor embeds
-// these same panels instead). taskSchema.json already declares the label
+// This addon's settings page, shown via TAM's "Addon Settings" button and the
+// only place its config is edited. taskSchema.json already declares the label
 // fields with category/tab "Settings"; rescheduleOptions is schema-hidden and
 // rendered here via the rich panel instead of a raw rrule text box.
 export default function TaskSettings() {

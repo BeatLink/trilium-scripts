@@ -2,7 +2,8 @@
 
 A right-pane widget for a note's start/due dates, duration, recurrence, and an Actions section with
 Complete Task and a row of reschedule buttons. Split out from `agenda@beatlink` (which still ships
-Overview, My Day, and Organize) so Task can be installed, updated, and configured independently.
+Overview and Note Actions) so Task can be installed, updated, and configured independently — the two
+addons no longer share any code or settings.
 
 Each of the three sections — Dates and Duration, Recurrence, Actions — is a collapsible disclosure,
 open by default.
@@ -21,30 +22,32 @@ End of Month (`FREQ=MONTHLY;BYMONTHDAY=-1`).
 
 ## Configuration
 
-Task owns its own settings note (`schema.json`/`config.json`) tagged `#agendaTaskConfig`, independent
-of `agenda@beatlink`'s `#agendaConfig` — the label names it reads/writes (start/due date/time,
-duration, recurrence) and the reschedule buttons' option registry. This addon's own **Task Settings**
-page (TAM's "Addon Settings" button) edits it directly. If `agenda@beatlink` is also installed, its
-Agenda Editor embeds the same two panels (**Settings** and **Reschedule Options** tabs) instead, so
-there's one editing surface either way — both read/write the same `#agendaTaskConfig` note.
+Task owns its own settings note (`taskSchema.json`/`taskDefaults.json`/`taskConfig.json`) tagged `#agendaTaskConfig` — the label
+names it reads/writes (start/due date/time, duration, recurrence) and the reschedule buttons' option
+registry. Its own **Task Settings** page (TAM's "Addon Settings" button) is the only place that edits
+it.
 
-## Exports
-
-Other addons (`agenda@beatlink`) reference these notes without a hard install-order dependency, via
-TAM's `sourceUrl` dedup-clone: declare a note with the identical `sourceUrl` and it clones in rather
-than re-fetching if this addon is already installed.
-
-| Export | What it is |
-|---|---|
-| `lib-task` | `libAgendaTask.js` — complete/reschedule/refresh-display-labels logic, used by `agenda@beatlink`'s Overview query/render path. |
-| `lib-recurrence` | `libRecurrence.js` — rrule parsing/formatting, required by `lib-task`. |
-| `recurrence-picker` | `recurrencePicker.jsx` — the standalone recurrence editor component, reused by `reschedule-options`. |
-| `reschedule-options` | `rescheduleOptions.jsx` — the Reschedule Options settings panel. |
-| `task-labels-panel` | `taskLabelsPanel.jsx` — the label-name overrides settings panel. |
-
-## Split from agenda@beatlink
+## Independence from agenda@beatlink
 
 Task used to live inside `agenda@beatlink` (`task/` folder), sharing its `#agendaConfig` settings note.
-As of this split, Task has its own settings note and anchor tag. An existing install's first read after
-updating both addons copies the old shared label/reschedule-option values into the new note
-automatically (see `agendaTaskSettings.js`'s migration step) — no manual action needed.
+The two are now fully decoupled in both directions: neither ships the other's code, neither reads the
+other's settings note, and neither declares the other as a TAM dependency. Either one runs on its own.
+
+What they still share is a vocabulary, not a wire:
+
+| Convention | Who writes it | Who reads it |
+|---|---|---|
+| start/due datetime + recurrence label names | this addon | `agenda@beatlink` and `agenda-myday@beatlink`, each from their own copy of the setting |
+| `durationDisplay` / `recurrenceDisplay` | this addon | `agenda@beatlink`'s overview columns, if installed |
+| `agenda:tasksChanged` (`api.triggerEvent`) | this addon, after any change | `agenda@beatlink`'s Overview, if installed |
+| `#agendaTaskWidget` (inheritable, from the item's template) | `template-picker@beatlink`'s templates | this addon, to decide whether the pane shows |
+
+The cost of that independence: renaming a label name here means renaming it in each other installed
+addon that reads it. Nothing detects the drift for you.
+
+## Upgrading from 2.x
+
+Version 3.0.0 removes the one-time migration that copied label names and Reschedule Options out of
+`agenda@beatlink`'s `#agendaConfig` note. Any install that ran a 2.x version at least once has already
+migrated and is unaffected. Installing 3.0.0 fresh onto a pre-4.0.0 agenda gets the default label names
+instead of the old shared ones — re-enter them on the Task Settings page if you had customized them.

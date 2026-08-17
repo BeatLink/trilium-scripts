@@ -20,14 +20,13 @@ export async function getAgendaSettings() {
 
     const settings = await loadSettings(schemaNoteId, configNoteId)
 
+    // The three task labels agenda itself reads (overview columns, iCal feed,
+    // due notifications), declared in agenda's own schema. The rest of the task
+    // vocabulary - the split date/time labels and duration - is written and read
+    // only by agenda-task@beatlink, out of its own #agendaTaskConfig note.
     const constants = {
         START_DATETIME_LABEL: settings.startDatetimeLabel,
-        START_DATE_LABEL: settings.startDateLabel,
-        START_TIME_LABEL: settings.startTimeLabel,
         DUE_DATETIME_LABEL: settings.dueDatetimeLabel,
-        DUE_DATE_LABEL: settings.dueDateLabel,
-        DUE_TIME_LABEL: settings.dueTimeLabel,
-        DURATION_LABEL: settings.durationLabel,
         RECURRENCE_LABEL: settings.recurrenceLabel
     }
 
