@@ -31,7 +31,10 @@ const DEFAULTS = {
         + 'AND not(note.parents.ancestors.labels.startDateTime != "") '
         + 'AND not(note.parents.ancestors.labels.dueDateTime != "")',
     startLabel: "startDateTime",
-    dueLabel: "dueDateTime"
+    dueLabel: "dueDateTime",
+    // Gates the per-task Add to My Day panel. Agenda's task templates set this
+    // as an inheritable label, so it marks exactly the notes that are tasks.
+    taskLabel: "agendaTaskWidget"
 }
 
 // My Day's own settings note ids, or null when it isn't discoverable. The
@@ -63,7 +66,8 @@ async function getMyDaySettings() {
         addToTop: values.addToTop ?? DEFAULTS.addToTop,
         taskSearch: values.taskSearch || DEFAULTS.taskSearch,
         startLabel: values.startLabel || DEFAULTS.startLabel,
-        dueLabel: values.dueLabel || DEFAULTS.dueLabel
+        dueLabel: values.dueLabel || DEFAULTS.dueLabel,
+        taskLabel: values.taskLabel || DEFAULTS.taskLabel
     }
 }
 
@@ -131,13 +135,13 @@ async function getSuggestedTasks(settings, myDayNoteId) {
         .filter(bucket => bucket.tasks.length > 0)
 }
 
-// Files a link to the task onto the My Day note, skipping notes already there.
-// `addToTop` prepends instead of appending.
+// Files a link to the task onto the My Day note and clones the task under it,
+// skipping notes already there. `addToTop` prepends instead of appending.
 //
 // The task is tagged #agendaMyDay, which is what marks it as "on my day" - the
-// note content is just the visible rendering of that. agenda-task@beatlink
-// removes the label when a task is completed or rescheduled, and pruneMyDayNote()
-// then drops any linked note that has lost it.
+// note content and the clone are just the two visible renderings of that.
+// agenda-task@beatlink removes the label when a task is completed or rescheduled,
+// and pruneMyDayNote() then drops any linked or cloned note that has lost it.
 async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = false) {
     await api.runOnBackend((myDayNoteId, taskNoteId, renderAsTodo, addToTop) => {
         const taskNote = api.getNote(taskNoteId)
@@ -146,6 +150,13 @@ async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = 
         // Set before the content check: a task already linked on the note still
         // needs the label, otherwise the next prune would strip it right back out.
         taskNote.setLabel("agendaMyDay")
+
+        // Clone the task under the My Day note so today's work is a branch in the
+        // tree, not only a link in the page. Idempotent: an existing branch fails
+        // validateParentChild and no second one is made, and a clone that would
+        // create a cycle (a task that is already an ancestor of the My Day note)
+        // is refused rather than thrown.
+        api.ensureNoteIsPresentInParent(taskNoteId, myDayNoteId)
 
         const myDayNote = api.getNote(myDayNoteId)
         const myDayContent = myDayNote.getContent()
@@ -162,9 +173,10 @@ async function addTaskToMyDay(myDayNoteId, taskNoteId, renderAsTodo, addToTop = 
     }, [myDayNoteId, taskNoteId, renderAsTodo, addToTop])
 }
 
-// Removes a task's entry from the My Day note, including its wrapper: the
-// enclosing <li> when it was filed as a todo item, or the enclosing <p>
-// otherwise. Stripping just the <a> would leave an orphan checkbox behind.
+// Removes a task's entry from the My Day note: its clone, and its link along
+// with the link's wrapper - the enclosing <li> when it was filed as a todo item,
+// or the enclosing <p> otherwise. Stripping just the <a> would leave an orphan
+// checkbox behind.
 //
 // Only the containing <li> is removed, never the whole <ul> - the editor merges
 // consecutive todo items into a single list, so dropping the <ul> would take
@@ -176,6 +188,12 @@ async function removeTaskFromMyDay(myDayNoteId, taskNoteId) {
         // label have to end up consistent even when only one of them was set.
         const taskNote = api.getNote(taskNoteId)
         if (taskNote) taskNote.removeLabel("agendaMyDay")
+
+        // Unclone for the same reason, and ahead of the content check below: the
+        // branch has to go even when the link was already removed by hand. This
+        // cannot delete the task - Trilium refuses to remove a note's only
+        // remaining parent, so a note living *solely* under My Day just stays.
+        api.ensureNoteIsAbsentFromParent(taskNoteId, myDayNoteId)
 
         const myDayNote = api.getNote(myDayNoteId)
         const before = myDayNote.getContent()
@@ -194,9 +212,10 @@ async function removeTaskFromMyDay(myDayNoteId, taskNoteId) {
     }, [myDayNoteId, taskNoteId])
 }
 
-// Drops any linked task that has lost its #agendaMyDay label. The label is the
-// record of "this is on my day"; the note content is just its rendering, so a
-// link whose task is no longer tagged is stale and comes out.
+// Drops any linked or cloned task that has lost its #agendaMyDay label. The
+// label is the record of "this is on my day"; the note content and the clones
+// are just its renderings, so an entry whose task is no longer tagged is stale
+// and comes out.
 //
 // agenda-task@beatlink removes the label when a task is completed or its dates
 // change, which is what makes completed and rescheduled tasks disappear here.
@@ -210,14 +229,23 @@ async function pruneMyDayNote(myDayNoteId) {
     const content = await myDayNote.getContent()
 
     const linkedIds = [...content.matchAll(/href="#root\/([a-zA-Z0-9_]+)"/g)].map(m => m[1])
-    if (!linkedIds.length) return
+    // Clones count as being on the page too, so a task keeps getting cleaned up
+    // even if its link was deleted by hand. Read from the backend rather than
+    // froca so an archived child (what a completed task becomes) is still seen.
+    const clonedIds = await api.runOnBackend((myDayNoteId) => {
+        const note = api.getNote(myDayNoteId)
+        return note ? note.getChildNotes().map(child => child.noteId) : []
+    }, [myDayNoteId])
+
+    const entryIds = new Set([...linkedIds, ...clonedIds])
+    if (!entryIds.size) return
 
     // Checked per note rather than via a #agendaMyDay search: completing a task
     // archives it, and archived notes are excluded from search results, so a
     // search would report every completed task as untagged whether or not it
     // ever carried the label.
     const stale = []
-    for (const noteId of new Set(linkedIds)) {
+    for (const noteId of entryIds) {
         const note = await api.getNote(noteId)
         if (note && !note.hasLabel("agendaMyDay")) stale.push(noteId)
     }
