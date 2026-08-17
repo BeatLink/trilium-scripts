@@ -5,10 +5,10 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "0.0.6",
+    "latestVersion": "0.0.7",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/mobile-view@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {
@@ -16,21 +16,21 @@
                 "title": "MobileView.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/MobileView.jsx"
+                "sourceUrl": "MobileView.jsx"
             },
             {
                 "id": "setupButtons",
                 "title": "setupButtons.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/setupButtons.js"
+                "sourceUrl": "setupButtons.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/mobile-view@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             }
         ],
