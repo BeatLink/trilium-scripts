@@ -1,0 +1,6 @@
+{
+    "apiKey": "CHANGE_ME",
+    "searchQuery": "#dueDate != \"\" AND #dueDate < TODAY+1 orderBy #dueDate",
+    "dateLabel": "dueDate",
+    "taskOrder": "earliest"
+}
