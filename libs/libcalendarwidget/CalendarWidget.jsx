@@ -44,7 +44,8 @@ export function CalendarWidget({
     icsString,
     eventsUrl,
     initialView = "timeGridWeek",
-    slotDuration = "00:10:00"
+    slotDuration = "00:10:00",
+    onEventClick
 }) {
     const containerRef = useRef(null)
     const calendarRef = useRef(null)
@@ -70,7 +71,8 @@ export function CalendarWidget({
             initialView,
             slotDuration,
             slotLabelInterval: "01:00:00",
-            events: eventsConfig
+            events: eventsConfig,
+            eventClick: onEventClick ? (info) => onEventClick(info.event) : undefined
         })
         calendarRef.current.render()
 
@@ -78,7 +80,7 @@ export function CalendarWidget({
             calendarRef.current?.destroy()
             calendarRef.current = null
         }
-    }, [loaded, events, icsString, eventsUrl, initialView, slotDuration])
+    }, [loaded, events, icsString, eventsUrl, initialView, slotDuration, onEventClick])
 
     return <div ref={containerRef} className="libcalendarwidget-container" />
 }

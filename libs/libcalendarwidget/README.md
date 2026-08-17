@@ -39,6 +39,7 @@ Pass exactly one of `events`, `icsString`, or `eventsUrl`.
 | `eventsUrl`    | string | Any ics feed URL, fetched directly by FullCalendar's iCalendar plugin |
 | `initialView`  | string | FullCalendar view name (default `"timeGridWeek"`)                    |
 | `slotDuration` | string | FullCalendar time-slot duration (default `"00:10:00"`)                |
+| `onEventClick` | function | Optional. Called with the clicked FullCalendar `Event` object (wired to FullCalendar's own `eventClick`) |
 
 ## How the vendor scripts get loaded
 
