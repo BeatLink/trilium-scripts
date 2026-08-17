@@ -5,14 +5,11 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/togglenotes@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.4",
+    "latestVersion": "1.1.2",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/togglenotes@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/togglenotes@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "togglenote",
-        "dependencies": [],
-        "exports": {},
         "notes": [
             {
                 "id": "togglenote",
@@ -89,10 +86,15 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             }
         ],
         "children": [
+            {
+                "parent": "root",
+                "child": "togglenote"
+            },
             {
                 "parent": "togglenote",
                 "child": "settings-jsx"
@@ -102,7 +104,7 @@
                 "child": "config-js"
             },
             {
-                "parent": "config-js",
+                "parent": "persistence",
                 "child": "settings-json"
             },
             {
@@ -150,7 +152,7 @@
             },
             {
                 "from": "config-js",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "settings-json"
             },
             {
