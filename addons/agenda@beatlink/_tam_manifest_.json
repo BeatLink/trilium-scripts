@@ -1,21 +1,27 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A complete task/agenda system: a right-pane overview widget (search/filter/sort/prefix/color rules re-file matching notes and export an iCal feed, or leave notes in place for a virtual-only profile), a right-pane task-editing widget (dates/duration, recurrence, quick actions, rank), a Kanban/Table/Calendar Task View page, and a 'My Day' focus widget (a manual countdown timer plus mark-done) that appears inline on whichever note you designate as your My Day note. Wires together the libagenda*/lib*picker/libcalendar/libtimer/libcollapsible libraries with settings-driven constants and a schema-driven, multi-profile configuration (libsettings@beatlink).",
+    "description": "A schema-driven, multi-profile agenda system for TriliumNext, built around the Overview widget: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, plus the Agenda Editor page that edits the config. Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. Three sibling addons split out of this one and each own their own settings note: agenda-task@beatlink (the Task pane; #agendaTaskConfig), which this addon no longer references at all - it shares only a label vocabulary, declared independently on both sides, agenda-myday@beatlink (the My Day focus panel and timer; #agendaMyDayConfig) which clones this addon's query engine to find due tasks, and agenda-organize@beatlink (the GTD notebook provisioner and triage page; #agendaOrganizeConfig) which reads the dimensions registry back out of #agendaConfig so the two never drift.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.8.2",
+    "latestVersion": "9.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
         "settingsNote": "profile-editor-page",
         "notes": [
             {
-                "id": "root",
-                "title": "agenda@beatlink",
+                "id": "grp-common",
+                "title": "Common",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-overview",
+                "title": "Overview",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -25,21 +31,49 @@
                 "title": "agendaSettings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "agendaSettings.jsx"
+                "sourceUrl": "common/agendaSettings.jsx"
+            },
+            {
+                "id": "dimensions",
+                "title": "dimensions.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "common/dimensions.js"
+            },
+            {
+                "id": "migrate",
+                "title": "migrate.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "common/migrate.js"
+            },
+            {
+                "id": "common-css",
+                "title": "agendaCommon.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "common/agendaCommon.css"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "schema.json"
+                "sourceUrl": "common/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "common/defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -53,49 +87,42 @@
                 "title": "calendarEvents.ical",
                 "type": "code",
                 "mime": "text/plain",
-                "sourceUrl": "calendarEvents.ical"
+                "sourceUrl": "common/calendarEvents.ical"
             },
             {
-                "id": "now-note",
-                "title": "My Day",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "common-css",
-                "title": "agendaCommon.css",
+                "id": "lib-overview",
+                "title": "libAgendaOverview.js",
                 "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "agendaCommon.css"
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "overview/libAgendaOverview.js"
             },
             {
-                "id": "my-day-css",
-                "title": "myDay.css",
+                "id": "lib-config",
+                "title": "libAgendaConfig.js",
                 "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "myDay.css"
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "overview/libAgendaConfig.js"
+            },
+            {
+                "id": "lib-query",
+                "title": "libAgendaQuery.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "overview/libAgendaQuery.js"
             },
             {
                 "id": "overview",
                 "title": "agendaOverview.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "agendaOverview.jsx"
+                "sourceUrl": "overview/agendaOverview.jsx"
             },
             {
-                "id": "task",
-                "title": "agendaTask.jsx",
+                "id": "collapsible",
+                "title": "Collapsible.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "agendaTask.jsx"
-            },
-            {
-                "id": "my-day",
-                "title": "myDayWidget.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "myDayWidget.jsx"
+                "sourceUrl": "overview/Collapsible.jsx"
             },
             {
                 "id": "profile-editor-page",
@@ -109,118 +136,222 @@
                 "title": "profileEditor.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "profileEditor.jsx"
+                "sourceUrl": "overview/profileEditor.jsx"
             },
             {
                 "id": "profile-editor-css",
                 "title": "profileEditor.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "profileEditor.css"
-            },
-            {
-                "id": "task-view",
-                "title": "taskView.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "taskView.jsx"
-            },
-            {
-                "id": "task-view-css",
-                "title": "taskView.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "taskView.css"
-            },
-            {
-                "id": "calendar-view",
-                "title": "agendaCalendarView.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "agendaCalendarView.jsx"
+                "sourceUrl": "overview/profileEditor.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "libmultisort-lib",
+                "title": "libMultisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libmultisort/libmultisort.js"
+            },
+            {
+                "id": "libnotification-lib",
+                "title": "libNotification.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libnotification/libnotification.js"
+            },
+            {
+                "id": "libcalendar-lib",
+                "title": "libCalendar.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libcalendar/libCalendar.js"
+            },
+            {
+                "id": "ical-lib",
+                "title": "ical.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libical/ical.min.js"
+            },
+            {
+                "id": "ical-resource",
+                "title": "ical.min.js (resource)",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "../../libs/libical/ical.min.js"
             }
         ],
         "children": [
             {
                 "parent": "root",
-                "child": "agenda-settings"
+                "child": "grp-common"
             },
             {
                 "parent": "root",
-                "child": "schema"
+                "child": "grp-overview"
             },
             {
                 "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "root",
-                "child": "settings"
+                "parent": "grp-common",
+                "child": "agenda-settings"
             },
             {
-                "parent": "root",
-                "child": "ical"
+                "parent": "grp-common",
+                "child": "dimensions"
             },
             {
-                "parent": "root",
-                "child": "now-note"
+                "parent": "grp-common",
+                "child": "migrate"
             },
             {
-                "parent": "root",
+                "parent": "grp-common",
                 "child": "common-css"
             },
             {
-                "parent": "root",
-                "child": "my-day-css"
+                "parent": "grp-common",
+                "child": "schema"
             },
             {
-                "parent": "root",
+                "parent": "grp-common",
+                "child": "defaults"
+            },
+            {
+                "parent": "grp-common",
+                "child": "settings"
+            },
+            {
+                "parent": "grp-common",
+                "child": "ical"
+            },
+            {
+                "parent": "grp-overview",
                 "child": "overview"
             },
             {
-                "parent": "root",
-                "child": "task"
+                "parent": "grp-overview",
+                "child": "profile-editor-page"
             },
             {
-                "parent": "root",
-                "child": "my-day"
+                "parent": "grp-overview",
+                "child": "profile-editor-css"
             },
             {
-                "parent": "task",
-                "addon": "libdatesdurationpicker@beatlink",
-                "child": "lib"
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
-                "parent": "task",
-                "addon": "librecurrencepicker@beatlink",
-                "child": "lib"
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
             },
             {
-                "parent": "task",
-                "addon": "libactionbar@beatlink",
-                "child": "lib"
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
             },
             {
-                "parent": "task",
-                "addon": "librankpicker@beatlink",
-                "child": "lib"
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
             },
             {
-                "parent": "task",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
+                "parent": "libcalendar-lib",
+                "child": "ical-lib"
+            },
+            {
+                "parent": "ical-lib",
+                "child": "ical-resource"
             },
             {
                 "parent": "agenda-settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "dimensions"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "migrate"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-config",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-config",
+                "child": "dimensions"
+            },
+            {
+                "parent": "lib-query",
+                "child": "lib-config"
+            },
+            {
+                "parent": "lib-query",
+                "child": "libmultisort-lib"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "lib-query"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libnotification-lib"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libcalendar-lib"
             },
             {
                 "parent": "overview",
@@ -228,164 +359,44 @@
             },
             {
                 "parent": "overview",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
+                "child": "lib-overview"
             },
             {
                 "parent": "overview",
-                "addon": "libcollapsible@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "overview",
-                "addon": "libformcheckboxgroup@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "task",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "my-day",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "my-day",
-                "addon": "libtimer@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "my-day",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "my-day",
-                "addon": "libagendanow@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "root",
-                "child": "profile-editor-page"
+                "child": "collapsible"
             },
             {
                 "parent": "profile-editor-page",
                 "child": "profile-editor"
             },
             {
-                "parent": "root",
-                "child": "profile-editor-css"
-            },
-            {
                 "parent": "profile-editor",
                 "child": "agenda-settings"
             },
             {
                 "parent": "profile-editor",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "child": "dimensions"
             },
             {
-                "parent": "root",
-                "child": "task-view"
-            },
-            {
-                "parent": "root",
-                "child": "task-view-css"
-            },
-            {
-                "parent": "task-view",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "task-view",
-                "child": "calendar-view"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendaoverview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendatask@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendakanbanview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "task-view",
-                "addon": "libagendatableview@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "calendar-view",
-                "addon": "libcalendarwidget@beatlink",
-                "child": "lib"
-            },
-            {
-                "parent": "root",
-                "child": "readme"
+                "parent": "profile-editor",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
             {
                 "from": "settings",
-                "type": "AddonData:config",
+                "type": "configNote",
                 "to": "config"
             },
             {
-                "from": "overview",
+                "from": "settings",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "overview",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "overview",
+                "from": "settings",
                 "type": "icalNote",
                 "to": "ical"
-            },
-            {
-                "from": "task",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "task",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "task",
-                "type": "icalNote",
-                "to": "ical"
-            },
-            {
-                "from": "my-day",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "my-day",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "my-day",
-                "type": "nowNote",
-                "to": "now-note"
             },
             {
                 "from": "profile-editor-page",
@@ -393,44 +404,14 @@
                 "to": "profile-editor"
             },
             {
-                "from": "profile-editor",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "profile-editor",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "profile-editor",
-                "type": "icalNote",
-                "to": "ical"
-            },
-            {
                 "from": "overview",
                 "type": "profileEditorNote",
                 "to": "profile-editor-page"
             },
             {
-                "from": "task-view",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "task-view",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "task-view",
-                "type": "icalNote",
-                "to": "ical"
-            },
-            {
-                "from": "overview",
-                "type": "taskViewRenderNote",
-                "to": "task-view"
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -445,17 +426,7 @@
                 "value": ""
             },
             {
-                "note": "my-day-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
                 "note": "profile-editor-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "task-view-css",
                 "name": "appCss",
                 "value": ""
             },
@@ -465,33 +436,121 @@
                 "value": ""
             },
             {
-                "note": "task",
-                "name": "widget",
+                "note": "settings",
+                "name": "agendaConfig",
                 "value": ""
             },
             {
-                "note": "my-day",
-                "name": "widget",
+                "note": "libsettings-style",
+                "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "ical-resource",
+                "name": "customResourceProvider",
+                "value": "libIcal.js"
+            },
+            {
+                "note": "grp-common",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "agenda-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "migrate",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "common-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "schema",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "ical",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-query",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "profile-editor-page",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "profile-editor",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "profile-editor-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
             }
         ],
-        "dependencies": [
-            "libagendaoverview@beatlink",
-            "libagendatask@beatlink",
-            "libagendanow@beatlink",
-            "libtimer@beatlink",
-            "libcollapsible@beatlink",
-            "libformcheckboxgroup@beatlink",
-            "libsettings@beatlink",
-            "libdatesdurationpicker@beatlink",
-            "librecurrencepicker@beatlink",
-            "libactionbar@beatlink",
-            "librankpicker@beatlink",
-            "libcalendarwidget@beatlink",
-            "libagendakanbanview@beatlink",
-            "libagendatableview@beatlink"
-        ],
-        "exports": {},
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
