@@ -1,0 +1,32 @@
+{
+    "startDatetimeLabel": "startDateTime",
+    "startDateLabel": "startDate",
+    "startTimeLabel": "startTime",
+    "dueDatetimeLabel": "dueDateTime",
+    "dueDateLabel": "endDate",
+    "dueTimeLabel": "endTime",
+    "durationLabel": "duration",
+    "recurrenceLabel": "recurrence",
+    "rescheduleOptions": {
+        "today": {
+            "name": "Today",
+            "mode": "days",
+            "days": 0
+        },
+        "tomorrow": {
+            "name": "Tomorrow",
+            "mode": "days",
+            "days": 1
+        },
+        "next-weekend": {
+            "name": "Next Weekend",
+            "mode": "recurrence",
+            "recurrence": "FREQ=WEEKLY;BYDAY=SA"
+        },
+        "end-of-month": {
+            "name": "End of Month",
+            "mode": "recurrence",
+            "recurrence": "FREQ=MONTHLY;BYMONTHDAY=-1"
+        }
+    }
+}
