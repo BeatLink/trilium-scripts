@@ -16,6 +16,12 @@ present) and reference its fixed resource URLs directly:
 | FullCalendar core | `custom/libFullCalendar.js` |
 | iCalendar plugin | `custom/libFullCalendarICalendar.js` |
 
+Both notes use a plain `application/javascript` MIME (no `;env=frontend` suffix). A
+`customResourceProvider` serves content with `Content-Type` set verbatim to the note's own MIME, and
+a browser refuses to execute a `<script>` whose type carries the non-standard `env=frontend`
+parameter — so these notes, which are only ever loaded as script tags and never `require()`d, must
+use a clean media type.
+
 The iCalendar plugin expects a global `ICAL` to already exist when *it* loads (it reads `ICAL` as a
 plain reference at load time, not lazily) — see
 [libical@kewisch](../libical@kewisch/)'s `custom/libIcal.js` resource for that, and load scripts in
