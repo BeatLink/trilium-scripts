@@ -1,20 +1,19 @@
 {
     "id": "expanded@beatlink",
     "name": "Expanded",
-    "description": "Keep selected notes always expanded in the note tree. Toggle 'Always Expanded' from the right pane header on any note to pin it open permanently, even after restarting Trilium. The label used to mark a note is configurable in settings.",
+    "description": "Keep selected notes always expanded in the note tree. Tick the promoted 'Always Expanded' checkbox on any note to pin it open permanently, even after restarting Trilium. The label and its promoted definition are configurable in settings.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.1",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/expanded@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
-        "settingsNote": "root",
+        "settingsNote": "launcher",
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
                 "title": "expanded@beatlink",
                 "type": "render",
                 "mime": "text/html",
@@ -25,14 +24,15 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             },
             {
-                "id": "widget",
-                "title": "expandedWidget",
+                "id": "setupRoot",
+                "title": "setupRoot.js",
                 "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "expandedWidget.jsx"
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setupRoot.js"
             },
             {
                 "id": "updateExpanded",
@@ -42,6 +42,20 @@
                 "sourceUrl": "updateExpanded.js"
             },
             {
+                "id": "expandBranches",
+                "title": "expandBranches.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "expandBranches.js"
+            },
+            {
+                "id": "expandedConfig",
+                "title": "expandedConfig.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "expandedConfig.js"
+            },
+            {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
@@ -49,11 +63,18 @@
                 "sourceUrl": "schema.json"
             },
             {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -61,103 +82,199 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
             {
                 "parent": "root",
-                "child": "widget"
+                "child": "launcher"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
+                "child": "setupRoot"
+            },
+            {
+                "parent": "launcher",
                 "child": "updateExpanded"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
+                "child": "expandBranches"
+            },
+            {
+                "parent": "launcher",
                 "child": "schema"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
                 "child": "config"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "settings"
             },
             {
-                "parent": "root",
+                "parent": "launcher",
                 "child": "readme"
             },
             {
-                "parent": "widget",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
-            },
-            {
-                "parent": "settings",
-                "addon": "libsettings@beatlink",
-                "child": "ui"
+                "parent": "setupRoot",
+                "child": "libsettings-ui"
             },
             {
                 "parent": "updateExpanded",
-                "addon": "libsettings@beatlink",
-                "child": "backend"
+                "child": "expandedConfig"
+            },
+            {
+                "parent": "expandBranches",
+                "child": "expandedConfig"
+            },
+            {
+                "parent": "expandedConfig",
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
             {
-                "from": "widget",
-                "type": "scriptNote",
+                "from": "setupRoot",
+                "type": "attributeScript",
                 "to": "updateExpanded"
             },
             {
-                "from": "widget",
+                "from": "setupRoot",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "widget",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "updateExpanded",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "updateExpanded",
-                "type": "settingsNote",
-                "to": "settings"
-            },
-            {
-                "from": "settings",
-                "type": "schemaNote",
-                "to": "schema"
-            },
-            {
-                "from": "settings",
-                "type": "AddonData:config",
+                "from": "setupRoot",
+                "type": "configNote",
                 "to": "config"
             },
             {
-                "from": "root",
+                "from": "updateExpanded",
+                "type": "expandScript",
+                "to": "expandBranches"
+            },
+            {
+                "from": "expandedConfig",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "expandedConfig",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
             {
-                "note": "widget",
-                "name": "widget",
+                "note": "setupRoot",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
                 "value": ""
             }
         ],
-        "dependencies": [
-            "libsettings@beatlink"
-        ],
-        "exports": {},
         "readmeNote": "readme",
-        "allowExternalReferences": true
+        "allowExternalReferences": true,
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

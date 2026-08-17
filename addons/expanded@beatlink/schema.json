@@ -1,3 +1,12 @@
 {
-    "labelName": {"type": "string", "label": "Label Name", "description": "The note label that marks a note as always expanded. Notes carrying this label (as #<name>) are kept expanded in the tree.", "default": "alwaysExpanded"}
+    "labelName": {
+        "type": "string",
+        "label": "Label Name",
+        "description": "The note label that marks a note as always expanded. It is defined on the root note as a promoted attribute, so every note shows it as a checkbox."
+    },
+    "definition": {
+        "type": "string",
+        "label": "Promoted Definition",
+        "description": "The promoted attribute definition written to the root note for that label. Keep 'boolean' unless you want a different kind of field; 'alias=' sets the name shown beside the checkbox."
+    }
 }
