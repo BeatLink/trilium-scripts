@@ -1,0 +1,64 @@
+{
+    "myDayNoteId": {
+        "type": "note",
+        "label": "My Day Note",
+        "description": "The text note that collects today's tasks, edited in place at the top of the right-pane panel. Required: the panel prompts for it until you set it. Adding a suggestion appends it here, and tasks already linked here stop being suggested.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "enableSounds": {
+        "type": "boolean",
+        "label": "Enable Timer Sounds",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "addTasksWhenDue": {
+        "type": "boolean",
+        "label": "Add Tasks When Due",
+        "description": "File tasks into the My Day note as their start time arrives.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "sendDueNotifications": {
+        "type": "boolean",
+        "label": "Send Due Notifications",
+        "description": "Send a desktop notification as each task's start time arrives.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "addToTop": {
+        "type": "boolean",
+        "label": "Add Tasks To Top",
+        "description": "Insert newly added tasks at the top of the My Day note instead of appending them to the bottom. Applies both to the + button and to tasks filed automatically when due.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "taskSearch": {
+        "type": "string",
+        "label": "Task Search",
+        "description": "The Trilium search that decides which notes can be suggested. The default matches any note with a start or due datetime, excluding subtasks. Notes are then bucketed into Earlier, Today and Next 7 Days by their start datetime, falling back to due.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "startLabel": {
+        "type": "string",
+        "label": "Start Datetime Label",
+        "description": "The note label holding a task's start datetime, without the leading #.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "dueLabel": {
+        "type": "string",
+        "label": "Due Datetime Label",
+        "description": "The note label holding a task's due datetime, without the leading #. Used when no start datetime is set.",
+        "category": "Execute",
+        "tab": "My Day"
+    },
+    "taskLabel": {
+        "type": "string",
+        "label": "Task Label",
+        "description": "The note label marking a note as a task, without the leading #. Any note carrying it gets an Add to My Day / Remove from My Day button in the right pane.",
+        "category": "Execute",
+        "tab": "My Day"
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "myDayNoteId": "",
+    "enableSounds": true,
+    "addTasksWhenDue": false,
+    "sendDueNotifications": true,
+    "addToTop": false,
+    "taskSearch": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')",
+    "startLabel": "startDateTime",
+    "dueLabel": "dueDateTime",
+    "taskLabel": "agendaTaskWidget"
+}
