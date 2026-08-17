@@ -26,7 +26,7 @@
 //
 // Structure: two PARALLEL top-level trees, each one level deep — one root per
 // area, one root per template — with a filed item cloned into both (its area
-// root and its type root). See agenda-structure@beatlink's structure.js.
+// root and its type root). The roots are user-made; nothing provisions them.
 //
 // Scope note: only notes UNDER the Inbox, the Area roots and the Type roots are
 // surfaced, de-duped by noteId since a filed item is reachable from two roots.
@@ -41,7 +41,7 @@
 const { getTemplates } = require("templateRegistry.jsx")
 const { loadSettings } = require("libSettingsUI.jsx")
 
-// Structural identity labels (written by agenda-structure@beatlink), one per kind of
+// Structural identity labels (set by hand on your own root notes), one per kind of
 // top-level root and mutually exclusive: an area root has `area`, a type root
 // has `type`, the Inbox / My Day / Agenda singletons have `special`.
 //

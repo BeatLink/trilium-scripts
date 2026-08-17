@@ -123,8 +123,8 @@ export default function OrganizeEditor() {
             <h2>Organize Editor</h2>
             <p>
                 Pick the note that hosts the Organize triage UI and set the quick-times its start-date
-                buttons use. Edit the classification vocabulary under Dimensions. Provisioning the
-                notebook structure the triage queues walk lives in agenda-structure@beatlink.
+                buttons use. Edit the classification vocabulary under Dimensions. The notebook
+                structure the triage queues walk is yours to create and tag; nothing provisions it.
             </p>
             <SettingsForm
                 schemaNoteId={ids.schemaNoteId}
