@@ -1,0 +1,8 @@
+{
+    "userAgent": {
+        "type": "string",
+        "label": "User Agent",
+        "description": "The user agent WhatsApp Web sees. Leave empty to use Trilium's own user agent with its Trilium and Electron tokens stripped out, which is the plain Chrome string of the Chromium build Trilium runs on. Reload Trilium after changing this.",
+        "default": ""
+    }
+}
