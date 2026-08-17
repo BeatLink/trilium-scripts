@@ -7,7 +7,7 @@ Subcommands (run `tamhelper.js <cmd> -h` for each one's flags):
   validate              Lint every addon manifest before publishing.
   tam-to-zip            Convert a manifest (or --all) into a Trilium ZIP import.
   zip-to-tam            Convert a Trilium export ZIP into a manifest + source files.
-  generate-pages        Build the GitHub Pages site (docs/, incl. catalog.json).
+  generate-pages        Build the GitHub Pages site (resources/docs/, incl. catalog.json).
   generate-readme       Regenerate README.md's addon table from manifests.
   publish-release       Upload built *.zip files to GitHub Releases.
   backfill-source-url   Add manifestSourceUrl to every manifest missing one.
@@ -264,6 +264,7 @@ function loadAddons() {
 
 const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
+const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
 
 
 async function cmdValidate(args) {
@@ -400,6 +401,30 @@ async function cmdValidate(args) {
         const settingsNote = byId[m.settingsNote];
         if (settingsNote && settingsNote.type === "code") {
             warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
+        }
+
+        // TAM runs a hook via FNote.executeScript(), which only hands back a return
+        // value for a frontend note, and hook code has to be replaced on update, so
+        // it can never live under "persistence".
+        for (const [phase, localId] of Object.entries(m.hooks || {})) {
+            if (!HOOK_PHASES.has(phase)) {
+                error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
+                continue;
+            }
+            if (!noteIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
+                continue;
+            }
+            const mime = byId[localId].mime || "";
+            if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
+            }
+            if (persistentIds.has(localId)) {
+                error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
+            }
+        }
+        if (m.hooks?.updateReview && persistentIds.size === 0) {
+            warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
         }
 
         // Notes served as static HTTP resources are exempt from the env check.
@@ -1252,7 +1277,7 @@ function cmdGeneratePages(args) {
     const baseHtml = readText(path.join(staticDir, "base.html"));
     const css = readText(path.join(staticDir, "style.css"));
 
-    const docsDir = "docs";
+    const docsDir = path.join("resources", "docs");
     fs.mkdirSync(docsDir, { recursive: true });
 
     const addons = loadAddons();
@@ -1272,13 +1297,13 @@ function cmdGeneratePages(args) {
 
     writeText(path.join(docsDir, "index.html"), renderIndex(baseHtml, addons));
     writeText(path.join(docsDir, "style.css"), css);
-    console.log(`Generated docs/ for ${addons.length} addons`);
+    console.log(`Generated ${docsDir}/ for ${addons.length} addons`);
 
     const urls = addons.filter((a) => a.meta.manifestSourceUrl).map((a) => a.meta.manifestSourceUrl);
     const missing = addons.length - urls.length;
     writeText(path.join(docsDir, "catalog.json"),
         jsonDumps({ webUrl: PAGES_URL, "tam-addons": urls }, 2) + "\n");
-    console.log(`Generated docs/catalog.json with ${urls.length} addon(s)` +
+    console.log(`Generated ${docsDir}/catalog.json with ${urls.length} addon(s)` +
         (missing ? ` (${missing} skipped -- no manifestSourceUrl)` : ""));
 }
 
@@ -1288,9 +1313,9 @@ const README_END = "<!-- GENERATED:END -->";
 
 
 function cmdGenerateReadme(args) {
-    const basePath = "README_base.md";
+    const basePath = path.join("resources", "README_base.md");
     if (!exists(basePath)) {
-        console.log("WARNING: README_base.md not found -- skipping README generation");
+        console.log(`WARNING: ${basePath} not found -- skipping README generation`);
         return;
     }
     const base = readText(basePath);
@@ -1317,7 +1342,7 @@ function cmdGenerateReadme(args) {
 
     const startIdx = base.indexOf(README_START), endIdx = base.indexOf(README_END);
     if (startIdx === -1 || endIdx === -1) {
-        console.log("WARNING: README_base.md missing GENERATED markers -- skipping README generation");
+        console.log(`WARNING: ${basePath} missing GENERATED markers -- skipping README generation`);
         return;
     }
     const afterStart = startIdx + README_START.length;
@@ -1595,7 +1620,7 @@ commands:
   validate [--fix]                          Lint every addon manifest
   tam-to-zip [manifest] [--out F] [--addons-dir D] [--all] [--out-dir D]
   zip-to-tam <input.zip> [--out DIR]        Convert a Trilium ZIP to a manifest
-  generate-pages                            Build the GitHub Pages site (docs/)
+  generate-pages                            Build the GitHub Pages site (resources/docs/)
   generate-readme                           Regenerate README.md's addon table
   publish-release                           Upload *.zip files to GitHub Releases
   backfill-source-url                       Add manifestSourceUrl where missing
