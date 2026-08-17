@@ -16,154 +16,191 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
 */
 
 :root {
-    --theme-style: light;
+    --theme-style: light !important;
 
     /* Raw palette tokens — every Trilium variable below is expressed in
        terms of these, so the dark-mode block only has to flip these and
        the rest of the theme follows automatically. */
-    --t-bg: #f1f5f9;
-    --t-surface: #ffffff;
-    --t-surface-2: #f8fafc;
-    --t-border: #e2e8f0;
-    --t-border-strong: #cbd5e1;
-    --t-text: #1a1a2e;
-    --t-heading: #0f172a;
-    --t-muted: #64748b;
-    --t-muted-2: #94a3b8;
-    --t-accent: #2563eb;
-    --t-accent-soft: #93c5fd;
-    --t-focus-ring: rgba(37, 99, 235, 0.15);
-    --t-success: #059669;
-    --t-warning: #d97706;
-    --t-danger: #dc2626;
-    --t-chrome-bg: #0f172a;
-    --t-chrome-bg-2: #1e3a5f;
-    --t-chrome-text-muted: #93c5fd;
-    --t-overlay: rgba(15, 23, 42, 0.45);
-    --t-dropdown-shadow-opacity: 0.15;
+    --t-bg: #f1f5f9 !important;
+    --t-surface: #ffffff !important;
+    --t-surface-2: #f1f5f9 !important;
+    --t-border: #e2e8f0 !important;
+    --t-border-strong: #cbd5e1 !important;
+    --t-text: #1a1a2e !important;
+    --t-heading: #0f172a !important;
+    --t-muted: #64748b !important;
+    --t-muted-2: #94a3b8 !important;
+    --t-accent: #2563eb !important;
+    --t-accent-soft: #93c5fd !important;
+    --t-focus-ring: rgba(37, 99, 235, 0.15) !important;
+    --t-success: #059669 !important;
+    --t-warning: #d97706 !important;
+    --t-danger: #dc2626 !important;
+    --t-chrome-bg: #0f172a !important;
+    --t-chrome-bg-2: #1e3a5f !important;
+    --t-chrome-text-muted: #93c5fd !important;
+    --t-overlay: rgba(15, 23, 42, 0.45) !important;
+    --t-dropdown-shadow-opacity: 0.15 !important;
 
-    --native-titlebar-background: transparent;
+    --native-titlebar-background: transparent !important;
 
-    --main-background-color: var(--t-surface);
-    --main-text-color: var(--t-text);
-    --main-border-color: var(--t-border);
-    --subtle-border-color: var(--t-border);
-    --dropdown-border-color: var(--t-border);
-    --dropdown-shadow-opacity: var(--t-dropdown-shadow-opacity);
-    --dropdown-item-icon-destructive-color: var(--t-danger);
-    --contextual-help-icon-color: var(--t-accent);
+    /* Typography/shape — without these, only colors differ from stock
+       "next" and the two themes read as nearly identical (same Inter font,
+       same 10px note-pane corners, same flat/no-shadow cards). Reusing
+       TAM's own embedded-widget font stack here ties the whole app back to
+       TAM's visual identity instead of just recoloring the default. */
+    --main-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    --center-pane-border-radius: 8px !important;
 
-    --accented-background-color: var(--t-surface-2);
+    --main-background-color: var(--t-surface) !important;
+    --main-text-color: var(--t-text) !important;
+    --main-border-color: var(--t-border) !important;
+    --subtle-border-color: var(--t-border) !important;
+    --dropdown-border-color: var(--t-border) !important;
+    --dropdown-shadow-opacity: var(--t-dropdown-shadow-opacity) !important;
+    --dropdown-item-icon-destructive-color: var(--t-danger) !important;
+    --contextual-help-icon-color: var(--t-accent) !important;
 
-    --tool-dialog-background-color: var(--t-surface);
-    --tool-dialog-shadow-color: rgba(15, 23, 42, 0.2);
+    --accented-background-color: var(--t-surface-2) !important;
 
-    --button-text-color: var(--t-accent);
+    --tool-dialog-background-color: var(--t-surface) !important;
+    --tool-dialog-shadow-color: rgba(15, 23, 42, 0.2) !important;
 
-    --cmd-button-background-color: var(--t-surface-2);
-    --cmd-button-text-color: var(--t-text);
-    --cmd-button-hover-background-color: var(--t-accent);
-    --cmd-button-hover-text-color: #fff;
-    --cmd-button-shadow-color: transparent;
-    --cmd-button-icon-color: var(--t-accent);
-    --cmd-button-keyboard-shortcut-background: var(--t-surface-2);
-    --cmd-button-keyboard-shortcut-color: var(--t-muted);
-    --cmd-button-disabled-opacity: 0.5;
+    --button-text-color: var(--t-accent) !important;
 
-    --button-group-active-button-background: var(--t-accent);
-    --button-group-active-button-text-color: #fff;
+    /* TAM's own normal buttons (see tam.css's .btn-ghost, used for every
+       non-CTA action) are ghost-style: transparent background, a border
+       and text in the accent color, and hover is just a subtle opacity
+       fade — never a background/text color swap. Matching that here
+       (rather than the "next" theme's default background-swap-on-hover)
+       also sidesteps a real bug: the icon glyph inside a button
+       (span.tn-icon) is never given its own hover color by forms.css, so
+       a background-swap hover made icon and background the same color
+       and the icon vanished. */
+    --cmd-button-background-color: transparent !important;
+    --cmd-button-text-color: var(--t-accent) !important;
+    --cmd-button-hover-background-color: transparent !important;
+    --cmd-button-hover-text-color: var(--t-accent) !important;
+    --cmd-button-shadow-color: transparent !important;
+    --cmd-button-icon-color: var(--t-accent) !important;
+    --cmd-button-keyboard-shortcut-background: var(--t-surface-2) !important;
+    --cmd-button-keyboard-shortcut-color: var(--t-muted) !important;
+    --cmd-button-disabled-opacity: 0.5 !important;
 
-    --icon-button-color: currentColor;
-    --icon-button-hover-background: var(--hover-item-background-color);
-    --icon-button-hover-color: var(--hover-item-text-color);
+    --button-group-active-button-background-color: var(--t-accent) !important;
+    --button-group-active-button-color: #fff !important;
+    --button-group-active-button-shadow-color: rgba(15, 23, 42, 0.2) !important;
 
-    --muted-text-color: var(--t-muted);
+    --icon-button-color: currentColor !important;
+    --icon-button-hover-background: var(--hover-item-background-color) !important;
+    --icon-button-hover-color: var(--hover-item-text-color) !important;
 
-    --input-background-color: var(--t-surface);
-    --input-text-color: var(--t-text);
-    --input-placeholder-color: var(--t-muted-2);
-    --input-selection-background: var(--t-accent-soft);
-    --input-selection-text-color: var(--t-heading);
-    --input-hover-background: var(--t-surface-2);
-    --input-hover-color: var(--t-text);
-    --input-focus-outline-color: var(--t-focus-ring);
-    --input-focus-background: var(--t-surface);
-    --input-focus-color: var(--t-text);
+    --muted-text-color: var(--t-muted) !important;
 
-    --input-action-button-color: var(--t-muted);
-    --input-action-button-hover: var(--t-accent);
+    --input-background-color: var(--t-surface) !important;
+    --input-text-color: var(--t-text) !important;
+    --input-placeholder-color: var(--t-muted-2) !important;
+    --input-selection-background: var(--t-accent-soft) !important;
+    --input-selection-text-color: var(--t-heading) !important;
+    --input-hover-background: var(--t-surface-2) !important;
+    --input-hover-color: var(--t-text) !important;
+    --input-focus-outline-color: var(--t-focus-ring) !important;
+    --input-focus-background: var(--t-surface) !important;
+    --input-focus-color: var(--t-text) !important;
 
-    --radio-checkbox-background: var(--t-surface-2);
-    --radio-checkbox-hover-background: var(--t-border);
-    --radio-checkbox-indicator-color: var(--t-accent);
+    --input-action-button-color: var(--t-muted) !important;
+    --input-action-button-hover: var(--t-accent) !important;
 
-    --select-focus-background: var(--t-surface);
-    --select-focus-text-color: var(--t-text);
-    --select-dropdown-text-color: var(--t-text);
-    --select-group-heading-text-color: var(--t-muted);
+    --radio-checkbox-background: var(--t-surface-2) !important;
+    --radio-checkbox-hover-background: var(--t-border) !important;
+    --radio-checkbox-indicator-color: var(--t-accent) !important;
 
-    --link-color: var(--t-accent);
-    --link-hover-background: var(--t-focus-ring);
-    --link-hover-color: var(--t-accent);
-    --link-selection-outline-color: var(--t-accent-soft);
+    /* The closed dropdown itself (not its open option list, which stays
+       readable via --select-dropdown-text-color below) reads as a ghost
+       button — transparent + accent text/border, opacity-only hover — see
+       the real-selector override further down; forms.css shares
+       --input-background-color/--input-text-color between selects and
+       plain text inputs, so this can't be done with variables alone
+       without also ghost-ing text inputs. */
+    --select-focus-background: transparent !important;
+    --select-focus-text-color: var(--t-accent) !important;
+    --select-dropdown-text-color: var(--t-text) !important;
+    --select-group-heading-text-color: var(--t-muted) !important;
 
-    --hover-item-text-color: var(--t-heading);
-    --hover-item-background-color: var(--t-surface-2);
-    --hover-item-border-color: transparent;
+    --link-color: var(--t-accent) !important;
+    --link-hover-background: var(--t-focus-ring) !important;
+    --link-hover-color: var(--t-accent) !important;
+    --link-selection-outline-color: var(--t-accent-soft) !important;
 
-    --active-item-text-color: var(--t-heading);
-    --active-item-background-color: var(--t-accent-soft);
-    --active-item-border-color: transparent;
+    --hover-item-text-color: var(--t-heading) !important;
+    --hover-item-background-color: var(--t-surface-2) !important;
+    --hover-item-border-color: transparent !important;
 
-    --menu-text-color: var(--t-text);
-    --menu-background-color: var(--t-surface);
-    --menu-background-color-no-backdrop: var(--t-surface);
-    --menu-item-icon-color: var(--t-muted);
-    --menu-item-disabled-opacity: 0.5;
-    --menu-item-keyboard-shortcut-color: var(--t-muted-2);
-    --menu-item-arrow-color: var(--t-muted);
-    --menu-item-delimiter-color: var(--t-border);
-    --menu-item-group-header-color: var(--t-muted);
-    --menu-section-background-color: var(--t-surface-2);
+    --active-item-text-color: var(--t-heading) !important;
+    --active-item-background-color: var(--t-accent-soft) !important;
+    --active-item-border-color: transparent !important;
 
-    --modal-backdrop-color: var(--t-overlay);
-    --modal-shadow-color: rgba(15, 23, 42, 0.25);
-    --modal-border-color: var(--t-border);
-    --modal-background-color: var(--t-surface);
-    --modal-title-color: var(--t-heading);
-    --modal-control-button-background: var(--t-surface-2);
-    --modal-control-button-color: var(--t-muted);
-    --modal-control-button-hover-color: #fff;
-    --modal-control-button-hover-background: var(--t-accent);
-    --modal-footer-background: var(--t-surface-2);
-    --modal-footer-color: var(--t-muted);
+    --menu-text-color: var(--t-text) !important;
+    --menu-background-color: var(--t-surface) !important;
+    --menu-background-color-no-backdrop: var(--t-surface) !important;
+    --menu-item-icon-color: var(--t-muted) !important;
+    --menu-item-disabled-opacity: 0.5 !important;
+    --menu-item-keyboard-shortcut-color: var(--t-muted-2) !important;
+    --menu-item-arrow-color: var(--t-muted) !important;
+    --menu-item-delimiter-color: var(--t-border) !important;
+    --menu-item-group-header-color: var(--t-muted) !important;
+    --menu-section-background-color: var(--t-surface-2) !important;
 
-    --toast-background: var(--t-chrome-bg);
-    --toast-text-color: #fff;
-    --toast-close-button-background: rgba(255, 255, 255, 0.15);
+    --modal-backdrop-color: var(--t-overlay) !important;
+    --modal-shadow-color: rgba(15, 23, 42, 0.25) !important;
+    --modal-border-color: var(--t-border) !important;
+    --modal-background-color: var(--t-surface) !important;
+    --modal-title-color: var(--t-heading) !important;
+    --modal-control-button-background: var(--t-surface-2) !important;
+    --modal-control-button-color: var(--t-muted) !important;
+    --modal-control-button-hover-color: #fff !important;
+    --modal-control-button-hover-background: var(--t-accent) !important;
+    --modal-footer-background: var(--t-surface-2) !important;
+    --modal-footer-color: var(--t-muted) !important;
 
-    --quick-search-background: var(--t-surface-2);
-    --quick-search-color: var(--t-muted);
-    --quick-search-hover-background: var(--t-border);
-    --quick-search-focus-border: var(--t-accent);
-    --quick-search-focus-background: var(--t-surface);
-    --quick-search-focus-color: var(--t-text);
-    --quick-search-result-content-background: var(--t-surface-2);
-    --quick-search-result-highlight-color: var(--t-accent);
+    --toast-background: var(--t-chrome-bg) !important;
+    --toast-text-color: #fff !important;
+    --toast-close-button-background: rgba(255, 255, 255, 0.15) !important;
 
-    --left-pane-collapsed-border-color: var(--t-border);
-    --left-pane-background-color: var(--t-surface-2);
-    --left-pane-text-color: var(--t-text);
-    --left-pane-icon-color: var(--t-muted);
-    --left-pane-item-hover-background: var(--t-border);
-    --left-pane-item-selected-background: var(--t-surface);
-    --left-pane-item-selected-color: var(--t-heading);
-    --left-pane-item-selected-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
-    --left-pane-item-action-button-background: var(--t-surface);
-    --left-pane-item-action-button-color: var(--t-muted);
-    --left-pane-item-action-button-hover-background: var(--t-accent);
-    --left-pane-item-action-button-hover-shadow: none;
-    --left-pane-item-selected-action-button-hover-shadow: none;
+    --quick-search-background: var(--t-surface-2) !important;
+    --quick-search-color: var(--t-muted) !important;
+    --quick-search-hover-background: var(--t-border) !important;
+    --quick-search-focus-border: var(--t-accent) !important;
+    --quick-search-focus-background: var(--t-surface) !important;
+    --quick-search-focus-color: var(--t-text) !important;
+    --quick-search-result-content-background: var(--t-surface-2) !important;
+    --quick-search-result-highlight-color: var(--t-accent) !important;
+
+    /* A tree item's custom #color label isn't rendered as-is: Trilium
+       converts it to Lab and clamps its lightness (see
+       theme-next/base.css and content_renderer.js's adjustColorLightness)
+       so colors stay legible against the tree background. The "next" base
+       theme's own cap (60) is aggressive enough that bright named colors
+       like "gold" or "lime" render as dark olive/forest-green instead of
+       anywhere close to their real hue — raising the light-mode cap (and
+       lowering the dark-mode floor a little) lets those colors read much
+       closer to true while still keeping a legibility margin below 100. */
+    --tree-item-light-theme-max-color-lightness: 78 !important;
+    --tree-item-dark-theme-min-color-lightness: 58 !important;
+
+    --left-pane-collapsed-border-color: var(--t-border) !important;
+    --left-pane-background-color: var(--t-surface-2) !important;
+    --left-pane-text-color: var(--t-text) !important;
+    --left-pane-icon-color: var(--t-muted) !important;
+    --left-pane-item-hover-background: var(--t-border) !important;
+    --left-pane-item-selected-background: var(--t-surface) !important;
+    --left-pane-item-selected-color: var(--t-heading) !important;
+    --left-pane-item-selected-shadow: 0 1px 2px rgba(15, 23, 42, 0.12) !important;
+    --left-pane-item-action-button-background: var(--t-surface) !important;
+    --left-pane-item-action-button-color: var(--t-muted) !important;
+    --left-pane-item-action-button-hover-background: var(--t-accent) !important;
+    --left-pane-item-action-button-hover-shadow: none !important;
+    --left-pane-item-selected-action-button-hover-shadow: none !important;
 
     /* The dark navy "chrome" (launcher icon rail + horizontal tab bar) is
        the one deliberate departure from a flat light theme — it mirrors
@@ -171,163 +208,291 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
        Trilium's variable system allows (these are consumed via
        background-color, not background, so the gradient itself can't be
        reproduced — the darker of its two stops is used instead). */
-    --launcher-pane-vert-background-color: var(--t-chrome-bg);
-    --launcher-pane-vert-text-color: var(--t-chrome-text-muted);
-    --launcher-pane-vert-button-hover-color: #fff;
-    --launcher-pane-vert-button-hover-background: var(--t-chrome-bg-2);
-    --launcher-pane-vert-button-hover-shadow: none;
-    --launcher-pane-vert-background-color-bgfx: var(--t-chrome-bg);
+    --launcher-pane-vert-background-color: var(--t-chrome-bg) !important;
+    --launcher-pane-vert-text-color: var(--t-chrome-text-muted) !important;
+    --launcher-pane-vert-button-hover-color: #fff !important;
+    --launcher-pane-vert-button-hover-background: var(--t-chrome-bg-2) !important;
+    --launcher-pane-vert-button-hover-shadow: none !important;
+    --launcher-pane-vert-background-color-bgfx: var(--t-chrome-bg) !important;
 
-    --launcher-pane-horiz-border-color: var(--t-border);
-    --launcher-pane-horiz-background-color: var(--t-chrome-bg);
-    --launcher-pane-horiz-text-color: var(--t-chrome-text-muted);
-    --launcher-pane-horiz-button-hover-color: #fff;
-    --launcher-pane-horiz-button-hover-background: var(--t-chrome-bg-2);
-    --launcher-pane-horiz-background-color-bgfx: var(--t-chrome-bg);
-    --launcher-pane-horiz-border-color-bgfx: var(--t-chrome-bg);
+    --launcher-pane-horiz-border-color: var(--t-border) !important;
+    --launcher-pane-horiz-background-color: var(--t-chrome-bg) !important;
+    --launcher-pane-horiz-text-color: var(--t-chrome-text-muted) !important;
+    --launcher-pane-horiz-button-hover-color: #fff !important;
+    --launcher-pane-horiz-button-hover-background: var(--t-chrome-bg-2) !important;
+    --launcher-pane-horiz-background-color-bgfx: var(--t-chrome-bg) !important;
+    --launcher-pane-horiz-border-color-bgfx: var(--t-chrome-bg) !important;
 
-    --global-menu-update-available-badge-background-color: var(--t-success);
-    --global-menu-update-available-badge-color: #fff;
+    --global-menu-update-available-badge-background-color: var(--t-success) !important;
+    --global-menu-update-available-badge-color: #fff !important;
 
-    --protected-session-active-icon-color: var(--t-success);
-    --sync-status-error-pulse-color: var(--t-danger);
+    --protected-session-active-icon-color: var(--t-success) !important;
+    --sync-status-error-pulse-color: var(--t-danger) !important;
 
-    --classic-toolbar-vert-layout-background-color: var(--t-surface);
-    --classic-toolbar-horiz-layout-background-color: var(--main-background-color);
+    --classic-toolbar-vert-layout-background-color: var(--t-surface) !important;
+    --classic-toolbar-horiz-layout-background-color: var(--main-background-color) !important;
 
-    --right-pane-heading-color: var(--t-muted);
-    --root-background: var(--t-bg);
+    --right-pane-heading-color: var(--t-muted) !important;
+    --root-background: var(--t-bg) !important;
 
-    --gutter-color: transparent;
-    --gutter-hover-color: var(--t-accent-soft);
+    --gutter-color: transparent !important;
+    --gutter-hover-color: var(--t-accent-soft) !important;
 
-    --tab-close-button-hover-background: var(--t-danger);
-    --tab-close-button-hover-color: #fff;
+    --tab-close-button-hover-background: var(--t-danger) !important;
+    --tab-close-button-hover-color: #fff !important;
 
-    --active-tab-background-color: var(--t-surface);
-    --active-tab-hover-background-color: var(--t-surface);
-    --active-tab-icon-color: var(--t-accent);
-    --active-tab-text-color: var(--t-heading);
-    --active-tab-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+    --active-tab-background-color: var(--t-surface) !important;
+    --active-tab-hover-background-color: var(--t-surface) !important;
+    --active-tab-icon-color: var(--t-accent) !important;
+    --active-tab-text-color: var(--t-heading) !important;
+    --active-tab-shadow: 0 1px 3px rgba(15, 23, 42, 0.15) !important;
 
-    --inactive-tab-background-color: transparent;
-    --inactive-tab-hover-background-color: var(--t-chrome-bg-2);
-    --inactive-tab-text-color: var(--t-chrome-text-muted);
+    --inactive-tab-background-color: transparent !important;
+    --inactive-tab-hover-background-color: var(--t-chrome-bg-2) !important;
+    --inactive-tab-text-color: var(--t-chrome-text-muted) !important;
 
-    --alert-bar-background: rgba(217, 119, 6, 0.15);
+    --alert-bar-background: rgba(217, 119, 6, 0.15) !important;
 
-    --badge-background-color: var(--t-surface-2);
-    --badge-text-color: var(--t-muted);
+    --badge-background-color: var(--t-surface-2) !important;
+    --badge-text-color: var(--t-muted) !important;
 
-    --badge-temporaraily-editable-background-color: var(--t-success);
-    --badge-read-only-background-color: var(--t-danger);
-    --badge-share-background-color: var(--t-muted);
-    --badge-clipped-note-background-color: var(--t-accent);
-    --badge-execute-background-color: #7c3aed;
-    --badge-active-content-background-color: var(--t-success);
+    --badge-temporaraily-editable-background-color: var(--t-success) !important;
+    --badge-read-only-background-color: var(--t-danger) !important;
+    --badge-share-background-color: var(--t-muted) !important;
+    --badge-clipped-note-background-color: var(--t-accent) !important;
+    --badge-execute-background-color: #7c3aed !important;
+    --badge-active-content-background-color: var(--t-success) !important;
 
-    --note-icon-background-color: var(--t-accent);
-    --note-icon-color: #fff;
-    --note-icon-hover-background-color: var(--t-accent-soft);
+    --note-icon-background-color: var(--t-accent) !important;
+    --note-icon-color: #fff !important;
+    --note-icon-hover-background-color: var(--t-accent-soft) !important;
 
-    --promoted-attribute-card-background-color: var(--t-surface-2);
-    --promoted-attribute-card-shadow: none;
+    --promoted-attribute-card-background-color: var(--t-surface-2) !important;
+    --promoted-attribute-card-shadow: none !important;
 
-    --floating-button-shadow-color: rgba(15, 23, 42, 0.2);
-    --floating-button-background-color: var(--t-surface);
-    --floating-button-color: var(--t-accent);
-    --floating-button-hover-background: var(--t-surface-2);
-    --floating-button-hover-color: var(--t-accent);
-    --floating-button-hide-button-background: var(--t-surface-2);
-    --floating-button-hide-button-color: var(--t-muted);
+    --floating-button-shadow-color: rgba(15, 23, 42, 0.2) !important;
+    --floating-button-background-color: var(--t-surface) !important;
+    --floating-button-color: var(--t-accent) !important;
+    --floating-button-hover-background: var(--t-surface-2) !important;
+    --floating-button-hover-color: var(--t-accent) !important;
+    --floating-button-hide-button-background: var(--t-surface-2) !important;
+    --floating-button-hide-button-color: var(--t-muted) !important;
 
-    --new-tab-button-background: transparent;
-    --new-tab-button-color: var(--t-chrome-text-muted);
-    --new-tab-button-shadow: none;
-    --new-tab-button-hover-background: var(--t-chrome-bg-2);
-    --new-tab-button-hover-color: #fff;
+    --new-tab-button-background: transparent !important;
+    --new-tab-button-color: var(--t-chrome-text-muted) !important;
+    --new-tab-button-shadow: none !important;
+    --new-tab-button-hover-background: var(--t-chrome-bg-2) !important;
+    --new-tab-button-hover-color: #fff !important;
 
-    --right-pane-background-color: var(--t-surface);
-    --right-pane-item-hover-background: var(--t-surface-2);
-    --right-pane-item-hover-color: var(--t-text);
+    --right-pane-background-color: var(--t-surface2) !important;
+    --right-pane-item-hover-background: var(--t-surface-2) !important;
+    --right-pane-item-hover-color: var(--t-text) !important;
 
-    --bottom-panel-background-color: var(--t-surface);
-    --bottom-panel-title-bar-background-color: var(--t-surface-2);
+    --bottom-panel-background-color: var(--t-surface) !important;
+    --bottom-panel-title-bar-background-color: var(--t-surface-2) !important;
 
-    --status-bar-border-color: var(--t-border);
+    --status-bar-border-color: var(--t-border) !important;
 
-    --scrollbar-thumb-color: var(--t-border-strong);
-    --scrollbar-thumb-hover-color: var(--t-muted-2);
-    --scrollbar-background-color: transparent;
+    --scrollbar-thumb-color: var(--t-border-strong) !important;
+    --scrollbar-thumb-hover-color: var(--t-muted-2) !important;
+    --scrollbar-background-color: transparent !important;
 
-    --selection-background-color: var(--t-focus-ring);
+    --selection-background-color: var(--t-focus-ring) !important;
 
-    --code-block-box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+    --code-block-box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1) !important;
 
-    --card-background-color: var(--t-surface);
-    --card-background-hover-color: var(--t-surface-2);
-    --card-border-color: var(--t-border);
-    --card-box-shadow: none;
+    --card-background-color: var(--t-surface) !important;
+    --card-background-hover-color: var(--t-surface-2) !important;
+    --card-border-color: var(--t-border) !important;
+    --card-box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06) !important;
 
-    --calendar-color: var(--t-text);
-    --calendar-weekday-labels-color: var(--t-muted);
-    --calendar-day-hover-color: #fff;
-    --calendar-day-hover-background: var(--t-accent);
-    --calendar-day-highlight-background: var(--t-focus-ring);
+    --calendar-color: var(--t-text) !important;
+    --calendar-weekday-labels-color: var(--t-muted) !important;
+    --calendar-day-hover-color: #fff !important;
+    --calendar-day-hover-background: var(--t-accent) !important;
+    --calendar-day-highlight-background: var(--t-focus-ring) !important;
 
-    --timeline-bullet-color: var(--t-accent-soft);
-    --timeline-bullet-hover-color: var(--t-accent);
-    --timeline-connector-color: var(--t-border);
-    --timeline-connector-active-color: var(--t-accent-soft);
+    --timeline-bullet-color: var(--t-accent-soft) !important;
+    --timeline-bullet-hover-color: var(--t-accent) !important;
+    --timeline-connector-color: var(--t-border) !important;
+    --timeline-connector-active-color: var(--t-accent-soft) !important;
 
-    --tooltip-background-color: var(--t-chrome-bg);
-    --tooltip-foreground-color: #fff;
-    --tooltip-shadow-color: rgba(15, 23, 42, 0.2);
+    --tooltip-background-color: var(--t-chrome-bg) !important;
+    --tooltip-foreground-color: #fff !important;
+    --tooltip-shadow-color: rgba(15, 23, 42, 0.2) !important;
 
-    --help-background-color: var(--t-surface);
-    --help-card-background: var(--t-surface-2);
-    --help-card-shadow: none;
-    --help-card-heading-color: var(--t-muted);
-    --help-kbd-shortcut-color: var(--t-text);
-    --help-kbd-shortcut-background: var(--t-surface-2);
-    --help-kbd-shortcut-shadow: none;
-    --help-code-color: var(--t-text);
-    --help-code-background: var(--t-surface-2);
+    --help-background-color: var(--t-surface) !important;
+    --help-card-background: var(--t-surface-2) !important;
+    --help-card-shadow: none !important;
+    --help-card-heading-color: var(--t-muted) !important;
+    --help-kbd-shortcut-color: var(--t-text) !important;
+    --help-kbd-shortcut-background: var(--t-surface-2) !important;
+    --help-kbd-shortcut-border: var(--t-border) !important;
+    --help-code-color: var(--t-text) !important;
+    --help-code-background: var(--t-surface-2) !important;
 
-    --ck-editor-popup-border-color: var(--t-border);
-    --ck-editor-toolbar-button-on-background: var(--t-accent-soft);
-    --ck-editor-toolbar-button-on-color: var(--t-heading);
-    --ck-editor-toolbar-button-on-shadow: none;
-    --ck-editor-toolbar-dropdown-button-open-background: var(--t-surface-2);
+    --ck-editor-popup-border-color: var(--t-border) !important;
+    --ck-editor-toolbar-button-on-background: var(--t-accent-soft) !important;
+    --ck-editor-toolbar-button-on-color: var(--t-heading) !important;
+    --ck-editor-toolbar-button-on-shadow: none !important;
+    --ck-editor-toolbar-dropdown-button-open-background: var(--t-surface-2) !important;
 
-    --note-list-view-content-background: var(--t-surface-2);
+    --note-list-view-content-background: var(--t-surface-2) !important;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --theme-style: dark;
+        --theme-style: dark !important;
 
-        --t-bg: #0b1220;
-        --t-surface: #16213a;
-        --t-surface-2: #1e293b;
-        --t-border: #334155;
-        --t-border-strong: #475569;
-        --t-text: #e2e8f0;
-        --t-heading: #f8fafc;
-        --t-muted: #94a3b8;
-        --t-muted-2: #64748b;
-        --t-accent: #3b82f6;
-        --t-accent-soft: #60a5fa;
-        --t-focus-ring: rgba(59, 130, 246, 0.28);
-        --t-success: #10b981;
-        --t-warning: #f59e0b;
-        --t-danger: #f87171;
-        --t-chrome-bg: #060b14;
-        --t-chrome-bg-2: #101b2d;
-        --t-chrome-text-muted: #7dabf5;
-        --t-overlay: rgba(0, 0, 0, 0.6);
-        --t-dropdown-shadow-opacity: 0.5;
+        --t-bg: #0b1220 !important;
+        --t-surface: #16213a !important;
+        --t-surface-2: #1e293b !important;
+        --t-border: #334155 !important;
+        --t-border-strong: #475569 !important;
+        --t-text: #e2e8f0 !important;
+        --t-heading: #f8fafc !important;
+        --t-muted: #94a3b8 !important;
+        --t-muted-2: #64748b !important;
+        --t-accent: #3b82f6 !important;
+        --t-accent-soft: #60a5fa !important;
+        --t-focus-ring: rgba(59, 130, 246, 0.28) !important;
+        --t-success: #10b981 !important;
+        --t-warning: #f59e0b !important;
+        --t-danger: #f87171 !important;
+        --t-chrome-bg: #060b14 !important;
+        --t-chrome-bg-2: #101b2d !important;
+        --t-chrome-text-muted: #7dabf5 !important;
+        --t-overlay: rgba(0, 0, 0, 0.6) !important;
+        --t-dropdown-shadow-opacity: 0.5 !important;
     }
+}
+
+
+/* Command buttons (.btn-primary/.btn-secondary/.btn-sm/.btn-success — every
+   plain Button component ends up as one of these, "secondary" by default)
+   — same story as text inputs: the border is a literal `border: unset` in
+   forms.css and the 120px min-width/4px-16px padding are hardcoded, so
+   matching TAM's own compact bordered-ghost button shape needs real
+   selectors, not just variables. Hover is opacity-only (see the
+   --cmd-button-hover-* comment above) so this intentionally doesn't
+   redeclare background/color on :hover. */
+button.btn.btn-primary,
+button.btn.btn-secondary,
+button.btn.btn-sm:not(.select-button),
+button.btn.btn-success {
+    border: 1px solid var(--t-accent) !important;
+    min-width: unset !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+button.btn.btn-primary:hover,
+button.btn.btn-secondary:hover,
+button.btn.btn-sm:not(.select-button):hover,
+button.btn.btn-success:hover {
+    opacity: 0.85 !important;
+}
+
+/* Form controls — "next" renders text inputs/selects/textareas with no
+   border at rest (border: unset; just a focus outline ring), unlike TAM's
+   own widget inputs (see tam.css's #search) which always show a visible
+   border, colored on hover/focus. No CSS variable governs that `unset`, so
+   restoring it needs the same selector lists forms.css itself uses. */
+input:not([type]),
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+:root input.ck.ck-input-text,
+:root input.ck.ck-input-number,
+textarea.form-control,
+textarea,
+:root textarea.ck.ck-textarea,
+.tn-input-field,
+.input-group,
+select,
+select.form-select,
+select.form-control,
+.select-button.dropdown-toggle.btn {
+    /*border: 1.5px solid var(--t-border) !important;*/
+}
+
+input:not([type]):hover,
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="password"]:hover,
+input[type="date"]:hover,
+input[type="time"]:hover,
+input[type="datetime-local"]:hover,
+:root input.ck.ck-input-text:not([readonly="true"]):hover,
+:root input.ck.ck-input-number:not([readonly="true"]):hover,
+textarea.form-control:hover,
+textarea:hover,
+:root textarea.ck.ck-textarea:hover,
+.tn-input-field:hover,
+.input-group:hover,
+select:hover,
+select.form-select:hover,
+select.form-control:hover,
+.select-button.dropdown-toggle.btn:hover {
+    border-color: var(--t-border-strong) !important;
+}
+
+input:not([type]):focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus,
+:root input.ck.ck-input-text:not([readonly="true"]):focus,
+:root input.ck.ck-input-number:not([readonly="true"]):focus,
+textarea.form-control:focus,
+textarea:focus,
+:root textarea.ck.ck-textarea:focus,
+.tn-input-field:focus,
+.tn-input-field:focus-within,
+.input-group:focus-within,
+select:focus,
+select.form-select:focus,
+select.form-control:focus,
+.select-button.dropdown-toggle.btn:focus {
+    border-color: var(--t-accent) !important;
+}
+
+/* Dropdowns read as ghost buttons (see the command-button block above):
+   transparent background, accent text, opacity-only hover — not the
+   filled surface look shared with plain text inputs via
+   --input-background-color/--input-text-color. background-color is a
+   longhand override on top of forms.css's `background: var(...)
+   var(--dropdown-arrow)` shorthand, so the arrow icon painted by that
+   shorthand's background-image is left untouched. */
+select,
+select.form-select,
+select.form-control,
+.select-button.dropdown-toggle.btn {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
+}
+
+select:hover,
+select.form-select:hover,
+select.form-control:hover,
+.select-button.dropdown-toggle.btn:hover {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
+    opacity: 0.85 !important;
+}
+
+select:focus,
+select.form-select:focus,
+select.form-control:focus,
+.select-button.dropdown-toggle.btn:focus {
+    background-color: transparent !important;
+    color: var(--t-accent) !important;
 }
 
 /* Extra polish — TAM's own headings (h1-h5) are always slate-900/slate-100,
@@ -338,14 +503,33 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
 .note-detail h3,
 .note-detail h4,
 .note-detail h5 {
-    color: var(--t-heading);
+    color: var(--t-heading) !important;
 }
 
 /* Mirrors TAM's card hover treatment (border turns accent-soft, subtle
    lift) on the right pane's own card-style panels (promoted attributes,
    "what links here", etc.) so they read as part of the same design. */
 #right-pane .card-header {
-    border-top: 2px solid var(--t-accent) !important;
+    border-radius: 0 !important;
+}
+
+body.desktop.experimental-feature-new-layout .split-note-container-widget>.note-split {
+    border-start-end-radius: var(--center-pane-border-radius) !important;
+    border-end-end-radius: var(--center-pane-border-radius) !important;
+    border-radius: var(--center-pane-border-radius) !important
+}
+
+body.desktop.experimental-feature-new-layout .tab-row-container {
+    margin: 0.2rem !important;
+}
+
+body.experimental-feature-new-layout #right-pane .card {
+    background-color: var(--t-surface) !important;
+    padding: 0.2rem !important;
+    margin: 0.2rem !important;
+    margin-right: calc(5px + 0.2rem) !important;
+    border: 1px solid var(--t-border) !important;
+    border-radius: var(--center-pane-border-radius) !important;
 }
 
 span.fancytree-title {
