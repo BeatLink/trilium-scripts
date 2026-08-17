@@ -83,7 +83,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## What this repo is
 
 Widgets, themes, and scripts for TriliumNext Notes, distributed via a custom addon manager, **TAM**
-(`addons/trilium-addon-manager@beatlink/` — see its README for the full manifest schema). Each
+(`addons/trilium-addon-manager@beatlink/` — see its `MANIFEST.md` for the full manifest schema and
+`ARCHITECTURE.md` for how it resolves one). Each
 addon lives at `addons/{name}@{author}/_tam_manifest_.json`, installed by TAM directly from this
 repo (no build step).
 

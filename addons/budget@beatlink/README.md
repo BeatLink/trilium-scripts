@@ -198,7 +198,7 @@ are displayed *and* the precision they're stored at — typing more precision th
 it on entry, so what's stored is what's shown rather than a figure the display quietly rounds off.
 Set it to 0 for whole-currency budgeting. Amounts already stored with more precision than the current
 setting keep it until you next edit them. Settings are stored in a persisted note via TAM's
-[Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism, so they survive
+[Persistence](../trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence) mechanism, so they survive
 addon updates.
 
 ## Storage format
