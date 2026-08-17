@@ -1,0 +1,50 @@
+{
+    "id": "margin-top@beatlink",
+    "name": "Margin Top",
+    "description": "This simple CSS adds extra padding to any notes with the #cssClass=margin-top label. Useful for headings in the tree view.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/margin-top@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.4",
+    "type": "css",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/margin-top@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "stylesheet",
+                "title": "margin-top@beatlink.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "margin-top@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "stylesheet"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "stylesheet",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
