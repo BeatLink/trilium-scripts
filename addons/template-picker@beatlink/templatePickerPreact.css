@@ -1,3 +1,20 @@
+.template-picker-settings {
+    padding: 16px;
+}
+
+.template-picker-blurb {
+    margin-bottom: 1rem;
+}
+
+.template-picker-scan {
+    margin-bottom: 0.5rem;
+}
+
+.template-picker-status {
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
 #right-pane .body-wrapper:has(#x-template-picker-widget),
 #right-pane .card-body:has(#x-template-picker-widget) {
     contain: none !important;
