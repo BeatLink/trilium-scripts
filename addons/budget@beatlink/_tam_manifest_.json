@@ -1,0 +1,268 @@
+{
+    "id": "budget@beatlink",
+    "name": "Budget",
+    "description": "Nested single-entry budget tables with monthly tracking \u2014 apply the Budget template to any note and edit Title / Income / Expense / Notes rows in place, each row showing its balance and child rows rolling up into their parents. A Transactions tab records dated income and expenses against budget rows a month at a time, and a Report tab measures the month against the plan record by record: how much stayed within each record limits versus went off them, reported separately for income and for spending (spending past an allocation, income short of or beyond expectation, or anything with no allocation at all), an itemisation of every off-budget component, budgeted vs actual per row for both columns, the month's income, and a six-month trend. Rollup behaviour (computed, own + children, or budget cap) is configurable, amounts are shown and stored at a configurable number of decimal places, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "2.5.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/budget@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "launcher",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "budget@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "widget",
+                "title": "budgetWidget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "budgetWidget.jsx"
+            },
+            {
+                "id": "lib",
+                "title": "libBudget.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libBudget.js"
+            },
+            {
+                "id": "style",
+                "title": "budget.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "budget.css"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "template",
+                "title": "Budget",
+                "type": "render",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "widget"
+            },
+            {
+                "parent": "launcher",
+                "child": "style"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "persistence",
+                "child": "template"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            },
+            {
+                "parent": "widget",
+                "child": "lib"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "widget",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings",
+                "child": "lib"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            }
+        ],
+        "relations": [
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "launcher",
+                "type": "templateNote",
+                "to": "template"
+            },
+            {
+                "from": "template",
+                "type": "renderNote",
+                "to": "widget"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "template",
+                "name": "iconClass",
+                "value": "bx bx-wallet"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
+    }
+}
