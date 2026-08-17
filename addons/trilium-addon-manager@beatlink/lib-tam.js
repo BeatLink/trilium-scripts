@@ -182,8 +182,40 @@ async function fetchJson(url) {
     }, [url])
 }
 
+/*
+ * A published manifest carries absolute, commit-pinned sourceUrls; a
+ * hand-authored source manifest carries paths relative to itself. Resolving
+ * them here, against the URL the manifest was actually fetched from, is what
+ * keeps every consumer below dealing only in absolute URLs.
+ */
 async function fetchManifest(manifestSourceUrl) {
-    return await fetchJson(manifestSourceUrl)
+    const manifest = await fetchJson(manifestSourceUrl)
+    for (const noteDef of (manifest?.manifest?.notes || [])) {
+        if (!noteDef.sourceUrl) continue
+        noteDef.sourceUrl = new URL(noteDef.sourceUrl, manifestSourceUrl).href
+    }
+    return manifest
+}
+
+// A published manifest's per-note content hashes, keyed by local id.
+function noteHashesOf(m) {
+    const hashes = {}
+    for (const noteDef of (m?.notes || [])) {
+        if (noteDef.sha) hashes[noteDef.id] = noteDef.sha
+    }
+    return hashes
+}
+
+// A note whose fetch failed is absent from the note map: keeping its previously
+// stored hash (or none at all) is what makes the next sync retry it rather than
+// read it as already current.
+function recordedNoteHashes(m, noteMap, storedNoteHashes) {
+    const hashes = {}
+    for (const [localId, sha] of Object.entries(noteHashesOf(m))) {
+        const value = noteMap[localId] ? sha : storedNoteHashes?.[localId]
+        if (value) hashes[localId] = value
+    }
+    return hashes
 }
 
 // =========================================================================
@@ -311,7 +343,7 @@ async function applyLabels(labels, noteMap) {
 
 // Resolves every note in scope against the live tree by #TAMFILEID, find-or-create.
 async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
-    const { rootExternallyParented = false, entryLocalId = null, scopeLocalIds = null } = options
+    const { rootExternallyParented = false, entryLocalId = null, scopeLocalIds = null, storedNoteHashes = null } = options
     const { primaryParent } = buildParentMaps(m.children)
     const persistentIds = persistentLocalIds(m)
     const noteIds = (scopeLocalIds ? m.notes.filter(n => scopeLocalIds.has(n.id)) : m.notes).map(n => n.id)
@@ -334,6 +366,10 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
         const isBinary = noteDef.binary ?? false
         const tamFileId = `${addonId}/${localId}`
         const skipParenting = isEntry && rootExternallyParented
+        // An unhashed manifest (or a note whose shipped content moved) always
+        // refetches; matching hashes mean the bytes on the other end of that URL
+        // are the ones already installed, so both the fetch and the write go.
+        const contentUnchanged = !!(noteDef.sha && storedNoteHashes?.[localId] === noteDef.sha)
         const absoluteSourceUrl = noteDef.sourceUrl || null
         let effectiveType = noteType
         let effectiveMime = mime
@@ -356,10 +392,15 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
             explicitContent = marked.parse(rawMarkdown ?? "")
             sourceUrlForBackend = null
         }
+        // What #TAMSOURCEURL records, and what two addons vendoring the same file
+        // are matched on. A published manifest supplies `sourceId` — the same file
+        // on its branch — because the sourceUrl it fetches from is pinned to one
+        // commit and so is a different string every publish.
+        const sourceIdentity = sourceUrlForBackend ? (noteDef.sourceId || sourceUrlForBackend) : null
         let realNoteId
         try {
             realNoteId = await api.runAsyncOnBackendWithManualTransactionHandling(
-                async (tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, skipParenting) => {
+                async (tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, skipParenting, contentUnchanged, sourceIdentity) => {
                     async function fetchWithRetry(url, maxRetries = 5) {
                         for (let attempt = 0; ; attempt++) {
                             const response = await fetch(new URL(url).href)
@@ -373,14 +414,14 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     }
                     let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
                     if (existing && existing.isDeleted) existing = null
-                    if (!existing && sourceUrl) {
-                        const shared = api.getNoteWithLabel(sourceUrlLabel, sourceUrl)
+                    if (!existing && sourceIdentity) {
+                        const shared = api.getNoteWithLabel(sourceUrlLabel, sourceIdentity)
                         if (shared && !shared.isDeleted) {
                             if (!skipParenting) api.ensureNoteIsPresentInParent(shared.noteId, parentRealId)
                             return shared.noteId
                         }
                     }
-                    const willWriteContent = !existing || !(skipOnUpdate || promptOnUpdate)
+                    const willWriteContent = !existing || !(skipOnUpdate || promptOnUpdate || contentUnchanged)
                     let finalContent = null
                     if (willWriteContent) {
                         if (explicitContent !== null) {
@@ -395,18 +436,21 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     }
                     if (existing) {
                         if (!skipParenting) api.ensureNoteIsPresentInParent(existing.noteId, parentRealId)
-                        if (existing.getOwnedLabelValue(sourceUrlLabel) !== (sourceUrl || "")) {
-                            existing.setLabel(sourceUrlLabel, sourceUrl || "")
+                        if (existing.getOwnedLabelValue(sourceUrlLabel) !== (sourceIdentity || "")) {
+                            existing.setLabel(sourceUrlLabel, sourceIdentity || "")
                         }
-                        if (willWriteContent) {
+                        // Title/type/mime still track the manifest when only the
+                        // content write was skipped as unchanged — a rename ships
+                        // without the file itself moving.
+                        if (!(skipOnUpdate || promptOnUpdate)) {
                             if (existing.type !== noteType || existing.mime !== mime || existing.title !== title) {
                                 existing.type = noteType
                                 existing.mime = mime
                                 existing.title = title
                                 existing.save()
                             }
-                            existing.setContent(finalContent)
                         }
+                        if (willWriteContent) existing.setContent(finalContent)
                         return existing.noteId
                     }
                     const result = api.createTextNote(parentRealId, title, "")
@@ -418,11 +462,11 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                     }
                     note.setContent(finalContent)
                     note.setLabel(tamFileIdLabel, tamFileId)
-                    note.setLabel(sourceUrlLabel, sourceUrl || "")
+                    note.setLabel(sourceUrlLabel, sourceIdentity || "")
                     return note.noteId
                 },
                 [tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, noteDef.title, effectiveType, effectiveMime, sourceUrlForBackend, explicitContent, isBinary,
-                    !!noteDef.skipOnUpdate || persistentIds.has(localId), !!noteDef.promptOnUpdate, skipParenting]
+                    !!noteDef.skipOnUpdate || persistentIds.has(localId), !!noteDef.promptOnUpdate, skipParenting, contentUnchanged, sourceIdentity]
             )
         } catch (e) {
             console.error(`TAM: failed to resolve note '${localId}' of ${addonId}`, e)
@@ -504,12 +548,16 @@ async function pruneRemovedNotes(m, addonId) {
 // =========================================================================
 
 // Called from syncAddon before resolveNotes: compares each persistent note's live content against the incoming manifest default and queues a prompt on any difference.
-async function collectPendingPrompts(addonId, m) {
+async function collectPendingPrompts(addonId, m, storedNoteHashes = null) {
     const persistentIds = persistentLocalIds(m)
     if (persistentIds.size === 0) return []
     const prompts = []
     for (const noteDef of (m.notes || [])) {
         if (!persistentIds.has(noteDef.id)) continue
+        // Nothing to decide when the shipped default hasn't moved since the last
+        // sync: the only difference left is the user's own edit, which they've
+        // already been asked about once.
+        if (noteDef.sha && storedNoteHashes?.[noteDef.id] === noteDef.sha) continue
         // A declared settings config note is reviewed per setting instead (see
         // collectSettingsPrompt) — diffing it whole would offer to replace the
         // user's entire config with the blank document the addon ships.
@@ -1105,11 +1153,12 @@ async function resolveManifest(m, addonId, parentRealId, options = {}) {
         scopeLocalIds = null,
         rootExternallyParented = false,
         existingNoteMap = null,
-        deferredRelations = null
+        deferredRelations = null,
+        storedNoteHashes = null
     } = options
     const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
     const resolved = await resolveNotes(m, addonId, parentRealId, {
-        entryLocalId, scopeLocalIds, rootExternallyParented
+        entryLocalId, scopeLocalIds, rootExternallyParented, storedNoteHashes
     })
     const noteMap = existingNoteMap ? Object.assign(existingNoteMap, resolved) : resolved
     await applyLabels((m.labels || []).filter(l => inScope(l.note)), noteMap)
@@ -1153,7 +1202,8 @@ async function syncAddon(addonId, options = {}) {
     const metadataPrompt = wasInstalled && !isSelf
         ? await collectMetadataPrompt(addonId, m, manifest.name || addonId)
         : null
-    const pendingPrompts = await collectPendingPrompts(addonId, m)
+    const storedNoteHashes = existing?.noteHashes || null
+    const pendingPrompts = await collectPendingPrompts(addonId, m, storedNoteHashes)
     if (pendingPrompts.length > 0) {
         if (!database.installedAddons[addonId]) database.installedAddons[addonId] = {}
         if (!database.installedAddons[addonId].persistence) database.installedAddons[addonId].persistence = {}
@@ -1179,14 +1229,16 @@ async function syncAddon(addonId, options = {}) {
         await resolveManifest(m, addonId, persistenceAnchorId, {
             scopeLocalIds: persistentIds,
             existingNoteMap: noteMap,
-            deferredRelations
+            deferredRelations,
+            storedNoteHashes
         })
     }
     await resolveManifest(m, addonId, addonRootAnchorId, {
         entryLocalId: isSelf ? m.root : null,
         rootExternallyParented: isSelf,
         scopeLocalIds: structuralScope,
-        existingNoteMap: noteMap
+        existingNoteMap: noteMap,
+        storedNoteHashes
     })
     for (const rel of deferredRelations) {
         if (noteMap[rel.from] && noteMap[rel.to]) await applyRelation(noteMap[rel.from], rel.type, noteMap[rel.to])
@@ -1195,10 +1247,18 @@ async function syncAddon(addonId, options = {}) {
     await pruneRemovedNotes(m, addonId)
     const storedManifest = stripManifestForStorage(m)
     const meta = extractAddonMeta(manifest)
+    // A sync that skipped a note (its fetch failed) has not installed what the
+    // manifest hash stands for, so the hash is left unset and the next update
+    // check falls back to comparing versions until a clean sync records one.
+    const fullyResolved = (m.notes || []).every(n => !!noteMap[n.id])
+    const contentHash = fullyResolved ? (manifest.contentHash ?? null) : null
+    const noteHashes = recordedNoteHashes(m, noteMap, storedNoteHashes)
     if (!wasInstalled) {
         const priorPersistence = database.installedAddons[addonId]?.persistence
         database.installedAddons[addonId] = {
             installedVersion: manifest.latestVersion,
+            contentHash,
+            noteHashes,
             manifestSourceUrl: fetchUrl,
             manuallyInstalled: manual || isSelf,
             enabled: isSelf,
@@ -1209,6 +1269,8 @@ async function syncAddon(addonId, options = {}) {
     } else {
         const rec = database.installedAddons[addonId]
         rec.installedVersion = manifest.latestVersion
+        rec.contentHash = contentHash
+        rec.noteHashes = noteHashes
         rec.manifestSourceUrl = fetchUrl
         rec.meta = meta
         rec.manifest = storedManifest
@@ -1332,7 +1394,16 @@ async function getAllAddons() {
     return addons
 }
 
-// Fetches every installed addon's own manifestSourceUrl and compares latestVersion against installedVersion.
+/*
+ * Refetches every installed addon's own manifestSourceUrl and decides whether an
+ * update exists.
+ *
+ * A published manifest carries a `contentHash` covering its structure and every
+ * note's content, so a change is detected from the content itself and shipping a
+ * fix no longer depends on the author remembering to bump `latestVersion`. The
+ * version comparison stays as the fallback for a manifest that carries no hash —
+ * a hand-authored one, or one published before this existed.
+ */
 async function checkForAddonUpdates() {
     let database = await loadDatabase()
     const installed = database.installedAddons || {}
@@ -1340,13 +1411,19 @@ async function checkForAddonUpdates() {
         if (!addon.installedVersion || !addon.manifestSourceUrl) return
         try {
             const manifest = await fetchManifest(addon.manifestSourceUrl)
-            if (manifest.latestVersion) {
+            if (manifest.contentHash && addon.contentHash) {
+                addon.updateAvailable = manifest.contentHash !== addon.contentHash
+            } else if (manifest.latestVersion) {
                 addon.updateAvailable = versionCompare(manifest.latestVersion, addon.installedVersion) > 0
-                if (addon.updateAvailable) {
-                    addon.availableVersion = manifest.latestVersion
-                } else {
-                    delete addon.availableVersion
-                }
+            } else {
+                return
+            }
+            // Left unset for a content-only update, so the button reads "Update"
+            // rather than offering the version already installed.
+            if (addon.updateAvailable && manifest.latestVersion && manifest.latestVersion !== addon.installedVersion) {
+                addon.availableVersion = manifest.latestVersion
+            } else {
+                delete addon.availableVersion
             }
         } catch (e) {
         }

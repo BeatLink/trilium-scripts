@@ -8,7 +8,7 @@
     "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/media-tracker@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [
@@ -24,14 +24,14 @@
                 "title": "mediaTracker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.jsx"
+                "sourceUrl": "mediaTracker.jsx"
             },
             {
                 "id": "style",
                 "title": "mediaTracker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTracker.css"
+                "sourceUrl": "mediaTracker.css"
             },
             {
                 "id": "settings-page",
@@ -45,21 +45,21 @@
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/schema.json"
+                "sourceUrl": "schema.json"
             },
             {
                 "id": "defaults",
                 "title": "defaults.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/defaults.json"
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
@@ -73,28 +73,28 @@
                 "title": "mediaTrackerBackend.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/mediaTrackerBackend.js"
+                "sourceUrl": "mediaTrackerBackend.js"
             },
             {
                 "id": "autosync",
                 "title": "autoSync.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/autoSync.js"
+                "sourceUrl": "autoSync.js"
             },
             {
                 "id": "lib-tracker",
                 "title": "libMediaTracker.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/libMediaTracker.js"
+                "sourceUrl": "libMediaTracker.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/media-tracker@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
@@ -102,42 +102,42 @@
                 "title": "libSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
             },
             {
                 "id": "libsettings-core",
                 "title": "libSettingsCore.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [

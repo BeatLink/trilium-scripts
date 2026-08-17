@@ -31,6 +31,11 @@ jobs:
       - name: Generate pages
         run: node resources/scripts/tamhelper.js generate-pages
 
+      # Pins every published sourceUrl to this commit, so the manifests deployed
+      # here and the files they fetch are always the same revision.
+      - name: Publish manifests
+        run: node resources/scripts/tamhelper.js publish
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: resources/docs/
