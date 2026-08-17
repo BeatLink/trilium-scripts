@@ -1,0 +1,296 @@
+/* Every declaration here carries !important — same reasoning as
+   agenda@beatlink's profileEditor.css and trilium-addon-manager@beatlink's
+   tam.css: Trilium's own note-content CSS (typography sizing, .btn skins,
+   table borders, etc.) otherwise bleeds into a rendered widget note and
+   silently wins ties like padding/heading-size that this file leaves
+   unenforced. */
+
+.lst-panel {
+    box-sizing: border-box !important;
+    background-color: var(--main-background-color) !important;
+
+    & *, & *::before, & *::after {
+        box-sizing: border-box !important;
+    }
+}
+
+.lst-field {
+    margin: 1rem 0 !important;
+}
+
+.lst-field h4 {
+    margin: 0 0 0.25rem 0 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+}
+
+.lst-field-description {
+    display: block !important;
+    color: var(--muted-text-color) !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.lst-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding: 1rem 0 !important;
+}
+
+.lst-loading {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2rem !important;
+    color: var(--muted-text-color) !important;
+}
+
+/* The optional category bar sits above the tab bar — a second, heavier
+   grouping level. An empty category (no tabs assigned yet) is shown but
+   disabled/greyed rather than hidden, so the full set stays visible. */
+.lst-categories {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    margin: 1rem 0 0.6rem 0 !important;
+}
+
+.lst-category {
+    cursor: pointer !important;
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.375rem !important;
+    background-color: var(--accented-background-color) !important;
+    color: var(--main-text-color) !important;
+    padding: 0.4rem 0.9rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+}
+
+.lst-category-active {
+    background-color: var(--active-item-background-color, var(--main-background-color)) !important;
+    color: var(--active-item-text-color, var(--main-text-color)) !important;
+    border-color: var(--main-border-color) !important;
+}
+
+.lst-category:disabled {
+    cursor: default !important;
+    opacity: 0.45 !important;
+}
+
+.lst-tabbed {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+    margin: 1rem 0 !important;
+}
+
+.lst-tabbed-tabs {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    border-bottom: 1px solid var(--main-border-color) !important;
+}
+
+.lst-tab {
+    cursor: pointer !important;
+    border: 1px solid var(--main-border-color) !important;
+    border-bottom: none !important;
+    border-radius: 0.375rem 0.375rem 0 0 !important;
+    background-color: var(--accented-background-color) !important;
+    color: var(--main-text-color) !important;
+    padding: 0.35rem 0.75rem !important;
+    font-size: 0.9rem !important;
+}
+
+.lst-tab-active {
+    background-color: var(--main-background-color) !important;
+    font-weight: 600 !important;
+}
+
+.lst-tabbed-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+}
+
+.lst-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+    margin: 1rem 0 !important;
+
+    & > .btn, & > button {
+        align-self: flex-start !important;
+        min-width: unset !important;
+        width: auto !important;
+    }
+}
+
+.lst-list-empty {
+    color: var(--muted-text-color) !important;
+    font-style: italic !important;
+    margin: 0 !important;
+}
+
+.lst-item {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    background-color: var(--main-background-color) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+
+    & > summary {
+        cursor: pointer !important;
+        user-select: none !important;
+        padding: 0.75rem !important;
+        font-weight: 600 !important;
+        background-color: var(--main-background-color) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+
+        /* Browsers other than Firefox render a disclosure triangle as a
+           ::marker pseudo-element that isn't part of the flex row above —
+           without shrinking it wouldn't wrap the title/actions row inline
+           with it, but Firefox's own ::-moz-list-bullet already accounts for
+           this on its own. Harmless duplication either way. */
+        &::marker, &::-webkit-details-marker {
+            flex: 0 0 auto !important;
+        }
+    }
+}
+
+.lst-item-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.lst-item-body {
+    padding: 0.75rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+}
+
+.lst-item-fields {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+}
+
+.lst-field-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+
+    & > label {
+        flex: 0 0 11rem !important;
+        min-width: 0 !important;
+        text-align: left !important;
+    }
+
+    & > :last-child {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+}
+
+/* Reorder/remove controls sit in the item's own summary/title row, visible
+   and usable whether the item is expanded or collapsed. */
+.lst-item-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex: 0 0 auto !important;
+    gap: 0.25rem !important;
+
+    /* Trilium's own .btn-secondary (what a plain Button defaults to) sets
+       min-width: 120px and generous padding — fine for a labeled action
+       button, but these are icon-only reorder/remove controls, so they need
+       to be pinned to a small square instead. */
+    & .btn, & button {
+        flex: 0 0 auto !important;
+        min-width: unset !important;
+        width: 2rem !important;
+        height: 2rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* forms.css gives every button's icon glyph padding-inline-end: 0.35em
+       unconditionally — meant to space it from trailing text, but these
+       buttons have no text, so it just pushes the glyph left of center. */
+    & .btn .tn-icon, & button .tn-icon {
+        padding-inline-end: 0 !important;
+    }
+}
+
+.lst-checklist {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+}
+
+.lst-checklist-group {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    background-color: var(--main-background-color) !important;
+
+    & > summary {
+        cursor: pointer !important;
+        user-select: none !important;
+        padding: 0.5rem 0.75rem !important;
+        font-weight: 600 !important;
+    }
+}
+
+.lst-checklist-items {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+    padding: 0 0.75rem 0.75rem 0.75rem !important;
+}
+
+.lst-reference-inline {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+
+    & > .lst-item-fields {
+        border-left: 2px solid var(--main-border-color) !important;
+        padding-left: 0.75rem !important;
+        margin-left: 0.25rem !important;
+    }
+}
+
+/* A `subgroup` clusters a tab's fields under a labelled fieldset — a third,
+   lightweight grouping level *inside* a tab, for tabs with many related
+   scalar fields (e.g. the label-name vocabulary split into Start / Due / Task). */
+.lst-subgroup {
+    border: 1px solid var(--main-border-color) !important;
+    border-radius: 0.5rem !important;
+    padding: 0.25rem 1rem 0.75rem 1rem !important;
+    margin: 1rem 0 !important;
+}
+
+.lst-subgroup-legend {
+    padding: 0 0.5rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    color: var(--muted-text-color) !important;
+}
