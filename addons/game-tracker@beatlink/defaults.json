@@ -1,0 +1,86 @@
+{
+    "libraryRootNoteId": "",
+    "collectionGroups": "{\"groups\":[],\"assign\":{}}",
+    "viewGroupFilters": "{}",
+    "genresEnabled": true,
+    "hiddenGenres": "",
+    "viewGenreFilter": "all",
+    "viewStatusFilter": "all",
+    "viewPlatformFilter": "all",
+    "viewCollectionFilter": "all",
+    "viewSortKey": "title",
+    "viewSortDesc": false,
+    "viewGrouped": false,
+    "statuses": {
+        "backlog": {
+            "name": "Backlog",
+            "role": "backlog",
+            "color": "#808080"
+        },
+        "playing": {
+            "name": "Playing",
+            "role": "playing",
+            "color": "#3884ff"
+        },
+        "beaten": {
+            "name": "Beaten",
+            "role": "done",
+            "color": "#2ea057"
+        },
+        "dropped": {
+            "name": "Dropped",
+            "role": "abandoned",
+            "color": "#db4848"
+        }
+    },
+    "defaultStatusId": "",
+    "coverSize": "cover_big",
+    "sources": {
+        "igdb": {
+            "name": "IGDB",
+            "enabled": true
+        },
+        "rawg": {
+            "name": "RAWG",
+            "enabled": true
+        },
+        "steam": {
+            "name": "Steam",
+            "enabled": true
+        },
+        "gog": {
+            "name": "GOG",
+            "enabled": true
+        },
+        "lutris": {
+            "name": "Lutris",
+            "enabled": true
+        },
+        "steamgriddb": {
+            "name": "SteamGridDB (art only)",
+            "enabled": false
+        },
+        "gamesdb": {
+            "name": "TheGamesDB",
+            "enabled": false
+        }
+    },
+    "rawgApiKey": "",
+    "steamGridDbApiKey": "",
+    "gamesDbApiKey": "",
+    "gamesDbLookups": "",
+    "igdbClientId": "",
+    "igdbClientSecret": "",
+    "igdbAccessToken": "",
+    "igdbTokenExpiresAt": 0,
+    "steamApiKey": "",
+    "steamId": "",
+    "steamOnlyPlayed": false,
+    "autoSyncSteam": false,
+    "autoSyncHours": 6,
+    "autoSyncLastRun": "",
+    "autoSyncLastResult": "",
+    "importMarksPlaying": true,
+    "importFetchMetadata": true,
+    "importOverwriteRatings": false
+}
