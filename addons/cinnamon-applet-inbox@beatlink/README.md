@@ -12,7 +12,7 @@ renders a Settings screen with the following fields:
 | `apiKey`      | a random string you choose   | Shared secret checked against the applet's configured API key     |
 | `inboxNoteId` | pick a note                  | The note whose first line should be surfaced (uses a note picker) |
 
-Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
+Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `inboxPanel` (must match the `customRequestHandler` label on `cinnamon-applet-inbox.js`)
@@ -34,9 +34,8 @@ removed from the displayed text, and a countdown timer starts:
 - **Empty inbox** — the reminder is disabled and any saved timer state is cleared.
 
 Clicking the panel item calls back into the endpoint with `open_inbox`, which activates the inbox
-note in Trilium. The desktop notification itself is sent via
-[libnotification@beatlink](../libnotification@beatlink/)'s backend export, which handles the
-frontend hop (the `Notification` API only exists there) internally.
+note in Trilium. The desktop notification itself is sent by a local `runOnFrontend` hop (the
+`Notification` API only exists in the frontend).
 
 ### Known limitations
 
