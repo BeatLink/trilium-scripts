@@ -1,14 +1,14 @@
 {
     "id": "expanded@beatlink",
     "name": "Expanded",
-    "description": "Keep selected notes always expanded in the note tree. Toggle 'Always Expanded' from the right pane header on any note to pin it open permanently, even after restarting Trilium. The label used to mark a note is configurable in settings.",
+    "description": "Keep selected notes always expanded in the note tree. Tick the promoted 'Always Expanded' checkbox on any note to pin it open permanently, even after restarting Trilium. The label and its promoted definition are configurable in settings.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.2",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/expanded@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [
@@ -24,78 +24,106 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
             },
             {
-                "id": "widget",
-                "title": "expandedWidget",
+                "id": "setupRoot",
+                "title": "setupRoot.js",
                 "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/expandedWidget.jsx"
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setupRoot.js"
             },
             {
                 "id": "updateExpanded",
                 "title": "updateExpanded.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/updateExpanded.js"
+                "sourceUrl": "updateExpanded.js"
+            },
+            {
+                "id": "expandBranches",
+                "title": "expandBranches.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "expandBranches.js"
+            },
+            {
+                "id": "expandedConfig",
+                "title": "expandedConfig.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "expandedConfig.js"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/expanded@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "libsettings-backend",
                 "title": "libSettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=backend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-backend.js"
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -105,7 +133,7 @@
             },
             {
                 "parent": "launcher",
-                "child": "widget"
+                "child": "setupRoot"
             },
             {
                 "parent": "launcher",
@@ -113,7 +141,15 @@
             },
             {
                 "parent": "launcher",
+                "child": "expandBranches"
+            },
+            {
+                "parent": "launcher",
                 "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
             },
             {
                 "parent": "persistence",
@@ -128,6 +164,26 @@
                 "child": "readme"
             },
             {
+                "parent": "setupRoot",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "updateExpanded",
+                "child": "expandedConfig"
+            },
+            {
+                "parent": "expandBranches",
+                "child": "expandedConfig"
+            },
+            {
+                "parent": "expandedConfig",
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
             },
@@ -140,43 +196,40 @@
                 "child": "colorpicker-css"
             },
             {
-                "parent": "widget",
-                "child": "libsettings-ui"
-            },
-            {
                 "parent": "settings",
                 "child": "libsettings-ui"
-            },
-            {
-                "parent": "updateExpanded",
-                "child": "libsettings-backend"
             }
         ],
         "relations": [
             {
-                "from": "widget",
-                "type": "scriptNote",
+                "from": "setupRoot",
+                "type": "attributeScript",
                 "to": "updateExpanded"
             },
             {
-                "from": "widget",
+                "from": "setupRoot",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "widget",
-                "type": "settingsNote",
-                "to": "settings"
+                "from": "setupRoot",
+                "type": "configNote",
+                "to": "config"
             },
             {
                 "from": "updateExpanded",
+                "type": "expandScript",
+                "to": "expandBranches"
+            },
+            {
+                "from": "expandedConfig",
                 "type": "schemaNote",
                 "to": "schema"
             },
             {
-                "from": "updateExpanded",
-                "type": "settingsNote",
-                "to": "settings"
+                "from": "expandedConfig",
+                "type": "configNote",
+                "to": "config"
             },
             {
                 "from": "settings",
@@ -192,13 +245,18 @@
                 "from": "launcher",
                 "type": "renderNote",
                 "to": "settings"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
             {
-                "note": "widget",
-                "name": "widget",
-                "value": ""
+                "note": "setupRoot",
+                "name": "run",
+                "value": "frontendStartup"
             },
             {
                 "note": "libsettings-style",
@@ -212,6 +270,11 @@
             }
         ],
         "readmeNote": "readme",
-        "allowExternalReferences": true
+        "allowExternalReferences": true,
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
