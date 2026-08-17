@@ -2,10 +2,34 @@
 
 Stateless, schema-driven settings engine for TriliumNext addons — inspired by Cinnamon's
 `settings-schema.json` model. An addon defines its own `schema.json` (what fields exist, their type,
-label, description, and default) and keeps its own persisted `config.json` (an
-[`AddonData:` persisted note](../trilium-addon-manager@beatlink/README.md#persistence)); this
-library reads/merges/saves those two notes for you, and can render a settings form from that same
-schema.
+label and description), ships their values in a `defaults.json`, and keeps its own persisted
+`config.json` (a [persistent note](../../addons/trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence));
+this library merges that chain of **sources** into the runtime values, writes the user's changes back
+to the last one, and can render a settings form from the same schema.
+
+## Sources
+
+A *source* is one JSON config document. A config note names the source below it with a
+`sourceConfig` relation, so a chain resolves depth-first, **lowest priority first**, and the last
+source wins on conflict. The last source is also the only writable one — everything below it is
+read-only context.
+
+```
+defaults.json  (shipped by the addon, structural)
+      ▲ sourceConfig
+config.json    (the user's own, persistent, writable)
+```
+
+That is the normal two-source chain, and it is what the manifest's
+[`settings`](#update-review--tam-owns-it) block declares. Point a `sourceConfig` at *another
+addon's* config note and its values layer in underneath yours; give that note a `schemaNote`
+relation and its fields join the merged schema too, which is how one settings form edits more than
+one addon's settings. Nothing in the chain is passed per call site: `loadSettings(schemaNoteId,
+configNoteId)` walks it itself, so a widget, a backend script and the form all see the same layering.
+
+Only what a source *changes* about the ones below it is stored in it. A value the user never touched
+is simply absent from `config.json`, so it keeps following `defaults.json` — including when a later
+addon version changes it.
 
 This library never resolves note references itself — it's handed noteIds by the consuming addon
 (dependency injection). It doesn't know or care about relation names, note titles, or your addon's
@@ -16,13 +40,22 @@ addon is calling me" on its own.
 ## Schema format
 
 A JSON object keyed by setting name, saved as your addon's own `schema.json` note (not this
-library's — schema lives with the addon that defines it):
+library's — schema lives with the addon that defines it). It describes fields only; their shipped
+values live beside it in `defaults.json`, keyed the same way:
 
 ```json
 {
-    "apiKey": {"type": "string", "label": "API Key", "description": "Shared secret for the panel applet", "default": "CHANGE_ME"},
-    "taskOrder": {"type": "select", "label": "Task Order", "options": [{"value": "earliest", "label": "Earliest"}, {"value": "latest", "label": "Latest"}], "default": "earliest"},
-    "inboxNoteId": {"type": "note", "label": "Inbox Note", "description": "Note whose first line should be surfaced", "default": ""}
+    "apiKey": {"type": "string", "label": "API Key", "description": "Shared secret for the panel applet"},
+    "taskOrder": {"type": "select", "label": "Task Order", "options": [{"value": "earliest", "label": "Earliest"}, {"value": "latest", "label": "Latest"}]},
+    "inboxNoteId": {"type": "note", "label": "Inbox Note", "description": "Note whose first line should be surfaced"}
+}
+```
+
+```json
+{
+    "apiKey": "CHANGE_ME",
+    "taskOrder": "earliest",
+    "inboxNoteId": ""
 }
 ```
 
@@ -31,7 +64,7 @@ library's — schema lives with the addon that defines it):
 | `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, `list`, `registry`, or `reference` |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
-| `default`     | yes      | Value used when the key is missing from `config.json` (`[]` for `list`, `{}` for `registry`, `""` for `reference`) |
+| `default`     | `itemSchema` fields only | Seeds this field on an item created at runtime, and fills it on an item that predates the field. Top-level fields have none — their value belongs in `defaults.json`, and a field no source holds falls back to its type's empty value (`""`, `0`, `false`, `[]`, `{}`) |
 | `options`     | `select` only | Array of `{"value", "label"}` for the dropdown          |
 | `itemSchema`  | `list`/`registry` only | A nested schema object (same shape as above) describing the fields of each entry |
 | `registry`    | `reference` only | The sibling top-level schema key (must be a `registry` field) this field picks an entry from |
@@ -40,16 +73,17 @@ library's — schema lives with the addon that defines it):
 | `subgroup`    | no       | Optional label that clusters this field with its tab-mates sharing the same `subgroup` under a labelled fieldset *within* the tab — see "Sub-groups" below |
 | `showWhen`    | no, `itemSchema` fields only | `{"otherField": value}` (or `{"otherField": [value, ...]}`) — only applies to an item whose sibling fields match; see "Polymorphic items" below |
 
-Your addon's `config.json` only needs to start as `{}` — every field is defaulted from the schema on
-first read, so there's nothing to duplicate between the two files.
+Your addon's `config.json` ships empty and stays that way until the user changes something — it holds
+only their divergences from `defaults.json`, never a copy of it.
 
 ### `list` fields — repeatable groups of settings
 
 Use `type: "list"` when an addon needs a variable number of entries that each carry several fields
 (e.g. one profile per table to total, one entry per webhook). Each stored value is an array of
 objects; each object is validated/defaulted against `itemSchema`, recursively — this works the same
-way at any depth `mergeDefaults`/`filterBySchema` are applied in both
-[`libsettings-backend.js`](libsettings-backend.js) and [`libsettings-ui.jsx`](libsettings-ui.jsx).
+way at any depth `mergeDefaults`/`filterBySchema` are applied — in
+[`libsettings-core.js`](libsettings-core.js) for the frontend and TAM, and in
+[`libsettings-backend.js`](libsettings-backend.js) for backend scripts.
 
 ```json
 {
@@ -57,7 +91,6 @@ way at any depth `mergeDefaults`/`filterBySchema` are applied in both
         "type": "list",
         "label": "Profiles",
         "description": "One entry per thing you want to configure",
-        "default": [],
         "itemSchema": {
             "targetNoteId": {"type": "note", "label": "Target Note", "default": ""},
             "attribute": {"type": "string", "label": "Attribute", "default": "value"}
@@ -88,7 +121,6 @@ Validated/defaulted against `itemSchema` the same recursive way as `list`.
     "dateRules": {
         "type": "registry",
         "label": "Date Rules",
-        "default": {},
         "itemSchema": {
             "name": {"type": "string", "label": "Name", "default": "New Date Rule"},
             "days": {"type": "number", "label": "Days", "default": 0}
@@ -107,26 +139,17 @@ position instead).
 
 ### Shipped entries — `registry` fields the addon itself ships entries into
 
-A `registry`'s `default` isn't just "the value when the key is missing" (as for every other field
-type) — it's also the *shipped* entry set, reconciled against the user's own additions/edits/deletions
-on every read and write. This works because `schema.json` is a normal addon-shipped note (not tracked
-by `AddonData:`), so it gets fully overwritten on every TAM update — same mechanism as any other
-shipped note — meaning a new default entry you add to `default` in a later addon version reaches
-existing installs automatically, without a migration:
+A `registry`'s entries in `defaults.json` are the addon's *shipped* entry set, reconciled against the
+user's own additions/edits/deletions on every read and write. `defaults.json` is a normal
+addon-shipped note (structural, *never* under the reserved `"persistence"` parent), so it gets fully
+overwritten on every TAM update — same mechanism as any other shipped note — meaning an entry you add
+to it in a later addon version reaches existing installs automatically, without a migration:
 
 ```json
 {
     "dateRules": {
-        "type": "registry",
-        "label": "Date Rules",
-        "default": {
-            "overdue": {"name": "Overdue", "days": -1},
-            "thisWeek": {"name": "This Week", "days": 7}
-        },
-        "itemSchema": {
-            "name": {"type": "string", "label": "Name", "default": "New Date Rule"},
-            "days": {"type": "number", "label": "Days", "default": 0}
-        }
+        "overdue": {"name": "Overdue", "days": -1},
+        "thisWeek": {"name": "This Week", "days": 7}
     }
 }
 ```
@@ -138,11 +161,9 @@ different and normally invisible to a consumer: `{ "entries": {...}, "removedIds
 `entries` holds only ids that are new or differ from their shipped version (an untouched shipped
 entry is never copied into `config.json`, so it keeps tracking future changes to its shipped default
 until the user actually edits it), and `removedIds` records which shipped ids the user deleted (so a
-future addon update doesn't resurrect something they removed). This is exactly the shipped-vs-
-persisted-delta split `agenda@beatlink`'s own hand-rolled `builtinElementsNoteId` system implements —
-generalized here as a property of the `registry` type itself, with no separate note needed. A
-`registry` with `default: {}` (no shipped entries) behaves exactly as before this existed — the split
-is a no-op when there's nothing shipped to reconcile against.
+future addon update doesn't resurrect something they removed). A source may state its entries either
+way — the flat map above, or that same wrapper — so a hand-written `defaults.json` never has to wrap
+anything, while a source layering over another one can still record removals.
 
 ### Polymorphic items — a `list`/`registry` entry whose fields depend on its own type
 
@@ -156,7 +177,6 @@ needing a separate `list`/`registry` per shape:
     "filters": {
         "type": "registry",
         "label": "Filters",
-        "default": {},
         "itemSchema": {
             "name": {"type": "string", "label": "Name", "default": "New Filter"},
             "type": {
@@ -215,11 +235,11 @@ keep in sync:
 ```json
 {
     "searchGroups": {
-        "type": "registry", "label": "Search Groups", "default": {},
+        "type": "registry", "label": "Search Groups",
         "itemSchema": {
             "name": {"type": "string", "label": "Name", "default": "New Group"},
             "children": {
-                "type": "registry", "label": "Searches", "default": {},
+                "type": "registry", "label": "Searches",
                 "itemSchema": {
                     "name": {"type": "string", "label": "Name", "default": "New Search"},
                     "rule": {"type": "string", "label": "Search Rule", "default": ""},
@@ -246,12 +266,12 @@ list of checkboxes — no separate item-editing form, just enable/disable. It on
 ```json
 {
     "searchGroups": {
-        "type": "registry", "label": "Search Groups", "default": {},
+        "type": "registry", "label": "Search Groups",
         "itemSchema": {
             "name": {"type": "string", "label": "Name", "default": "New Group"},
             "profileId": {"type": "reference", "label": "Profile", "registry": "profiles", "default": ""},
             "children": {
-                "type": "registry", "label": "Searches", "default": {},
+                "type": "registry", "label": "Searches",
                 "itemSchema": {
                     "name": {"type": "string", "label": "Name", "default": "New Search"},
                     "rule": {"type": "string", "label": "Search Rule", "default": ""},
@@ -261,7 +281,7 @@ list of checkboxes — no separate item-editing form, just enable/disable. It on
         }
     },
     "profiles": {
-        "type": "registry", "label": "Profiles", "default": {},
+        "type": "registry", "label": "Profiles",
         "itemSchema": {
             "name": {"type": "string", "label": "Name", "default": "New Profile"},
             "searchGroups": {"type": "checklist", "label": "Searches", "registry": "searchGroups", "filterBy": "profileId"}
@@ -296,9 +316,9 @@ onto one named tab instead of each getting its own:
 
 ```json
 {
-    "parentNoteId": {"type": "note", "label": "File Tasks Under", "default": "", "tab": "Profile"},
-    "searches": {"type": "registry", "label": "Searches", "default": {}, "itemSchema": {...}, "tab": "Searches"},
-    "searchGroups": {"type": "registry", "label": "Search Groups", "default": {}, "itemSchema": {...}, "tab": "Searches"}
+    "parentNoteId": {"type": "note", "label": "File Tasks Under", "tab": "Profile"},
+    "searches": {"type": "registry", "label": "Searches", "itemSchema": {...}, "tab": "Searches"},
+    "searchGroups": {"type": "registry", "label": "Search Groups", "itemSchema": {...}, "tab": "Searches"}
 }
 ```
 
@@ -316,9 +336,9 @@ row of tabs is too flat. Two pieces enable it:
 ```json
 {
     "_categories": ["Collect", "Organize", "Review", "Execute"],
-    "myDayNoteId": {"type": "note", "label": "My Day Note", "default": "", "category": "Execute", "tab": "My Day"},
-    "morningTime": {"type": "string", "label": "Morning", "default": "08:00", "category": "Organize", "tab": "Times"},
-    "profiles": {"type": "registry", "label": "Profiles", "default": {}, "itemSchema": {}, "category": "Organize", "tab": "Profiles"}
+    "myDayNoteId": {"type": "note", "label": "My Day Note", "category": "Execute", "tab": "My Day"},
+    "morningTime": {"type": "string", "label": "Morning", "category": "Organize", "tab": "Times"},
+    "profiles": {"type": "registry", "label": "Profiles", "itemSchema": {}, "category": "Organize", "tab": "Profiles"}
 }
 ```
 
@@ -375,19 +395,20 @@ const { loadSettings, saveSettings } = require("libSettings.js")
 // however your addon resolves its own noteIds — this library doesn't do it for you
 const schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 const configNoteId = api.getNote(api.currentNote.getRelationValue("settingsNote"))
-    .getRelationValue("AddonData:config")
+    .getRelationValue("configNote")
 
 const values = loadSettings(schemaNoteId, configNoteId)
 ```
 
 ### `loadSettings(schemaNoteId, configNoteId)`
 
-Reads both notes, merges stored values over schema defaults for any missing key, and returns the
-merged values object.
+Walks the config note's [source chain](#sources), merges every source in order (last wins), and
+returns the merged values object.
 
 ### `saveSettings(schemaNoteId, configNoteId, values)`
 
-Writes `values` to the config note, keeping only keys present in the schema.
+Writes to the config note only what `values` changes about the sources below it, keeping only keys
+present in the schema.
 
 ## Frontend / widget usage
 
@@ -406,13 +427,13 @@ export default function MySettings() {
 
 ### `<SettingsPage note />`
 
-Resolves `note`'s `schemaNote` and `AddonData:config` relations, then renders a `SettingsForm` for
+Resolves `note`'s `schemaNote` and `configNote` relations, then renders a `SettingsForm` for
 them, showing `Loading...` until both resolve. Any other prop (`extraPanels`, `only`, `onSaved`)
 passes straight through to `SettingsForm`.
 
 **`note` is required, and must be read in your own module.** Reading `api.currentNote` inside this
 library yields *the library's* note, not your settings note — it has no `schemaNote` or
-`AddonData:config` relation, so resolution silently yields nothing and the page never leaves
+`configNote` relation, so resolution silently yields nothing and the page never leaves
 `Loading...`. That is why this is a prop rather than a default.
 
 Reach for `SettingsForm` directly only when the page is more than the form — e.g. content stacked
@@ -423,7 +444,7 @@ case use `resolveConfigNotes()` so you still don't hand-roll the relation lookup
 
 Returns `{ schemaNoteId, configNoteId }` for a note, handling both wirings:
 
-* a **settings note**, where `schemaNote` and `AddonData:config` both hang off the note directly;
+* a **settings note**, where `schemaNote` and `configNote` both hang off the note directly;
 * a **widget script note**, which carries `schemaNote` itself but reaches config indirectly through
   its `settingsNote` relation.
 
@@ -436,8 +457,8 @@ Frontend only — backend scripts should keep using the `libSettings.js` require
 
 ### `<SettingsForm schemaNoteId configNoteId />`
 
-Fully self-contained: loads `schema.json` and `config.json` itself, renders one field per schema
-entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
+Fully self-contained: resolves the config note's whole [source chain](#sources) itself, renders one
+field per merged-schema entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
 picker, `color` → swatch picker, `reference` → dropdown of another registry's entries, `list` →
 repeatable stack of forms of the above, `registry` → id-keyed stack of forms of the above), and owns
 its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't dictate
@@ -457,7 +478,7 @@ category/tab nav as the schema fields, so it doesn't need a second page or a sec
     schemaNoteId={schemaNoteId}
     configNoteId={configNoteId}
     extraPanels={[
-        { category: "Settings", tab: "Workflow Setup", render: () => <MySetupPanel /> }
+        { category: "Settings", tab: "Maintenance", render: () => <MyMaintenancePanel /> }
     ]}
 />
 ```
@@ -468,8 +489,8 @@ joins the given `category`'s tab row (after the schema tabs already there); when
 falls under the first declared category, exactly as a field would. Give each panel its own `tab` label
 — a panel sharing a label with a schema tab would collide. `extraPanels` is purely additive: omit it
 (the default `[]`) and the form behaves exactly as documented above. See
-[`agenda@beatlink`](../agenda@beatlink/)'s `profileEditor.jsx` for a real consumer (Workflow Setup +
-the Organize-note picker injected as a Settings tab).
+[`agenda-organize@beatlink`](../../addons/agenda-organize@beatlink/)'s `organizeEditor.jsx` for a
+real consumer (the Organize-note picker injected as a Settings tab).
 
 #### `only` — embedding a single tab
 
@@ -496,20 +517,103 @@ once the config is on disk — e.g. `organizeTemplates.jsx` writes each enabled 
 
 ### `loadSettings(schemaNoteId, configNoteId)` (also exported from `libsettings-ui.jsx`)
 
-The same merge-with-defaults read as the backend function, but `async` and usable from any frontend
+The same source-chain merge as the backend function, but `async` and usable from any frontend
 context — not just a widget rendering `SettingsForm`. Useful for e.g. a note-context-aware widget
 that needs to check current settings without rendering the full form.
 
 ### `saveSettings(schemaNoteId, configNoteId, values)` (also exported from `libsettings-ui.jsx`)
 
-The same diff-against-schema write as the backend function, `async` from any frontend context.
+The same diff-against-the-lower-sources write as the backend function, `async` from any frontend
+context.
 Useful for frontend library code that needs to persist a programmatic edit itself — a widget calling
 into a shared library function that reads, patches, and writes settings, not just edits made through
 `SettingsForm` directly.
 
+## Update review — TAM owns it
+
+`config.json` is persistent, so TAM never overwrites it; `defaults.json` is structural, so every
+update replaces it with whatever the shipped values have become. Reconciling those two on update is
+**[TAM's](../../addons/trilium-addon-manager@beatlink/ARCHITECTURE.md#per-setting-review-manifestsettings)
+job, not this library's**, and needs no code in your addon. Declare the trio in your manifest, and
+link the config note to its defaults source:
+
+```json
+"settings": {
+    "schema": "schema",
+    "defaults": "defaults",
+    "config": "config"
+}
+```
+
+```json
+"relations": [
+    {"from": "config", "type": "sourceConfig", "to": "defaults"}
+]
+```
+
+with the schema and defaults notes structural and the config note attached under the reserved
+`"persistence"` parent and shipping **no content of its own** (`"sourceUrl": null`, no `content`) —
+TAM creates it empty, which this library reads as `{}`. `validate` enforces all of it. See
+[`duplicate-finder@beatlink`](../../addons/duplicate-finder@beatlink/) and
+[`area-picker@beatlink`](../../addons/area-picker@beatlink/) for the wiring in a real manifest.
+
+That gets you, for free:
+
+* the config note **excluded** from TAM's whole-file diff (a persistent note shipping `{}` would
+  otherwise be offered for whole-file replacement on every update, wiping every saved setting);
+* every default that moved in the update raised as one Update Review row, with Keep Mine against
+  what the user has today and Use New Default against the new shipped value — a row they never
+  customized starts on Use New Default, one that conflicts starts on Keep Mine.
+
+Registry entries reconcile as [Shipped entries](#shipped-entries--registry-fields-the-addon-itself-ships-entries-into)
+already describes: untouched shipped entries track upstream automatically and never appear in the
+review at all, user-added and user-deleted ones are left alone, and only an entry the user *edited*
+whose shipped version *also* changed is worth a question. `list` fields are excluded from review
+entirely, since a stored list replaces its default wholesale.
+
+Answering **Use New Default** drops the user's override — their key, or their shadowing registry
+entry — rather than copying the new value in, so the setting goes back to tracking `defaults.json`
+from then on. **Keep Mine** does the opposite: it pins what they have today into `config.json`,
+which for a setting they never diverged on is the only thing that stops it following the new value.
+
+### `libsettings-core.js`
+
+The schema semantics — how a chain of sources combines into the runtime values, and how they come
+apart on save — live in
+[`libsettings-core.js`](libsettings-core.js), a plain `env=frontend` module. Both
+[`libsettings-ui.jsx`](libsettings-ui.jsx) and TAM's own `lib-tam.js` require it, so the review and
+the form agree exactly on what "the user changed this" means. Since TAM reuses any note carrying the
+same `#TAMSOURCEURL`, that is one note in the database no matter how many addons wire it.
+
+Consumers wire it as a **direct** child of `libSettingsUI.jsx` (that is what `require()` resolves
+against):
+
+```json
+{
+    "notes": [
+        {
+            "id": "libsettings-core",
+            "title": "libSettingsCore.js",
+            "type": "code",
+            "mime": "application/javascript;env=frontend",
+            "sourceUrl": ".../libs/libsettings/libsettings-core.js"
+        }
+    ],
+    "children": [
+        {"parent": "libsettings-ui", "child": "libsettings-core"}
+    ]
+}
+```
+
+[`libsettings-backend.js`](libsettings-backend.js) still carries its own copy of those helpers, and
+has to: Trilium only bundles a child module whose script env matches its parent's, so a backend
+script can never require a frontend note however the notes are wired. Those two must be changed
+together.
+
 ## See it in use
 
-[`cinnamon-applet-agenda@beatlink`](../cinnamon-applet-agenda@beatlink/) and
-[`cinnamon-applet-inbox@beatlink`](../cinnamon-applet-inbox@beatlink/) both consume this library —
-their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `AddonData:config`) a
-consumer needs to declare.
+[`cinnamon-applet-agenda@beatlink`](../../addons/cinnamon-applet-agenda@beatlink/) and
+[`cinnamon-applet-inbox@beatlink`](../../addons/cinnamon-applet-inbox@beatlink/) both consume this
+library — their manifests show the full relation wiring (`schemaNote`, `settingsNote`, `configNote`,
+and the `sourceConfig` link from `config.json` to `defaults.json`) a consumer needs to declare, with
+`config.json` attached under the reserved `"persistence"` parent and named by `manifest.settings`.

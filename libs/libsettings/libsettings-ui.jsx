@@ -8,125 +8,62 @@ import {
     NoteAutocomplete
 } from "trilium:preact"
 import { ColorPicker } from "ColorPicker.jsx"
+import { isPlainObject, blankItem, mergeSchemas, mergeSources, filterBySchema, titleFor } from "libSettingsCore.js"
 
-function isPlainObject(value) {
-    return !!value && typeof value === "object" && !Array.isArray(value)
-}
 
-// A registry's `default` doubles as its *shipped* entries — schema.json is a
-// normal addon-shipped note (not `AddonData:`-tracked), so it gets fully
-// overwritten on every TAM update just like the rest of the addon, meaning a
-// newly-added shipped entry reaches existing installs for free. The
-// persisted (config.json) shape for a registry field is therefore not the
-// flat runtime map itself but `{ entries, removedIds }`: `entries` holds
-// only additions/edits that differ from the shipped version (keyed by the
-// same id to shadow a specific shipped entry), and `removedIds` records
-// which shipped ids the user deleted — an untouched shipped entry is never
-// duplicated into config.json, so it keeps tracking future shipped edits
-// until the user actually changes it. `mergeRegistryDefaults` reconstructs
-// the flat runtime map (shipped, minus removed, with entries overlaid) that
-// the rest of this module and the UI both work with; `filterRegistryBySchema`
-// is the inverse, run on save. Kept in exact lockstep with the identically-
-// named functions in libsettings-backend.js.
-// A registry field can itself nest further `list`/`registry` fields in its
-// `itemSchema` (e.g. a colour/prefix variant's `children`, one flat
-// label-value map per variant — see libsettings@beatlink's README "Nesting"
-// section). The shipped baseline for such a nested field lives inside its
-// *parent item's own* shipped default (`shippedItem[key]`, e.g.
-// `colors.default.priority.children`), never in the nested field's own
-// schema `default` (which is only the blank starting point for a brand-new
-// item added through the UI, always `{}`) — so `mergeDefaults`/
-// `filterBySchema` thread a `shippedNode` parameter through every level of
-// recursion instead of re-deriving "shipped" from `def.default` past the
-// top level. Kept in exact lockstep with the identically-named functions in
-// libsettings-backend.js.
-function mergeRegistryDefaults(itemSchema, shipped, storedWrapper) {
-    const storedEntries = isPlainObject(storedWrapper?.entries) ? storedWrapper.entries : {}
-    const removedIds = Array.isArray(storedWrapper?.removedIds) ? storedWrapper.removedIds : []
-    const merged = {}
-    for (const [id, item] of Object.entries(shipped)) {
-        if (!removedIds.includes(id)) merged[id] = mergeDefaults(itemSchema, item, null)
-    }
-    for (const [id, item] of Object.entries(storedEntries)) {
-        merged[id] = mergeDefaults(itemSchema, shipped[id] ?? null, item)
-    }
-    return merged
-}
-
-function filterRegistryBySchema(itemSchema, shipped, effective) {
-    const entries = {}
-    const removedIds = []
-    for (const [id, item] of Object.entries(effective)) {
-        const shippedItem = shipped[id] ?? null
-        const filteredItem = filterBySchema(itemSchema, item, shippedItem)
-        const shippedFiltered = shippedItem
-            ? filterBySchema(itemSchema, mergeDefaults(itemSchema, shippedItem, null), shippedItem)
-            : null
-        if (shippedFiltered === null || JSON.stringify(shippedFiltered) !== JSON.stringify(filteredItem)) {
-            entries[id] = filteredItem
+// Every source under a config note, lowest priority first and the note itself
+// last: each source may name further sources through its own `sourceConfig`
+// relations, and its own fields through a `schemaNote` relation, so one addon's
+// config can layer over another's. Depth-first and post-order, so a source is
+// always read before whatever points at it; a cycle stops at the note it
+// revisits. One backend hop for the whole chain — it walks relations and reads
+// note content, neither of which the frontend can do directly.
+async function loadSources(configNoteId) {
+    return await api.runOnBackend((rootId) => {
+        const readJson = (noteId) => {
+            const note = noteId ? api.getNote(noteId) : null
+            if (!note) return {}
+            try {
+                return JSON.parse(note.getContent() || "{}")
+            } catch (e) {
+                return {}
+            }
         }
-    }
-    for (const id of Object.keys(shipped)) {
-        if (!(id in effective)) removedIds.push(id)
-    }
-    return { entries, removedIds }
-}
-
-function mergeDefaults(schema, shippedNode, storedNode) {
-    const values = {}
-    for (const [key, def] of Object.entries(schema)) {
-        // Keys starting with `_` are schema-level metadata (e.g. `_categories`,
-        // the ordered category list SettingsForm reads), not fields — they
-        // carry no per-user value, so they never enter the merged/persisted map.
-        if (key.startsWith("_")) continue
-        const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : def.default
-        if (def.type === "list") {
-            const storedList = Array.isArray(storedNode?.[key]) ? storedNode[key] : (shippedValue ?? [])
-            values[key] = storedList.map(item => mergeDefaults(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            values[key] = mergeRegistryDefaults(def.itemSchema, shippedValue || {}, storedNode?.[key])
-        } else {
-            values[key] = (storedNode && key in storedNode) ? storedNode[key] : shippedValue
+        const sources = []
+        const seen = new Set()
+        const visit = (noteId) => {
+            if (!noteId || seen.has(noteId)) return
+            seen.add(noteId)
+            const note = api.getNote(noteId)
+            if (!note) return
+            for (const relation of note.getOwnedRelations("sourceConfig")) visit(relation.value)
+            sources.push({
+                configNoteId: noteId,
+                schema: readJson(note.getRelationValue("schemaNote")),
+                stored: readJson(noteId)
+            })
         }
-    }
-    return values
+        visit(rootId)
+        return sources
+    }, [configNoteId])
 }
 
-function filterBySchema(schema, values, shippedNode) {
-    const filtered = {}
-    for (const key of Object.keys(schema)) {
-        if (key.startsWith("_")) continue
-        const def = schema[key]
-        if (def.type === "list") {
-            const list = Array.isArray(values?.[key]) ? values[key] : []
-            filtered[key] = list.map(item => filterBySchema(def.itemSchema, item, item))
-        } else if (def.type === "registry") {
-            const effective = isPlainObject(values?.[key]) ? values[key] : {}
-            const shippedValue = (shippedNode && key in shippedNode) ? shippedNode[key] : (def.default || {})
-            filtered[key] = filterRegistryBySchema(def.itemSchema, shippedValue || {}, effective)
-        } else {
-            filtered[key] = values[key]
-        }
-    }
-    return filtered
-}
-
-async function loadSchema(schemaNoteId) {
+// The merged schema and values of a config note's whole source chain, with
+// `schemaNoteId`'s fields on top of whatever the chain itself declares.
+async function resolveSettings(schemaNoteId, configNoteId) {
     const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [schemaNoteId])
-    return JSON.parse(content || "{}")
+    const sources = await loadSources(configNoteId)
+    const schema = mergeSchemas([...sources.map(s => s.schema), JSON.parse(content || "{}")])
+    return { sources, schema, values: mergeSources(schema, sources.map(s => s.stored)) }
 }
 
-async function loadValues(schema, configNoteId) {
-    const content = await api.runOnBackend((id) => api.getNote(id).getContent(), [configNoteId])
-    const stored = content ? JSON.parse(content) : {}
-    return mergeDefaults(schema, null, stored)
-}
-
-async function persistValues(schema, configNoteId, values) {
-    const filtered = filterBySchema(schema, values, null)
+// Writes only what `values` changes about the read-only sources below the config
+// note — the config note is the one writable source in its chain.
+async function persistValues(sources, schema, configNoteId, values) {
+    const base = mergeSources(schema, sources.slice(0, -1).map(s => s.stored))
     await api.runOnBackend(
         (id, content) => api.getNote(id).setContent(content),
-        [configNoteId, JSON.stringify(filtered, null, 4)]
+        [configNoteId, JSON.stringify(filterBySchema(schema, values, base), null, 4)]
     )
 }
 
@@ -136,7 +73,7 @@ async function persistValues(schema, configNoteId, values) {
 //
 //   - a *settings* note (the render-note case, what `SettingsPage` uses): the
 //     schema and config hang off this note directly, as `schemaNote` and
-//     `AddonData:config`.
+//     `configNote`.
 //   - a *widget* script note: it carries `schemaNote` itself but reaches config
 //     indirectly, via its `settingsNote` relation — so the config lookup needs a
 //     backend hop to read a relation off a note that isn't the current one.
@@ -144,10 +81,14 @@ async function persistValues(schema, configNoteId, values) {
 // `note` is required and must be the *consumer's* own note — do not default it
 // to `api.currentNote`. Inside this module `api.currentNote` is the library's
 // note, not the settings/widget note that owns the `schemaNote` and
-// `AddonData:config` relations, so a default silently resolves nothing and
+// `configNote` relations, so a default silently resolves nothing and
 // strands the caller on its loading state. Settings notes pass `api.currentNote`
 // from their own module; widgets pass the `currentNote` they import from
 // `trilium:api`.
+//
+// The config note is a persistent note (attached under the reserved "persistence"
+// parent); the `configNote` relation points at it directly and TAM never
+// overwrites its content — it reviews it per setting instead, see the README.
 //
 // Returns `{ schemaNoteId, configNoteId }`, either of which may be null if the
 // relation is absent — callers already gate their render on that.
@@ -155,26 +96,19 @@ export async function resolveConfigNotes(note) {
     const schemaNoteId = await note.getRelationValue("schemaNote")
     const settingsNoteId = await note.getRelationValue("settingsNote")
     // No `settingsNote` means this *is* the settings note: read config locally.
-    // Note the asymmetry — the local read goes through `getRelationTarget().noteId`,
-    // not `getRelationValue()`. On a *frontend* note `getRelationValue` does not
-    // resolve `AddonData:config` (it yields undefined, which strands every caller
-    // on its loading state); the backend note objects reached via `api.getNote`
-    // are the ones where `getRelationValue` works, which is why the
-    // `settingsNote` branch below can use it inside `runOnBackend`.
     const configNoteId = settingsNoteId
         ? await api.runOnBackend(
-            (id) => api.getNote(id).getRelationValue("AddonData:config"),
+            (id) => api.getNote(id).getRelationValue("configNote"),
             [settingsNoteId]
         )
-        : (await note.getRelationTarget("AddonData:config"))?.noteId
+        : (await note.getRelationTarget("configNote"))?.noteId
     return { schemaNoteId, configNoteId }
 }
 
 // Exported so other frontend code (e.g. a note-context-aware widget) can read merged
 // settings without duplicating the schema/config-loading logic.
 export async function loadSettings(schemaNoteId, configNoteId) {
-    const schema = await loadSchema(schemaNoteId)
-    return loadValues(schema, configNoteId)
+    return (await resolveSettings(schemaNoteId, configNoteId)).values
 }
 
 // The write-side counterpart, for frontend code that needs to persist a
@@ -183,8 +117,8 @@ export async function loadSettings(schemaNoteId, configNoteId) {
 // `libsettings-backend.js`'s `saveSettings` exactly, just backend-note-read
 // via `api.runOnBackend` like every other frontend function in this file.
 export async function saveSettings(schemaNoteId, configNoteId, values) {
-    const schema = await loadSchema(schemaNoteId)
-    await persistValues(schema, configNoteId, values)
+    const { sources, schema } = await resolveSettings(schemaNoteId, configNoteId)
+    await persistValues(sources, schema, configNoteId, values)
 }
 
 // `registries` is the full top-level values object (every schema key's
@@ -311,17 +245,6 @@ function matchesShowWhen(def, item) {
 // field's value — resolved through a `reference` field to the *referenced*
 // entry's own name (rather than showing a raw reference id) when that first
 // field is itself a `reference`.
-function titleFor(itemSchema, item, registries) {
-    if ("name" in itemSchema) return item.name || "Untitled"
-    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
-    if (!firstKey) return "Untitled"
-    const rawValue = item[firstKey]
-    if (firstDef.type === "reference") {
-        const referenced = registries?.[firstDef.registry]?.[rawValue]
-        return referenced?.name || rawValue || "Untitled"
-    }
-    return rawValue || "Untitled"
-}
 
 // One labeled field row per itemSchema key (skipping a field whose `showWhen`
 // doesn't match this item), used by both ListItems and RegistryItems so a
@@ -393,10 +316,8 @@ function ListItems({ itemSchema, items, onChange, registries, onRegistriesChange
     }
 
     function addItem() {
-        const blank = {}
-        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
         setExpandedKeys(prev => new Set(prev).add(items.length))
-        onChange([...items, blank])
+        onChange([...items, blankItem(itemSchema)])
     }
 
     function removeItem(index) {
@@ -465,11 +386,9 @@ function RegistryItems({ itemSchema, items, onChange, registries, onRegistriesCh
     }
 
     function addItem() {
-        const blank = {}
-        for (const [key, def] of Object.entries(itemSchema)) blank[key] = def.default
         const id = generateRegistryId()
         setExpandedKeys(prev => new Set(prev).add(id))
-        onChange({ ...items, [id]: blank })
+        onChange({ ...items, [id]: blankItem(itemSchema) })
     }
 
     function moveItem(index, direction) {
@@ -533,9 +452,11 @@ function resolveCategory(def) {
     return def.category || null
 }
 
-// Self-contained: loads schema.json + config.json itself, renders one field per schema
-// entry, and owns its own Save button. The consuming addon just places this wherever
-// it wants in its own settings widget.
+// Self-contained: resolves the config note's whole source chain itself (see
+// `loadSources`), renders one field per merged-schema entry, and owns its own
+// Save button — which writes only what the user changed about the read-only
+// sources below. The consuming addon just places this wherever it wants in its
+// own settings widget.
 //
 // Entries are grouped by `resolveTab` into an ordered map (first-occurrence
 // order), and when there's more than one group they become top-level tabs —
@@ -565,6 +486,7 @@ function resolveCategory(def) {
 // derived labels onto notes once the config that describes them is on disk.
 export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], only = null, onSaved = null }) {
     const [schema, setSchema] = useState(null)
+    const [sources, setSources] = useState(null)
     const [values, setValues] = useState(null)
     const [saveStatus, setSaveStatus] = useState(null)
     const [activeTab, setActiveTab] = useState(null)
@@ -572,14 +494,15 @@ export function SettingsForm({ schemaNoteId, configNoteId, extraPanels = [], onl
 
     useEffect(() => {
         (async () => {
-            const loadedSchema = await loadSchema(schemaNoteId)
-            setSchema(loadedSchema)
-            setValues(await loadValues(loadedSchema, configNoteId))
+            const resolved = await resolveSettings(schemaNoteId, configNoteId)
+            setSchema(resolved.schema)
+            setSources(resolved.sources)
+            setValues(resolved.values)
         })()
     }, [schemaNoteId, configNoteId])
 
     async function save() {
-        await persistValues(schema, configNoteId, values)
+        await persistValues(sources, schema, configNoteId, values)
         if (onSaved) await onSaved(values)
         setSaveStatus("saved")
         setTimeout(() => setSaveStatus(null), 2000)
