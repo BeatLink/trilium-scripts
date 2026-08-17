@@ -1,14 +1,14 @@
 {
     "id": "budget@beatlink",
     "name": "Budget",
-    "description": "Nested budget tables — apply the Budget template to any note and edit Title / Amount Budgeted / Notes rows in place, with child rows rolling up into their parents. Rollup behaviour (computed, own + children, or budget cap) is configurable, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
+    "description": "Nested single-entry budget tables with monthly tracking \u2014 apply the Budget template to any note and edit Title / Income / Expense / Notes rows in place, each row showing its balance and child rows rolling up into their parents. A Transactions tab records dated income and expenses against budget rows a month at a time, and a Report tab measures the month against the plan record by record: how much stayed within each record limits versus went off them, reported separately for income and for spending (spending past an allocation, income short of or beyond expectation, or anything with no allocation at all), an itemisation of every off-budget component, budgeted vs actual per row for both columns, the month's income, and a six-month trend. Rollup behaviour (computed, own + children, or budget cap) is configurable, amounts are shown and stored at a configurable number of decimal places, rows can be expanded and collapsed individually or all at once, columns can be shown, hidden and reordered, and budgets can be imported and exported as JSON.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/budget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.4.4",
+    "latestVersion": "2.5.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/budget@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [
@@ -24,42 +24,49 @@
                 "title": "budgetWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/budgetWidget.jsx"
+                "sourceUrl": "budgetWidget.jsx"
             },
             {
                 "id": "lib",
                 "title": "libBudget.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/libBudget.js"
+                "sourceUrl": "libBudget.js"
             },
             {
                 "id": "style",
                 "title": "budget.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/budget.css"
+                "sourceUrl": "budget.css"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/schema.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
                 "title": "settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/settings.jsx"
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "template",
@@ -73,36 +80,43 @@
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/budget@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -123,6 +137,10 @@
                 "child": "schema"
             },
             {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
                 "parent": "persistence",
                 "child": "config"
             },
@@ -141,6 +159,10 @@
             {
                 "parent": "widget",
                 "child": "lib"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -202,6 +224,11 @@
                 "from": "template",
                 "type": "renderNote",
                 "to": "widget"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -231,6 +258,11 @@
                 "value": ""
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

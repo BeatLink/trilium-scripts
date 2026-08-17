@@ -1,0 +1,24 @@
+{
+    "rollupMode": "computed",
+    "columns": [
+        {
+            "key": "income",
+            "visible": true
+        },
+        {
+            "key": "expense",
+            "visible": true
+        },
+        {
+            "key": "balance",
+            "visible": true
+        },
+        {
+            "key": "notes",
+            "visible": true
+        }
+    ],
+    "decimals": 2,
+    "currency": "USD",
+    "locale": ""
+}

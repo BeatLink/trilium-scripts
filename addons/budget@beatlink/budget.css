@@ -22,8 +22,12 @@
     vertical-align: middle;
 }
 
+/* The header cells are classed from the column key, the body cells from what
+   they hold, so both spellings of the money columns line up here. */
 .budget-cell-amount,
-.budget-cell-total {
+.budget-cell-income,
+.budget-cell-expense,
+.budget-cell-balance {
     width: 1%;
     white-space: nowrap;
     text-align: right;
@@ -151,6 +155,165 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+/* Budget / Spending / Report tab bar. */
+.budget-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--main-border-color);
+    margin-bottom: 12px;
+}
+
+.budget-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    font: inherit;
+    padding: 6px 14px;
+}
+
+.budget-tab:hover {
+    color: var(--main-text-color);
+}
+
+.budget-tab-active {
+    border-bottom-color: var(--main-text-color);
+    color: var(--main-text-color);
+    font-weight: 600;
+}
+
+/* Month picker shared by the Spending and Report tabs. */
+.budget-month-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.budget-month-step,
+.budget-month-today,
+.budget-trend-month {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    font: inherit;
+    padding: 3px 6px;
+}
+
+.budget-month-step:hover,
+.budget-month-today:hover,
+.budget-trend-month:hover {
+    color: var(--main-text-color);
+}
+
+.budget-month-label {
+    font-weight: 600;
+    min-width: 10em;
+    text-align: center;
+}
+
+.budget-month-input {
+    background: transparent;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    color: inherit;
+    font: inherit;
+    padding: 3px 5px;
+}
+
+.budget-trend-month {
+    padding: 3px 0;
+    text-decoration: underline dotted;
+}
+
+.budget-cell-date,
+.budget-cell-trend {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.budget-cell-trend {
+    min-width: 140px;
+}
+
+.budget-row-select {
+    border-color: var(--main-border-color);
+}
+
+/* The on/off budget matrix: one row per column of the ledger. */
+.budget-matrix td {
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
+    padding: 6px 8px;
+}
+
+.budget-matrix-label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.budget-matrix-note {
+    color: var(--muted-text-color);
+    font-size: 0.82em;
+}
+
+/* The components an off-budget figure is the sum of, under the figure itself. */
+.budget-summary-parts {
+    color: var(--muted-text-color);
+    display: block;
+    font-size: 0.78em;
+    font-variant-numeric: normal;
+    margin-top: 2px;
+}
+
+.budget-on-text {
+    color: var(--link-color, #3a7bd5);
+}
+
+.budget-off-text,
+.budget-off,
+.budget-net-negative {
+    color: var(--error-text-color, #d33);
+}
+
+.budget-income-text {
+    color: var(--success-text-color, #2a7f4f);
+}
+
+.budget-split-bar {
+    background: var(--main-border-color);
+    border-radius: 3px;
+    display: flex;
+    height: 8px;
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+
+.budget-split-on {
+    background: var(--link-color, #3a7bd5);
+}
+
+.budget-split-off {
+    background: var(--error-text-color, #d33);
+}
+
+.budget-split-bar-trend {
+    margin-bottom: 0;
+    min-width: 2px;
+}
+
+.budget-report-heading {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 18px 0 6px 0;
+}
+
+.budget-trend td {
+    padding: 4px 8px;
 }
 
 /* Column visibility/order rows on the settings page. */
