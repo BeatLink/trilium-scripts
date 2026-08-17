@@ -7,6 +7,13 @@ Browse available addons at **https://beatlink.github.io/trilium-scripts/**
 > ⚠️ **Work in progress.** TAM's manifest format and its Database/persistence model are under
 > active development and changing frequently. Data loss is possible. Install this to test and
 > explore only — do not use it to manage real/production Trilium data yet.
+>
+> **7.0.0 breaks in-place updates from 6.x.** Addons are now installed from published manifests (see
+> [Publishing](#publishing)); the raw manifests a 6.x install points at no longer carry absolute
+> URLs, which a 6.x client cannot resolve. Reinstall TAM from the
+> [latest release](https://github.com/BeatLink/trilium-scripts/releases/latest) ZIP — every note is
+> re-adopted by its `#TAMFILEID`, so nothing is duplicated and persisted data is untouched — and
+> the new install points at the published catalog from then on.
 
 ## Overview
 
@@ -186,7 +193,9 @@ export being referenced), the same "look it up by TAMFILEID, then clone or creat
 ### `#TAMSOURCEURL`: one note per URL, shared across addons
 
 Alongside `#TAMFILEID`, every resolved note carries `#TAMSOURCEURL` with the URL its content came
-from — and `resolveNotes` uses it as a second lookup: a note that doesn't exist yet under *this*
+from — its published `sourceId`, which tracks the branch, rather than the commit-pinned `sourceUrl`
+it was fetched from, since a pinned URL is a different string every publish and would match nothing
+(see [Publishing](#publishing)) — and `resolveNotes` uses it as a second lookup: a note that doesn't exist yet under *this*
 addon's `#TAMFILEID`, but whose `sourceUrl` already exists somewhere, is **cloned into place rather
 than copied**. Two addons vendoring the same library file therefore share one note in the database,
 which is what keeps a shared library from being duplicated N times.
@@ -202,6 +211,59 @@ attributes of its own, everything passed in by its caller) shares perfectly; any
 know which addon it belongs to must ship as that addon's own file, at its own URL. Uninstall is
 already safe either way: `detachAddonOwnedBranches` only detaches a shared note from the departing
 addon's parents, and deletes it only once nothing else parents it.
+
+---
+
+## Publishing
+
+A manifest is written in one form and installed in another.
+
+A **source manifest** (`addons/{id}/_tam_manifest_.json`) is the hand-authored one: it names each
+note's file by a path relative to itself and carries no URLs of its own. `tamhelper.js publish`
+turns every source manifest into a **published manifest**, deployed to the catalog site at
+`https://beatlink.github.io/trilium-scripts/{id}/_tam_manifest_.json`, which is what TAM actually
+fetches and installs from. Publishing does three things:
+
+1. **Resolves every relative `sourceUrl`** against one commit —
+   `raw.githubusercontent.com/{owner}/{repo}/{sha}/...`. A published URL therefore never moves, and
+   never serves a stale cached copy the way a `refs/heads/main` URL does. Each note also gets a
+   `sourceId`: the same file's branch-tracking URL, which is what note sharing is matched on (see
+   [`#TAMSOURCEURL`](#tamsourceurl-one-note-per-url-shared-across-addons)) precisely because it does
+   *not* change every publish.
+2. **Hashes every file**, as a `sha` per note and one `contentHash` over the manifest as a whole.
+3. **Writes `catalog.json`**, the list of every published manifest URL (see
+   [Catalog Format](#catalog-format)).
+
+It is deliberately offline and deterministic: only files on disk are hashed, and the same commit
+always publishes byte-identically. A `sourceUrl` that was already absolute in the source manifest
+points at someone else's repo, so it is carried through untouched and contributes its URL rather
+than its content to the hash — fetching it here would make the same commit publish differently
+depending on what upstream did that day. Such a note has no `sha`, so it simply refetches on every
+sync, as everything did before hashes existed.
+
+`contentHash` covers the manifest with each note's `sourceUrl` replaced by that note's `sha`, so it
+tracks content and structure and **not** the commit the URLs happen to be pinned to — otherwise
+every addon would report an update on every push.
+
+### What the hashes are for
+
+**Detecting updates without a version bump.** `checkForAddonUpdates` compares the fetched
+`contentHash` against the one recorded at the last sync: any change to any file, or to the manifest's
+structure, is an available update on its own. `latestVersion` is still declared, still shown, and
+still the fallback comparison for a manifest carrying no hash (a hand-authored one, or an install
+predating this) — but shipping a fix no longer depends on remembering to bump it.
+
+**Not refetching what hasn't changed.** A sync used to fetch every file in the manifest whether or
+not anything had moved. Now a note whose incoming `sha` matches the one recorded at the last sync is
+skipped entirely — no fetch, no content write — so changing one file in a 25-note addon costs one
+request instead of 25. Its title, type and mime still track the manifest, so a rename with no content
+change still applies. A note whose fetch failed is left out of the recorded hashes, so the next sync
+retries it rather than reading it as already current.
+
+**Asking about a persistent note only when the shipped side moved.** A persistent note whose
+upstream default is unchanged raises no Update Review entry, even if the user has edited theirs —
+the same rule the per-setting review already followed (see
+[per-setting review](#per-setting-review-manifestsettings)).
 
 ---
 
@@ -224,25 +286,22 @@ below), so an addon's manifest and its source files can live anywhere on the web
 | `license` | Yes | SPDX license identifier (e.g., `GPL-3.0-or-later`). |
 | `latestVersion` | Yes | Current version string. Follows semver. Incrementing this triggers an update prompt in TAM. |
 | `type` | Yes | Addon category. One of: `widget`, `theme`, `css`, `script`, `library`. Used for display only. |
-| `manifestSourceUrl` | No¹ | A URL where this exact manifest document can always be fetched from. See below. |
+| `manifestSourceUrl` | No¹ | A URL where this exact manifest document can always be fetched from. Written by `publish`; see [Publishing](#publishing). |
+| `contentHash` | — | *Published manifests only.* A hash over the manifest's structure and every note's content — what TAM compares to detect an update. Never hand-authored. |
 | `readme` | No | Relative path to the README file for the catalog website (e.g., `README.md`). |
 | `manifest` | No | The note-tree manifest (see below). Omit for metadata-only entries. |
 
-¹ Not required for the file to be *valid*, but required for TAM to actually be able to install it —
-`tamhelper.js validate` only warns (doesn't error) on a missing `manifestSourceUrl`, since a manifest
-that hasn't been published anywhere yet legitimately doesn't have one.
+¹ A source manifest in this repo carries it anyway, pointing at where `publish` serves that same
+addon (`validate` errors if the two disagree), so an install that refetches the raw source manifest
+is told where the published one lives and moves itself over on its next sync.
 
 #### `manifestSourceUrl`
 
 The single field that makes an addon installable/updatable by TAM at all. For an addon living in
-this repo, it's a `raw.githubusercontent.com/.../refs/heads/main/addons/{id}/_tam_manifest_.json`
-URL — `tamhelper.js zip-to-tam` auto-fills it when its output directory is inside a git
-working copy with a `github.com` origin remote (detecting the current branch and the manifest's path
-relative to the repo root); `tamhelper.js backfill-source-url` does the same
-retroactively for every existing addon in this repo (re-run it if an addon's folder ever moves — it's
-safe to re-run any time, since it recomputes and overwrites rather than skipping already-set addons).
-Hand-author it directly for anything not authored via `zip-to-tam`, or for a manifest that
-deliberately doesn't live in this repo's own tree.
+this repo it is its published manifest's URL on the catalog site,
+`https://beatlink.github.io/trilium-scripts/{id}/_tam_manifest_.json`, which `publish` writes and
+`validate` enforces — nobody types it. Hand-author it only for a manifest that deliberately doesn't
+live in this repo's own tree and is published somewhere else.
 
 TAM's Database stores this value verbatim on the addon's own installed-record, exactly as read from
 whichever manifest was fetched — TAM never computes or guesses it. It's what `checkForAddonUpdates`
@@ -446,7 +505,9 @@ An array of note definitions. Each entry describes one note to create:
 | `title` | The Trilium note title. |
 | `type` | Trilium note type: `text`, `code`, `render`, `book`, `canvas`, `mermaid`, etc. |
 | `mime` | MIME type. For code notes: `application/javascript;env=frontend`, `application/javascript;env=backend`, `text/jsx`, `text/css`, `application/json`, etc. |
-| `sourceUrl` | Where this note's actual content lives. A relative path is resolved via `new URL(sourceUrl, manifestSourceUrl)` — exactly like an HTML `<base href>` — for a file that ships alongside the manifest; a full `http(s)://` URL is used as-is for content hosted anywhere else entirely (e.g. pointing straight at an upstream project's own files instead of vendoring a copy). `resolveNotes` fetches it fresh, backend-side, at install/update time — nothing pre-inlines it into any distribution artifact. |
+| `sourceUrl` | Where this note's actual content lives. In a **source** manifest it is a path relative to the manifest itself (`myWidget.jsx`, `../../libs/libsettings/libsettings-core.js`); `publish` rewrites it to an absolute URL pinned to one commit. A full `http(s)://` URL is left alone in both, for content hosted somewhere else entirely (e.g. an upstream project's own file instead of a vendored copy). TAM resolves whatever it finds against the URL the manifest was fetched from — exactly like an HTML `<base href>` — and fetches it fresh, backend-side, at install/update time; nothing is pre-inlined into any distribution artifact. |
+| `sha` | *Published only.* The SHA-256 of that file's content. TAM skips both the fetch and the write for a note whose `sha` matches the one recorded at the last sync, and raises no update prompt for a persistent note whose shipped side hasn't moved. |
+| `sourceId` | *Published only.* The same file's branch-tracking URL, and what `#TAMSOURCEURL` records. Sharing one note between two addons vendoring the same file is matched on this rather than on `sourceUrl`, which is pinned to a commit and so is a different string every publish. |
 | `content` | An escape hatch: a literal inline content string, used directly (no fetch at all) if present. Mostly useful for hand-authored/special-case notes. |
 | `skipOnUpdate` | If `true`, TAM never overwrites this note's content during updates. Use for user-configurable notes (settings, database). |
 | `promptOnUpdate` | If `true`, TAM detects content changes during an update and prompts the user to choose between their current version and the new default. Use for notes users are expected to customize but that may receive meaningful upstream changes. |
@@ -541,7 +602,9 @@ Every installed addon's entry in `database.installedAddons[addonId]` is:
 ```json
 {
   "installedVersion": "1.2.3",
-  "manifestSourceUrl": "https://raw.githubusercontent.com/.../_tam_manifest_.json",
+  "contentHash": "9f2c...",
+  "noteHashes": { "widget": "3ab1...", "style": "c07e..." },
+  "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/foo@bar/_tam_manifest_.json",
   "manuallyInstalled": true,
   "enabled": true,
   "meta": { "name": "...", "description": "...", "author": "...", "license": "...", "type": "...", "homepage": "..." },
@@ -566,6 +629,11 @@ Only a handful of facts are genuinely irreducible and can't be derived from the 
 note tree:
 - **`installedVersion`** — a manifest fetch always reflects the *latest* available version, never
   what's actually installed.
+- **`contentHash`** / **`noteHashes`** — the published hashes of what is actually installed, for the
+  same reason: the fetched manifest only ever describes what is current. `contentHash` is what an
+  update check compares; `noteHashes` is what decides, per note, whether anything needs refetching.
+  Left unset by a sync that skipped a note (its fetch failed), so the update check falls back to
+  comparing versions until a clean sync records one. See [Publishing](#publishing).
 - **`manifestSourceUrl`** — exactly which URL this install came from, read verbatim from the fetched
   manifest at sync time. Used to re-fetch for update checks.
 - **`meta`** — a snapshot of the manifest's own top-level display fields (`name`/`description`/etc.)
@@ -674,8 +742,8 @@ TAM's "add catalog" action just remembers the URL; every time you actually *brow
 (`fetchCatalogAddons`), it re-fetches the list and then fetches every manifest on it, fresh — nothing
 about a catalog's contents is ever cached, so there's no separate "refresh this catalog" action
 needed, unlike the old per-repository `metadata.json` registry this replaced. This repo's own catalog
-(`https://beatlink.github.io/trilium-scripts/catalog.json`) is generated by `tamhelper.js generate-pages` from
-every addon's own `manifestSourceUrl` and served via GitHub Pages — no GitHub Releases involvement at
+(`https://beatlink.github.io/trilium-scripts/catalog.json`) is written by `tamhelper.js publish`,
+listing every manifest it published, and served via GitHub Pages alongside them — no GitHub Releases involvement at
 all for the catalog or the install/update path; Releases are used purely for the `{id}.zip` exports
 (see [Scripts Reference](#scripts-reference)).
 
@@ -694,9 +762,9 @@ the stored record). This used to be three separate functions (`installAddon`/`up
 `selfUpdateAddon`) before find-or-create-by-`#TAMFILEID` removed the need to delete everything first
 for a clean slate.
 
-1. Fetch the addon's manifest from `manifestSourceUrl`.
+1. Fetch the addon's manifest from `manifestSourceUrl`, resolving any relative `sourceUrl` in it against that URL.
 2. `collectPendingPrompts` snapshots any `promptOnUpdate` diffs against currently persisted content, before anything touches it (see [`promptOnUpdate`](#promptonupdate)).
-3. `ensureAddonAnchor` find-or-creates this addon's own TAM-owned root anchor (under **Addons**) and, if its manifest attaches anything under the reserved `"persistence"` parent keyword, its own persistence anchor (under **Addon Data**) — titled, `#addonId`-tagged, and `#iconClass`-tagged after the addon, never something the addon's manifest declares itself. `resolveManifest` then resolves the addon's notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). A note whose declared parent is the reserved `"root"`/`"persistence"` keyword resolves directly under the matching anchor instead of another local note. Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate` (or persistent placement) says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl` (resolved against `manifestSourceUrl`), backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses. A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — its manifest still declares a real `root` note (see [`root`](#root-tam-only)), which lives above the Addons tree (wherever it was manually ZIP-imported) and skips the per-addon anchor entirely, so its own parent is never touched. This step runs twice when the addon's manifest attaches anything under `"persistence"`: a **persistence pass** resolving that subtree under this addon's own persistence anchor first, then a **structural pass** resolving everything else under this addon's own root anchor — both writing into one shared note map so cross-anchor relations resolve (see [Persistence](#persistence)). A persistent note is never content-overwritten once it exists.
+3. `ensureAddonAnchor` find-or-creates this addon's own TAM-owned root anchor (under **Addons**) and, if its manifest attaches anything under the reserved `"persistence"` parent keyword, its own persistence anchor (under **Addon Data**) — titled, `#addonId`-tagged, and `#iconClass`-tagged after the addon, never something the addon's manifest declares itself. `resolveManifest` then resolves the addon's notes (`resolveNotes`, topological order) and walks `children[]`/`relations[]`, recursing into `ensureDependencyExport` for cross-addon references (see [Hidden libraries](#hidden-libraries-resolved-lazily-and-rootlessly)). A note whose declared parent is the reserved `"root"`/`"persistence"` keyword resolves directly under the matching anchor instead of another local note. Per note: found via `#TAMFILEID` (and not soft-deleted) → cloned into the correct parent, content/type/mime overwritten unless `skipOnUpdate` (or persistent placement) says otherwise; not found → created and tagged. Content is fetched fresh from `sourceUrl`, backend-side, through the same 429 retry-with-backoff wrapper every fetch in this file uses — skipped entirely for a note whose published `sha` matches the one recorded at the last sync (see [Publishing](#publishing)). A note's fetch failure is logged and it (and anything parented under it) is skipped, not fatal. TAM's own root note is the one structural special case — its manifest still declares a real `root` note (see [`root`](#root-tam-only)), which lives above the Addons tree (wherever it was manually ZIP-imported) and skips the per-addon anchor entirely, so its own parent is never touched. This step runs twice when the addon's manifest attaches anything under `"persistence"`: a **persistence pass** resolving that subtree under this addon's own persistence anchor first, then a **structural pass** resolving everything else under this addon's own root anchor — both writing into one shared note map so cross-anchor relations resolve (see [Persistence](#persistence)). A persistent note is never content-overwritten once it exists.
 4. `reconcileNoteParenting` clones every note into every parent its manifest currently declares and detaches it from any parent it's no longer declared under — scoped to only ever detach a branch *this addon's own* manifest created, so a lazily-resolved dependency export shared by multiple consumers is never mistaken as stale by another consumer's clone.
 5. Labels/relations are (re)applied, scoped to whatever was just resolved. Both are disable-state aware — if the addon is currently disabled, writes go to the `disabled:`-prefixed name instead of live-reactivating it. A trailing `(inheritable)` suffix on a label name sets a real `isInheritable` attribute.
 6. `pruneRemovedNotes` deletes any live `#TAMFILEID`-tagged note under this addon's prefix whose local id is no longer in the current manifest — for the top-level addon and again for every dependency touched along the way.
@@ -839,7 +907,8 @@ Every **persistent** note (one reachable from the reserved `"persistence"` paren
 it does surface an upstream change so the user can opt in. There is no per-note `promptOnUpdate`
 flag to set — placement under `"persistence"` is what enables this behaviour.
 
-Before an update, for each persistent note:
+Before an update, for each persistent note — skipping any whose published `sha` is unchanged since
+the last sync, since nothing upstream moved to ask about:
 1. TAM reads the note's current content (the live persistent note).
 2. TAM reads the new content from the incoming manifest (fetched fresh from its `sourceUrl`, or the
    inline default).
@@ -936,7 +1005,7 @@ Setting `promptOnUpdate` or `skipOnUpdate` on a note that is already reachable f
 
 ## Scripts Reference
 
-The toolchain is a single Node.js CLI, `resources/scripts/tamhelper.js`, run from the repository root as `node resources/scripts/tamhelper.js <command>`. Inside `nix-shell resources/nix`/`nix develop ./resources/nix` each command is also exposed as a shell function (`validate`, `tam_to_zip`, `zip_to_tam`, `generate_pages`, `generate_readme`, `publish_release`, `backfill_manifest_source_url`). The only runtime dependency is `marked` (installed via `npm ci` from the committed `resources/package-lock.json`).
+The toolchain is a single Node.js CLI, `resources/scripts/tamhelper.js`, run from the repository root as `node resources/scripts/tamhelper.js <command>`. Inside `nix-shell resources/nix`/`nix develop ./resources/nix` each command is also exposed as a shell function (`validate`, `tam_to_zip`, `zip_to_tam`, `generate_pages`, `publish`, `generate_readme`, `publish_release`). The only runtime dependency is `marked` (installed via `npm ci` from the committed `resources/package-lock.json`).
 
 ### `validate`
 
@@ -945,9 +1014,9 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 - All required top-level fields are present (`id`, `name`, `description`, `author`, `homepage`, `license`, `latestVersion`, `type`).
 - `homepage` ends with `addons/{id}` when the path contains `/addons/` (auto-fixable with `--fix`).
 - `readme` file exists on disk if declared.
-- `manifestSourceUrl` is present (a warning, not an error — a not-yet-published addon legitimately won't have one).
+- `manifestSourceUrl` matches where `publish` will serve this manifest (auto-fixable with `--fix`; only a warning when absent entirely).
 - If `manifest.root` is set (TAM's own self-bootstrap exception only), it exists in `manifest.notes`; otherwise `manifest.children` attaches at least one note to the reserved `"root"` parent keyword.
-- Every relative `sourceUrl` resolves to a real file on disk (a local-dev-only check — absolute URLs are exempt).
+- Every relative `sourceUrl` resolves to a real file on disk, and is read from there rather than fetched (an absolute one is still fetched, since it isn't in this repo).
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
 - `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
 - `manifest.settings`, when present, names a `schema`, a `defaults` and a `config` that all exist in `manifest.notes`. The schema and defaults notes must not be attached under the reserved `"persistence"` parent (both ship anew every update), and the defaults note must ship content; the config must be persistent, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). The config must carry a `sourceConfig` relation to the defaults note, or libsettings would read no defaults at all. A mime other than `application/json` on any of them is a warning.
@@ -963,7 +1032,7 @@ node resources/scripts/tamhelper.js validate [--fix]
 
 Converts a `_tam_manifest_.json` into a Trilium-importable ZIP export (the format Trilium's "Import" function accepts). Automatically discovers and bundles dependency addons from the sibling `addons/` directory.
 
-- For each note in the manifest, fresh Trilium note IDs are generated.
+- For each note in the manifest, fresh Trilium note IDs are generated. Content comes off disk for a relative `sourceUrl` (so a ZIP always matches the working copy, and builds offline); only an absolute one is fetched.
 - Every note gets a real `#TAMFILEID="{addonId}/{localId}"` label baked into the exported ZIP (see [Note Identity](#note-identity-tamfileid)) — a manually-imported ZIP is fully self-identifying from the moment of import, with no separate bootstrap/tagging step needed for TAM to recognize its own notes on a later sync.
 - Dependency addons are read from `addons/{dep-id}/_tam_manifest_.json` in the same repo and bundled as additional root entries in the ZIP's `!!!meta.json` — this only works for a bare-id dependency (or an explicit one that happens to also have a local sibling folder); a dependency that only exists at a remote `manifestSourceUrl` can't be bundled into an offline ZIP and is skipped with a warning.
 - Cross-addon clone children and relations are wired using the generated UUIDs, resolved via each dependency's `exports` map.
@@ -989,7 +1058,7 @@ Converts a Trilium export ZIP into a `_tam_manifest_.json` + flat source files. 
 - Copies source files flat into the output directory, resolving each note's data file by its exact path in the archive (so notes that share a basename, e.g. several bundled deps each with a `README.md`, don't collide).
 - Handles clone entries (notes that appear under multiple parents) correctly — they become extra `children` entries referencing the same local ID rather than duplicate note entries.
 - Filters out `noImport` scaffold entries.
-- Auto-fills `manifestSourceUrl` if `--out` is inside a git working copy with a `github.com` origin remote (using the current branch and the manifest's path relative to the repo root); otherwise leaves it unset.
+- Writes each note's `sourceUrl` as a plain filename relative to the manifest, the form a source manifest uses; `publish` resolves it later, so no `manifestSourceUrl` is scaffolded at all.
 - Outputs a `_tam_manifest_.json` with `FILL_IN` placeholders for top-level metadata fields that must be filled in manually.
 
 ```
@@ -998,13 +1067,20 @@ node resources/scripts/tamhelper.js zip-to-tam path/to/export.zip [--out ./outpu
 
 After running, fill in the `FILL_IN` fields in `_tam_manifest_.json`, review the auto-generated local IDs, add `dependencies`/`exports` if needed, and set `skipOnUpdate`/`promptOnUpdate` on appropriate notes.
 
-### `backfill-source-url`
+### `publish`
 
-One-time (but safe to re-run) backfill: adds `manifestSourceUrl` to every `addons/*/_tam_manifest_.json` in this repo, using the same git-remote detection `zip-to-tam` uses. Recomputes and overwrites the field every time rather than skipping addons that already have it, so re-running it also fixes up any manifest that moved since it was last set.
+Turns every source manifest into the published one TAM installs from — resolved, hashed, and written
+to `resources/docs/{id}/_tam_manifest_.json` alongside `catalog.json`. See
+[Publishing](#publishing) for what it does and why. Offline: nothing is fetched, and the same commit
+always publishes byte-identically.
 
 ```
-node resources/scripts/tamhelper.js backfill-source-url
+node resources/scripts/tamhelper.js publish [--addons-dir addons/] [--out-dir resources/docs/] [--commit SHA]
 ```
+
+`--commit` defaults to `GITHUB_SHA` in CI, else `HEAD`. Run in CI on every push (see
+[`pages.yml`](#pagesyml)) — a local run is only useful for inspecting the output, since
+`resources/docs/` is gitignored and only the deployed copy is ever installed from.
 
 ### `generate-pages`
 
@@ -1014,9 +1090,7 @@ Generates the static GitHub Pages catalog site at `resources/docs/`. For each ad
 - Renders a detail page (`resources/docs/{addon-id}/index.html`) with the README, metadata table, download buttons, and — when the addon has any dependency or dependent — a focused Mermaid dependency subgraph (see [Dependency graph](#dependency-graph)).
 - The index page has a search bar, type filter buttons, and a collapsible whole-catalog Mermaid dependency graph.
 - Author names link to their GitHub profiles.
-- Download buttons: **Download ZIP** (Trilium import), **View Manifest** (the addon's own `manifestSourceUrl`, if set), **Source** (GitHub homepage).
-
-Also generates `resources/docs/catalog.json` — the `{"tam-addons": [...]}` list of every addon's own `manifestSourceUrl` (addons missing one are skipped) — this is what TAM's "add catalog" action consumes; see [Catalog Format](#catalog-format).
+- Download buttons: **Download ZIP** (Trilium import), **View Manifest** (the addon's published manifest), **Source** (GitHub homepage).
 
 ```
 node resources/scripts/tamhelper.js generate-pages
@@ -1057,8 +1131,10 @@ Runs on every push to `main` and on manual dispatch. Steps:
 Runs on every push to `main` and on manual dispatch. Builds and deploys the GitHub Pages catalog site:
 
 1. Installs the npm dependencies (`npm ci`).
-2. Runs `tamhelper.js generate-pages` to produce `resources/docs/` (including `catalog.json`).
-3. Uploads `resources/docs/` as a Pages artifact and deploys it.
+2. Runs `tamhelper.js generate-pages` to produce `resources/docs/`.
+3. Runs `tamhelper.js publish` to write every published manifest and `catalog.json` into it, pinned
+   to the commit being deployed (see [Publishing](#publishing)).
+4. Uploads `resources/docs/` as a Pages artifact and deploys it.
 
 ---
 
