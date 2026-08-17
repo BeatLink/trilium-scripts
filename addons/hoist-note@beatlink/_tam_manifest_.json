@@ -1,0 +1,49 @@
+{
+    "id": "hoist-note@beatlink",
+    "name": "Hoist Note",
+    "description": "A launchbar button that toggles hoisting on the current note.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "2.1.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/hoist-note@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "setupButtons",
+                "title": "setupButtons.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setupButtons.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "setupButtons"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "labels": [
+            {
+                "note": "setupButtons",
+                "name": "run",
+                "value": "frontendStartup"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
