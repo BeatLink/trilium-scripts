@@ -1,0 +1,170 @@
+{
+    "speedStep": {
+        "type": "number",
+        "label": "Speed Step",
+        "description": "How much the Slower and Faster keys change the playback rate.",
+        "tab": "Playback"
+    },
+    "preferredSpeed": {
+        "type": "number",
+        "label": "Preferred Speed",
+        "description": "The speed the Preferred Speed key toggles to, and back from.",
+        "tab": "Playback"
+    },
+    "rewindSeconds": {
+        "type": "number",
+        "label": "Rewind Seconds",
+        "description": "How far the Rewind key jumps back.",
+        "tab": "Playback"
+    },
+    "advanceSeconds": {
+        "type": "number",
+        "label": "Advance Seconds",
+        "description": "How far the Advance key jumps forward.",
+        "tab": "Playback"
+    },
+    "rememberSpeed": {
+        "type": "boolean",
+        "label": "Remember Speed",
+        "description": "Start each new video at the last speed you set on that site. Off leaves every video at whatever speed the page itself chose.",
+        "tab": "Playback"
+    },
+    "enableAudio": {
+        "type": "boolean",
+        "label": "Control Audio Too",
+        "description": "Also put the controller on plain <audio> players, not just video.",
+        "tab": "Playback"
+    },
+    "position": {
+        "type": "select",
+        "label": "Position",
+        "description": "Which corner of the video the controller starts in. Drag it anywhere from there.",
+        "options": [
+            {
+                "value": "top-left",
+                "label": "Top Left"
+            },
+            {
+                "value": "top-right",
+                "label": "Top Right"
+            },
+            {
+                "value": "bottom-left",
+                "label": "Bottom Left"
+            },
+            {
+                "value": "bottom-right",
+                "label": "Bottom Right"
+            }
+        ],
+        "tab": "Controller"
+    },
+    "opacity": {
+        "type": "number",
+        "label": "Opacity",
+        "description": "How solid the controller is, from 0 to 1.",
+        "tab": "Controller"
+    },
+    "startHidden": {
+        "type": "boolean",
+        "label": "Start Hidden",
+        "description": "Keep the controller out of sight until the Show/Hide key brings it back. The shortcuts still work.",
+        "tab": "Controller"
+    },
+    "keySlower": {
+        "type": "string",
+        "label": "Slower",
+        "tab": "Shortcuts",
+        "subgroup": "Speed"
+    },
+    "keyFaster": {
+        "type": "string",
+        "label": "Faster",
+        "tab": "Shortcuts",
+        "subgroup": "Speed"
+    },
+    "keyReset": {
+        "type": "string",
+        "label": "Reset To 1x",
+        "tab": "Shortcuts",
+        "subgroup": "Speed"
+    },
+    "keyPreferred": {
+        "type": "string",
+        "label": "Preferred Speed",
+        "tab": "Shortcuts",
+        "subgroup": "Speed"
+    },
+    "keyRewind": {
+        "type": "string",
+        "label": "Rewind",
+        "tab": "Shortcuts",
+        "subgroup": "Seeking"
+    },
+    "keyAdvance": {
+        "type": "string",
+        "label": "Advance",
+        "tab": "Shortcuts",
+        "subgroup": "Seeking"
+    },
+    "keyMark": {
+        "type": "string",
+        "label": "Set Marker",
+        "tab": "Shortcuts",
+        "subgroup": "Seeking"
+    },
+    "keyJump": {
+        "type": "string",
+        "label": "Jump To Marker",
+        "tab": "Shortcuts",
+        "subgroup": "Seeking"
+    },
+    "keyDisplay": {
+        "type": "string",
+        "label": "Show / Hide Controller",
+        "tab": "Shortcuts",
+        "subgroup": "Display"
+    },
+    "applyInWebViews": {
+        "type": "boolean",
+        "label": "Web View Notes",
+        "description": "Control the videos on pages you browse inside Trilium Desktop's Web View note type.",
+        "tab": "Where"
+    },
+    "applyInTrilium": {
+        "type": "boolean",
+        "label": "Trilium's Own Players",
+        "description": "Control video and audio notes, and the players Trilium embeds in text notes.",
+        "tab": "Where"
+    },
+    "triliumShortcuts": {
+        "type": "select",
+        "label": "Shortcut Scope In Trilium",
+        "description": "Trilium's tree and editor use bare letter keys too, so the shortcuts are normally limited to the player you are pointing at.",
+        "options": [
+            {
+                "value": "hover",
+                "label": "Only while the player is hovered or focused"
+            },
+            {
+                "value": "always",
+                "label": "Whenever a player is on screen"
+            }
+        ],
+        "tab": "Where"
+    },
+    "blacklist": {
+        "type": "list",
+        "label": "Blocked Sites",
+        "description": "Sites the controller stays off. Matches subdomains too, so youtube.com also covers music.youtube.com.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Domain",
+                "description": "A bare hostname, e.g. netflix.com",
+                "default": ""
+            }
+        },
+        "tab": "Where"
+    }
+}
