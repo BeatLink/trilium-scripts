@@ -1,0 +1,74 @@
+{
+    "matchTitle": {
+        "type": "boolean",
+        "label": "Match Title",
+        "description": "Two notes must have the same title to be considered duplicates.",
+        "tab": "Matching",
+        "subgroup": "Compared Fields"
+    },
+    "matchContent": {
+        "type": "boolean",
+        "label": "Match Content",
+        "description": "Two notes must have the same content to be considered duplicates.",
+        "tab": "Matching",
+        "subgroup": "Compared Fields"
+    },
+    "matchAttributes": {
+        "type": "boolean",
+        "label": "Match Attributes",
+        "description": "Two notes must carry the same owned labels and relations to be considered duplicates.",
+        "tab": "Matching",
+        "subgroup": "Compared Fields"
+    },
+    "normalizeContent": {
+        "type": "boolean",
+        "label": "Ignore Formatting",
+        "description": "Compare content with HTML tags stripped and whitespace collapsed, so a reformatted copy still matches. Only applies when Match Content is on.",
+        "tab": "Matching",
+        "subgroup": "Comparison Rules"
+    },
+    "caseInsensitiveTitle": {
+        "type": "boolean",
+        "label": "Ignore Title Case",
+        "description": "Compare titles case-insensitively. Only applies when Match Title is on.",
+        "tab": "Matching",
+        "subgroup": "Comparison Rules"
+    },
+    "ignoreEmpty": {
+        "type": "boolean",
+        "label": "Skip Empty Notes",
+        "description": "Skip notes whose content is empty. Recommended when Match Content is on, since every empty note would otherwise match every other empty note.",
+        "tab": "Matching",
+        "subgroup": "Comparison Rules"
+    },
+    "searchRoot": {
+        "type": "note",
+        "label": "Scan Under",
+        "description": "Limit the scan to this note's subtree. Leave blank to scan the whole tree.",
+        "tab": "Scope"
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are skipped by the scan.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #archived or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
+            }
+        },
+        "tab": "Scope"
+    }
+}
