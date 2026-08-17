@@ -1,0 +1,261 @@
+{
+    "id": "duplicate-finder@beatlink",
+    "name": "Duplicate Finder",
+    "description": "Finds notes with matching title, content and attributes, and converts the extra copies into clones of whichever copy you choose to keep. Which fields count as a match is configurable.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/duplicate-finder@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-launcher",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "Duplicate Notes",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "page",
+                "title": "duplicateFinderPage.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/duplicateFinderPage.jsx"
+            },
+            {
+                "id": "style",
+                "title": "duplicateFinderPage.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/duplicateFinderPage.css"
+            },
+            {
+                "id": "registry",
+                "title": "duplicateRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/duplicateRegistry.jsx"
+            },
+            {
+                "id": "settings-launcher",
+                "title": "duplicate-finder@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/config.json"
+            },
+            {
+                "id": "settings-hook",
+                "title": "libSettingsHook.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-hook.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/duplicate-finder@beatlink/README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "page"
+            },
+            {
+                "parent": "page",
+                "child": "style"
+            },
+            {
+                "parent": "page",
+                "child": "registry"
+            },
+            {
+                "parent": "page",
+                "child": "schema"
+            },
+            {
+                "parent": "page",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "root",
+                "child": "settings-launcher"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "root",
+                "child": "settings-hook"
+            },
+            {
+                "parent": "settings-hook",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "page"
+            },
+            {
+                "from": "page",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "page",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings-launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings-hook",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings-hook",
+                "type": "configNote",
+                "to": "config"
+            }
+        ],
+        "labels": [
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "launcher",
+                "name": "iconClass",
+                "value": "bx bx-duplicate"
+            },
+            {
+                "note": "settings-launcher",
+                "name": "iconClass",
+                "value": "bx bx-duplicate"
+            }
+        ],
+        "readmeNote": "readme",
+        "hooks": {
+            "postInstall": "settings-hook",
+            "postUpdate": "settings-hook",
+            "updateReview": "settings-hook"
+        }
+    }
+}
