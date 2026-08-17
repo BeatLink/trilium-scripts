@@ -1,29 +1,28 @@
-const { loadSettings } = require("libSettings.js")
+// Runs on every attribute change in the tree, via the inheritable hooks setupRoot.js puts on root.
+// Its only job is keeping the runOnBranchChange relation in step with the checkbox, so that only
+// flagged notes ever trigger expandBranches.js.
 
-function expand() {
-    const scriptNote = api.startNote
+const { loadConfig } = require("expandedConfig.js")
 
-    // The label to pin on is an addon-wide setting shared with the widget.
-    const schemaNoteId = scriptNote.getRelationValue("schemaNote")
-    const settingsNoteId = scriptNote.getRelationValue("settingsNote")
-    const configNoteId = api.getNote(settingsNoteId).getRelationValue("configNote")
-    const { labelName } = loadSettings(schemaNoteId, configNoteId)
+function updateExpanded() {
+    const attribute = api.originEntity
+    if (!attribute || attribute.type !== "label") return
 
-    var notes = api.searchForNotes(`#${labelName}`)
-    for (var note of notes) {
-        note.setRelation('runOnBranchChange', scriptNote.noteId)
-        for (var branch of note.getParentBranches()) {
-            if (!branch.isExpanded) {
-                branch.isExpanded = true
-                branch.save()
-            }
-        }
-    }
-    var notesToRemove = api.searchForNotes(`~runOnBranchChange.noteId="${scriptNote.noteId}" AND not(#${labelName})`)
-    for (var noteToRemove of notesToRemove) {
-        while (noteToRemove.hasOwnedRelation("runOnBranchChange", scriptNote.noteId)) {
-            noteToRemove.removeRelation("runOnBranchChange", scriptNote.noteId)
+    const { labelName } = loadConfig()
+    if (attribute.name !== labelName) return
+
+    const expandScriptNoteId = api.currentNote.getRelationValue("expandScript")
+    const note = api.getNote(attribute.noteId)
+    if (!note || !expandScriptNoteId) return
+
+    // An unticked box keeps the label with the value "false", so only "true" counts as flagged.
+    if (attribute.value === "true") {
+        note.setRelation("runOnBranchChange", expandScriptNoteId)
+        api.getNote(expandScriptNoteId).executeScript()
+    } else {
+        while (note.hasOwnedRelation("runOnBranchChange", expandScriptNoteId)) {
+            note.removeRelation("runOnBranchChange", expandScriptNoteId)
         }
     }
 }
-expand()
+updateExpanded()
