@@ -1,0 +1,50 @@
+{
+    "id": "whitebluelegacy@beatlink",
+    "name": "WhiteBlueLegacy",
+    "description": "Legacy WhiteBlue theme for older versions of Trilium. A white-dominant theme with light blue accents.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluelegacy@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.4",
+    "type": "theme",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/whitebluelegacy@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "stylesheet",
+                "title": "whitebluelegacy@beatlink.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "whitebluelegacy@beatlink.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "stylesheet"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "stylesheet",
+                "name": "appTheme",
+                "value": "WhiteBlueLegacy"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
