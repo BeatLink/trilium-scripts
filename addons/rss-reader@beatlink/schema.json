@@ -1,0 +1,77 @@
+{
+    "freshrssEnabled": {
+        "type": "boolean",
+        "label": "Sync With FreshRSS",
+        "description": "Read feeds, articles and read/starred state from a FreshRSS server, and push your changes back to it. With this on, subscribing and unsubscribing here happen on the server, so FreshRSS stays the owner of the feed list.",
+        "tab": "FreshRSS"
+    },
+    "freshrssUrl": {
+        "type": "string",
+        "label": "Server URL",
+        "description": "Where FreshRSS is, for example https://rss.example.com. The API path (/api/greader.php) is added automatically. The API has to be enabled in FreshRSS under Administration -> Authentication.",
+        "tab": "FreshRSS"
+    },
+    "freshrssUser": {
+        "type": "string",
+        "label": "Username",
+        "description": "Your FreshRSS username.",
+        "tab": "FreshRSS"
+    },
+    "freshrssPassword": {
+        "type": "string",
+        "label": "API Password",
+        "description": "The API password from FreshRSS Profile, not your login password. It is stored as plain text in this addon's config note, the same as every other setting here.",
+        "tab": "FreshRSS"
+    },
+    "maxArticlesPerSync": {
+        "type": "number",
+        "label": "Articles Per Sync",
+        "description": "How many of the newest unread and starred articles to download the full text of in one sync. Read/unread state is still reconciled for everything, so a low value only delays how much text is cached.",
+        "tab": "FreshRSS"
+    },
+    "refreshIntervalHours": {
+        "type": "number",
+        "label": "Hours Between Automatic Refreshes",
+        "description": "Opening this widget refreshes only if this many hours have passed. There is no background sync: parsing a feed needs the browser's XML parser, so refreshes happen while the widget is open. Set to 0 to refresh only with the Refresh button.",
+        "tab": "Reading"
+    },
+    "retentionDays": {
+        "type": "number",
+        "label": "Keep Articles For (Days)",
+        "description": "Articles that are read, not starred, and older than this are dropped from the cache on each refresh. Unread and starred articles are always kept, and your read history is never pruned, so an article that drops out and later returns is still known to be read. Set to 0 to keep everything.",
+        "tab": "Reading"
+    },
+    "markReadOnOpen": {
+        "type": "boolean",
+        "label": "Mark Read When Opened",
+        "description": "Mark an article read as soon as you open it in the reading pane.",
+        "tab": "Reading"
+    },
+    "allowPrivateHosts": {
+        "type": "boolean",
+        "label": "Allow Private Network Feeds",
+        "description": "Let feed URLs point at loopback and private network addresses. Off by default, so enabling this addon does not turn your Trilium server into a way to probe the network it sits on. The FreshRSS server configured above is always allowed, whatever address it has.",
+        "tab": "Reading"
+    },
+    "viewFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Read Filter",
+        "description": "Remembered view state. Managed by the widget, not edited here.",
+        "tab": "Reading"
+    },
+    "viewFeed": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Feed Filter",
+        "description": "Remembered view state. Managed by the widget, not edited here.",
+        "tab": "Reading"
+    },
+    "viewSortDesc": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Sort Direction",
+        "description": "Remembered view state. Managed by the widget, not edited here.",
+        "tab": "Reading"
+    }
+}
