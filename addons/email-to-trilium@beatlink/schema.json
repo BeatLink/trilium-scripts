@@ -1,0 +1,76 @@
+{
+    "accounts": {
+        "type": "registry",
+        "label": "Email Accounts",
+        "description": "One entry per mailbox. After filling in the OAuth client credentials, save, then use the 'Connect' button in the inbox view to authorize each account.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Account Name",
+                "description": "A label for this account (e.g. 'Work Gmail')",
+                "default": "New Account"
+            },
+            "provider": {
+                "type": "select",
+                "label": "Provider",
+                "description": "Which email service this account uses",
+                "default": "gmail",
+                "options": [
+                    {
+                        "value": "gmail",
+                        "label": "Gmail"
+                    },
+                    {
+                        "value": "graph",
+                        "label": "Microsoft (Outlook / Office 365)"
+                    }
+                ]
+            },
+            "clientId": {
+                "type": "string",
+                "label": "OAuth Client ID",
+                "description": "From your Google Cloud or Azure app registration (see README)",
+                "default": ""
+            },
+            "clientSecret": {
+                "type": "string",
+                "label": "OAuth Client Secret",
+                "description": "From your Google Cloud or Azure app registration",
+                "default": ""
+            },
+            "tenant": {
+                "type": "string",
+                "label": "Azure Tenant",
+                "description": "Azure directory (tenant) ID, or 'common' for multi-tenant/personal accounts",
+                "default": "common",
+                "showWhen": {
+                    "provider": "graph"
+                }
+            },
+            "targetNoteId": {
+                "type": "note",
+                "label": "File Emails Under",
+                "description": "New notes created from this account's emails are placed as children of this note",
+                "default": ""
+            },
+            "refreshToken": {
+                "type": "string",
+                "label": "Refresh Token",
+                "description": "Populated automatically after you Connect this account. Leave blank; clear it to force re-authorization.",
+                "default": ""
+            }
+        }
+    },
+    "maxMessages": {
+        "type": "number",
+        "label": "Messages to List",
+        "description": "How many recent messages to fetch per account in the inbox view",
+        "tab": "General"
+    },
+    "deleteAfterCreate": {
+        "type": "boolean",
+        "label": "Delete After Creating Note",
+        "description": "When you create a note from an email, also delete (trash) that email from the account",
+        "tab": "General"
+    }
+}

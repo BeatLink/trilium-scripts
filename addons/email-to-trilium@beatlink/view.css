@@ -1,0 +1,109 @@
+.etr-view {
+    padding: 12px 16px;
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 14px;
+}
+
+.etr-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.etr-account-select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--input-background-color);
+    color: var(--main-text-color);
+}
+
+.etr-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    color: var(--main-text-color);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.etr-btn:hover { filter: brightness(1.08); }
+.etr-btn:disabled { opacity: 0.5; cursor: default; }
+.etr-btn-primary {
+    background: var(--button-primary-background-color, #3a87ad);
+    color: var(--button-primary-color, #fff);
+    border-color: transparent;
+}
+.etr-btn-danger {
+    background: transparent;
+    color: #c0392b;
+    border-color: #c0392b;
+}
+.etr-btn-danger:hover { background: #c0392b; color: #fff; }
+
+.etr-empty {
+    color: var(--muted-text-color, #888);
+    padding: 24px 0;
+    text-align: center;
+}
+
+.etr-status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.etr-status-info { background: rgba(58, 135, 173, 0.12); }
+.etr-status-error { background: rgba(192, 57, 43, 0.14); color: #c0392b; }
+.etr-link { margin-left: 6px; }
+
+.etr-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.etr-msg {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.etr-msg-main { flex: 1; min-width: 0; }
+.etr-msg-subject { font-weight: 600; margin-bottom: 2px; }
+.etr-msg-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted-text-color, #888);
+}
+.etr-msg-from { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.etr-msg-snippet {
+    font-size: 12px;
+    color: var(--muted-text-color, #888);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.etr-msg-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.etr-settings { padding: 12px 16px; max-width: 900px; margin: 0 auto; }
+.etr-hint {
+    color: var(--muted-text-color, #888);
+    font-size: 13px;
+    background: rgba(58, 135, 173, 0.08);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+.etr-hint code { word-break: break-all; }
