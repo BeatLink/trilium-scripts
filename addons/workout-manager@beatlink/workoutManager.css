@@ -1,0 +1,367 @@
+.workout-manager-widget {
+    padding: 10px 14px 20px 14px;
+}
+
+.workout-manager-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 2px solid var(--main-border-color);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+}
+
+.workout-manager-spacer {
+    flex: 1;
+}
+
+.workout-manager-tab-btn {
+    background: none;
+    border: none;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--muted-text-color);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.workout-manager-tab-btn-active {
+    color: var(--main-text-color);
+    border-bottom-color: var(--main-border-color);
+    font-weight: 600;
+}
+
+.workout-manager-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.workout-manager-toolbar select,
+.workout-manager-toolbar input[type="text"],
+.workout-manager-toolbar input[type="date"] {
+    max-width: 240px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.workout-manager-heading {
+    margin: 18px 0 8px 0;
+}
+
+.workout-manager-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+    margin-bottom: 8px;
+}
+
+.workout-manager-table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--main-border-color);
+    white-space: nowrap;
+}
+
+.workout-manager-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--main-border-color);
+    vertical-align: middle;
+}
+
+.workout-manager-table input[type="text"],
+.workout-manager-table input[type="number"],
+.workout-manager-table select {
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.workout-manager-table input[type="number"] {
+    width: 80px;
+}
+
+.workout-manager-row-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* Each target keeps its unit beside the number, so a row reads "8 reps / 60 kg". */
+.workout-manager-target-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.workout-manager-target-cell label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9em;
+    color: var(--muted-text-color);
+}
+
+.workout-manager-sets {
+    margin-bottom: 6px;
+}
+
+.workout-manager-card {
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.workout-manager-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.workout-manager-session-name {
+    font-weight: 600;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+}
+
+.workout-manager-session-name:focus,
+.workout-manager-session-comment:focus,
+.workout-manager-entry-comment:focus {
+    border-color: var(--main-border-color);
+    background: var(--input-background-color, transparent);
+}
+
+.workout-manager-session-comment {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+}
+
+.workout-manager-entry {
+    border-top: 1px solid var(--main-border-color);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.workout-manager-entry-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.workout-manager-entry-comment {
+    width: 200px;
+    padding: 3px 5px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+}
+
+.workout-manager-plan {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.workout-manager-plan li {
+    padding: 3px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.workout-manager-plan li:last-child {
+    border-bottom: none;
+}
+
+.workout-manager-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+}
+
+.workout-manager-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.workout-manager-chip-remove {
+    background: none;
+    border: none;
+    color: var(--muted-text-color);
+    cursor: pointer;
+    padding: 0;
+}
+
+.workout-manager-chip-remove:hover {
+    color: var(--menu-item-hover-text-color, #c0392b);
+}
+
+.workout-manager-chip-add {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.workout-manager-suggest {
+    position: relative;
+}
+
+.workout-manager-suggest input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.workout-manager-suggest-grow {
+    flex: 1;
+}
+
+.workout-manager-suggestions {
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 2px 0 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--main-background-color);
+}
+
+.workout-manager-suggestions button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.workout-manager-suggestions button:hover {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+}
+
+.workout-manager-form {
+    max-width: 720px;
+}
+
+.workout-manager-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.workout-manager-form input[type="text"],
+.workout-manager-form input[type="number"],
+.workout-manager-form select,
+.workout-manager-form textarea {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    font: inherit;
+}
+
+.workout-manager-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.workout-manager-lookup {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.workout-manager-lookup input {
+    flex: 1;
+}
+
+.workout-manager-results {
+    list-style: none;
+    margin: 0 0 12px 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.workout-manager-results li {
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.workout-manager-results li:last-child {
+    border-bottom: none;
+}
+
+.workout-manager-results button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.workout-manager-results button:hover {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+}
+
+.workout-manager-hint {
+    color: var(--muted-text-color);
+    font-size: 0.9em;
+}
+
+.workout-manager-error {
+    color: #c0392b;
+    margin-bottom: 8px;
+}
+
+.workout-manager-ok {
+    color: #27ae60;
+}
