@@ -1,0 +1,338 @@
+.workflow-window {
+    padding: 8px;
+}
+
+.workflow-window-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--main-border-color, currentColor);
+}
+
+.workflow-window-tab {
+    cursor: pointer;
+    border: 1px solid var(--main-border-color, currentColor);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: var(--accented-background-color, transparent);
+    color: inherit;
+    padding: 6px 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.workflow-window-tab-active {
+    background: var(--main-background-color, transparent);
+}
+
+.workflow-window-panel {
+    padding: 4px;
+}
+
+/* --- Templates settings tab --- */
+
+.organize-templates-blurb {
+    opacity: 0.85;
+    max-width: 70ch;
+    margin-bottom: 12px;
+}
+
+.organize-templates-scan {
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.organize-templates-status {
+    margin: 8px 0;
+    opacity: 0.85;
+}
+
+/* --- Areas settings tab --- */
+
+.organize-areas-blurb {
+    opacity: 0.85;
+    max-width: 70ch;
+    margin-bottom: 12px;
+}
+
+.organize-areas-warning {
+    max-width: 70ch;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--muted-text-color, #888);
+    opacity: 0.85;
+}
+
+.workflow-window-blurb {
+    opacity: 0.85;
+    max-width: 70ch;
+}
+
+.workflow-window-placeholder {
+    opacity: 0.6;
+    padding: 12px;
+    border: 1px dashed var(--main-border-color, currentColor);
+    border-radius: 6px;
+    margin-top: 12px;
+    max-width: 70ch;
+}
+
+/* --- Organize tab --- */
+
+.workflow-organize {
+    max-width: 70ch;
+}
+
+.workflow-organize-progress {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.workflow-organize-card {
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.workflow-organize-title {
+    font-size: 1.15em;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.workflow-organize-title:hover {
+    text-decoration: underline;
+}
+
+.workflow-organize-path {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+.workflow-organize-preview {
+    opacity: 0.8;
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--main-border-color, #ccc);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+    border-radius: 0 4px 4px 0;
+}
+
+.workflow-organize-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.workflow-organize-option-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    cursor: pointer;
+}
+
+.workflow-organize-option-btn:hover:not(:disabled) {
+    border-color: var(--main-text-color, #333);
+}
+
+.workflow-organize-option-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* The area a note already sits under is pre-suggested. */
+.workflow-organize-option-suggested {
+    font-weight: bold;
+    outline: 2px solid var(--main-text-color, #333);
+    outline-offset: 1px;
+}
+
+/* Full-width explanation of why a note is misfiled, above the fix buttons. */
+.workflow-organize-reason {
+    flex-basis: 100%;
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
+/* --- No-due-date date+time picker --- */
+
+.workflow-duedate {
+    flex-basis: 100%;
+}
+
+.workflow-duedate-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.workflow-duedate-label {
+    min-width: 48px;
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.workflow-duedate-time {
+    opacity: 0.55;
+    font-size: 0.85em;
+}
+
+.workflow-duedate-input {
+    padding: 5px 8px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.workflow-duedate-preview {
+    margin-top: 4px;
+    font-weight: bold;
+    opacity: 0.85;
+}
+
+.workflow-organize-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workflow-organize-heading {
+    margin: 0 0 12px;
+}
+
+.workflow-organize-nav {
+    background: none;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    padding: 6px 12px;
+    opacity: 0.85;
+    cursor: pointer;
+}
+
+.workflow-organize-nav:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.workflow-organize-nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.workflow-organize-delete {
+    background: none;
+    border: none;
+    color: var(--error-color, crimson);
+    opacity: 0.8;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: auto;
+}
+
+.workflow-organize-delete:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.workflow-organize-done {
+    padding: 12px 0;
+    margin-bottom: 8px;
+}
+
+.workflow-organize-section + .workflow-organize-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--main-border-color, #ccc);
+}
+
+.workflow-organize-restart {
+    background: none;
+    border: none;
+    opacity: 0.75;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 8px;
+}
+
+.workflow-organize-restart:hover {
+    opacity: 1;
+}
+
+/* --- Invalid Buckets table --- */
+
+.invalid-buckets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.invalid-buckets-table th,
+.invalid-buckets-table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--main-border-color, #ccc);
+    vertical-align: top;
+}
+
+.invalid-buckets-table th {
+    font-weight: bold;
+    opacity: 0.75;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.invalid-buckets-title {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.invalid-buckets-title:hover {
+    text-decoration: underline;
+}
+
+.invalid-buckets-path {
+    display: block;
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
+.invalid-buckets-reason {
+    opacity: 0.85;
+}
+
+.invalid-buckets-count {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.invalid-buckets-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.invalid-buckets-select {
+    padding: 5px 8px;
+    max-width: 220px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.invalid-buckets-notarget {
+    opacity: 0.7;
+    font-size: 0.9em;
+}
