@@ -37,6 +37,7 @@ const {
     importDatabase
 } = require("libWorkoutManager.js")
 const { searchExercises: searchWger } = require("libWger.js")
+const { convertLiftosaurExport } = require("libLiftosaur.js")
 
 const UNTAGGED = "Uncategorised"
 
@@ -1117,39 +1118,75 @@ function WorkoutManagerWidget() {
      * so importing the same file twice is a no-op rather than duplicating
      * workouts, and existing data is never wiped.
      */
-    const onImport = useCallback(() => {
+    const mergeImported = useCallback(imported => {
+        persist(current => {
+            const log = { ...current.log }
+            for (const [date, sessions] of Object.entries(imported.log)) {
+                const existingIds = new Set((log[date] || []).map(session => session.id))
+                log[date] = [...(log[date] || []), ...sessions.filter(session => !existingIds.has(session.id))]
+            }
+            return {
+                categories: normalizeTags([...current.categories, ...imported.categories]),
+                exercises: { ...current.exercises, ...imported.exercises },
+                routines: { ...current.routines, ...imported.routines },
+                log
+            }
+        })
+    }, [persist])
+
+    // Reads one picked file and hands its text to `convert`, which returns the
+    // database to merge plus the line to report.
+    const importFile = useCallback((accept, convert) => {
         const input = document.createElement("input")
         input.type = "file"
-        input.accept = "application/json,.json"
+        input.accept = accept
         input.onchange = async () => {
             const file = input.files?.[0]
             if (!file) return
-            let imported
+            let result
             try {
-                imported = importDatabase(await file.text())
+                result = convert(await file.text())
             } catch (e) {
                 api.showError(`Could not import: ${e.message}`)
                 return
             }
-            persist(current => {
-                const log = { ...current.log }
-                for (const [date, sessions] of Object.entries(imported.log)) {
-                    const existingIds = new Set((log[date] || []).map(session => session.id))
-                    log[date] = [...(log[date] || []), ...sessions.filter(session => !existingIds.has(session.id))]
-                }
-                return {
-                    categories: normalizeTags([...current.categories, ...imported.categories]),
-                    exercises: { ...current.exercises, ...imported.exercises },
-                    routines: { ...current.routines, ...imported.routines },
-                    log
-                }
-            })
-            api.showMessage(
-                `Imported ${Object.keys(imported.exercises).length} exercise(s) and ${Object.keys(imported.routines).length} routine(s).`
-            )
+            mergeImported(result.database)
+            api.showMessage(result.message)
         }
         input.click()
-    }, [persist])
+    }, [mergeImported])
+
+    const onImport = useCallback(() => {
+        importFile("application/json,.json", text => {
+            const database = importDatabase(text)
+            return {
+                database,
+                message: `Imported ${Object.keys(database.exercises).length} exercise(s) and `
+                    + `${Object.keys(database.routines).length} routine(s).`
+            }
+        })
+    }, [importFile])
+
+    /*
+     * Liftosaur's own exports, converted on the way in. Its weights carry their
+     * own unit, so the summary says which one everything landed in -- this
+     * addon labels weights rather than converting them, and the setting has to
+     * match for the numbers to read correctly.
+     */
+    const onImportLiftosaur = useCallback(() => {
+        importFile("application/json,.json,text/csv,.csv", text => {
+            const { database, summary } = convertLiftosaurExport(text)
+            const unitNote = summary.unit === units.weight
+                ? ""
+                : ` Weights are in ${summary.unit} — set Weight Unit to ${summary.unit} in settings to match.`
+            return {
+                database,
+                message: `Imported ${summary.sessions} workout(s), ${summary.sets} set(s) and `
+                    + `${summary.exercises} exercise(s) from Liftosaur `
+                    + `(skipped ${summary.warmupSets} warmup and ${summary.incompleteSets} unperformed set(s)).${unitNote}`
+            }
+        })
+    }, [importFile, units.weight])
 
     const categories = useMemo(() => database ? allCategories(database) : [], [database])
     const units = useMemo(
@@ -1178,6 +1215,7 @@ function WorkoutManagerWidget() {
                 {tabButton("categories", "Categories")}
                 <span className="workout-manager-spacer" />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
+                <Button icon="bx-dumbbell" text="Import Liftosaur" onClick={onImportLiftosaur} />
                 <Button icon="bx-export" text="Export JSON" onClick={onExport} />
             </div>
             {tab === "log" && (

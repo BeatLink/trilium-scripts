@@ -101,6 +101,37 @@ Switching a unit relabels what is displayed — it never converts or rewrites re
 by id: exercises and routines are added alongside what's already there, and workouts already present
 are skipped, so importing the same file twice changes nothing and nothing is ever wiped.
 
+### Importing from Liftosaur
+
+**Import Liftosaur** takes either file [Liftosaur](https://liftosaur.com) exports and merges it in
+the same way:
+
+- the full JSON backup — Settings → *Export data to file*, saved as `liftosaur-YYYYMMDD.json`
+- the history CSV — *Export history to CSV*
+
+Both bring in every workout, its exercises, and each performed set's reps, weight and RPE. Ids are
+derived from the Liftosaur data rather than generated, so re-importing a newer export adds only the
+workouts that weren't there before.
+
+Which file to prefer: the **CSV** names exercises the way the app displays them (`Bench Press,
+Barbell`) and carries target/synergist muscles for every exercise. The **JSON** identifies built-in
+exercises by their internal id, so their names are reconstructed from it (`benchPress` → `Bench
+Press`) and only custom exercises bring muscles along. The CSV therefore gives a tidier library; the
+JSON is the complete backup.
+
+What is not imported:
+
+- **Warmup sets** and sets that were never performed — both are counted in the summary message.
+- **Programs.** Liftosaur programs are Liftoscript, which computes sets and weights per workout;
+  they have no equivalent as a plain set/rep routine, so routines are left to you to write.
+- Everything Liftosaur logs is reps and weight, so imported exercises come in as Weight & Reps, or
+  as Bodyweight Reps when no set ever carried weight. Change an exercise's measurement afterwards if
+  it should be Duration or Cardio.
+
+Liftosaur stores every weight with its own unit. The import converts them all onto one unit and the
+summary says which — if that isn't the unit set in settings, change **Weight Unit** to match, since
+this addon labels weights rather than converting them.
+
 ## Settings
 
 | Setting | Description |
