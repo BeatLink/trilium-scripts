@@ -1,8 +1,8 @@
-.recipes-widget {
+.diet-manager-widget {
     padding: 10px 14px 20px 14px;
 }
 
-.recipes-tabs {
+.diet-manager-tabs {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -11,11 +11,11 @@
     padding-bottom: 6px;
 }
 
-.recipes-tabs-spacer {
+.diet-manager-tabs-spacer {
     flex: 1;
 }
 
-.recipes-tab-btn {
+.diet-manager-tab-btn {
     background: none;
     border: none;
     padding: 8px 14px;
@@ -25,23 +25,23 @@
     margin-bottom: -2px;
 }
 
-.recipes-tab-btn-active {
+.diet-manager-tab-btn-active {
     color: var(--main-text-color);
     border-bottom-color: var(--main-border-color);
     font-weight: 600;
 }
 
-.recipes-toolbar {
+.diet-manager-toolbar {
     margin-bottom: 10px;
 }
 
-.recipes-table {
+.diet-manager-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.95em;
 }
 
-.recipes-table th {
+.diet-manager-table th {
     text-align: left;
     font-weight: 600;
     padding: 6px 8px;
@@ -49,19 +49,19 @@
     white-space: nowrap;
 }
 
-.recipes-table td {
+.diet-manager-table td {
     padding: 4px 8px;
     border-bottom: 1px solid var(--main-border-color);
     vertical-align: middle;
 }
 
-.recipes-cell-actions {
+.diet-manager-cell-actions {
     width: 1%;
     white-space: nowrap;
     text-align: right;
 }
 
-.recipes-action {
+.diet-manager-action {
     background: none;
     border: none;
     color: var(--muted-text-color);
@@ -69,40 +69,40 @@
     padding: 4px;
 }
 
-.recipes-action-remove:hover {
+.diet-manager-action-remove:hover {
     color: var(--menu-item-hover-text-color, #c0392b);
 }
 
-.recipes-empty {
+.diet-manager-empty {
     color: var(--muted-text-color);
     text-align: center;
     padding: 16px !important;
 }
 
-.recipes-form {
+.diet-manager-form {
     max-width: 640px;
 }
 
-.recipes-field {
+.diet-manager-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-bottom: 10px;
 }
 
-.recipes-field-row {
+.diet-manager-field-row {
     display: flex;
     gap: 12px;
 }
 
-.recipes-field-row .recipes-field {
+.diet-manager-field-row .diet-manager-field {
     flex: 1;
 }
 
-.recipes-form input[type="text"],
-.recipes-form input[type="number"],
-.recipes-form input[type="date"],
-.recipes-form select {
+.diet-manager-form input[type="text"],
+.diet-manager-form input[type="number"],
+.diet-manager-form input[type="date"],
+.diet-manager-form select {
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
@@ -110,13 +110,13 @@
     color: inherit;
 }
 
-.recipes-form-actions {
+.diet-manager-form-actions {
     display: flex;
     gap: 8px;
     margin-top: 14px;
 }
 
-.recipes-nutrient-grid {
+.diet-manager-nutrient-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 10px;
@@ -126,14 +126,14 @@
     border-radius: 6px;
 }
 
-.recipes-nutrient-field {
+.diet-manager-nutrient-field {
     display: flex;
     flex-direction: column;
     gap: 2px;
     font-size: 0.9em;
 }
 
-.recipes-nutrient-field input {
+.diet-manager-nutrient-field input {
     padding: 3px 5px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
@@ -141,17 +141,17 @@
     color: inherit;
 }
 
-.recipes-usda-search {
+.diet-manager-usda-search {
     display: flex;
     gap: 8px;
     margin-bottom: 8px;
 }
 
-.recipes-usda-search input {
+.diet-manager-usda-search input {
     flex: 1;
 }
 
-.recipes-usda-results {
+.diet-manager-usda-results {
     list-style: none;
     margin: 0 0 12px 0;
     padding: 0;
@@ -161,7 +161,7 @@
     border-radius: 6px;
 }
 
-.recipes-usda-results li {
+.diet-manager-usda-results li {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -169,32 +169,32 @@
     border-bottom: 1px solid var(--main-border-color);
 }
 
-.recipes-usda-results li:last-child {
+.diet-manager-usda-results li:last-child {
     border-bottom: none;
 }
 
-.recipes-usda-empty {
+.diet-manager-usda-empty {
     color: var(--muted-text-color);
     justify-content: center !important;
 }
 
-.recipes-usda-source {
+.diet-manager-usda-source {
     color: var(--muted-text-color);
     font-size: 0.85em;
 }
 
-.recipes-error {
+.diet-manager-error {
     color: #c0392b;
     margin-bottom: 8px;
 }
 
-.recipes-ingredient-list {
+.diet-manager-ingredient-list {
     list-style: none;
     margin: 0 0 10px 0;
     padding: 0;
 }
 
-.recipes-ingredient-row {
+.diet-manager-ingredient-row {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -202,11 +202,11 @@
     border-bottom: 1px solid var(--main-border-color);
 }
 
-.recipes-ingredient-name {
+.diet-manager-ingredient-name {
     flex: 1;
 }
 
-.recipes-ingredient-row input {
+.diet-manager-ingredient-row input {
     width: 80px;
     padding: 3px 5px;
     border: 1px solid var(--main-border-color);
@@ -215,14 +215,14 @@
     color: inherit;
 }
 
-.recipes-add-ingredient {
+.diet-manager-add-ingredient {
     display: flex;
     gap: 8px;
     align-items: center;
     margin-bottom: 12px;
 }
 
-.recipes-add-ingredient select {
+.diet-manager-add-ingredient select {
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
@@ -230,7 +230,7 @@
     color: inherit;
 }
 
-.recipes-add-ingredient input {
+.diet-manager-add-ingredient input {
     width: 80px;
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
@@ -239,21 +239,21 @@
     color: inherit;
 }
 
-.recipes-preview {
+.diet-manager-preview {
     padding: 8px 10px;
     background: var(--accented-background-color, rgba(127, 127, 127, 0.1));
     border-radius: 6px;
     margin-bottom: 10px;
 }
 
-.recipes-diary-nav {
+.diet-manager-diary-nav {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 14px;
 }
 
-.recipes-diary-nav input[type="date"] {
+.diet-manager-diary-nav input[type="date"] {
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
@@ -261,14 +261,14 @@
     color: inherit;
 }
 
-.recipes-diary-totals {
+.diet-manager-diary-totals {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 8px;
     margin-bottom: 16px;
 }
 
-.recipes-target {
+.diet-manager-target {
     display: flex;
     justify-content: space-between;
     padding: 6px 10px;
@@ -277,18 +277,18 @@
     font-size: 0.9em;
 }
 
-.recipes-target-over {
+.diet-manager-target-over {
     border-color: #c0392b;
     color: #c0392b;
 }
 
-.recipes-diary-entries {
+.diet-manager-diary-entries {
     list-style: none;
     margin: 0 0 14px 0;
     padding: 0;
 }
 
-.recipes-diary-entry {
+.diet-manager-diary-entry {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -296,10 +296,19 @@
     border-bottom: 1px solid var(--main-border-color);
 }
 
-.recipes-diary-entry-servings {
+.diet-manager-diary-entry-servings {
     color: var(--muted-text-color);
 }
 
-.recipes-diary-entry .recipes-action {
+.diet-manager-diary-entry .diet-manager-action {
     margin-left: auto;
+}
+
+.diet-manager-hint {
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.diet-manager-ok {
+    color: var(--muted-text-color);
 }

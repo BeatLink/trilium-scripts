@@ -20,7 +20,7 @@ const FDC_NUTRIENT_NUMBERS = {
 }
 
 async function searchFoods(apiKey, query) {
-    if (!apiKey) throw new Error("No USDA API key configured. Set one in Recipes settings.")
+    if (!apiKey) throw new Error("No USDA API key configured. Set one in Diet Manager settings.")
     return await api.runAsyncOnBackendWithManualTransactionHandling(async (apiKey, query, nutrientNumbers) => {
         async function fetchJson(url) {
             const response = await fetch(url)

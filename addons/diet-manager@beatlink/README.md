@@ -1,4 +1,4 @@
-# Recipes
+# Diet Manager
 
 A food and recipe database with a daily nutrition diary, built to replace Cronometer. All data —
 foods, recipes, and the diary — lives in one persisted JSON note, so it's a single note you can
@@ -7,7 +7,7 @@ back up, inspect, or migrate.
 ## Setup
 
 1. Install the addon and enable it.
-2. Open its launcher note (`recipes@beatlink`) to use the widget.
+2. Open its launcher note (`diet-manager@beatlink`) to use the widget.
 3. Optionally, open the addon's settings screen to set daily nutrient targets and a USDA
    FoodData Central API key for food lookup (Open Food Facts lookup needs no key and works out of
    the box).
@@ -55,6 +55,11 @@ Open the addon's launcher note for the settings screen:
   Open Food Facts results appear regardless of this setting.
 - **Daily Targets** — a target value per tracked nutrient, compared against each day's diary
   totals. A target of `0` is treated as "no target" and shown without a comparison.
+- **Render Note** — pick an existing note to become a second place the diet manager shows up.
+  Selecting it converts that note into a render note pointing at the widget and stamps its icon;
+  clearing it reverts the previously-chosen note back to a text note. **Apply render wiring**
+  re-runs the wiring on the note already selected, for when it was set while the addon was
+  disabled.
 
 ## Import and export
 
