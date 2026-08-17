@@ -1,6 +1,6 @@
 # Hoist Note
 
-Adds a launchbar button to quickly toggle hoisting of the current note.
+A launchbar button that toggles hoisting on the current note.
 
 ## Overview
 
@@ -8,10 +8,10 @@ Hoisting focuses the Trilium note tree on a single note, hiding everything outsi
 
 ## How It Works
 
-- At startup, `setupButtons.js` registers a launchbar button of type `script` pointing to `hoistNote.js`.
-- Clicking the button runs `hoistNote.js`, which checks whether the current note is already hoisted:
-  - If it is, hoisting is cleared (returns to root).
-  - If it isn't, the current note becomes the hoisted root.
+- At startup, `setupButtons.js` creates (or updates) a launchbar launcher of type `command`, bound
+  to Trilium's built-in `toggleNoteHoisting` command.
+- Clicking the button toggles hoisting on the active note: hoisted notes return to root, unhoisted
+  notes become the hoisted root.
 
 ## Installation
 
