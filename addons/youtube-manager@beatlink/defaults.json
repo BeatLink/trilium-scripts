@@ -1,0 +1,10 @@
+{
+    "videosPerChannel": 15,
+    "retentionDays": 60,
+    "refreshIntervalHours": 6,
+    "markWatchedOnPlay": false,
+    "hideShorts": true,
+    "viewFilter": "unwatched",
+    "viewChannel": "all",
+    "viewSortDesc": true
+}
