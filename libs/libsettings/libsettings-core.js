@@ -1,13 +1,27 @@
-// Schema-driven settings engine for backend (customRequestHandler) scripts.
-// Stateless: callers pass in the noteIds of their own schema.json and config.json
-// notes, and the config note's own `sourceConfig` relation chain supplies every
-// lower-priority source underneath it (see libsettings-core.js for the model).
+// The schema semantics of libsettings: how an ordered chain of settings sources
+// combines into the runtime values everything else works with, and how they come
+// apart again on save.
 //
-// The merge helpers below are duplicated from libsettings-core.js, which the
-// frontend half and TAM share as a single note. Trilium only bundles a child
-// module whose script env matches its parent's, so a backend script can never
-// require that frontend note however the notes are wired — the two copies have
-// to be changed together.
+// A *source* is one JSON config document. Sources are ordered lowest priority
+// first and merged left to right, so the last one wins on conflict; the last is
+// also the only writable one (everything under it is read-only context). An
+// addon's own chain is normally two long — its shipped `defaults.json`, then the
+// user's `config.json` — and grows when a source points at a further one, which
+// is how one addon layers over another addon's config.
+//
+// schema.json therefore carries no top-level `default`: it describes fields
+// (type, label, tabs), while values live in the sources. `default` still applies
+// inside an `itemSchema`, where it seeds a field of an item created at runtime
+// rather than shipping a value.
+//
+// This is a frontend module (`env=frontend`), shared as one note by every
+// consumer's libSettingsUI.jsx *and* by TAM's own lib-tam.js — TAM produces the
+// settings half of the Update Review itself and needs the identical reading of
+// what "the user changed this" means. libsettings-backend.js still carries its
+// own copy: Trilium only bundles a child module whose script env matches its
+// parent's, so a backend script cannot require a frontend note however the
+// notes are wired. Those two must stay in lockstep by hand; this file and TAM
+// do not.
 
 function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value)
@@ -30,8 +44,17 @@ function fallbackFor(def) {
     }
 }
 
-// Several schemas merged into one field set, ordered lowest priority first; a
-// later schema wins on a duplicate key, `_`-prefixed array metadata concatenates.
+// The blank item a `list`/`registry` seeds a newly added entry from.
+function blankItem(itemSchema) {
+    const item = {}
+    for (const [key, def] of Object.entries(itemSchema)) item[key] = fallbackFor(def)
+    return item
+}
+
+// Several schemas merged into one field set, ordered lowest priority first — for
+// a form that edits more than one addon's fields at once. A later schema wins on
+// a duplicate key; `_`-prefixed array metadata (`_categories`) concatenates
+// instead, so a merged form keeps every contributor's categories in order.
 function mergeSchemas(schemas) {
     const merged = {}
     for (const schema of schemas) {
@@ -54,17 +77,24 @@ function mergeSources(schema, storedDocs) {
 
 // A registry field is stored as `{ entries, removedIds }` rather than as the flat
 // runtime map, because a source only records how it *diverges* from the sources
-// below it: `entries` holds ids it adds or edits, `removedIds` the ids it drops.
-// An entry a source leaves alone is never copied into it, so it keeps tracking
-// whatever the layer below does with it. A plain `{ [id]: item }` map is also
-// accepted, read as "these entries, nothing removed" — how a hand-written
-// defaults.json states its shipped entries.
+// below it: `entries` holds ids it adds or edits (an edit shadows the lower
+// source's entry under the same id), `removedIds` the ids it drops. An entry a
+// source leaves alone is never copied into it, so it keeps tracking whatever the
+// layer below does with it. `mergeRegistryDefaults` reconstructs the flat runtime
+// map (base, minus removed, with entries overlaid) that the rest of this module
+// and the UI both work with; `filterRegistryBySchema` is the inverse, run on save.
+//
+// A source may also give a registry field a plain `{ [id]: item }` map instead of
+// that wrapper, read as "these entries, nothing removed" — how a hand-written
+// defaults.json states its shipped entries without wrapping every one of them.
 //
 // A registry field can itself nest further `list`/`registry` fields in its
-// `itemSchema`; the baseline for such a nested field lives inside its *parent
-// item's own* base item, so `mergeDefaults`/`filterBySchema` thread a `baseNode`
-// parameter through every level of recursion. Kept in lockstep with
-// libsettings-core.js.
+// `itemSchema` (e.g. a colour/prefix variant's `children`, one flat label-value
+// map per variant — see this library's README, "Nesting"). The baseline for such
+// a nested field lives inside its *parent item's own* base item
+// (`baseItem[key]`), so `mergeDefaults`/`filterBySchema` thread a `baseNode`
+// parameter through every level of recursion. Kept in exact lockstep with the
+// identically-named functions in libsettings-backend.js.
 function registryEntriesOf(storedNode) {
     if (!isPlainObject(storedNode)) return { entries: {}, removedIds: [] }
     const isWrapper = isPlainObject(storedNode.entries) || Array.isArray(storedNode.removedIds)
@@ -104,8 +134,9 @@ function filterRegistryBySchema(itemSchema, base, effective) {
 function mergeDefaults(schema, baseNode, storedNode) {
     const values = {}
     for (const [key, def] of Object.entries(schema)) {
-        // Keys starting with `_` are schema-level metadata (e.g. `_categories`),
-        // not fields — they carry no per-user value.
+        // Keys starting with `_` are schema-level metadata (e.g. `_categories`,
+        // the ordered category list SettingsForm reads), not fields — they
+        // carry no per-user value, so they never enter the merged/persisted map.
         if (key.startsWith("_")) continue
         const baseValue = (baseNode && key in baseNode) ? baseNode[key] : fallbackFor(def)
         if (def.type === "list") {
@@ -121,7 +152,9 @@ function mergeDefaults(schema, baseNode, storedNode) {
 }
 
 // The document one source stores: only what it changes about the sources below
-// it, so a value the base already holds keeps following that source.
+// it. A value the base already holds is left out entirely, so it keeps following
+// that source instead of freezing a copy — which is also what lets a shipped
+// default the user never touched move on its own.
 function filterBySchema(schema, values, baseNode) {
     const filtered = {}
     for (const key of Object.keys(schema)) {
@@ -146,60 +179,27 @@ function filterBySchema(schema, values, baseNode) {
     return filtered
 }
 
-function readJson(noteId) {
-    const note = noteId ? api.getNote(noteId) : null
-    if (!note) return {}
-    try {
-        return JSON.parse(note.getContent() || "{}")
-    } catch (e) {
-        console.error(`libsettings: note ${noteId} does not hold valid JSON`, e)
-        return {}
+// An item's collapsed-summary title prefers an itemSchema field literally
+// named `name` (matching the convention every consumer's item schema already
+// uses for its display name — also what a `reference` field pointing at this
+// registry shows in its own dropdown); otherwise it falls back to the first
+// field's value — resolved through a `reference` field to the *referenced*
+// entry's own name (rather than showing a raw reference id) when that first
+// field is itself a `reference`. TAM names a reviewed entry the same way, so
+// the Update Review and the form the user then opens agree on what to call it.
+function titleFor(itemSchema, item, registries) {
+    if ("name" in itemSchema) return item.name || "Untitled"
+    const [firstKey, firstDef] = Object.entries(itemSchema)[0] || []
+    if (!firstKey) return "Untitled"
+    const rawValue = item[firstKey]
+    if (firstDef.type === "reference") {
+        const referenced = registries?.[firstDef.registry]?.[rawValue]
+        return referenced?.name || rawValue || "Untitled"
     }
+    return rawValue || "Untitled"
 }
 
-// Every source under a config note, lowest priority first and the note itself
-// last: each source may name further sources through its own `sourceConfig`
-// relations, and its own fields through a `schemaNote` relation, so one addon's
-// config can layer over another's. Depth-first and post-order, so a source is
-// always read before whatever points at it; a cycle stops at the note it
-// revisits.
-function collectSources(configNoteId) {
-    const sources = []
-    const seen = new Set()
-    const visit = (noteId) => {
-        if (!noteId || seen.has(noteId)) return
-        seen.add(noteId)
-        const note = api.getNote(noteId)
-        if (!note) return
-        for (const relation of note.getOwnedRelations("sourceConfig")) visit(relation.value)
-        sources.push({
-            configNoteId: noteId,
-            schema: readJson(note.getRelationValue("schemaNote")),
-            stored: readJson(noteId)
-        })
-    }
-    visit(configNoteId)
-    return sources
+module.exports = {
+    isPlainObject, fallbackFor, blankItem, mergeSchemas, mergeSources,
+    mergeRegistryDefaults, filterRegistryBySchema, mergeDefaults, filterBySchema, titleFor
 }
-
-// The merged schema and values of a config note's whole source chain, with
-// `schemaNoteId`'s fields on top of whatever the chain itself declares.
-function resolveSettings(schemaNoteId, configNoteId) {
-    const sources = collectSources(configNoteId)
-    const schema = mergeSchemas([...sources.map(s => s.schema), readJson(schemaNoteId)])
-    return { sources, schema, values: mergeSources(schema, sources.map(s => s.stored)) }
-}
-
-function loadSettings(schemaNoteId, configNoteId) {
-    return resolveSettings(schemaNoteId, configNoteId).values
-}
-
-// Writes only what `values` changes about the read-only sources below the config
-// note — the config note is the one writable source in its chain.
-function saveSettings(schemaNoteId, configNoteId, values) {
-    const { sources, schema } = resolveSettings(schemaNoteId, configNoteId)
-    const base = mergeSources(schema, sources.slice(0, -1).map(s => s.stored))
-    api.getNote(configNoteId).setContent(JSON.stringify(filterBySchema(schema, values, base), null, 4))
-}
-
-module.exports = { loadSettings, saveSettings }
