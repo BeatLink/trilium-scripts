@@ -3,7 +3,6 @@
         "type": "registry",
         "label": "Templates",
         "description": "The templates offered by the picker dropdown, in display order. Run Scan to pull in every #template note you have; each row's Enabled flag controls whether it appears, and the row move controls set the dropdown order.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",
@@ -15,6 +14,12 @@
                 "type": "note",
                 "label": "Template Note",
                 "description": "The #template note this row assigns. Filled in by Scan; a row whose note no longer exists is skipped by the picker.",
+                "default": ""
+            },
+            "rootNoteId": {
+                "type": "note",
+                "label": "Root Note",
+                "description": "Optional: the container note that collects this template's notes. The addon ships one per bundled template under its own Templates note; point this at wherever you moved yours. Leave blank if this template has no root.",
                 "default": ""
             },
             "enabled": {
@@ -47,7 +52,6 @@
         "type": "registry",
         "label": "Exclude Filters",
         "description": "Notes matching any enabled filter's search query are hidden from the Template picker widget and skipped by the Missing Templates triage list.",
-        "default": {},
         "itemSchema": {
             "name": {
                 "type": "string",

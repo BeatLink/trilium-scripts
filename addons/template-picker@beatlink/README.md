@@ -28,6 +28,8 @@ Open the addon's settings note and use the **Templates** tab:
   key off it rather than owning their own type vocabulary.
 - **Bucket Icon**, if set, is used by other addons that scaffold one folder per template (a BoxIcons
   class without the leading `bx`, e.g. `bx-check`).
+- **Root Note**, if set, is the container note collecting this template's notes — see
+  [Bundled roots](#bundled-roots). Scan does not fill it in; point it at your root yourself.
 
 Click **Save** to persist your changes.
 
@@ -40,12 +42,47 @@ note sorted by title.
 
 ## Bundled templates
 
-This addon ships seven ready-made item templates — **Ideas**, **Goal**, **Routine**, **Task**,
-**Future**, **Project**, **Note** — under its own **Templates** container note, persisted so your
-edits survive updates. They were moved here from `agenda@beatlink` (which still ships the three
-structural templates its Organize workflow scaffolds with — those aren't meant to be picked as an
-item's own type). Run **Scan** to register the bundled ones in your dropdown if they aren't there
+This addon ships eight ready-made templates under its own **Templates** container note, persisted so
+your edits survive updates. Run **Scan** to register them in your dropdown if they aren't there
 already.
+
+When a later version changes a bundled template you have edited, TAM's **Update Review** shows both
+versions and lets you choose; **Keep Mine** is the default. Your saved settings are reviewed the
+same way but one setting at a time, so nothing you configured is ever replaced wholesale.
+
+Seven are **item templates** — **Ideas**, **Goal**, **Routine**, **Task**, **Future**, **Project**,
+**Note** — moved here from `agenda@beatlink` in 1.5.0.
+
+The eighth, **AreaCollection**, is a **container** template: it carries `#viewType=list` and
+`#type=areacollection`, and is meant for the per-area root notes that
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)'s triage queues walk. It is not
+meant to be picked as an item's own type — leave its registry row **disabled**.
+
+## Bundled roots
+
+Since 1.9.0 the addon also ships one **root container note** per bundled item template — **Ideas Root**,
+**Goal Root**, **Routine Root**, **Task Root**, **Future Root**, **Project Root**, **Note Root** —
+as **children of the AreaCollection template**, so every note you create from that template gets its
+own copy of the whole set. Trilium deep-duplicates a template's children into the instance, so a new
+Area comes out already holding its Ideas / Goal / Routine / Task / Future / Project / Note roots,
+ready to file into.
+
+Each root is an empty text note carrying the matching template's `#iconClass`, `#viewType=list`, and
+a `#label:area=single` promoted-attribute definition (the same one the templates carry), so `#area`
+is a settable field on the root itself. Nothing files notes into them automatically.
+
+Two consequences of how Trilium templates work:
+
+- The copy happens **on creation only**. Attaching `~template` to a note that already exists does not
+  retroactively give it the roots — create the note from the template instead.
+- The originals live under the AreaCollection template (inside the persisted **Templates** note), so
+  editing one changes what *future* areas get, never the copies already made.
+
+They stand in for the type roots that used to be provisioned for you, so the containers still exist
+now that no addon scaffolds a notebook structure. Set a template's **Root Note** in the registry if
+you want a single global root resolvable from the registry, and if you use
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md), add its
+`#agendaOrganizeType=<templateNoteId>` identity label to a root for its queues to see it.
 
 ## Missing Templates
 
