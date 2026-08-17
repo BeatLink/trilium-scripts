@@ -1,0 +1,20 @@
+/* !important throughout: Trilium's note-content CSS otherwise bleeds into a rendered widget note and wins ties. */
+.profile-editor {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 1.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+    text-align: left !important;
+
+    & *, & *::before, & *::after {
+        box-sizing: border-box !important;
+    }
+
+    & > h2 {
+        margin: 0 !important;
+    }
+}
