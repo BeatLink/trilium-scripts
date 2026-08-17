@@ -20,7 +20,7 @@ add `~template.title="2. Routine" AND` to only surface notes using the Routine t
 named in `dateLabel`, since that label's value is what gets checked against "now" after the search
 runs.
 
-Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/README.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
+Settings are saved to a persisted note (see TAM's [Persistence](../trilium-addon-manager@beatlink/ARCHITECTURE.md#persistence) mechanism) — your edits survive addon updates. The screen and the underlying schema-driven storage are provided by [libsettings@beatlink](../libsettings@beatlink/).
 
 Then, in the Cinnamon panel applet's settings:
 - Set the **API endpoint** to `agenda_panel` (must match the `customRequestHandler` label on `cinnamonAppletAgenda.js`)

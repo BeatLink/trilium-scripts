@@ -8,7 +8,7 @@ export default function AgendaSettings() {
     useEffect(() => {
         (async () => {
             setSchemaNoteId(await api.currentNote.getRelationValue("schemaNote"))
-            const target = await api.currentNote.getRelationTarget("AddonData:config")
+            const target = await api.currentNote.getRelationTarget("configNote")
             setConfigNoteId(target.noteId)
         })()
     }, [])
