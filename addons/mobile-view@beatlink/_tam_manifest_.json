@@ -1,0 +1,67 @@
+{
+    "id": "mobile-view@beatlink",
+    "name": "Mobile View",
+    "description": "These set of scripts allow you to use the full capabilities of the Trilium desktop interface while on a mobile device.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "0.0.7",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/mobile-view@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "mobileView",
+                "title": "MobileView.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "MobileView.jsx"
+            },
+            {
+                "id": "setupButtons",
+                "title": "setupButtons.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "setupButtons.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "mobileView"
+            },
+            {
+                "parent": "root",
+                "child": "setupButtons"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "setupButtons",
+                "type": "MobileViewWidget",
+                "to": "mobileView"
+            }
+        ],
+        "labels": [
+            {
+                "note": "setupButtons",
+                "name": "run",
+                "value": "frontendStartup"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
