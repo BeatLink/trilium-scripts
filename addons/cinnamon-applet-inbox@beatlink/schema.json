@@ -1,0 +1,12 @@
+{
+    "apiKey": {
+        "type": "string",
+        "label": "API Key",
+        "description": "Shared secret checked against the applet's configured API key"
+    },
+    "inboxNoteId": {
+        "type": "note",
+        "label": "Inbox Note",
+        "description": "The note whose first line should be surfaced"
+    }
+}
