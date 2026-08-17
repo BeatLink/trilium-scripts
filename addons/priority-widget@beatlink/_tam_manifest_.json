@@ -1,19 +1,29 @@
 {
     "id": "priority-widget@beatlink",
     "name": "Priority Widget",
-    "description": "A widget to set the priority of a note",
+    "description": "A right pane dropdown widget for setting the priority of a note, plus a Missing Priorities page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.3",
+    "latestVersion": "3.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/priority-widget@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/priority-widget@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
+        "settingsNote": "launcher",
+        "exports": {
+            "registry": "registry"
+        },
         "notes": [
             {
-                "id": "root",
+                "id": "launcher",
+                "title": "priority-widget@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "script",
                 "title": "priority-widget@beatlink",
                 "type": "code",
                 "mime": "text/jsx",
@@ -27,44 +37,253 @@
                 "sourceUrl": "style.css"
             },
             {
-                "id": "profile",
-                "title": "profile.json",
+                "id": "registry",
+                "title": "priorityRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "priorityRegistry.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "profile.json"
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "missing-launcher",
+                "title": "Missing Priorities",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "missing-page",
+                "title": "priorityPickerPage",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "priorityPickerPage.jsx"
+            },
+            {
+                "id": "missing-style",
+                "title": "priorityPickerPage.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "priorityPickerPage.css"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
             {
                 "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "script"
+            },
+            {
+                "parent": "script",
                 "child": "style"
             },
             {
-                "parent": "root",
-                "child": "profile"
+                "parent": "script",
+                "child": "registry"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "registry"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
             },
             {
                 "parent": "root",
-                "child": "readme"
+                "child": "missing-launcher"
+            },
+            {
+                "parent": "missing-launcher",
+                "child": "missing-page"
+            },
+            {
+                "parent": "missing-page",
+                "child": "missing-style"
+            },
+            {
+                "parent": "missing-page",
+                "child": "registry"
+            },
+            {
+                "parent": "missing-page",
+                "child": "schema"
+            },
+            {
+                "parent": "missing-page",
+                "child": "defaults"
+            },
+            {
+                "parent": "missing-page",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "script",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
             {
-                "from": "root",
-                "type": "AddonData:profile",
-                "to": "profile"
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "missing-page",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "missing-page",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "missing-launcher",
+                "type": "renderNote",
+                "to": "missing-page"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
             {
-                "note": "root",
+                "note": "script",
                 "name": "widget",
                 "value": ""
             },
@@ -72,10 +291,33 @@
                 "note": "style",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "settings",
+                "name": "priorityConfig",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "missing-style",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

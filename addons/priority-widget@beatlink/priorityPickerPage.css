@@ -1,0 +1,117 @@
+.priority-picker-page {
+    padding: 16px;
+}
+
+.priority-picker-page-heading {
+    margin: 0 0 12px;
+}
+
+.priority-picker-page-progress {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.priority-picker-page-card {
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.priority-picker-page-title {
+    font-size: 1.15em;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.priority-picker-page-title:hover {
+    text-decoration: underline;
+}
+
+.priority-picker-page-path {
+    opacity: 0.7;
+    font-size: 0.85em;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+.priority-picker-page-preview {
+    opacity: 0.8;
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--main-border-color, #ccc);
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.08));
+    border-radius: 0 4px 4px 0;
+}
+
+.priority-picker-page-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.priority-picker-page-option-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    background: var(--button-background-color, transparent);
+    cursor: pointer;
+}
+
+.priority-picker-page-option-btn:hover:not(:disabled) {
+    border-color: var(--main-text-color, #333);
+}
+
+.priority-picker-page-option-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.priority-picker-page-nopriorities {
+    opacity: 0.7;
+}
+
+.priority-picker-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.priority-picker-page-nav {
+    background: none;
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 6px;
+    padding: 6px 12px;
+    opacity: 0.85;
+    cursor: pointer;
+}
+
+.priority-picker-page-nav:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.priority-picker-page-nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.priority-picker-page-done {
+    padding: 12px 0;
+    margin-bottom: 8px;
+}
+
+.priority-picker-page-restart {
+    background: none;
+    border: none;
+    opacity: 0.75;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 8px;
+}
+
+.priority-picker-page-restart:hover {
+    opacity: 1;
+}
