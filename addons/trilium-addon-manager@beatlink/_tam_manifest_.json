@@ -1,0 +1,221 @@
+{
+    "id": "trilium-addon-manager@beatlink",
+    "name": "Trilium Addon Manager",
+    "description": "This addon allows for the easy installation, removal and updating of Trilium addons from any manifest URL or catalog.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "8.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "root": "root",
+        "notes": [
+            {
+                "id": "root",
+                "title": "trilium-addon-manager@beatlink",
+                "type": "render",
+                "mime": "",
+                "sourceUrl": null,
+                "skipOnUpdate": true
+            },
+            {
+                "id": "database",
+                "title": "Database",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "database.json",
+                "skipOnUpdate": true
+            },
+            {
+                "id": "addons",
+                "title": "Addons",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null,
+                "skipOnUpdate": true
+            },
+            {
+                "id": "addon-data",
+                "title": "Addon Data",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null,
+                "skipOnUpdate": true
+            },
+            {
+                "id": "source-code",
+                "title": "Source Code",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "tam-jsx",
+                "title": "TAM.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "TAM.jsx"
+            },
+            {
+                "id": "lib-tam",
+                "title": "lib-tam.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib-tam.js"
+            },
+            {
+                "id": "marked",
+                "title": "marked.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "marked.min.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "tam-css",
+                "title": "TAM.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "tam.css"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "database"
+            },
+            {
+                "parent": "root",
+                "child": "source-code"
+            },
+            {
+                "parent": "root",
+                "child": "addons"
+            },
+            {
+                "parent": "root",
+                "child": "addon-data"
+            },
+            {
+                "parent": "source-code",
+                "child": "tam-jsx"
+            },
+            {
+                "parent": "source-code",
+                "child": "tam-css"
+            },
+            {
+                "parent": "tam-jsx",
+                "child": "lib-tam"
+            },
+            {
+                "parent": "lib-tam",
+                "child": "marked"
+            },
+            {
+                "parent": "lib-tam",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "root",
+                "type": "renderNote",
+                "to": "tam-jsx"
+            },
+            {
+                "from": "tam-jsx",
+                "type": "displayNote",
+                "to": "root"
+            },
+            {
+                "from": "lib-tam",
+                "type": "database",
+                "to": "database"
+            },
+            {
+                "from": "lib-tam",
+                "type": "addonRoot",
+                "to": "addons"
+            },
+            {
+                "from": "lib-tam",
+                "type": "addonPersistence",
+                "to": "addon-data"
+            }
+        ],
+        "labels": [
+            {
+                "note": "root",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "database",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "addons",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "addon-data",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "source-code",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "tam-jsx",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "lib-tam",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "marked",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "tam-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "tam-css",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}

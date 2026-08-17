@@ -1,0 +1,1103 @@
+/* This file mirrors resources/static/pages/style.css (the GitHub Pages
+   catalog's own stylesheet) rule-for-rule — same selectors, same values —
+   so TAM's embedded UI looks exactly like the website. Two things differ,
+   both purely plumbing for running inside Trilium rather than as a
+   standalone page, never a visual difference from the website itself:
+   1. Every selector is scoped under .TAM-body (the website owns the whole
+      page; TAM only owns its own widget note).
+   2. Every declaration carries !important — Trilium's own authored CSS
+      (note-content typography, .btn skins, table borders, etc.) otherwise
+      bleeds into anything rendered under this widget's note.
+   Anything past the "TAM-only additions" marker below has no equivalent on
+   the website at all (settings, catalogs, update prompts, validation) —
+   these are the actual added controls, kept visually consistent with the
+   copied rules above via the same palette/spacing/radii. */
+
+
+/* Give TAM a bounded height to fill.
+   `height: 100%` only resolves if every ancestor has a definite height, and a
+   `render` note has none: unlike canvas/mermaid/etc, "render" carries no
+   `isFullHeight` in Trilium's TYPE_MAPPINGS, so `.note-detail` never gets the
+   `full-height` class, the scrolling container is never made a flex column, and
+   the render wrapper is left at `height: auto`. TAM would then grow with its
+   content and hand the scrolling back to the page.
+   So the chain is built here instead, mirroring what Trilium's own
+   `.note-detail.full-height` rule does. Every selector is `:has(.TAM-body)`-gated
+   — this file is loaded globally as #appCss, so it must touch the note hosting
+   TAM and nothing else. */
+.scrolling-container:has(.TAM-body),
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    display: flex !important;
+    flex-direction: column !important;
+    /* Flex items default to min-height:auto, which lets content grow the box past
+       its parent instead of scrolling inside it. This is what actually confines
+       the scrolling to TAM. */
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* The scrolling container is sized by the split above it and stays the anchor;
+   everything below it takes the height that's left. */
+.note-detail:has(.TAM-body),
+.note-detail-render:has(.TAM-body),
+.note-detail-render-content:has(.TAM-body) {
+    flex: 1 1 auto !important;
+    height: auto !important;
+}
+
+.TAM-body {
+
+    /* `all: revert` strips every property Trilium's own CSS authored back
+       to the user-agent stylesheet, without the "everything becomes
+       display:inline" trap `all: initial` has. Matches the website's own
+       `*, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }`
+       reset, just starting from `revert` instead of the UA default so
+       Trilium's authored rules are actually undone first. */
+    &,
+    & *,
+    & *::before,
+    & *::after {
+        all: revert !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* A column the height of the viewport: the header keeps to its own size and
+       the content takes the rest. The page itself never scrolls - main scrolls
+       inside its own box, as does the activity log when it's open over the top. */
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    font-family: -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: #1a1a2e !important;
+    background: #f1f5f9 !important;
+    /* Fills the height established above rather than asking for 100% of an
+       auto-height parent. */
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+
+    /* Form controls don't inherit font by default in the UA stylesheet even
+       after revert — restore it so buttons/inputs match the surrounding text. */
+    & button,
+    & input,
+    & select,
+    & textarea {
+        font-family: inherit !important;
+        font-size: inherit !important;
+        color: inherit !important;
+    }
+
+    & h1,
+    & h2,
+    & h3,
+    & h4,
+    & h5 {
+        display: block !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    & a {
+        color: #2563eb !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+
+        &:hover {
+            text-decoration: underline !important;
+        }
+    }
+
+    /* Header --------------------------------------------------------------- */
+    & header {
+        flex: 0 0 auto !important;
+        background: linear-gradient(135deg, #0f172a, #1e3a5f) !important;
+        color: #fff !important;
+        padding: 28px 0 !important;
+    }
+
+    & .hdr {
+        max-width: 1100px !important;
+        margin: 0 auto !important;
+        padding: 0 24px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 24px !important;
+        flex-wrap: wrap !important;
+    }
+
+    & header h1 {
+        font-size: 26px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.4px !important;
+        color: #fff !important;
+    }
+
+    & header p {
+        color: #94a3b8 !important;
+        margin-top: 4px !important;
+        font-size: 14px !important;
+    }
+
+    & header p a {
+        color: #93c5fd !important;
+    }
+
+    & .hdr-right {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        gap: 10px !important;
+    }
+
+    & .hdr-links {
+        display: flex !important;
+        gap: 16px !important;
+    }
+
+    & .hdr-links a {
+        color: #93c5fd !important;
+        font-size: 13px !important;
+    }
+
+    /* Addon-detail header variant */
+    & .back {
+        color: #93c5fd !important;
+        font-size: 13px !important;
+        display: block !important;
+        margin-bottom: 10px !important;
+        cursor: pointer !important;
+    }
+
+    & .hdr-name {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Badge ------------------------------------------------------------------ */
+    & .badge {
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        text-transform: uppercase !important;
+        color: #fff !important;
+        padding: 2px 8px !important;
+        border-radius: 10px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        display: inline-block !important;
+    }
+
+    /* Main --------------------------------------------------------------- */
+    & main {
+        /* min-height:0 is what actually lets this shrink and scroll - a flex item
+           defaults to min-height:auto, which would grow the column past the
+           viewport and hand the scrolling back to the page. */
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        width: 100% !important;
+        max-width: 1100px !important;
+        margin: 0 auto !important;
+        padding: 28px 24px !important;
+        display: block !important;
+    }
+
+    /* Card grid --------------------------------------------------------------- */
+    & .TAM-addon-section {
+        margin-bottom: 24px !important;
+
+        & h3 {
+            font-size: 14px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            color: #64748b !important;
+            margin: 0 0 10px 0 !important;
+        }
+    }
+
+    & .grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;
+        gap: 14px !important;
+    }
+
+    & .card {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 16px 18px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        color: inherit !important;
+        cursor: pointer !important;
+        transition: box-shadow 0.15s, border-color 0.15s !important;
+
+        &:hover {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09) !important;
+            border-color: #94a3b8 !important;
+            text-decoration: none !important;
+        }
+    }
+
+    & .card-top {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+    }
+
+    & .card-name {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+    }
+
+    & .card-desc {
+        font-size: 13px !important;
+        color: #64748b !important;
+        flex: 1 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    & .card-foot {
+        display: flex !important;
+        justify-content: space-between !important;
+        font-size: 12px !important;
+        color: #94a3b8 !important;
+        border-top: 1px solid #f1f5f9 !important;
+        padding-top: 10px !important;
+        margin-top: auto !important;
+    }
+
+    & .card-author {
+        cursor: pointer !important;
+    }
+
+    & .card-author:hover {
+        color: #2563eb !important;
+        text-decoration: underline !important;
+    }
+
+    /* Addon detail --------------------------------------------------------- */
+    & .addon-layout {
+        display: grid !important;
+        grid-template-columns: 220px 1fr !important;
+        gap: 28px !important;
+        align-items: start !important;
+    }
+
+    & .addon-sidebar {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        position: sticky !important;
+        top: 16px !important;
+    }
+
+    & .meta-table {
+        display: table !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 13px !important;
+
+        & tbody {
+            display: table-row-group !important;
+        }
+
+        & tr {
+            display: table-row !important;
+        }
+
+        & th {
+            display: table-cell !important;
+            color: #64748b !important;
+            font-weight: 500 !important;
+            text-align: left !important;
+            padding: 5px 12px 5px 0 !important;
+            white-space: nowrap !important;
+            width: 1% !important;
+        }
+
+        & td {
+            display: table-cell !important;
+            color: #0f172a !important;
+            padding: 5px 0 !important;
+            word-break: break-word !important;
+        }
+
+        & tr+tr th,
+        & tr+tr td {
+            border-top: 1px solid #f1f5f9 !important;
+        }
+
+        & code {
+            font-size: 11px !important;
+            background: #f1f5f9 !important;
+            padding: 1px 4px !important;
+            border-radius: 3px !important;
+        }
+    }
+
+    & .addon-actions {
+        margin-top: 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    & .btn {
+        display: block !important;
+        text-align: center !important;
+        padding: 8px 14px !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        background: #fff !important;
+        color: #0f172a !important;
+        transition: border-color 0.15s, background 0.15s !important;
+        cursor: pointer !important;
+
+        /* The website's buttons never carry an icon — TAM's do, so this is
+           the one genuinely added rule in an otherwise copied block. */
+        & i {
+            margin-right: 6px !important;
+        }
+
+        &:hover {
+            background: #f8fafc !important;
+            border-color: #94a3b8 !important;
+            text-decoration: none !important;
+        }
+    }
+
+    & .btn-ghost {
+        background: #fff !important;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* README ------------------------------------------------------------------ */
+    & .readme {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 24px 28px !important;
+
+        & h1 {
+            font-size: 21px !important;
+            margin-bottom: 12px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding-bottom: 8px !important;
+        }
+
+        & h2 {
+            font-size: 17px !important;
+            margin: 20px 0 8px !important;
+        }
+
+        & h3 {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            margin: 14px 0 6px !important;
+        }
+
+        & p {
+            margin-bottom: 12px !important;
+        }
+
+        & ul,
+        & ol {
+            display: block !important;
+            margin: 0 0 12px 20px !important;
+        }
+
+        & ul {
+            list-style: disc !important;
+        }
+
+        & ol {
+            list-style: decimal !important;
+        }
+
+        & li {
+            display: list-item !important;
+            margin-bottom: 3px !important;
+        }
+
+        & a {
+            color: #2563eb !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            background: #f1f5f9 !important;
+            padding: 1px 5px !important;
+            border-radius: 3px !important;
+        }
+
+        & pre {
+            background: #0f172a !important;
+            color: #e2e8f0 !important;
+            padding: 16px !important;
+            border-radius: 6px !important;
+            overflow-x: auto !important;
+            margin: 12px 0 !important;
+            font-size: 12px !important;
+            line-height: 1.5 !important;
+
+            & code {
+                background: none !important;
+                padding: 0 !important;
+                color: inherit !important;
+            }
+        }
+
+        & img {
+            max-width: 100% !important;
+            border-radius: 6px !important;
+            margin: 8px 0 !important;
+            display: block !important;
+        }
+
+        & table {
+            display: table !important;
+            border-collapse: collapse !important;
+            margin: 12px 0 !important;
+            width: 100% !important;
+            font-size: 13px !important;
+        }
+
+        & thead {
+            display: table-header-group !important;
+        }
+
+        & tbody {
+            display: table-row-group !important;
+        }
+
+        & tr {
+            display: table-row !important;
+        }
+
+        & th,
+        & td {
+            display: table-cell !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 6px 12px !important;
+        }
+
+        & th {
+            background: #f8fafc !important;
+            font-weight: 600 !important;
+        }
+
+        & blockquote {
+            border-left: 3px solid #e2e8f0 !important;
+            margin: 12px 0 !important;
+            padding: 4px 16px !important;
+            color: #64748b !important;
+        }
+    }
+
+    & .no-readme {
+        color: #94a3b8 !important;
+        font-style: italic !important;
+    }
+
+    /* Toolbar ------------------------------------------------------------------ */
+    & .toolbar {
+        display: flex !important;
+        gap: 10px !important;
+        align-items: center !important;
+        margin-bottom: 24px !important;
+        flex-wrap: wrap !important;
+    }
+
+    & .search-wrap {
+        position: relative !important;
+        flex: 1 !important;
+        min-width: 200px !important;
+        display: block !important;
+
+        &::before {
+            content: "" !important;
+            position: absolute !important;
+            left: 11px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 15px !important;
+            height: 15px !important;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") center/contain no-repeat !important;
+            pointer-events: none !important;
+        }
+    }
+
+    & #search {
+        display: block !important;
+        width: 100% !important;
+        padding: 9px 12px 9px 34px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        color: #0f172a !important;
+        background: #fff !important;
+        outline: none !important;
+        transition: border-color 0.15s, box-shadow 0.15s !important;
+
+        &:focus {
+            border-color: #94a3b8 !important;
+        }
+
+        &::placeholder {
+            color: #94a3b8 !important;
+        }
+    }
+
+    & .filters {
+        display: flex !important;
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+    }
+
+    & .filter {
+        display: inline-block !important;
+        padding: 7px 16px !important;
+        border-radius: 20px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        background: #fff !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.03em !important;
+        cursor: pointer !important;
+        color: #64748b !important;
+        transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+        white-space: nowrap !important;
+        text-transform: uppercase !important;
+
+        &:hover {
+            border-color: #94a3b8 !important;
+            color: #334155 !important;
+        }
+
+        &.active {
+            background: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        & .hdr {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+
+        & .hdr-right {
+            align-items: flex-start !important;
+        }
+
+        & .addon-layout {
+            grid-template-columns: 1fr !important;
+        }
+
+        & .addon-sidebar {
+            position: static !important;
+        }
+    }
+
+    /* TAM-only additions ----------------------------------------------------
+       Nothing above this point differs from the website in anything but
+       scope/!important. Everything below has no website equivalent at all
+       — TAM's own added controls (install-state indicators, settings,
+       catalog management, update prompts, database validation) — built
+       from the exact same palette/spacing/radii as the rules above. */
+
+    & .TAM-card-badges {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+    }
+
+    & .TAM-pill {
+        display: inline-block !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.03em !important;
+        text-transform: uppercase !important;
+        padding: 2px 8px !important;
+        border-radius: 10px !important;
+        white-space: nowrap !important;
+    }
+
+    & .TAM-pill-installed {
+        background: rgba(5, 150, 105, 0.12) !important;
+        color: #059669 !important;
+    }
+
+    & .TAM-pill-update {
+        background: rgba(217, 119, 6, 0.12) !important;
+        color: #d97706 !important;
+    }
+
+    & .TAM-card-install {
+        align-self: flex-start !important;
+    }
+
+    & .TAM-card-quick-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+        align-self: flex-start !important;
+    }
+
+    & .TAM-empty-state {
+        background: #fff !important;
+        border: 1px dashed #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 32px !important;
+        text-align: center !important;
+        color: #64748b !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+    }
+
+    & .TAM-spinner {
+        width: 26px !important;
+        height: 26px !important;
+        border: 3px solid #e2e8f0 !important;
+        border-top-color: #2563eb !important;
+        border-radius: 50% !important;
+        animation: TAM-spin 0.6s linear infinite !important;
+    }
+
+    /* Blocking overlay shown for the duration of any dispatched command
+       (install/update/uninstall/etc.) — most of these end in a full page
+       reload, but the gap before that (or before a lighter refresh) had
+       nothing on screen indicating work was happening. */
+    /* Activity log ------------------------------------------------------------ */
+    /* A page over the whole widget rather than a docked panel: it opens itself
+       whenever something is running, and is dismissed from its header or Esc.
+       Only the body scrolls - the header stays put, so the way out and the
+       "nothing is running" state are always on screen. */
+    & .TAM-log {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 100 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        background: #0f172a !important;
+    }
+
+    & .TAM-log-head {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 14px 16px !important;
+        border-bottom: 1px solid #1e293b !important;
+        color: #e2e8f0 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Whatever the head is showing - the busy label or the idle title - sits
+       left and pushes the buttons to the right edge. */
+    & .TAM-log-head > span {
+        margin-right: auto !important;
+    }
+
+    /* Clear and Close are the same kind of thing - both live in the header, both
+       styled alike. */
+    & .TAM-log-action {
+        cursor: pointer !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+
+        &:hover {
+            color: #e2e8f0 !important;
+            border-color: #64748b !important;
+        }
+    }
+
+    & .TAM-log-body {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        padding: 8px 16px 12px !important;
+        font-family: "SFMono-Regular", Consolas, monospace !important;
+        font-size: 12px !important;
+        line-height: 1.7 !important;
+    }
+
+    & .TAM-log-empty {
+        color: #64748b !important;
+    }
+
+    & .TAM-log-line {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        word-break: break-word !important;
+    }
+
+    & .TAM-log-time {
+        flex: 0 0 auto !important;
+        color: #475569 !important;
+    }
+
+    & .TAM-log-message {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    & .TAM-log-info .TAM-log-message { color: #cbd5e1 !important; }
+    & .TAM-log-step .TAM-log-message { color: #60a5fa !important; font-weight: 600 !important; }
+    & .TAM-log-done .TAM-log-message { color: #4ade80 !important; }
+    & .TAM-log-warn .TAM-log-message { color: #fbbf24 !important; }
+    & .TAM-log-error .TAM-log-message { color: #f87171 !important; }
+
+    & .addon-content {
+        min-width: 0 !important;
+    }
+
+    & .TAM-addon-description {
+        font-size: 15px !important;
+        color: #334155 !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* Settings page */
+    & .TAM-settings {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 28px !important;
+
+        & h3 {
+            font-size: 16px !important;
+            margin-bottom: 10px !important;
+            color: #0f172a !important;
+        }
+    }
+
+    & .TAM-stats-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+        gap: 14px !important;
+    }
+
+    & .TAM-stat-card {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+    }
+
+    & .TAM-stat-value {
+        font-size: 24px !important;
+        font-weight: 700 !important;
+        color: #2563eb !important;
+    }
+
+    & .TAM-stat-label {
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        color: #94a3b8 !important;
+    }
+
+    & .TAM-repo-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    & .TAM-repo-row {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 10px 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        font-size: 14px !important;
+        color: #0f172a !important;
+        gap: 12px !important;
+    }
+
+    & .TAM-new-repository-div {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    & .TAM-new-repository-text {
+        display: block !important;
+        flex: 1 !important;
+        height: 44px !important;
+        padding: 0 14px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        color: #0f172a !important;
+        background: #fff !important;
+        outline: none !important;
+
+        &:focus {
+            border-color: #94a3b8 !important;
+        }
+    }
+
+    & .TAM-maintenance-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* Validation results */
+    & .TAM-validation-results {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        margin-bottom: 20px !important;
+
+        & h4 {
+            font-size: 14px !important;
+            color: #0f172a !important;
+        }
+    }
+
+    & .TAM-diagnostics-reload {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+        border: 1px solid #fcd34d !important;
+        background: #fffbeb !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        color: #78350f !important;
+    }
+
+    & .TAM-diagnostics-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 13px !important;
+        color: #1a1a2e !important;
+
+        & th,
+        & td {
+            text-align: left !important;
+            vertical-align: top !important;
+            padding: 8px 10px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        & th {
+            font-weight: 600 !important;
+            color: #64748b !important;
+            white-space: nowrap !important;
+        }
+
+        /* The repair column keeps to its button; Details takes what's left. */
+        & td:last-child {
+            width: 1% !important;
+            white-space: nowrap !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            padding: 1px 5px !important;
+            background: #f1f5f9 !important;
+            border-radius: 4px !important;
+            word-break: break-all !important;
+        }
+    }
+
+    & .TAM-diagnostics-manual {
+        font-size: 12px !important;
+        color: #64748b !important;
+    }
+
+    /* Stacked rather than inline: a row offering both a repoint and an uninstall
+       shouldn't widen the column past the details it belongs to. */
+    & .TAM-diagnostics-fixes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+    }
+
+    & .TAM-validation-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+    }
+
+    /* Prompt review */
+    & .TAM-prompt-review {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    & .TAM-prompt-item {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+
+        & h4 {
+            font-size: 14px !important;
+            color: #0f172a !important;
+        }
+    }
+
+    /* One reviewable item inside a hook-produced prompt */
+    & .TAM-prompt-field {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+
+        & h5 {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+        }
+    }
+
+    & .TAM-prompt-options {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+    }
+
+    & .TAM-prompt-option {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        cursor: pointer !important;
+        transition: border-color 0.15s !important;
+
+        &:hover {
+            border-color: #94a3b8 !important;
+        }
+
+        &.TAM-prompt-selected {
+            border-color: #64748b !important;
+            background: #f8fafc !important;
+        }
+
+        & label {
+            display: block !important;
+            font-weight: 600 !important;
+            font-size: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            color: #0f172a !important;
+            cursor: pointer !important;
+        }
+    }
+
+    & .TAM-prompt-content {
+        display: block !important;
+        font-family: "SFMono-Regular", Consolas, monospace !important;
+        font-size: 12px !important;
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        max-height: 200px !important;
+        overflow-y: auto !important;
+        color: #64748b !important;
+    }
+
+    /* External reference warning */
+    & .TAM-external-ref-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+
+        & li {
+            background: #fff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+            font-size: 13px !important;
+            color: #0f172a !important;
+        }
+
+        & code {
+            font-family: "SFMono-Regular", Consolas, monospace !important;
+            font-size: 12px !important;
+            color: #64748b !important;
+        }
+    }
+
+    & .TAM-uninstall-data {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        font-size: 13px !important;
+        color: #0f172a !important;
+        cursor: pointer !important;
+
+        & input {
+            margin-top: 2px !important;
+            flex-shrink: 0 !important;
+        }
+    }
+}
+
+@keyframes TAM-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "catalogs": [
+        "https://beatlink.github.io/trilium-scripts/catalog.json"
+    ],
+    "installedAddons": {
+        "trilium-addon-manager@beatlink": {
+            "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json"
+        }
+    }
+}
