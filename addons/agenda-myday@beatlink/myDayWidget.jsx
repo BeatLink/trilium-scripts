@@ -1,8 +1,7 @@
 import {
     RightPanelWidget,
+    Collapsible,
     defineWidget,
-    useActiveNoteContext,
-    useNoteProperty,
     useEffect,
     useState,
     useTriliumEvent,
@@ -10,6 +9,7 @@ import {
 } from "trilium:preact";
 
 import { Timer } from "Timer.jsx"
+import { MyDayNote } from "myDayNote.jsx"
 
 const {
     getMyDaySettings,
@@ -44,8 +44,6 @@ function Suggestion({ task, onAdd }) {
 function MyDay() {
     const [ids, setIds] = useState(null)
     const [buckets, setBuckets] = useState([])
-    const { note } = useActiveNoteContext()
-    const activeNoteId = useNoteProperty(note, "noteId")
 
     useEffect(() => {
         (async () => {
@@ -56,7 +54,6 @@ function MyDay() {
     // No bundled note ships with this addon: point the My Day Note setting at
     // whichever note you want to collect today's tasks.
     const myDayNoteId = ids?.myDay?.myDayNoteId
-    const isVisible = Boolean(myDayNoteId) && activeNoteId === myDayNoteId
 
     // Suggestions come from the configured task search, so they stay empty when
     // it matches nothing.
@@ -65,25 +62,20 @@ function MyDay() {
         setBuckets(await getSuggestedTasks(ids.myDay, myDayNoteId))
     }
 
-    // Only query while the panel is on screen; the auto-file loop below calls
-    // refreshSuggestions() directly, so its own refresh is unaffected. Pruning
-    // runs first so a task completed while the panel was unmounted (no event
-    // reached us) is cleared on the way in.
+    // Pruning runs first so a task completed while the panel was unmounted (no
+    // event reached us) is cleared on the way in.
     useEffect(() => {
-        if (!isVisible) return
+        if (!myDayNoteId) return
         (async () => {
             await pruneMyDayNote(myDayNoteId)
             await refreshSuggestions()
         })()
-    }, [ids, myDayNoteId, isVisible])
+    }, [ids, myDayNoteId])
 
-    // Deliberately ungated: a task is usually completed from its own note, not
-    // from the My Day note, so gating the prune on isVisible would mean it only
-    // ran when it had nothing to do.
     useTriliumEvent("agenda:tasksChanged", async () => {
         if (!ids) return
         await pruneMyDayNote(myDayNoteId)
-        if (isVisible) await refreshSuggestions()
+        await refreshSuggestions()
     })
 
     useEffect(() => {
@@ -107,34 +99,38 @@ function MyDay() {
         return () => clearInterval(interval);
     }, [ids])
 
-    // The panel only shows on the My Day note itself. The two setInterval loops
-    // above are deliberately left outside this gate: they are background
-    // automation, and would stop firing as soon as you navigated elsewhere.
-    if (!ids || !isVisible) return null
+    if (!ids) return null
 
     async function addToMyDay(taskNoteId) {
         await addTaskToMyDay(myDayNoteId, taskNoteId, true, ids.myDay.addToTop)
         await refreshSuggestions()
     }
 
+    // The panel is shown on every note, so the My Day note is always at hand and
+    // never has to be navigated to.
     return (
-        <RightPanelWidget title="My Day">
+        <RightPanelWidget id="x-my-day" title="My Day">
+            {myDayNoteId
+                ? <MyDayNote noteId={myDayNoteId} />
+                : <div className="myDayEmpty">Set the My Day Note in settings.</div>}
             <div className="myDayControls">
                 <Timer initialEnableSounds={ids.myDay.enableSounds} />
             </div>
-            <div className="myDaySuggestions">
-                {buckets.length === 0 && (
-                    <div className="myDayEmpty">Nothing to suggest.</div>
-                )}
-                {buckets.map(bucket => (
-                    <div key={bucket.id}>
-                        <label>{bucket.display}</label>
-                        {bucket.tasks.map(task => (
-                            <Suggestion key={task.noteId} task={task} onAdd={addToMyDay} />
-                        ))}
-                    </div>
-                ))}
-            </div>
+            <Collapsible title="Suggestions" className="myDaySuggestionsSection">
+                <div className="myDaySuggestions">
+                    {buckets.length === 0 && (
+                        <div className="myDayEmpty">Nothing to suggest.</div>
+                    )}
+                    {buckets.map(bucket => (
+                        <div key={bucket.id}>
+                            <label>{bucket.display}</label>
+                            {bucket.tasks.map(task => (
+                                <Suggestion key={task.noteId} task={task} onAdd={addToMyDay} />
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </Collapsible>
         </RightPanelWidget>
     )
 }
