@@ -1,6 +1,7 @@
-import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
 import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
-import { getAreas, assignArea, isExcludedFromPicker } from "areaRegistry.jsx"
+import { getAreas, assignArea } from "areaRegistry.jsx"
+import { isExcludedFromPicker } from "pickerRegistry.jsx"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 
 const NONE_OPTION = { key: "none", title: "None" }
@@ -14,8 +15,18 @@ export default defineWidget({
         const [areasByKey, setAreasByKey] = useState({})
         const [dropdownValue, setDropdownValue] = useState("none")
         const [excluded, setExcluded] = useState(false)
+        const [reload, setReload] = useState(0)
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
+        // #label:area and #area can be owned by the note, by its template, or by an
+        // inheritable ancestor label, so reload on any attribute change reaching this note.
+        useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+            if (!note) return
+            const owners = [note, ...note.getNotesToInheritAttributesFrom()].filter(Boolean)
+            const affects = attr => owners.some(owner => owner.noteId === attr.noteId)
+                || (attr.isInheritable && owners.some(owner => owner.hasAncestor(attr.noteId, true)))
+            if (loadResults.getAttributeRows().some(affects)) setReload(count => count + 1)
+        })
         useEffect(() => {
             (async () => {
                 const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
@@ -51,7 +62,7 @@ export default defineWidget({
                 ])
                 setDropdownValue(currentArea)
             })()
-        }, [noteId])
+        }, [noteId, reload])
 
         if (excluded) return null
 
