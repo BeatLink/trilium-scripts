@@ -1,30 +1,24 @@
 {
     "id": "web-preview@beatlink",
     "name": "Web Preview",
-    "description": "Browse-and-save toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save to Inbox / Open in Browser) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type.",
+    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address or searches it with a configured provider.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.8.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/web-preview@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",
     "manifest": {
-        "root": "root",
+        "settingsNote": "settings-launcher",
         "notes": [
-            {
-                "id": "root",
-                "title": "web-preview@beatlink",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "README.md"
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
             },
             {
                 "id": "widget",
@@ -39,6 +33,104 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "libWebPreview.js"
+            },
+            {
+                "id": "newtab",
+                "title": "New Tab",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "newtab-page",
+                "title": "newTabPage.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "newTabPage.jsx"
+            },
+            {
+                "id": "newtab-launcher",
+                "title": "newTabLauncher.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "newTabLauncher.js"
+            },
+            {
+                "id": "newtab-startup",
+                "title": "newTabStartup.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "newTabStartup.js"
+            },
+            {
+                "id": "settings-launcher",
+                "title": "web-preview@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -53,18 +145,170 @@
             {
                 "parent": "widget",
                 "child": "lib"
+            },
+            {
+                "parent": "widget",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "root",
+                "child": "newtab"
+            },
+            {
+                "parent": "newtab",
+                "child": "newtab-page"
+            },
+            {
+                "parent": "newtab-page",
+                "child": "lib"
+            },
+            {
+                "parent": "newtab-page",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "root",
+                "child": "newtab-startup"
+            },
+            {
+                "parent": "root",
+                "child": "newtab-launcher"
+            },
+            {
+                "parent": "root",
+                "child": "settings-launcher"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
             }
         ],
-        "relations": [],
+        "relations": [
+            {
+                "from": "newtab",
+                "type": "renderNote",
+                "to": "newtab-page"
+            },
+            {
+                "from": "widget",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "widget",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "newtab-page",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "newtab-page",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "newtab-launcher",
+                "type": "newTabPageNote",
+                "to": "newtab"
+            },
+            {
+                "from": "newtab-startup",
+                "type": "newTabScriptNote",
+                "to": "newtab-launcher"
+            },
+            {
+                "from": "settings-launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
+        ],
         "labels": [
             {
                 "note": "widget",
                 "name": "widget",
                 "value": ""
+            },
+            {
+                "note": "newtab-startup",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "newtab",
+                "name": "iconClass",
+                "value": "bx bx-globe"
+            },
+            {
+                "note": "settings-launcher",
+                "name": "iconClass",
+                "value": "bx bx-globe"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
             }
         ],
-        "dependencies": [],
-        "exports": {},
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
