@@ -49,7 +49,10 @@
             # globalSetup/teardown. Extra args pass through to `playwright test`
             # (e.g. `run_tests --headed`, `run_tests -g TAM`). Named run_tests
             # rather than `test` because `test` is a bash builtin.
-            run_tests()       { npx playwright test "$@"; }
+            # Runs from resources/testing/ so playwright auto-discovers the
+            # config sitting there and node's require() walk reaches
+            # resources/node_modules -- works from any cwd in the repo.
+            run_tests()       { ( cd "$(git rev-parse --show-toplevel)/resources/testing" && npx playwright test "$@" ); }
             # Manual escape hatch for debugging the seed/server by hand -- the
             # normal path is `run_tests`.
             trilium_harness() { node resources/testing/testing.js "$@"; }
