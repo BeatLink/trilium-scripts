@@ -7,6 +7,8 @@ These set of scripts allow you to use the full capabilities of the Trilium serve
 * On startup, Set the zoom and viewport to match the size of your mobile device
 * Shows only one pane at a time according to which view you select
 * Enables overflow for the left hand sidebar, improving readability for long page titles
+* Highlights the button for the view you are currently on
+* Works with both the vertical and horizontal launcher pane layouts
 
 
 ## How to Use
@@ -38,6 +40,18 @@ With the right panel view selected only the right panel and widgets are shown
 ![Right Panel View](./img-Right%20Pane%20View.png)
 
 ## Versions
+
+### 0.0.7
+
+Note: the version numbers below predate the manifest's `latestVersion`, which is the number TAM
+installs against.
+
+- Support the new right pane layout, where `#right-pane` is wrapped in `#right-pane-host`
+- Size the widget from the launcher pane's own orientation variables instead of the vertical ones,
+  fixing the button sizes in a horizontal launcher pane
+- Build the buttons from Trilium's `ActionButton`, so they get the standard tooltips and states
+- Highlight the active view button
+- Fix long sidebar titles being clipped instead of wrapped
 
 ### 2.0 
 - Consolidate all code to a single widget
