@@ -1,14 +1,14 @@
 {
     "id": "agenda-myday@beatlink",
     "name": "Agenda My Day",
-    "description": "A right-pane panel shown only while your My Day note is active, modelled on Microsoft To Do's My Day page. It lists recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note you nominate; tasks already linked there drop off the list. It also carries a countdown timer with selectable durations and start/select/end sounds, optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today without going to the My Day note first. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a note of your own, and the panel appears while that note is active.",
+    "description": "A right-pane panel shown on every note, modelled on Microsoft To Do's My Day page. Your My Day note is edited in place at the top of the panel as rich text, so today's list is always on screen and never has to be navigated to. Below it sits a countdown timer with selectable durations and start/select/end sounds, and a collapsible Suggestions section listing recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note and clones the task under it; tasks already on your day drop off the list. It optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today (or unfiled, link and clone together) without going to the My Day note first. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a text note of your own and the panel edits it. Editing in the panel reuses the CKEditor instance Trilium builds for the note detail, so until a text note has been opened once in the session the panel shows the note read-only.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "12.0.0",
+    "latestVersion": "13.0.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-myday@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "myday-editor-page",
         "notes": [
@@ -17,35 +17,42 @@
                 "title": "myDayWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayWidget.jsx"
+                "sourceUrl": "myDayWidget.jsx"
             },
             {
                 "id": "my-day-task",
                 "title": "myDayTaskWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayTaskWidget.jsx"
+                "sourceUrl": "myDayTaskWidget.jsx"
+            },
+            {
+                "id": "my-day-note",
+                "title": "myDayNote.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "myDayNote.jsx"
             },
             {
                 "id": "timer",
                 "title": "Timer.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/Timer.jsx"
+                "sourceUrl": "Timer.jsx"
             },
             {
                 "id": "my-day-css",
                 "title": "myDay.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDay.css"
+                "sourceUrl": "myDay.css"
             },
             {
                 "id": "myday-settings",
                 "title": "myDaySettings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDaySettings.js"
+                "sourceUrl": "myDaySettings.js"
             },
             {
                 "id": "myday-editor-page",
@@ -59,28 +66,35 @@
                 "title": "myDayEditor.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayEditor.jsx"
+                "sourceUrl": "myDayEditor.jsx"
             },
             {
                 "id": "myday-schema",
                 "title": "myDaySchema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDaySchema.json"
+                "sourceUrl": "myDaySchema.json"
+            },
+            {
+                "id": "myday-defaults",
+                "title": "myDayDefaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "myDayDefaults.json"
             },
             {
                 "id": "myday-config",
                 "title": "myDayConfig.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/myDayConfig.json"
+                "sourceUrl": null
             },
             {
                 "id": "wav-select",
                 "title": "timerSelect.wav",
                 "type": "file",
                 "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerSelect.wav",
+                "sourceUrl": "timerSelect.wav",
                 "binary": true
             },
             {
@@ -88,7 +102,7 @@
                 "title": "timerStart.wav",
                 "type": "file",
                 "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerStart.wav",
+                "sourceUrl": "timerStart.wav",
                 "binary": true
             },
             {
@@ -96,7 +110,7 @@
                 "title": "timerEnd.wav",
                 "type": "file",
                 "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/timerEnd.wav",
+                "sourceUrl": "timerEnd.wav",
                 "binary": true
             },
             {
@@ -104,50 +118,57 @@
                 "title": "libNotification.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
+                "sourceUrl": "../../libs/libnotification/libnotification.js"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda-myday@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             },
             {
                 "id": "libnotification-lib",
                 "title": "libNotification.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
+                "sourceUrl": "../../libs/libnotification/libnotification.js"
             }
         ],
         "children": [
@@ -168,6 +189,10 @@
                 "child": "myday-schema"
             },
             {
+                "parent": "myday-editor-page",
+                "child": "myday-defaults"
+            },
+            {
                 "parent": "root",
                 "child": "readme"
             },
@@ -182,6 +207,10 @@
             {
                 "parent": "my-day-task",
                 "child": "myday-settings"
+            },
+            {
+                "parent": "my-day",
+                "child": "my-day-note"
             },
             {
                 "parent": "my-day",
@@ -221,6 +250,10 @@
             },
             {
                 "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
                 "child": "libsettings-style"
             },
             {
@@ -251,6 +284,11 @@
                 "from": "myday-editor-page",
                 "type": "schemaNote",
                 "to": "myday-schema"
+            },
+            {
+                "from": "myday-config",
+                "type": "sourceConfig",
+                "to": "myday-defaults"
             }
         ],
         "labels": [
@@ -315,6 +353,11 @@
                 "value": "bx bx-task"
             },
             {
+                "note": "my-day-note",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
                 "note": "timer",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -370,6 +413,11 @@
                 "value": "bx bx-task"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "myday-schema",
+            "defaults": "myday-defaults",
+            "config": "myday-config"
+        }
     }
 }
