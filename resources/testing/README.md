@@ -1,120 +1,150 @@
-# Trilium Testing Harness
+# Trilium Testing System
 
-A standalone, scriptable way to boot a real Trilium instance and drive it — no manual browser
-clicking, no locally-cloned Trilium checkout required. Everything needed to build and run Trilium is
-fetched and built by Nix, via this repo's own [`flake.nix`](../../flake.nix) (Trilium's own repo as a
-flake input).
+A single-command way to boot a real Trilium instance, deploy TAM into it, and drive it with
+Playwright — no manual browser clicking, no locally-cloned Trilium checkout, no separate setup
+steps. Everything is fetched and built by Nix via this repo's [`flake.nix`](../nix/flake.nix)
+(Trilium's own repo as a flake input).
+
+## Run it
+
+```bash
+nix develop ./resources/nix   # once per shell session — builds trilium-server, sets $TRILIUM_SRC, installs deps
+run_tests       # the whole flow: seed + start + deploy TAM + run the Playwright suite + stop
+```
+
+`run_tests` (a shell function from the flake, = `npx playwright test`) is the entire pipeline. Each
+run rebuilds the golden snapshot then runs the suite against it.
+
+```bash
+run_tests --headed                  # same, with a visible browser
+run_tests -g "TAM UI"               # run only matching tests
+TRILIUM_TESTING_NO_RESEED=1 run_tests   # reuse the existing snapshot (skip the reseed)
+```
 
 ## How it works
 
-- `nix develop` builds `trilium-server` (Trilium's headless server binary, no Electron involved) from
-  the `trilium` flake input and puts it on `PATH`, alongside every existing `nix-shell` tool
-  (`validate`, `tam_to_zip`, etc. — this repo's existing `shell.nix` workflow is unchanged and still
-  works standalone).
-- The same flake input also carries Trilium's own e2e-test seed database
-  (`apps/server/spec/db/{document.db,config.ini}` in Trilium's source — the exact fixture its own
-  Playwright suite uses) with `noAuthentication=true` already set, so there's no setup wizard or
-  login flow to script around.
-- `trilium_seed` copies that fixture into `resources/testing/data/` (gitignored — real SQLite
-  content), boots a real (disk-writing) server against it, imports `trilium-addon-manager@beatlink`
-  into it via `tam_to_zip.py` + the notes-import endpoint, then stops the server. The result is a
-  golden snapshot with TAM already installed.
-- `trilium_server start` boots that snapshot with `TRILIUM_INTEGRATION_TEST=memory` — the server
-  loads `document.db` into memory and never writes back to the file, so nothing a test run does can
-  corrupt the seed. Every `trilium_server start` after the first begins from the exact same state.
+The whole harness -- server lifecycle, http client, page wrapper, the
+`test`/`expect` fixtures, and the Playwright lifecycle hook -- lives in one file,
+[`testing.js`](testing.js). `playwright.config.js` (next to it) is the thin
+Playwright entry point that wires it in:
 
-## Usage
+- **globalSetup** (`testing.js`'s default export) calls `prepare()`, which:
+  1. **Seeds**: copies Trilium's own e2e-test fixture db (`document.db` + `config.ini` with
+     `noAuthentication=true` already set — fetched via the `trilium` flake input, exposed as
+     `$TRILIUM_SRC`) into `data/` (gitignored), boots a real disk-backed server, imports
+     `trilium-addon-manager@beatlink` via `tamhelper.js tam-to-zip` + the notes-import endpoint, and
+     stops. The result is a golden snapshot with TAM already deployed. This happens on **every** run
+     so each suite starts from the same known state (see the memory-mode note under known bugs); it's
+     cheap (a file copy + one zip import). Set `TRILIUM_TESTING_NO_RESEED=1` to reuse the existing
+     snapshot while iterating on non-mutating tests.
+  2. **Starts** the server against that snapshot (disk-backed), plus a small static HTTP server
+     over the repo's `addons/` dir so tests can install an addon-under-test through TAM itself
+     (see "Installing an addon under test" below).
+- **Tests** ([`tests/*.spec.js`](tests/)) import `{ test, expect }` from
+  [`testing.js`](testing.js), which injects two Trilium-aware fixtures:
+  - `tri` — a no-auth HTTP client (`searchNotes`, `getNote`, `importZip`, `execScript`, `request`)
+    against the running server. `searchNotes`/`getNote` are plain ETAPI GETs (no anchor needed).
+    `execScript` runs **backend**-env JS via `/api/script/exec` — it requires an existing
+    backend/code note as its `startNoteId` anchor (the route builds the script bundle from that
+    note), so use `searchNotes` to locate notes and reserve `execScript` for running logic.
+  - `page` — the standard Playwright page, wrapped so `gotoNote(noteId)` / `enableRenderNote()` are
+    available and everything else falls through to the real `Page`. Use this for **frontend**-env
+    flows: TAM's own UI (`TAM.jsx` et al.), `#run=frontendStartup` scripts, `require()`-driven
+    module resolution, `fetch()`-based manifest installs, real button clicks — none of which
+    `/api/script/exec` can run.
+- **globalTeardown** — there's no separate teardown file: `globalSetup` returns the teardown
+  function and Playwright runs it after the suite. It stops the server (skip with
+  `TRILIUM_TESTING_KEEP=1` to leave it up for manual poking).
+
+Playwright's browser binaries come from `pkgs.playwright-driver.browsers` (pinned to the
+`playwright` package's expected revision); the flake shellHook sets `PLAYWRIGHT_BROWSERS_PATH` /
+`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` so `playwright install` (which downloads into
+`$HOME/.cache` and fails offline/in a sandbox) is never needed.
+
+## Writing a test
+
+```js
+const { test, expect } = require("../testing");
+
+// Backend: inspect notes via ETAPI — no browser.
+test("TAM is deployed", async ({ tri }) => {
+    const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
+    expect(results.length).toBeGreaterThan(0);
+});
+
+// Frontend: drive TAM's actual widget in a real browser.
+test("TAM UI mounts", async ({ tri, page }) => {
+    const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
+    await page.gotoNote(results[0].noteId);
+    await page.enableRenderNote();   // dismiss the one-time "untrusted render note" warning
+    await expect(page.locator(".note-detail-render :visible").first()).toBeVisible();
+});
+```
+
+Known frontend-only gotchas: `gotoNote` needs `enableRenderNote()` once per note before its widget
+mounts; elements matching by visible text can collide with the note tree's own titles (e.g. a note
+literally named "Settings") — scope locators to `:visible` or a container role instead of bare text.
+
+## Installing an addon under test
+
+Only TAM is in the seed. To test any other addon, install it **through TAM itself** — the real user
+path — with `installViaTam(page, tri, addonId)`:
+
+```js
+const { test, expect, installViaTam, httpClient, wrapPage } = require("../testing");
+
+test.beforeAll(async ({ browser }) => {
+    const raw = await browser.newPage();            // beforeAll has no `page` fixture
+    try { await installViaTam(wrapPage(raw), httpClient(), "hoist-note@beatlink"); }
+    finally { await raw.close(); }
+});
+```
+
+It drives TAM's UI end to end: Settings → **Install by URL** (pointed at the addon on the local
+addon server, `http://127.0.0.1:8091/<addonId>/_tam_manifest_.json`) → **Enable Addon** → reload
+the frontend. No ZIP import. Because TAM resolves each note's `sourceUrl` relative to the manifest
+URL, the whole addon (manifest + every source file) is served straight from `addons/` with no
+rewriting. See [`hoist-note.spec.js`](tests/hoist-note.spec.js) for a full example.
+
+Two things this exercises that a raw import wouldn't: fresh installs are **disabled** by default, so
+`#run=frontendStartup` (and other activation labels) live under a `disabled:` prefix until the
+Enable step flips them — assert on the *live* label to prove enable worked. And the addon server
+plus TAM's own fetch/resolve path is the same one users hit against GitHub.
+
+## Manual debugging
+
+The `run_tests` flow manages the server for you. To poke at the same state by hand, drive the harness CLI:
 
 ```bash
-nix develop                    # once per shell session — builds trilium-server, sets $TRILIUM_SRC
-trilium_seed                   # once — builds resources/testing/data/document.db with TAM installed
-trilium_server start           # boots the seed in-memory on http://127.0.0.1:8090
+trilium_harness seed     # rebuild the golden snapshot
+trilium_harness start    # boot it (in-memory); add --real for disk-backed
+trilium_harness stop
 ```
-
-Then drive it from Python (or anything that can speak HTTP — the seeded config has no auth):
-
-```python
-import sys
-sys.path.insert(0, "resources/testing")
-import trilium_client as tc
-
-# Run arbitrary backend JS — enough to call into libTAMjs, inspect the
-# Database note, create notes, etc. with no browser involved.
-tc.exec_script("return api.getInstanceName()")
-
-# Import an addon zip built by tam_to_zip.py
-tc.import_zip("root", "agenda@beatlink.zip")
-
-# Read-side inspection via ETAPI
-tc.search_notes("#appCss")
-```
-
-```bash
-trilium_server stop            # when done
-```
-
-Re-run `trilium_seed` any time you want to rebuild the snapshot from scratch (e.g. after a breaking
-TAM change) — it always starts from a fresh copy of Trilium's own fixture, never from whatever state
-a previous test run left behind.
-
-## Browser-driven testing (Playwright)
-
-`trilium_client.py`'s `exec_script` only runs **backend**-env script bundles (Trilium's own
-`/api/script/exec` route hardcodes `getScriptBundle(currentNote, true, "backend", ...)` — see its
-docstring). TAM's own UI (`TAM.jsx` et al.) and anything else living in a `env=frontend` note —
-including `require()`-driven module resolution, `fetch()`-based manifest installs, and actual
-button clicks — can only be exercised by a real browser loading Trilium's frontend bundle. That's
-what `browser_client.py` is for:
-
-```python
-import sys
-sys.path.insert(0, "resources/testing")
-import trilium_client as tc
-from browser_client import launch
-
-tam_note = tc.search_notes('#TAMFILEID="trilium-addon-manager@beatlink/root"')["results"][0]["noteId"]
-
-with launch() as page:                 # launches headless Chromium
-    page.goto_note(tam_note)           # navigates to http://127.0.0.1:8090/#root/<noteId>
-    page.enable_render_note()          # dismisses the one-time "untrusted render note" warning
-    page.locator("a:visible", has_text="Settings").first.click()
-    # ...from here `page` is a plain Playwright Page — use its full API.
-```
-
-`shell.nix` provisions everything this needs — `pkgs.python3.withPackages (ps: [... ps.playwright])`
-plus `pkgs.playwright-driver.browsers` (prebuilt Chromium/Firefox/WebKit binaries matching the pinned
-`playwright` package's expected revision) — and the shellHook sets `PLAYWRIGHT_BROWSERS_PATH` /
-`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` so `playwright install` (which tries to download into
-`$HOME/.cache` and fails offline/in a sandbox) is never needed. Works out of the box inside
-`nix develop`/`nix-shell`, no manual setup.
-
-Known frontend-only gotcha: `exec_script`'s "any note works as an anchor" doesn't apply here —
-`page.goto_note` needs `enable_render_note()` once per note before its widget mounts, and elements
-matching by visible text can collide with the note tree's own titles (e.g. a literal note named
-"Settings") — scope locators to `:visible` or a container role instead of bare text matches.
 
 ## Known harness/tooling bugs found this way
 
-- **`tam_to_zip.py` silently dropped every clone branch** (same-addon multi-parent notes, and every
+- **`tam-to-zip` silently dropped every clone branch** (same-addon multi-parent notes, and every
   cross-addon `children[]` dependency wiring) from its ZIP output. Trilium's own ZIP import walks
   *physical archive entries* — a meta.json `isClone` entry with no backing data file is never visited,
-  so its branch never gets created (confirmed by reading Trilium's own export code, which writes a
-  placeholder file per clone precisely so its own import can find it). Fixed by having `tam_to_zip.py`
-  emit the same placeholder-file-per-clone convention. Before the fix, this even broke TAM's own
-  seeded self-install (`seed.py` uses `tam_to_zip.py` on TAM itself) — its own `TAMListViews.jsx`
-  failed to load with "Could not find module note TAMShared.jsx" because the clone wiring it depends
-  on was silently missing.
-- **In-memory mode (`trilium_server start`, no `--real`)** still fails with `SQLITE_CANTOPEN` — not
-  yet root-caused. Use `--real` (disk-backed) for now and re-run `trilium_seed` afterward to reset the
-  golden snapshot, since `--real` mode persists whatever a test run wrote.
+  so its branch never gets created. Fixed by having `tam-to-zip` emit a placeholder file per clone
+  (Trilium's own export does the same so its own import can find them). Before the fix this even broke
+  TAM's own seeded self-install — `TAMListViews.jsx` failed with "Could not find module note
+  TAMShared.jsx" because the clone wiring it depends on was silently missing.
+- **In-memory mode (`TRILIUM_INTEGRATION_TEST=memory`) crashes on boot** with `SQLITE_CANTOPEN` in
+  trilium-server 0.103 — not yet root-caused (the fixture db has no uncheckpointed WAL sidecar, so
+  it isn't that). Memory mode would let the server load the db read-only into RAM so no test run
+  could touch the file; until it's fixed, the harness runs disk-backed and re-seeds every run
+  instead, which gives the same clean-start guarantee.
 
 ## Files
 
-- `../../flake.nix` — the `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`,
-  `trilium_seed`/`trilium_server` shell functions.
-- `../../shell.nix` — also provisions `playwright` + `playwright-driver.browsers` for the browser layer.
-- `seed.py` — one-time (re-runnable) golden-snapshot bootstrap.
-- `run_server.py` — start/stop the server against that snapshot.
-- `trilium_client.py` — stdlib HTTP client: `exec_script`, `import_zip`, `get_note`, `search_notes`.
-- `browser_client.py` — Playwright wrapper for frontend-only flows: `launch()`, `goto_note`,
-  `enable_render_note`.
+- `playwright.config.js` — the thin Playwright entry point (points `globalSetup` at
+  `testing.js`, sets reporter/timeout/browser opts).
+- `../nix/flake.nix` — `trilium` flake input, `trilium-server` on `PATH`, `$TRILIUM_SRC`, the
+  `run_tests` and `trilium_harness` shell functions.
+- `../nix/shell.nix` — provisions `nodejs` + `playwright-driver.browsers` and installs npm deps.
+- `testing.js` — **the whole harness in one file**: all the primitives (seed / start / stop /
+  prepare / http client / page wrapper / addon server / `installViaTam`), the `test`/`expect`
+  fixtures, the `globalSetup` hook (which returns its own teardown), plus a `seed|start|stop` CLI
+  for manual debugging.
+- `tests/` — the Playwright specs (`tam-*` for TAM, `hoist-note.spec.js` for hoist-note).
