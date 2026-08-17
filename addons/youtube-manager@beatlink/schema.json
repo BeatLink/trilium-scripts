@@ -1,0 +1,53 @@
+{
+    "videosPerChannel": {
+        "type": "number",
+        "label": "Videos Per Channel",
+        "description": "How many recent uploads to pull from each channel on a refresh. Higher values follow more continuations, so a refresh takes longer and makes more requests.",
+        "tab": "Feed"
+    },
+    "retentionDays": {
+        "type": "number",
+        "label": "Keep Videos For (Days)",
+        "description": "Videos older than this are dropped from the cache on each refresh. Only the cache is pruned: your watched history is never pruned, so a video that drops out and later returns is still known to be watched. Set to 0 to keep everything.",
+        "tab": "Feed"
+    },
+    "refreshIntervalHours": {
+        "type": "number",
+        "label": "Hours Between Automatic Refreshes",
+        "description": "Opening this widget refreshes the feed only if this many hours have passed. There is no background sync: YouTube.js runs only in the browser, so refreshes happen while the widget is open. Set to 0 to refresh only with the Refresh button.",
+        "tab": "Feed"
+    },
+    "markWatchedOnPlay": {
+        "type": "boolean",
+        "label": "Mark Watched When Played",
+        "description": "Mark a video watched as soon as it starts playing. Off by default, since the embedded player cannot report how much of a video was actually watched.",
+        "tab": "Feed"
+    },
+    "hideShorts": {
+        "type": "boolean",
+        "label": "Hide Shorts",
+        "description": "Leave YouTube Shorts out of the feed. Also toggled directly on the Feed tab. Shorts are detected by duration, so a Short longer than a minute reads as a normal video.",
+        "tab": "Feed"
+    },
+    "viewFilter": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Watch Filter",
+        "description": "Remembered Feed view state. Managed by the widget, not edited here.",
+        "tab": "Feed"
+    },
+    "viewChannel": {
+        "type": "string",
+        "hidden": true,
+        "label": "Last Channel Filter",
+        "description": "Remembered Feed view state. Managed by the widget, not edited here.",
+        "tab": "Feed"
+    },
+    "viewSortDesc": {
+        "type": "boolean",
+        "hidden": true,
+        "label": "Last Sort Direction",
+        "description": "Remembered Feed view state. Managed by the widget, not edited here.",
+        "tab": "Feed"
+    }
+}
