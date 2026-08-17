@@ -10,8 +10,6 @@
     align-items: center;
     gap: 1rem;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
     padding: 0.5rem;
 }
 
@@ -22,11 +20,11 @@
 #x-priority-picker-widget button {
     width: 100% !important;
     text-align: left;
-    anchor-name: --x-template-picker-anchor;
+    anchor-name: --x-priority-picker-anchor;
 }
 
 #x-priority-picker-widget ul {
     position: fixed !important;
-    position-anchor: --x-template-picker-anchor;
+    position-anchor: --x-priority-picker-anchor;
     width: anchor-size(width) !important;
 }
