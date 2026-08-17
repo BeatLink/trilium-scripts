@@ -1,0 +1,140 @@
+.duplicate-finder-page {
+    padding: 16px;
+}
+
+.duplicate-finder-heading {
+    margin: 0 0 8px;
+}
+
+.duplicate-finder-blurb {
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin: 0 0 16px;
+    max-width: 70ch;
+}
+
+.duplicate-finder-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.duplicate-finder-summary {
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.duplicate-finder-error {
+    border-left: 4px solid var(--muted-text-color, #888);
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 0.9em;
+}
+
+.duplicate-finder-done {
+    border-left: 4px solid var(--main-border-color, #ccc);
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 0.9em;
+}
+
+.duplicate-finder-group {
+    border: 1px solid var(--main-border-color, #ccc);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.duplicate-finder-group-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.duplicate-finder-group-title {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.duplicate-finder-group-count {
+    opacity: 0.7;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+.duplicate-finder-preview {
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin-top: 8px;
+    max-height: 4.5em;
+    overflow: hidden;
+}
+
+.duplicate-finder-copies {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.duplicate-finder-copy {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.duplicate-finder-copy:hover {
+    border-color: var(--main-border-color, #ccc);
+}
+
+.duplicate-finder-copy.is-keeper {
+    border-color: var(--main-border-color, #ccc);
+    background-color: var(--accented-background-color, rgba(128, 128, 128, 0.08));
+}
+
+.duplicate-finder-copy-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.duplicate-finder-copy-title {
+    font-weight: bold;
+}
+
+.duplicate-finder-copy-title:hover {
+    text-decoration: underline;
+}
+
+.duplicate-finder-copy-meta,
+.duplicate-finder-copy-parents {
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.duplicate-finder-warning {
+    opacity: 0.85;
+    font-size: 0.85em;
+    margin-top: 12px;
+    border-left: 4px solid var(--main-border-color, #ccc);
+    padding: 6px 10px;
+}
+
+.duplicate-finder-group-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.duplicate-finder-group-status {
+    opacity: 0.8;
+    font-size: 0.85em;
+}
