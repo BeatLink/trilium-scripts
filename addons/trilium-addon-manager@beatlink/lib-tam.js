@@ -134,10 +134,18 @@ function versionCompare(remote, local) {
     return remote.localeCompare(local, undefined, { numeric: true, sensitivity: 'base' })
 }
 
-// Retries on HTTP 429, honoring Retry-After when sent, else exponential backoff.
+/*
+ * Retries on HTTP 429, honoring Retry-After when sent, else exponential backoff.
+ *
+ * The URL is normalized through `new URL()` rather than encodeURI, which
+ * escapes a percent sign and so double-encodes a URL that already carries an
+ * escape: a stored `...manager%40beatlink/...` became `%2540`, which fetched
+ * GitHub's "404: Not Found" body. `new URL().href` leaves an existing escape
+ * alone while still encoding a literal space.
+ */
 async function fetchWithRetry(url, maxRetries = 5) {
     for (let attempt = 0; ; attempt++) {
-        const response = await fetch(encodeURI(url))
+        const response = await fetch(new URL(url).href)
         if (response.status !== 429 || attempt >= maxRetries) return response
         const retryAfter = Number(response.headers.get("retry-after"))
         const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -152,7 +160,7 @@ async function fetchJson(url) {
     return await api.runAsyncOnBackendWithManualTransactionHandling(async (url) => {
         async function fetchWithRetry(url, maxRetries = 5) {
             for (let attempt = 0; ; attempt++) {
-                const response = await fetch(encodeURI(url))
+                const response = await fetch(new URL(url).href)
                 if (response.status !== 429 || attempt >= maxRetries) return response
                 const retryAfter = Number(response.headers.get("retry-after"))
                 const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -162,6 +170,10 @@ async function fetchJson(url) {
             }
         }
         const response = await fetchWithRetry(url)
+        // An error page is still a body, and parsing it yields a JSON syntax
+        // error that names neither the status nor the URL — the actual fault
+        // (a dead manifestSourceUrl, say) then has to be guessed at.
+        if (!response.ok) throw new Error(`TAM: fetch of ${url} failed with HTTP ${response.status} ${response.statusText}`)
         return await response.json()
     }, [url])
 }
@@ -209,6 +221,7 @@ function stripManifestForStorage(m) {
         root: m.root,
         settingsNote: m.settingsNote,
         readmeNote: m.readmeNote,
+        hooks: m.hooks || null,
         allowExternalReferences: m.allowExternalReferences,
         children: m.children || []
     }
@@ -341,7 +354,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
                 async (tamFileIdLabel, sourceUrlLabel, tamFileId, parentRealId, title, noteType, mime, sourceUrl, explicitContent, isBinary, skipOnUpdate, promptOnUpdate, skipParenting) => {
                     async function fetchWithRetry(url, maxRetries = 5) {
                         for (let attempt = 0; ; attempt++) {
-                            const response = await fetch(encodeURI(url))
+                            const response = await fetch(new URL(url).href)
                             if (response.status !== 429 || attempt >= maxRetries) return response
                             const retryAfter = Number(response.headers.get("retry-after"))
                             const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
@@ -521,12 +534,24 @@ async function getPendingPrompts(addonId) {
     return database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
 }
 
-async function resolvePrompt(addonId, noteLocalId, useNew) {
-    if (!useNew) return
+// `decision` is a plain boolean for a built-in whole-content prompt, or a
+// { [itemKey]: boolean } map for a hook-produced one — in which case the addon's
+// own hook does the writing, since only it knows what an item means.
+async function resolvePrompt(addonId, noteLocalId, decision) {
     const database = await loadDatabase()
-    const prompt = (database.installedAddons?.[addonId]?.persistence?.pendingPrompts || [])
+    const record = database.installedAddons?.[addonId]
+    const prompt = (record?.persistence?.pendingPrompts || [])
         .find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
+    if (prompt.items) {
+        await runHook(addonId, record.manifest?.hooks?.updateReview, {
+            phase: "apply",
+            noteLocalId,
+            selections: decision || {}
+        })
+        return
+    }
+    if (!decision) return
     await api.runOnBackend((noteId, content) => {
         api.getNote(noteId).setContent(content)
     }, [prompt.persistedNoteId, prompt.newContent])
@@ -541,29 +566,92 @@ async function clearPendingPrompts(addonId) {
 }
 
 // =========================================================================
+// Hooks: the addon-declared lifecycle scripts (manifest `hooks`) TAM executes at install/update/uninstall points.
+// =========================================================================
+
+const hookContextLabel = "tamHookContext"
+
+// Runs one hook note and returns whatever it returned.
+//
+// FNote.executeScript() takes no arguments and only yields a return value for a
+// *frontend* note (a backend one is POSTed to the server and its result thrown
+// away), so context goes in on a temporary label and `validate` requires hooks
+// to be frontend JS/JSX — backend work is still reachable through the hook's own
+// api.runOnBackend. executeScript() is independent of the #run labels
+// enableAddon toggles, so hooks fire on a disabled addon too, which postInstall
+// (a fresh install is left disabled) and preUninstall both depend on.
+//
+// Never fatal: a hook that throws is swallowed by Trilium's own bundle error
+// handling and arrives here as undefined, and every caller treats an
+// unusable return the same as a hook that was never declared.
+async function runHook(addonId, localId, context) {
+    if (!localId || addonId === TAM_ID) return undefined
+    const noteId = await resolveStoredNoteId(addonId, localId)
+    if (!noteId) {
+        console.error(`TAM: hook note '${localId}' of ${addonId} did not resolve`)
+        return undefined
+    }
+    await api.runOnBackend((noteId, name, value) => {
+        api.getNote(noteId).setLabel(name, value)
+    }, [noteId, hookContextLabel, JSON.stringify({ addonId, ...context })])
+    try {
+        const note = await api.getNote(noteId)
+        return await note.executeScript()
+    } catch (e) {
+        console.error(`TAM: hook '${localId}' of ${addonId} failed`, e)
+        return undefined
+    } finally {
+        await api.runOnBackend((noteId, name) => {
+            api.getNote(noteId).removeLabel(name)
+        }, [noteId, hookContextLabel])
+    }
+}
+
+// =========================================================================
 // Install / Sync: the install/update entry point (syncAddon, installByUrl).
 // =========================================================================
 
+async function applyRelation(fromRealId, type, toRealId) {
+    await api.runOnBackend((fromId, type, toId) => {
+        const note = api.getNote(fromId)
+        const disabledType = `disabled:${type}`
+        const targetType = note.hasRelation(disabledType) ? disabledType : type
+        note.setRelation(targetType, toId)
+    }, [fromRealId, type, toRealId])
+}
+
 // Resolves `m`'s notes (scoped via scopeLocalIds) and applies labels/relations for that same scope.
 async function resolveManifest(m, addonId, parentRealId, options = {}) {
-    const { entryLocalId = null, scopeLocalIds = null, rootExternallyParented = false, existingNoteMap = null } = options
+    const {
+        entryLocalId = null,
+        scopeLocalIds = null,
+        rootExternallyParented = false,
+        existingNoteMap = null,
+        deferredRelations = null
+    } = options
     const inScope = (localId) => !scopeLocalIds || scopeLocalIds.has(localId)
     const resolved = await resolveNotes(m, addonId, parentRealId, {
         entryLocalId, scopeLocalIds, rootExternallyParented
     })
     const noteMap = existingNoteMap ? Object.assign(existingNoteMap, resolved) : resolved
     await applyLabels((m.labels || []).filter(l => inScope(l.note)), noteMap)
+    // A `to` that isn't one of the manifest's own local ids is taken as a real
+    // note id (e.g. "root"); one that is must come from the map, since passing
+    // the local id through would set a relation to a note that doesn't exist.
+    const localIds = new Set((m.notes || []).map(n => n.id))
     for (const rel of (m.relations || []).filter(r => inScope(r.from))) {
         const fromRealId = noteMap[rel.from]
         if (!fromRealId) continue
+        if (localIds.has(rel.to) && !noteMap[rel.to]) {
+            // The target is in a scope this pass hasn't resolved yet — a
+            // persistent note pointing at a structural one. Hand it back to the
+            // caller to apply once every scope has been resolved.
+            if (deferredRelations) deferredRelations.push(rel)
+            continue
+        }
         const toRealId = noteMap[rel.to] || rel.to
         if (!toRealId) continue
-        await api.runOnBackend((fromId, type, toId) => {
-            const note = api.getNote(fromId)
-            const disabledType = `disabled:${type}`
-            const targetType = note.hasRelation(disabledType) ? disabledType : type
-            note.setRelation(targetType, toId)
-        }, [fromRealId, rel.type, toRealId])
+        await applyRelation(fromRealId, rel.type, toRealId)
     }
     return noteMap
 }
@@ -576,6 +664,7 @@ async function syncAddon(addonId, options = {}) {
     let database = await loadDatabase()
     const existing = database.installedAddons[addonId]
     const wasInstalled = !!existing?.installedVersion
+    const previousVersion = existing?.installedVersion ?? null
     const fetchUrl = manifestSourceUrl || existing?.manifestSourceUrl
     if (!fetchUrl) throw new Error(`TAM: no manifestSourceUrl available to sync '${addonId}' (not installed yet, and none provided)`)
     const manifest = await fetchManifest(fetchUrl)
@@ -596,13 +685,18 @@ async function syncAddon(addonId, options = {}) {
         ? await getAddonRootNoteId()
         : await ensureAddonAnchor(addonId, manifest.name, addonAnchorRootLocalId, await getAddonRootNoteId())
     const noteMap = {}
+    // Relations from a persistent note to a structural one, which the
+    // persistence pass below can't resolve because the structural pass hasn't
+    // run yet.
+    const deferredRelations = []
     if (persistentIds.size) {
         const persistenceAnchorId = isSelf
             ? await getPersistenceNoteId()
             : await ensureAddonAnchor(addonId, manifest.name, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
         await resolveManifest(m, addonId, persistenceAnchorId, {
             scopeLocalIds: persistentIds,
-            existingNoteMap: noteMap
+            existingNoteMap: noteMap,
+            deferredRelations
         })
     }
     await resolveManifest(m, addonId, addonRootAnchorId, {
@@ -611,6 +705,9 @@ async function syncAddon(addonId, options = {}) {
         scopeLocalIds: structuralScope,
         existingNoteMap: noteMap
     })
+    for (const rel of deferredRelations) {
+        if (noteMap[rel.from] && noteMap[rel.to]) await applyRelation(noteMap[rel.from], rel.type, noteMap[rel.to])
+    }
     if (isSelf && !noteMap[m.root]) throw new Error(`TAM: root note '${m.root}' was not resolved for ${addonId}`)
     await pruneRemovedNotes(m, addonId)
     const storedManifest = stripManifestForStorage(m)
@@ -637,6 +734,33 @@ async function syncAddon(addonId, options = {}) {
     }
     await saveDatabase(database)
     if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
+    if (isSelf) return
+    const hookContext = { previousVersion, newVersion: manifest.latestVersion }
+    if (!wasInstalled) {
+        await runHook(addonId, m.hooks?.postInstall, { phase: "postInstall", ...hookContext })
+        return
+    }
+    await runHook(addonId, m.hooks?.postUpdate, { phase: "postUpdate", ...hookContext })
+    // An addon shipping its own review hook replaces the whole-content diff
+    // collected before the sync with its own item list. It runs here, after the
+    // sync and after postUpdate, so it reads its own updated code against
+    // already-migrated data. Anything other than an array (a hook that threw, or
+    // returned junk) leaves the built-in diff in place as the fallback; an empty
+    // array is a real answer and clears it.
+    if (m.hooks?.updateReview) {
+        const items = await runHook(addonId, m.hooks.updateReview, { phase: "collect", ...hookContext })
+        if (Array.isArray(items)) {
+            database = await loadDatabase()
+            const persistence = database.installedAddons[addonId].persistence || {}
+            if (items.length > 0) {
+                persistence.pendingPrompts = items
+            } else {
+                delete persistence.pendingPrompts
+            }
+            database.installedAddons[addonId].persistence = persistence
+            await saveDatabase(database)
+        }
+    }
 }
 
 // Installs by manifestSourceUrl alone — the caller doesn't need to know the addon's id.
@@ -908,11 +1032,16 @@ async function detachAddonOwnedBranches(addonId, persistentIds = []) {
     }, [tamFileIdLabel, addonId, anchorIds, persistentIds])
 }
 
-async function deleteAddon(addonId) {
+// `deleteData` drops the protected-id list entirely, so the same sweep that tears
+// down the structural tree also takes the persistent notes and their anchor.
+async function deleteAddon(addonId, options = {}) {
+    const { deleteData = false } = options
     if (!addonId.trim()) return
     let database = await loadDatabase()
     const addonRecord = database.installedAddons[addonId]
-    const persistentIds = [...persistentLocalIds(addonRecord?.manifest || {}), addonAnchorPersistenceLocalId]
+    const persistentIds = deleteData
+        ? []
+        : [...persistentLocalIds(addonRecord?.manifest || {}), addonAnchorPersistenceLocalId]
     await detachAddonOwnedBranches(addonId, persistentIds)
     delete database.installedAddons[addonId]
     await saveDatabase(database)
@@ -946,11 +1075,26 @@ async function findExternalReferences(addonId) {
 }
 
 // The user-facing "uninstall" entry point.
-async function uninstallAddon(addonId) {
+async function uninstallAddon(addonId, options = {}) {
+    const { deleteData = false } = options
     if (!addonId.trim()) return
     const database = await loadDatabase()
-    if (!database.installedAddons[addonId]?.installedVersion) return
-    await deleteAddon(addonId)
+    const record = database.installedAddons[addonId]
+    if (!record?.installedVersion) return
+    // Runs while every note this addon owns is still in place, and is told
+    // whether its data is about to go with them.
+    await runHook(addonId, record.manifest?.hooks?.preUninstall, {
+        phase: "preUninstall",
+        version: record.installedVersion,
+        deleteData
+    })
+    await deleteAddon(addonId, { deleteData })
+}
+
+// Whether an addon owns any persistent notes — drives the "delete stored data" option on uninstall.
+async function hasPersistentData(addonId) {
+    const record = (await loadDatabase()).installedAddons[addonId]
+    return persistentLocalIds(record?.manifest || {}).size > 0
 }
 
 // Recovery tool: uninstalls every addon except TAM itself, then hard-resets the Database note to just its catalogs and a bare TAM entry.
@@ -1000,6 +1144,7 @@ module.exports.checkForAddonUpdates = checkForAddonUpdates
 module.exports.syncAddon = syncAddon
 module.exports.installByUrl = installByUrl
 module.exports.uninstallAddon = uninstallAddon
+module.exports.hasPersistentData = hasPersistentData
 module.exports.reinitializeDatabase = reinitializeDatabase
 module.exports.findExternalReferences = findExternalReferences
 module.exports.enableAddon = enableAddon
