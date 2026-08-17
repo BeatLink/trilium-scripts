@@ -1,0 +1,14 @@
+{
+    "freshrssEnabled": false,
+    "freshrssUrl": "",
+    "freshrssUser": "",
+    "freshrssPassword": "",
+    "maxArticlesPerSync": 500,
+    "refreshIntervalHours": 1,
+    "retentionDays": 30,
+    "markReadOnOpen": true,
+    "allowPrivateHosts": false,
+    "viewFilter": "unread",
+    "viewFeed": "all",
+    "viewSortDesc": true
+}
