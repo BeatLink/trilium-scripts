@@ -1,191 +1,60 @@
 {
-    "_categories": ["Collect", "Organize", "Review", "Display Elements", "Execute", "Dimensions", "Settings"],
-    "inboxNoteId": {
-        "type": "note",
-        "label": "Inbox Note",
-        "description": "The note new captures land in. Defaults to Trilium's own inbox (a note tagged #inbox). Shared via #agendaConfig so collection addons can file into the same place.",
-        "default": "",
-        "category": "Collect",
-        "tab": "Inbox"
-    },
+    "_categories": [
+        "Collect",
+        "Organize",
+        "Review",
+        "Display Elements",
+        "Execute",
+        "Dimensions",
+        "Settings"
+    ],
     "startDatetimeLabel": {
         "type": "string",
         "label": "Start Datetime Label",
-        "default": "startDateTime",
+        "description": "The note label holding a task's start datetime. Read for the overview's Start column, the iCal feed and due notifications. agenda-task@beatlink and agenda-myday@beatlink each carry their own copy of this setting; rename it in one and rename it in the others too.",
         "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Start"
-    },
-    "startDateLabel": {
-        "type": "string",
-        "label": "Start Date Label",
-        "default": "startDate",
-        "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Start"
-    },
-    "startTimeLabel": {
-        "type": "string",
-        "label": "Start Time Label",
-        "default": "startTime",
-        "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Start"
+        "tab": "Settings"
     },
     "dueDatetimeLabel": {
         "type": "string",
         "label": "Due Datetime Label",
-        "default": "dueDateTime",
+        "description": "The note label holding a task's due datetime. Read for the overview's Due column and the iCal feed.",
         "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Due"
-    },
-    "dueDateLabel": {
-        "type": "string",
-        "label": "Due Date Label",
-        "default": "endDate",
-        "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Due"
-    },
-    "dueTimeLabel": {
-        "type": "string",
-        "label": "Due Time Label",
-        "default": "endTime",
-        "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Due"
-    },
-    "durationLabel": {
-        "type": "string",
-        "label": "Duration Label",
-        "default": "duration",
-        "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Task"
+        "tab": "Settings"
     },
     "recurrenceLabel": {
         "type": "string",
         "label": "Recurrence Label",
-        "default": "recurrence",
+        "description": "The note label holding a task's recurrence rule. Read for the iCal feed and for grouping/filtering by recurrence frequency.",
         "category": "Settings",
-        "tab": "Settings",
-        "subgroup": "Task"
+        "tab": "Settings"
     },
-    "morningTime": {
-        "type": "string",
-        "label": "Morning",
-        "description": "Time (HH:mm) the Organize \"Morning\" button sets on a task's start date.",
-        "default": "08:00",
-        "category": "Organize",
-        "tab": "Times"
-    },
-    "noonTime": {
-        "type": "string",
-        "label": "Noon",
-        "description": "Time (HH:mm) the Organize \"Noon\" button sets.",
-        "default": "12:00",
-        "category": "Organize",
-        "tab": "Times"
-    },
-    "eveningTime": {
-        "type": "string",
-        "label": "Evening",
-        "description": "Time (HH:mm) the Organize \"Evening\" button sets.",
-        "default": "17:00",
-        "category": "Organize",
-        "tab": "Times"
-    },
-    "nightTime": {
-        "type": "string",
-        "label": "Night",
-        "description": "Time (HH:mm) the Organize \"Night\" button sets.",
-        "default": "20:00",
-        "category": "Organize",
-        "tab": "Times"
+    "inboxNoteId": {
+        "type": "note",
+        "label": "Inbox Note",
+        "description": "The note new captures land in. Defaults to Trilium's own inbox (a note tagged #inbox). Shared via #agendaConfig so collection addons can file into the same place.",
+        "category": "Collect",
+        "tab": "Inbox"
     },
     "overviewNoteId": {
         "type": "note",
         "label": "Overview Note",
         "description": "The single shared collection note the active profile's matching tasks are filed under. Opening it shows the active profile's tasks in the chosen collection view.",
-        "default": "",
         "category": "Review",
         "tab": "Overview"
-    },
-    "organizeNoteId": {
-        "type": "note",
-        "hidden": true,
-        "label": "Organize Note",
-        "description": "The note that displays the Organize triage UI. Selecting it converts that note into a render note pointing at the Organize page; clearing it reverts the previously-chosen note to a text note.",
-        "default": "",
-        "category": "Organize",
-        "tab": "Organize Note"
     },
     "activeProfileId": {
         "type": "reference",
         "registry": "profiles",
         "label": "Active Profile",
         "description": "Which profile currently populates the shared Overview Note. Switchable here or from the Agenda sidebar widget.",
-        "default": "default",
         "category": "Review",
         "tab": "Active Profile"
-    },
-    "myDayNoteId": {
-        "type": "note",
-        "label": "My Day Note",
-        "description": "The note that shows the My Day focus controls (timer, mark done). The My Day widget only appears while browsing this note.",
-        "default": "",
-        "category": "Execute",
-        "tab": "My Day"
-    },
-    "enableSounds": {
-        "type": "boolean",
-        "label": "Enable Timer Sounds",
-        "default": true,
-        "category": "Execute",
-        "tab": "My Day"
-    },
-    "addTasksWhenDue": {
-        "type": "boolean",
-        "label": "Add Tasks When Due",
-        "default": false,
-        "category": "Execute",
-        "tab": "My Day"
-    },
-    "sendDueNotifications": {
-        "type": "boolean",
-        "label": "Send Due Notifications",
-        "default": true,
-        "category": "Execute",
-        "tab": "My Day"
     },
     "sectionState": {
         "type": "json",
         "hidden": true,
-        "label": "Section State",
-        "default": {}
-    },
-    "rescheduleOptions": {
-        "type": "registry",
-        "hidden": true,
-        "label": "Reschedule Options",
-        "description": "The choices offered by the Task pane's Reschedule dropdown. Each is either a fixed number of days from now, or the next occurrence of a recurrence rule computed from now. Order here is dropdown order. Edited via the custom Reschedule Options panel (rescheduleOptions.jsx), not the generic form — a recurrence rule needs the real RecurrencePicker UI, not a raw rrule text box.",
-        "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Option" },
-            "mode": {
-                "type": "select", "label": "Mode", "default": "days",
-                "options": [
-                    { "value": "days", "label": "Days From Now" },
-                    { "value": "recurrence", "label": "Recurrence Rule" }
-                ]
-            },
-            "days": { "type": "number", "label": "Days From Now", "default": 0, "showWhen": { "mode": "days" } },
-            "recurrence": { "type": "string", "label": "Recurrence Rule", "default": "", "showWhen": { "mode": "recurrence" } }
-        },
-        "default": {
-            "today": { "name": "Today", "mode": "days", "days": 0 },
-            "tomorrow": { "name": "Tomorrow", "mode": "days", "days": 1 }
-        }
+        "label": "Section State"
     },
     "dimensions": {
         "type": "registry",
@@ -194,61 +63,73 @@
         "category": "Dimensions",
         "tab": "Dimensions",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Dimension" },
-            "label": { "type": "string", "label": "Note Label", "description": "The note label values are written to, without the leading #.", "default": "" },
-            "writeColor": { "type": "boolean", "label": "Also Write #color", "description": "Mirror the chosen value's colour onto the note's #color label, tinting it in the tree.", "default": false },
-            "triage": { "type": "boolean", "label": "Triage Unassigned Notes", "description": "Give this dimension a queue in Organize listing notes that lack a value.", "default": true },
-            "actionableOnly": { "type": "boolean", "label": "Triage Only Actionable Notes", "description": "Restrict that queue to notes whose type is marked Actionable.", "default": false },
-            "scaffoldsAreas": { "type": "boolean", "label": "Scaffold A Root Note Per Value", "description": "Workflow Setup builds one notebook root note per value of this dimension.", "default": false },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Dimension"
+            },
+            "label": {
+                "type": "string",
+                "label": "Note Label",
+                "description": "The note label values are written to, without the leading #.",
+                "default": ""
+            },
+            "writeColor": {
+                "type": "boolean",
+                "label": "Also Write #color",
+                "description": "Mirror the chosen value's colour onto the note's #color label, tinting it in the tree.",
+                "default": false
+            },
+            "triage": {
+                "type": "boolean",
+                "label": "Triage Unassigned Notes",
+                "description": "Give this dimension a queue in Organize listing notes that lack a value.",
+                "default": true
+            },
+            "actionableOnly": {
+                "type": "boolean",
+                "label": "Triage Only Actionable Notes",
+                "description": "Restrict that queue to notes whose type is marked Actionable.",
+                "default": false
+            },
+            "scaffoldsAreas": {
+                "type": "boolean",
+                "label": "Scaffold A Root Note Per Value",
+                "description": "This dimension is the one whose values each get a notebook root note.",
+                "default": false
+            },
             "values": {
                 "type": "registry",
                 "label": "Values",
                 "default": {},
                 "itemSchema": {
-                    "name": { "type": "string", "label": "Name", "default": "" },
-                    "key": { "type": "string", "label": "Label Value", "description": "The stored value. Changing it orphans every note already tagged with the old one.", "default": "" },
-                    "color": { "type": "color", "label": "Color", "default": "gray" },
-                    "actionable": { "type": "boolean", "label": "Actionable", "description": "Items of this value flow through the priority and start-date triage queues.", "default": false },
-                    "icon": { "type": "string", "label": "Bucket Icon", "default": "" }
-                }
-            }
-        },
-        "default": {
-            "area": {
-                "name": "Area",
-                "label": "area",
-                "writeColor": true,
-                "triage": true,
-                "actionableOnly": false,
-                "scaffoldsAreas": true,
-                "values": {
-                    "career": { "name": "Career", "key": "career", "color": "red" },
-                    "finances": { "name": "Finances", "key": "finances", "color": "red" },
-                    "legal": { "name": "Legal", "key": "legal", "color": "red" },
-                    "home": { "name": "Home", "key": "home", "color": "darkorange" },
-                    "car": { "name": "Car", "key": "car", "color": "darkorange" },
-                    "tech": { "name": "Tech", "key": "tech", "color": "darkorange" },
-                    "fitness": { "name": "Fitness", "key": "fitness", "color": "gold" },
-                    "grooming": { "name": "Grooming", "key": "grooming", "color": "gold" },
-                    "sexual": { "name": "Sexual", "key": "sexual", "color": "gold" },
-                    "social": { "name": "Social", "key": "social", "color": "lime" },
-                    "mental": { "name": "Mental", "key": "mental", "color": "lime" },
-                    "identity": { "name": "Identity", "key": "identity", "color": "lime" },
-                    "fun": { "name": "Fun", "key": "fun", "color": "magenta" }
-                }
-            },
-            "priority": {
-                "name": "Priority",
-                "label": "priority",
-                "writeColor": true,
-                "triage": true,
-                "actionableOnly": true,
-                "scaffoldsAreas": false,
-                "values": {
-                    "4-critical": { "name": "Must Do", "key": "4-critical", "color": "red" },
-                    "3-high": { "name": "Should Do", "key": "3-high", "color": "gold" },
-                    "2-medium": { "name": "Could Do", "key": "2-medium", "color": "lime" },
-                    "1-low": { "name": "Want to Do", "key": "1-low", "color": "cyan" }
+                    "name": {
+                        "type": "string",
+                        "label": "Name",
+                        "default": ""
+                    },
+                    "key": {
+                        "type": "string",
+                        "label": "Label Value",
+                        "description": "The stored value. Changing it orphans every note already tagged with the old one.",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Color",
+                        "default": "gray"
+                    },
+                    "actionable": {
+                        "type": "boolean",
+                        "label": "Actionable",
+                        "description": "Items of this value flow through the priority and start-date triage queues.",
+                        "default": false
+                    },
+                    "icon": {
+                        "type": "string",
+                        "label": "Bucket Icon",
+                        "default": ""
+                    }
                 }
             }
         }
@@ -259,35 +140,85 @@
         "category": "Review",
         "tab": "Profiles",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Profile" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Profile"
+            },
             "viewType": {
-                "type": "select", "label": "Collection View", "default": "list",
+                "type": "select",
+                "label": "Collection View",
+                "default": "list",
                 "options": [
-                    { "value": "list", "label": "List" },
-                    { "value": "grid", "label": "Grid" },
-                    { "value": "table", "label": "Table" },
-                    { "value": "board", "label": "Board" },
-                    { "value": "calendar", "label": "Calendar" },
-                    { "value": "geoMap", "label": "Geo Map" },
-                    { "value": "dashboard", "label": "Dashboard" },
-                    { "value": "presentation", "label": "Presentation" }
+                    {
+                        "value": "list",
+                        "label": "List"
+                    },
+                    {
+                        "value": "grid",
+                        "label": "Grid"
+                    },
+                    {
+                        "value": "table",
+                        "label": "Table"
+                    },
+                    {
+                        "value": "board",
+                        "label": "Board"
+                    },
+                    {
+                        "value": "calendar",
+                        "label": "Calendar"
+                    },
+                    {
+                        "value": "geoMap",
+                        "label": "Geo Map"
+                    },
+                    {
+                        "value": "dashboard",
+                        "label": "Dashboard"
+                    },
+                    {
+                        "value": "presentation",
+                        "label": "Presentation"
+                    }
                 ]
             },
-            "sortSelected": { "type": "reference", "label": "Sort", "registry": "sorts", "default": "" },
-            "prefixSelected": { "type": "reference", "label": "Prefix", "registry": "prefixes", "default": "" },
-            "colorSelected": { "type": "reference", "label": "Color", "registry": "colors", "default": "" },
-            "groupingSelected": { "type": "reference", "label": "Kanban Grouping", "registry": "groupings", "default": "" },
-            "searchGroups": { "type": "checklist", "label": "Searches", "registry": "searchGroups", "filterBy": "profileId" },
-            "filterGroups": { "type": "checklist", "label": "Filters", "registry": "filterGroups", "filterBy": "profileId" }
-        },
-        "default": {
-            "default": {
-                "name": "default",
-                "viewType": "list",
-                "sortSelected": "startDate",
-                "prefixSelected": "interval",
-                "colorSelected": "dim-priority",
-                "groupingSelected": "dim-priority"
+            "sortSelected": {
+                "type": "reference",
+                "label": "Sort",
+                "registry": "sorts",
+                "default": ""
+            },
+            "prefixSelected": {
+                "type": "reference",
+                "label": "Prefix",
+                "registry": "prefixes",
+                "default": ""
+            },
+            "colorSelected": {
+                "type": "reference",
+                "label": "Color",
+                "registry": "colors",
+                "default": ""
+            },
+            "groupingSelected": {
+                "type": "reference",
+                "label": "Kanban Grouping",
+                "registry": "groupings",
+                "default": ""
+            },
+            "searchGroups": {
+                "type": "checklist",
+                "label": "Searches",
+                "registry": "searchGroups",
+                "filterBy": "profileId"
+            },
+            "filterGroups": {
+                "type": "checklist",
+                "label": "Filters",
+                "registry": "filterGroups",
+                "filterBy": "profileId"
             }
         }
     },
@@ -297,42 +228,37 @@
         "category": "Review",
         "tab": "Searches",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Group" },
-            "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Group"
+            },
+            "profileId": {
+                "type": "reference",
+                "label": "Profile",
+                "registry": "profiles",
+                "default": ""
+            },
             "children": {
                 "type": "registry",
                 "label": "Searches",
                 "default": {},
                 "itemSchema": {
-                    "name": { "type": "string", "label": "Name", "default": "New Search" },
-                    "rule": { "type": "string", "label": "Search Rule", "default": "" },
-                    "enabled": { "type": "boolean", "label": "Enabled", "default": true }
-                }
-            }
-        },
-        "default": {
-            "type": {
-                "name": "Note Type",
-                "profileId": "default",
-                "children": {
-                    "all": { "name": "All Tasks", "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')", "enabled": false },
-                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
-                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
-                    "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
-                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task')", "enabled": true },
-                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task')", "enabled": true }
-                }
-            },
-            "typeDated": {
-                "name": "Note Type (Dated)",
-                "profileId": "default",
-                "children": {
-                    "all": { "name": "All Tasks", "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')", "enabled": false },
-                    "goal": { "name": "1. Goal", "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "routine": { "name": "2. Routines", "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "tasks": { "name": "3. Tasks", "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "future": { "name": "4. Future", "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false },
-                    "project": { "name": "5. Projects", "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task') AND (#startDateTime != \"\" OR #dueDateTime != \"\")", "enabled": false }
+                    "name": {
+                        "type": "string",
+                        "label": "Name",
+                        "default": "New Search"
+                    },
+                    "rule": {
+                        "type": "string",
+                        "label": "Search Rule",
+                        "default": ""
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "label": "Enabled",
+                        "default": true
+                    }
                 }
             }
         }
@@ -343,53 +269,64 @@
         "category": "Review",
         "tab": "Filters",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Filter Group" },
-            "profileId": { "type": "reference", "label": "Profile", "registry": "profiles", "default": "" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter Group"
+            },
+            "profileId": {
+                "type": "reference",
+                "label": "Profile",
+                "registry": "profiles",
+                "default": ""
+            },
             "children": {
                 "type": "registry",
                 "label": "Filters",
                 "default": {},
                 "itemSchema": {
-                    "name": { "type": "string", "label": "Name", "default": "New Filter" },
+                    "name": {
+                        "type": "string",
+                        "label": "Name",
+                        "default": "New Filter"
+                    },
                     "type": {
-                        "type": "select", "label": "Type", "default": "search",
+                        "type": "select",
+                        "label": "Type",
+                        "default": "search",
                         "options": [
-                            { "value": "search", "label": "Search Query" },
-                            { "value": "dayjs", "label": "Date Comparison" }
+                            {
+                                "value": "search",
+                                "label": "Search Query"
+                            },
+                            {
+                                "value": "dayjs",
+                                "label": "Date Comparison"
+                            }
                         ]
                     },
-                    "rule": { "type": "string", "label": "Search Rule", "default": "", "showWhen": { "type": "search" } },
-                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "", "showWhen": { "type": "dayjs" } },
-                    "enabled": { "type": "boolean", "label": "Enabled", "default": true }
-                }
-            }
-        },
-        "default": {
-            "date": {
-                "name": "Date",
-                "profileId": "default",
-                "children": {
-                    "noDate": { "name": "No Date", "type": "dayjs", "dateRuleId": "noDate", "enabled": false },
-                    "overdue": { "name": "Overdue", "type": "dayjs", "dateRuleId": "overdue", "enabled": true },
-                    "now": { "name": "Now", "type": "dayjs", "dateRuleId": "now", "enabled": true },
-                    "restOfDay": { "name": "Later Today", "type": "dayjs", "dateRuleId": "restOfDay", "enabled": true },
-                    "tomorrow": { "name": "Tomorrow", "type": "dayjs", "dateRuleId": "tomorrow", "enabled": false },
-                    "thisWeek": { "name": "This Week", "type": "dayjs", "dateRuleId": "thisWeek", "enabled": false },
-                    "thisMonth": { "name": "This Month", "type": "dayjs", "dateRuleId": "thisMonth", "enabled": false },
-                    "thisYear": { "name": "This Year", "type": "dayjs", "dateRuleId": "thisYear", "enabled": false },
-                    "future": { "name": "Future", "type": "dayjs", "dateRuleId": "future", "enabled": false }
-                }
-            },
-            "recurrence": {
-                "name": "Recurrence",
-                "profileId": "default",
-                "children": {
-                    "hourly": { "name": "Hourly", "type": "search", "rule": "#recurrence *=* HOURLY", "enabled": true },
-                    "daily": { "name": "Daily", "type": "search", "rule": "#recurrence *=* DAILY", "enabled": true },
-                    "weekly": { "name": "Weekly", "type": "search", "rule": "#recurrence *=* WEEKLY", "enabled": true },
-                    "monthly": { "name": "Monthly", "type": "search", "rule": "#recurrence *=* MONTHLY", "enabled": true },
-                    "yearly": { "name": "Yearly", "type": "search", "rule": "#recurrence *=* YEARLY", "enabled": true },
-                    "noRecurrence": { "name": "No Recurrence", "type": "search", "rule": "#!recurrence OR (#recurrence='')", "enabled": true }
+                    "rule": {
+                        "type": "string",
+                        "label": "Search Rule",
+                        "default": "",
+                        "showWhen": {
+                            "type": "search"
+                        }
+                    },
+                    "dateRuleId": {
+                        "type": "reference",
+                        "label": "Date Rule",
+                        "registry": "dateRules",
+                        "default": "",
+                        "showWhen": {
+                            "type": "dayjs"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "label": "Enabled",
+                        "default": true
+                    }
                 }
             }
         }
@@ -400,47 +337,33 @@
         "category": "Display Elements",
         "tab": "Sorts",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Sort" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Sort"
+            },
             "criteria": {
                 "type": "list",
                 "label": "Criteria",
                 "default": [],
                 "itemSchema": {
-                    "attribute": { "type": "string", "label": "Attribute", "default": "" },
-                    "desc": { "type": "boolean", "label": "Descending", "default": false },
-                    "caseInsensitive": { "type": "boolean", "label": "Case Insensitive", "default": false }
+                    "attribute": {
+                        "type": "string",
+                        "label": "Attribute",
+                        "default": ""
+                    },
+                    "desc": {
+                        "type": "boolean",
+                        "label": "Descending",
+                        "default": false
+                    },
+                    "caseInsensitive": {
+                        "type": "boolean",
+                        "label": "Case Insensitive",
+                        "default": false
+                    }
                 }
             }
-        },
-        "default": {
-            "startDate": { "name": "Start Date", "criteria": [
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] },
-            "title": { "name": "Title", "criteria": [
-                { "attribute": "title", "desc": false, "caseInsensitive": true }
-            ] },
-            "typePriorityStartDate": { "name": "Type → Priority → Start Date", "criteria": [
-                { "attribute": "type", "desc": false, "caseInsensitive": false },
-                { "attribute": "priority", "desc": false, "caseInsensitive": false },
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] },
-            "typeStartDate": { "name": "Type → Start Date", "criteria": [
-                { "attribute": "type", "desc": false, "caseInsensitive": false },
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] },
-            "area": { "name": "Area → Start Date", "criteria": [
-                { "attribute": "area", "desc": false, "caseInsensitive": false },
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] },
-            "priorityStartDate": { "name": "Priority → Start Date", "criteria": [
-                { "attribute": "priority", "desc": false, "caseInsensitive": false },
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] },
-            "priorityTypeStartDate": { "name": "Priority → Type → Start Date", "criteria": [
-                { "attribute": "priority", "desc": false, "caseInsensitive": false },
-                { "attribute": "type", "desc": false, "caseInsensitive": false },
-                { "attribute": "startDateTime", "desc": false, "caseInsensitive": false }
-            ] }
         }
     },
     "prefixes": {
@@ -449,45 +372,79 @@
         "category": "Display Elements",
         "tab": "Prefixes",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Prefix" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Prefix"
+            },
             "type": {
-                "type": "select", "label": "Type", "default": "label",
+                "type": "select",
+                "label": "Type",
+                "default": "label",
                 "options": [
-                    { "value": "label", "label": "By Label Value" },
-                    { "value": "dayjs", "label": "By Date" }
+                    {
+                        "value": "label",
+                        "label": "By Label Value"
+                    },
+                    {
+                        "value": "dayjs",
+                        "label": "By Date"
+                    }
                 ]
             },
-            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": "label" } },
+            "label": {
+                "type": "string",
+                "label": "Note Label",
+                "default": "",
+                "showWhen": {
+                    "type": "label"
+                }
+            },
             "children": {
-                "type": "registry", "label": "Values", "default": {}, "showWhen": { "type": "label" },
+                "type": "registry",
+                "label": "Values",
+                "default": {},
+                "showWhen": {
+                    "type": "label"
+                },
                 "itemSchema": {
-                    "labelValue": { "type": "string", "label": "Label Value", "default": "" },
-                    "display": { "type": "string", "label": "Prefix Text", "default": "" }
+                    "labelValue": {
+                        "type": "string",
+                        "label": "Label Value",
+                        "default": ""
+                    },
+                    "display": {
+                        "type": "string",
+                        "label": "Prefix Text",
+                        "default": ""
+                    }
                 }
             },
             "intervals": {
-                "type": "registry", "label": "Intervals", "default": {}, "showWhen": { "type": "dayjs" },
+                "type": "registry",
+                "label": "Intervals",
+                "default": {},
+                "showWhen": {
+                    "type": "dayjs"
+                },
                 "itemSchema": {
-                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
-                    "formatString": { "type": "string", "label": "Format String", "default": "" }
+                    "dateRuleId": {
+                        "type": "reference",
+                        "label": "Date Rule",
+                        "registry": "dateRules",
+                        "default": ""
+                    },
+                    "formatString": {
+                        "type": "string",
+                        "label": "Format String",
+                        "default": ""
+                    }
                 }
             },
-            "noValuePrefix": { "type": "string", "label": "No-Value Prefix", "default": "" }
-        },
-        "default": {
-            "interval": {
-                "name": "Interval", "type": "dayjs",
-                "intervals": {
-                    "overdue": { "dateRuleId": "overdue", "formatString": "MMM D, YYYY HH:mm" },
-                    "now": { "dateRuleId": "now", "formatString": "HH:mm" },
-                    "restOfDay": { "dateRuleId": "restOfDay", "formatString": "HH:mm" },
-                    "tomorrow": { "dateRuleId": "tomorrow", "formatString": "[Tmrw] HH:mm" },
-                    "thisWeek": { "dateRuleId": "thisWeek", "formatString": "ddd" },
-                    "thisMonth": { "dateRuleId": "thisMonth", "formatString": "Do" },
-                    "thisYear": { "dateRuleId": "thisYear", "formatString": "MMMM" },
-                    "future": { "dateRuleId": "future", "formatString": "YYYY" }
-                },
-                "noValuePrefix": "No Date Set"
+            "noValuePrefix": {
+                "type": "string",
+                "label": "No-Value Prefix",
+                "default": ""
             }
         }
     },
@@ -497,44 +454,79 @@
         "category": "Display Elements",
         "tab": "Colors",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Color" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Color"
+            },
             "type": {
-                "type": "select", "label": "Type", "default": "label",
+                "type": "select",
+                "label": "Type",
+                "default": "label",
                 "options": [
-                    { "value": "label", "label": "By Label Value" },
-                    { "value": "dayjs", "label": "By Date" }
+                    {
+                        "value": "label",
+                        "label": "By Label Value"
+                    },
+                    {
+                        "value": "dayjs",
+                        "label": "By Date"
+                    }
                 ]
             },
-            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": "label" } },
+            "label": {
+                "type": "string",
+                "label": "Note Label",
+                "default": "",
+                "showWhen": {
+                    "type": "label"
+                }
+            },
             "children": {
-                "type": "registry", "label": "Values", "default": {}, "showWhen": { "type": "label" },
+                "type": "registry",
+                "label": "Values",
+                "default": {},
+                "showWhen": {
+                    "type": "label"
+                },
                 "itemSchema": {
-                    "labelValue": { "type": "string", "label": "Label Value", "default": "" },
-                    "display": { "type": "color", "label": "Color", "default": "gray" }
+                    "labelValue": {
+                        "type": "string",
+                        "label": "Label Value",
+                        "default": ""
+                    },
+                    "display": {
+                        "type": "color",
+                        "label": "Color",
+                        "default": "gray"
+                    }
                 }
             },
             "intervals": {
-                "type": "registry", "label": "Intervals", "default": {}, "showWhen": { "type": "dayjs" },
+                "type": "registry",
+                "label": "Intervals",
+                "default": {},
+                "showWhen": {
+                    "type": "dayjs"
+                },
                 "itemSchema": {
-                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
-                    "color": { "type": "color", "label": "Color", "default": "gray" }
+                    "dateRuleId": {
+                        "type": "reference",
+                        "label": "Date Rule",
+                        "registry": "dateRules",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Color",
+                        "default": "gray"
+                    }
                 }
             },
-            "noValueColor": { "type": "color", "label": "No-Value Color", "default": "" }
-        },
-        "default": {
-            "interval": {
-                "name": "Interval", "type": "dayjs",
-                "intervals": {
-                    "overdue": { "dateRuleId": "overdue", "color": "red" },
-                    "now": { "dateRuleId": "now", "color": "lime" },
-                    "restOfDay": { "dateRuleId": "restOfDay", "color": "cyan" },
-                    "tomorrow": { "dateRuleId": "tomorrow", "color": "gray" },
-                    "thisWeek": { "dateRuleId": "thisWeek", "color": "lightgray" },
-                    "thisMonth": { "dateRuleId": "thisMonth", "color": "lightgray" },
-                    "thisYear": { "dateRuleId": "thisYear", "color": "lightgray" },
-                    "future": { "dateRuleId": "future", "color": "lightgray" }
-                }
+            "noValueColor": {
+                "type": "color",
+                "label": "No-Value Color",
+                "default": ""
             }
         }
     },
@@ -544,59 +536,104 @@
         "category": "Display Elements",
         "tab": "Groupings",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Grouping" },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Grouping"
+            },
             "type": {
-                "type": "select", "label": "Type", "default": "label",
+                "type": "select",
+                "label": "Type",
+                "default": "label",
                 "options": [
-                    { "value": "label", "label": "By Label Value" },
-                    { "value": "dayjs", "label": "By Date" },
-                    { "value": "recurrence", "label": "By Recurrence" }
+                    {
+                        "value": "label",
+                        "label": "By Label Value"
+                    },
+                    {
+                        "value": "dayjs",
+                        "label": "By Date"
+                    },
+                    {
+                        "value": "recurrence",
+                        "label": "By Recurrence"
+                    }
                 ]
             },
-            "label": { "type": "string", "label": "Note Label", "default": "", "showWhen": { "type": ["label", "recurrence"] } },
+            "label": {
+                "type": "string",
+                "label": "Note Label",
+                "default": "",
+                "showWhen": {
+                    "type": [
+                        "label",
+                        "recurrence"
+                    ]
+                }
+            },
             "children": {
-                "type": "registry", "label": "Columns", "default": {}, "showWhen": { "type": ["label", "recurrence"] },
+                "type": "registry",
+                "label": "Columns",
+                "default": {},
+                "showWhen": {
+                    "type": [
+                        "label",
+                        "recurrence"
+                    ]
+                },
                 "itemSchema": {
-                    "labelValue": { "type": "string", "label": "Label Value", "default": "" },
-                    "display": { "type": "string", "label": "Column Name", "default": "" },
-                    "color": { "type": "color", "label": "Column Color", "default": "gray" }
+                    "labelValue": {
+                        "type": "string",
+                        "label": "Label Value",
+                        "default": ""
+                    },
+                    "display": {
+                        "type": "string",
+                        "label": "Column Name",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Column Color",
+                        "default": "gray"
+                    }
                 }
             },
             "intervals": {
-                "type": "registry", "label": "Intervals", "default": {}, "showWhen": { "type": "dayjs" },
+                "type": "registry",
+                "label": "Intervals",
+                "default": {},
+                "showWhen": {
+                    "type": "dayjs"
+                },
                 "itemSchema": {
-                    "dateRuleId": { "type": "reference", "label": "Date Rule", "registry": "dateRules", "default": "" },
-                    "display": { "type": "string", "label": "Column Name", "default": "" },
-                    "color": { "type": "color", "label": "Column Color", "default": "gray" }
+                    "dateRuleId": {
+                        "type": "reference",
+                        "label": "Date Rule",
+                        "registry": "dateRules",
+                        "default": ""
+                    },
+                    "display": {
+                        "type": "string",
+                        "label": "Column Name",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Column Color",
+                        "default": "gray"
+                    }
                 }
             },
-            "noValueDisplay": { "type": "string", "label": "No-Value Column Name", "default": "" },
-            "noValueColor": { "type": "color", "label": "No-Value Column Color", "default": "" }
-        },
-        "default": {
-            "interval": {
-                "name": "By Interval", "type": "dayjs",
-                "intervals": {
-                    "overdue": { "dateRuleId": "overdue", "display": "Overdue", "color": "red" },
-                    "now": { "dateRuleId": "now", "display": "Now", "color": "lime" },
-                    "restOfDay": { "dateRuleId": "restOfDay", "display": "Later Today", "color": "cyan" },
-                    "tomorrow": { "dateRuleId": "tomorrow", "display": "Tomorrow", "color": "gray" },
-                    "thisWeek": { "dateRuleId": "thisWeek", "display": "This Week", "color": "lightgray" },
-                    "thisMonth": { "dateRuleId": "thisMonth", "display": "This Month", "color": "lightgray" },
-                    "thisYear": { "dateRuleId": "thisYear", "display": "This Year", "color": "lightgray" },
-                    "future": { "dateRuleId": "future", "display": "Future", "color": "lightgray" }
-                }
+            "noValueDisplay": {
+                "type": "string",
+                "label": "No-Value Column Name",
+                "default": ""
             },
-            "recurrence": {
-                "name": "By Recurrence", "type": "recurrence", "label": "recurrence",
-                "children": {
-                    "HOURLY": { "labelValue": "HOURLY", "display": "Hourly", "color": "red" },
-                    "DAILY": { "labelValue": "DAILY", "display": "Daily", "color": "gold" },
-                    "WEEKLY": { "labelValue": "WEEKLY", "display": "Weekly", "color": "lime" },
-                    "MONTHLY": { "labelValue": "MONTHLY", "display": "Monthly", "color": "cyan" },
-                    "YEARLY": { "labelValue": "YEARLY", "display": "Yearly", "color": "magenta" },
-                    "NONE": { "labelValue": "NONE", "display": "One-off", "color": "gray" }
-                }
+            "noValueColor": {
+                "type": "color",
+                "label": "No-Value Column Color",
+                "default": ""
             }
         }
     },
@@ -606,62 +643,150 @@
         "category": "Display Elements",
         "tab": "Date Rules",
         "itemSchema": {
-            "name": { "type": "string", "label": "Name", "default": "New Date Rule" },
-            "dateLabel": { "type": "string", "label": "Date Label", "default": "" },
-            "useNumberOfDays": { "type": "boolean", "label": "Use Number of Days", "default": false },
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Date Rule"
+            },
+            "dateLabel": {
+                "type": "string",
+                "label": "Date Label",
+                "default": ""
+            },
+            "useNumberOfDays": {
+                "type": "boolean",
+                "label": "Use Number of Days",
+                "default": false
+            },
             "operator": {
-                "type": "select", "label": "Operator", "default": "isNull",
+                "type": "select",
+                "label": "Operator",
+                "default": "isNull",
                 "options": [
-                    { "value": "isNull", "label": "isNull" },
-                    { "value": "isBefore", "label": "isBefore" },
-                    { "value": "isAfter", "label": "isAfter" },
-                    { "value": "isBetween", "label": "isBetween" }
+                    {
+                        "value": "isNull",
+                        "label": "isNull"
+                    },
+                    {
+                        "value": "isBefore",
+                        "label": "isBefore"
+                    },
+                    {
+                        "value": "isAfter",
+                        "label": "isAfter"
+                    },
+                    {
+                        "value": "isBetween",
+                        "label": "isBetween"
+                    }
                 ]
             },
             "moment1": {
-                "type": "select", "label": "Moment 1", "default": "now", "showWhen": { "operator": ["isBefore", "isAfter", "isBetween"] },
+                "type": "select",
+                "label": "Moment 1",
+                "default": "now",
+                "showWhen": {
+                    "operator": [
+                        "isBefore",
+                        "isAfter",
+                        "isBetween"
+                    ]
+                },
                 "options": [
-                    { "value": "now", "label": "now" },
-                    { "value": "startOfToday", "label": "startOfToday" },
-                    { "value": "endOfToday", "label": "endOfToday" },
-                    { "value": "endOfTomorrow", "label": "endOfTomorrow" },
-                    { "value": "endOfThisWeek", "label": "endOfThisWeek" },
-                    { "value": "endOfThisMonth", "label": "endOfThisMonth" },
-                    { "value": "endOfThisYear", "label": "endOfThisYear" }
+                    {
+                        "value": "now",
+                        "label": "now"
+                    },
+                    {
+                        "value": "startOfToday",
+                        "label": "startOfToday"
+                    },
+                    {
+                        "value": "endOfToday",
+                        "label": "endOfToday"
+                    },
+                    {
+                        "value": "endOfTomorrow",
+                        "label": "endOfTomorrow"
+                    },
+                    {
+                        "value": "endOfThisWeek",
+                        "label": "endOfThisWeek"
+                    },
+                    {
+                        "value": "endOfThisMonth",
+                        "label": "endOfThisMonth"
+                    },
+                    {
+                        "value": "endOfThisYear",
+                        "label": "endOfThisYear"
+                    }
                 ]
             },
             "moment2": {
-                "type": "select", "label": "Moment 2", "default": "now", "showWhen": { "operator": "isBetween" },
+                "type": "select",
+                "label": "Moment 2",
+                "default": "now",
+                "showWhen": {
+                    "operator": "isBetween"
+                },
                 "options": [
-                    { "value": "now", "label": "now" },
-                    { "value": "startOfToday", "label": "startOfToday" },
-                    { "value": "endOfToday", "label": "endOfToday" },
-                    { "value": "endOfTomorrow", "label": "endOfTomorrow" },
-                    { "value": "endOfThisWeek", "label": "endOfThisWeek" },
-                    { "value": "endOfThisMonth", "label": "endOfThisMonth" },
-                    { "value": "endOfThisYear", "label": "endOfThisYear" }
+                    {
+                        "value": "now",
+                        "label": "now"
+                    },
+                    {
+                        "value": "startOfToday",
+                        "label": "startOfToday"
+                    },
+                    {
+                        "value": "endOfToday",
+                        "label": "endOfToday"
+                    },
+                    {
+                        "value": "endOfTomorrow",
+                        "label": "endOfTomorrow"
+                    },
+                    {
+                        "value": "endOfThisWeek",
+                        "label": "endOfThisWeek"
+                    },
+                    {
+                        "value": "endOfThisMonth",
+                        "label": "endOfThisMonth"
+                    },
+                    {
+                        "value": "endOfThisYear",
+                        "label": "endOfThisYear"
+                    }
                 ]
             },
             "bracket": {
-                "type": "select", "label": "Bracket", "default": "[]", "showWhen": { "operator": "isBetween" },
+                "type": "select",
+                "label": "Bracket",
+                "default": "[]",
+                "showWhen": {
+                    "operator": "isBetween"
+                },
                 "options": [
-                    { "value": "[]", "label": "[]" },
-                    { "value": "[)", "label": "[)" },
-                    { "value": "(]", "label": "(]" },
-                    { "value": "()", "label": "()" }
+                    {
+                        "value": "[]",
+                        "label": "[]"
+                    },
+                    {
+                        "value": "[)",
+                        "label": "[)"
+                    },
+                    {
+                        "value": "(]",
+                        "label": "(]"
+                    },
+                    {
+                        "value": "()",
+                        "label": "()"
+                    }
                 ]
             }
-        },
-        "default": {
-            "noDate": { "name": "No Date", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isNull" },
-            "overdue": { "name": "Overdue", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBefore", "moment1": "startOfToday" },
-            "now": { "name": "Now", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "startOfToday", "moment2": "now", "bracket": "[]" },
-            "restOfDay": { "name": "Later Today", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "now", "moment2": "endOfToday", "bracket": "[]" },
-            "tomorrow": { "name": "Tomorrow", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfToday", "moment2": "endOfTomorrow", "bracket": "[]" },
-            "thisWeek": { "name": "This Week", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfToday", "moment2": "endOfThisWeek", "bracket": "[)" },
-            "thisMonth": { "name": "This Month", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfThisWeek", "moment2": "endOfThisMonth", "bracket": "[)" },
-            "thisYear": { "name": "This Year", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isBetween", "moment1": "endOfThisMonth", "moment2": "endOfThisYear", "bracket": "[]" },
-            "future": { "name": "Future", "dateLabel": "startDateTime", "useNumberOfDays": false, "operator": "isAfter", "moment1": "endOfThisYear" }
         }
     }
 }

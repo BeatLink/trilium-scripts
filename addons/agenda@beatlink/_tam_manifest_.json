@@ -1,17 +1,16 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile task/agenda system for TriliumNext, in three widgets plus an opinionated GTD Organize workflow, all sharing one configuration: Overview (a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, and the Agenda Editor page that edits the config), Task (a right-pane editor for a task's start/due dates, duration, recurrence, and quick actions), My Day (a note-detail countdown timer that files due tasks and sends notifications while your My Day note is open), and Organize (a Workflow Setup tab (in the Agenda Editor) that provisions a GTD notebook of Areas/template-buckets, plus an Organize triage UI - shown on a note you select in the Agenda Editor - that assigns each classification dimension plus a start date and fixes misfiled notes). Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a triage queue, a sort ordinal, and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label) - agenda depends on it for Organize's bucket scaffolding and its actionable-item set. Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime.",
+    "description": "A schema-driven, multi-profile agenda system for TriliumNext, built around the Overview widget: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, plus the Agenda Editor page that edits the config. Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. Three sibling addons split out of this one and each own their own settings note: agenda-task@beatlink (the Task pane; #agendaTaskConfig), which this addon no longer references at all - it shares only a label vocabulary, declared independently on both sides, agenda-myday@beatlink (the My Day focus panel and timer; #agendaMyDayConfig) which clones this addon's query engine to find due tasks, and agenda-organize@beatlink (the GTD notebook provisioner and triage page; #agendaOrganizeConfig) which reads the dimensions registry back out of #agendaConfig so the two never drift.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.3.0",
+    "latestVersion": "9.2.0",
     "type": "widget",
     "readme": "README.md",
-    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "profile-editor-page",
-        "dependencies": ["template-picker@beatlink"],
         "notes": [
             {
                 "id": "grp-common",
@@ -28,67 +27,53 @@
                 "sourceUrl": null
             },
             {
-                "id": "grp-myday",
-                "title": "My Day",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "grp-task",
-                "title": "Task",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "grp-organize",
-                "title": "Organize",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
                 "id": "agenda-settings",
                 "title": "agendaSettings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/agendaSettings.jsx"
+                "sourceUrl": "common/agendaSettings.jsx"
             },
             {
                 "id": "dimensions",
                 "title": "dimensions.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/dimensions.js"
+                "sourceUrl": "common/dimensions.js"
             },
             {
                 "id": "migrate",
                 "title": "migrate.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/migrate.js"
+                "sourceUrl": "common/migrate.js"
             },
             {
                 "id": "common-css",
                 "title": "agendaCommon.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/agendaCommon.css"
+                "sourceUrl": "common/agendaCommon.css"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/schema.json"
+                "sourceUrl": "common/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "common/defaults.json"
             },
             {
                 "id": "config",
                 "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/config.json"
+                "sourceUrl": null
             },
             {
                 "id": "settings",
@@ -102,87 +87,42 @@
                 "title": "calendarEvents.ical",
                 "type": "code",
                 "mime": "text/plain",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/common/calendarEvents.ical"
+                "sourceUrl": "common/calendarEvents.ical"
             },
             {
                 "id": "lib-overview",
                 "title": "libAgendaOverview.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaOverview.js"
+                "sourceUrl": "overview/libAgendaOverview.js"
             },
             {
                 "id": "lib-config",
                 "title": "libAgendaConfig.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaConfig.js"
+                "sourceUrl": "overview/libAgendaConfig.js"
             },
             {
                 "id": "lib-query",
                 "title": "libAgendaQuery.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/libAgendaQuery.js"
-            },
-            {
-                "id": "lib-task",
-                "title": "libAgendaTask.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/libAgendaTask.js"
-            },
-            {
-                "id": "lib-recurrence",
-                "title": "libRecurrence.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/libRecurrence.js"
-            },
-            {
-                "id": "timer",
-                "title": "Timer.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/Timer.jsx"
-            },
-            {
-                "id": "wav-select",
-                "title": "timerSelect.wav",
-                "type": "file",
-                "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/timerSelect.wav",
-                "binary": true
-            },
-            {
-                "id": "wav-start",
-                "title": "timerStart.wav",
-                "type": "file",
-                "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/timerStart.wav",
-                "binary": true
-            },
-            {
-                "id": "wav-end",
-                "title": "timerEnd.wav",
-                "type": "file",
-                "mime": "audio/wav",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/timerEnd.wav",
-                "binary": true
+                "sourceUrl": "overview/libAgendaQuery.js"
             },
             {
                 "id": "overview",
                 "title": "agendaOverview.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/agendaOverview.jsx"
+                "sourceUrl": "overview/agendaOverview.jsx"
             },
             {
                 "id": "collapsible",
                 "title": "Collapsible.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/Collapsible.jsx"
+                "sourceUrl": "overview/Collapsible.jsx"
             },
             {
                 "id": "profile-editor-page",
@@ -196,204 +136,92 @@
                 "title": "profileEditor.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/profileEditor.jsx"
-            },
-            {
-                "id": "reschedule-options",
-                "title": "rescheduleOptions.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/rescheduleOptions.jsx"
+                "sourceUrl": "overview/profileEditor.jsx"
             },
             {
                 "id": "profile-editor-css",
                 "title": "profileEditor.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/overview/profileEditor.css"
-            },
-            {
-                "id": "my-day",
-                "title": "myDayWidget.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/myDayWidget.jsx"
-            },
-            {
-                "id": "my-day-css",
-                "title": "myDay.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/myday/myDay.css"
-            },
-            {
-                "id": "now-note",
-                "title": "My Day",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "task",
-                "title": "agendaTask.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/agendaTask.jsx"
-            },
-            {
-                "id": "togglebutton",
-                "title": "FormToggleButton.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/task/FormToggleButton.jsx"
-            },
-            {
-                "id": "organize-page-src",
-                "title": "organizePage.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organizePage.jsx"
-            },
-            {
-                "id": "organize-lib",
-                "title": "organize.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organize.js"
-            },
-            {
-                "id": "organize-structure",
-                "title": "organizeStructure.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organizeStructure.js"
-            },
-            {
-                "id": "organize-provision",
-                "title": "organizeProvision.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organizeProvision.js"
-            },
-            {
-                "id": "organize-dimensions",
-                "title": "organizeDimensions.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organizeDimensions.jsx"
-            },
-            {
-                "id": "organize-css",
-                "title": "organize.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/organize/organize.css"
-            },
-            {
-                "id": "templates-root",
-                "title": "Templates",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
-            {
-                "id": "tpl-area",
-                "title": "AreaCollection",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/areaCollection.html"
-            },
-            {
-                "id": "tpl-typecollection",
-                "title": "TypeCollection",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/typeCollection.html"
-            },
-            {
-                "id": "tpl-special",
-                "title": "Special",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/templates/special.html"
+                "sourceUrl": "overview/profileEditor.css"
             },
             {
                 "id": "readme",
                 "title": "README.md",
                 "type": "code",
                 "mime": "text/markdown",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/agenda@beatlink/README.md",
+                "sourceUrl": "README.md",
                 "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
             },
             {
                 "id": "libsettings-ui",
                 "title": "libSettingsUI.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
             },
             {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
                 "id": "colorpicker",
                 "title": "ColorPicker.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
             },
             {
                 "id": "colorpicker-css",
                 "title": "ColorPicker.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             },
             {
                 "id": "libmultisort-lib",
                 "title": "libMultisort.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libmultisort/libmultisort.js"
+                "sourceUrl": "../../libs/libmultisort/libmultisort.js"
             },
             {
                 "id": "libnotification-lib",
                 "title": "libNotification.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libnotification/libnotification.js"
+                "sourceUrl": "../../libs/libnotification/libnotification.js"
             },
             {
                 "id": "libcalendar-lib",
                 "title": "libCalendar.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libcalendar/libCalendar.js"
+                "sourceUrl": "../../libs/libcalendar/libCalendar.js"
             },
             {
                 "id": "ical-lib",
                 "title": "ical.min.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
+                "sourceUrl": "../../libs/libical/ical.min.js"
             },
             {
                 "id": "ical-resource",
                 "title": "ical.min.js (resource)",
                 "type": "code",
                 "mime": "application/javascript",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libical/ical.min.js"
-            },
-            {
-                "id": "librrule-lib",
-                "title": "rrule.min.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/librrule/rrule.min.js"
+                "sourceUrl": "../../libs/libical/ical.min.js"
             }
         ],
         "children": [
@@ -407,27 +235,11 @@
             },
             {
                 "parent": "root",
-                "child": "grp-myday"
-            },
-            {
-                "parent": "root",
-                "child": "grp-task"
-            },
-            {
-                "parent": "root",
-                "child": "grp-organize"
-            },
-            {
-                "parent": "root",
                 "child": "readme"
             },
             {
                 "parent": "persistence",
                 "child": "config"
-            },
-            {
-                "parent": "persistence",
-                "child": "templates-root"
             },
             {
                 "parent": "grp-common",
@@ -451,6 +263,10 @@
             },
             {
                 "parent": "grp-common",
+                "child": "defaults"
+            },
+            {
+                "parent": "grp-common",
                 "child": "settings"
             },
             {
@@ -470,44 +286,8 @@
                 "child": "profile-editor-css"
             },
             {
-                "parent": "grp-myday",
-                "child": "my-day"
-            },
-            {
-                "parent": "grp-myday",
-                "child": "my-day-css"
-            },
-            {
-                "parent": "grp-myday",
-                "child": "now-note"
-            },
-            {
-                "parent": "grp-task",
-                "child": "task"
-            },
-            {
-                "parent": "grp-organize",
-                "child": "organize-page-src"
-            },
-            {
-                "parent": "grp-organize",
-                "child": "organize-dimensions"
-            },
-            {
-                "parent": "grp-organize",
-                "child": "organize-css"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-area"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-typecollection"
-            },
-            {
-                "parent": "templates-root",
-                "child": "tpl-special"
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
@@ -555,10 +335,6 @@
             },
             {
                 "parent": "lib-query",
-                "child": "lib-task"
-            },
-            {
-                "parent": "lib-query",
                 "child": "lib-config"
             },
             {
@@ -576,26 +352,6 @@
             {
                 "parent": "lib-overview",
                 "child": "libcalendar-lib"
-            },
-            {
-                "parent": "lib-task",
-                "child": "lib-recurrence"
-            },
-            {
-                "parent": "lib-recurrence",
-                "child": "librrule-lib"
-            },
-            {
-                "parent": "timer",
-                "child": "wav-select"
-            },
-            {
-                "parent": "timer",
-                "child": "wav-start"
-            },
-            {
-                "parent": "timer",
-                "child": "wav-end"
             },
             {
                 "parent": "overview",
@@ -623,108 +379,6 @@
             },
             {
                 "parent": "profile-editor",
-                "child": "organize-provision"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "reschedule-options"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "reschedule-options",
-                "child": "task"
-            },
-            {
-                "parent": "my-day",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "my-day",
-                "child": "timer"
-            },
-            {
-                "parent": "my-day",
-                "child": "lib-overview"
-            },
-            {
-                "parent": "task",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "task",
-                "child": "togglebutton"
-            },
-            {
-                "parent": "task",
-                "child": "lib-task"
-            },
-            {
-                "parent": "organize-page-src",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "organize-page-src",
-                "child": "dimensions"
-            },
-            {
-                "parent": "organize-page-src",
-                "child": "organize-dimensions"
-            },
-            {
-                "parent": "organize-page-src",
-                "child": "organize-lib"
-            },
-            {
-                "parent": "organize-page-src",
-                "child": "organize-structure"
-            },
-            {
-                "parent": "organize-dimensions",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "organize-dimensions",
-                "child": "dimensions"
-            },
-            {
-                "parent": "organize-dimensions",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "organize-structure"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "organize-lib"
-            },
-            {
-                "parent": "organize-provision",
-                "child": "dimensions"
-            },
-            {
-                "parent": "organize-provision",
-                "addon": "template-picker@beatlink",
-                "child": "registry"
-            },
-            {
-                "parent": "organize-lib",
-                "addon": "template-picker@beatlink",
-                "child": "registry"
-            },
-            {
-                "parent": "organize-lib",
                 "child": "libsettings-ui"
             }
         ],
@@ -755,14 +409,9 @@
                 "to": "profile-editor-page"
             },
             {
-                "from": "my-day",
-                "type": "nowNote",
-                "to": "now-note"
-            },
-            {
-                "from": "templates-root",
-                "type": "template",
-                "to": "tpl-special"
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
             }
         ],
         "labels": [
@@ -782,32 +431,7 @@
                 "value": ""
             },
             {
-                "note": "my-day-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "organize-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "organize-page-src",
-                "name": "agendaOrganizeRender",
-                "value": ""
-            },
-            {
                 "note": "overview",
-                "name": "widget",
-                "value": ""
-            },
-            {
-                "note": "my-day",
-                "name": "widget",
-                "value": ""
-            },
-            {
-                "note": "task",
                 "name": "widget",
                 "value": ""
             },
@@ -815,21 +439,6 @@
                 "note": "settings",
                 "name": "agendaConfig",
                 "value": ""
-            },
-            {
-                "note": "wav-select",
-                "name": "customResourceProvider",
-                "value": "libtimerSelect.wav"
-            },
-            {
-                "note": "wav-start",
-                "name": "customResourceProvider",
-                "value": "libtimerStart.wav"
-            },
-            {
-                "note": "wav-end",
-                "name": "customResourceProvider",
-                "value": "libtimerEnd.wav"
             },
             {
                 "note": "libsettings-style",
@@ -853,21 +462,6 @@
             },
             {
                 "note": "grp-overview",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "grp-myday",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "grp-task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "grp-organize",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
@@ -927,36 +521,6 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "lib-task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "lib-recurrence",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "timer",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "wav-select",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "wav-start",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "wav-end",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "overview",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -977,126 +541,16 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "my-day",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "my-day-css",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "now-note",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "task",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-page-src",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-lib",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-structure",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-provision",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-dimensions",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "organize-css",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "readme",
                 "name": "iconClass",
                 "value": "bx bx-task"
-            },
-            {
-                "note": "templates-root",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "tpl-area",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-area",
-                "name": "iconClass",
-                "value": "bx bxs-circle"
-            },
-            {
-                "note": "tpl-area",
-                "name": "viewType",
-                "value": "list"
-            },
-            {
-                "note": "tpl-area",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-area",
-                "name": "type",
-                "value": "areacollection"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "iconClass",
-                "value": "bx bx-folder"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "viewType",
-                "value": "list"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "label:area",
-                "value": "single"
-            },
-            {
-                "note": "tpl-typecollection",
-                "name": "type",
-                "value": "typecollection"
-            },
-            {
-                "note": "tpl-special",
-                "name": "template",
-                "value": ""
-            },
-            {
-                "note": "tpl-special",
-                "name": "type",
-                "value": "special"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }
