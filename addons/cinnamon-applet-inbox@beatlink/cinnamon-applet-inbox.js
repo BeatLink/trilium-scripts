@@ -21,7 +21,7 @@ function sendNotification(title, body, noteId) {
 
 let schemaNoteId = api.currentNote.getRelationValue("schemaNote")
 let settingsNoteId = api.currentNote.getRelationValue("settingsNote")
-let configNoteId = api.getNote(settingsNoteId).getRelationValue("AddonData:config")
+let configNoteId = api.getNote(settingsNoteId).getRelationValue("configNote")
 
 let settings = loadSettings(schemaNoteId, configNoteId)
 let apiKey = settings.apiKey
