@@ -33,12 +33,34 @@
 
 .diet-manager-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
 }
 
+/* Capped so a long food or category name can't stretch the select across the toolbar. */
 .diet-manager-toolbar select {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 220px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-toolbar input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-category-new {
     padding: 4px 6px;
     border: 1px solid var(--main-border-color);
     border-radius: 4px;
@@ -126,8 +148,140 @@
     margin-top: 6px;
 }
 
-.diet-manager-tag-add input {
+.diet-manager-suggest {
+    position: relative;
+}
+
+.diet-manager-suggest input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-suggest-grow {
     flex: 1;
+}
+
+.diet-manager-suggest-unit {
+    width: 90px;
+}
+
+.diet-manager-suggestions {
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 2px 0 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--main-background-color);
+}
+
+.diet-manager-suggestions button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.diet-manager-suggestions button:hover {
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+}
+
+.diet-manager-unit-select {
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    max-width: 160px;
+}
+
+.diet-manager-portion-list {
+    list-style: none;
+    margin: 0 0 8px 0;
+    padding: 0;
+}
+
+.diet-manager-portion-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+}
+
+.diet-manager-portion-row input[type="number"] {
+    width: 90px;
+    padding: 3px 5px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-suggest-brand {
+    width: 130px;
+}
+
+.diet-manager-grocery-comment {
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-group {
+    margin: 14px 0 4px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-grocery-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.diet-manager-grocery-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--main-border-color);
+}
+
+.diet-manager-grocery-name {
+    flex: 1;
+}
+
+.diet-manager-grocery-row input[type="number"] {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+}
+
+.diet-manager-grocery-done .diet-manager-grocery-name {
+    text-decoration: line-through;
+    color: var(--muted-text-color);
 }
 
 .diet-manager-cell-actions {
@@ -172,6 +326,18 @@
 
 .diet-manager-field-row .diet-manager-field {
     flex: 1;
+}
+
+.diet-manager-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 6px 8px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+    background: var(--input-background-color, transparent);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
 }
 
 .diet-manager-form input[type="text"],

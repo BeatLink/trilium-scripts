@@ -12,6 +12,12 @@
         "description": "Free key from https://fdc.nal.usda.gov/api-key-signup.html. Leave blank to disable food lookup and enter nutrition facts manually.",
         "tab": "USDA Lookup"
     },
+    "prefillGroceryComment": {
+        "type": "boolean",
+        "label": "Prefill grocery comments from the food",
+        "description": "When a food is added to the grocery list, start its comment from the food's own comment. The line's copy can still be edited without touching the food.",
+        "tab": "Grocery"
+    },
     "targetCalories": {
         "type": "number",
         "label": "Calories",
