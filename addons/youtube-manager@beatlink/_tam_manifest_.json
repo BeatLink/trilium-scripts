@@ -1,0 +1,380 @@
+{
+    "id": "youtube-manager@beatlink",
+    "name": "YouTube Manager",
+    "description": "A YouTube subscription tracker for TriliumNext, in the spirit of NoUTube: subscribe to channels, get one feed of everything they upload, and keep a permanent record of what you watched. No Google API key and no quota. Channel data comes from YouTube.js, which reads YouTube's own InnerTube API and runs entirely in the frontend, proxied through a narrow host-allowlisted backend endpoint because YouTube sends no CORS headers. Your subscriptions, the rolling video cache, and your watch history live in one JSON note you can back up, inspect, or hand-edit. Add channels by pasting URLs or @handles, or import a FreeTube subscription export in one go. Playback is YouTube's iframe embed inside the widget. Shorts are hidden by default. There is no background sync: YouTube.js ships ESM-only and cannot be loaded by a Trilium backend script, so refreshes happen while the widget is open.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/youtube-manager@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.1.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/youtube-manager@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-page",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "youtube-manager@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "view",
+                "title": "youtubeManager.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "youtubeManager.jsx"
+            },
+            {
+                "id": "style",
+                "title": "youtubeManager.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "youtubeManager.css"
+            },
+            {
+                "id": "lib-youtube",
+                "title": "libYouTube.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libYouTube.js"
+            },
+            {
+                "id": "youtubei",
+                "title": "youtubei.js",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "../../libs/libyoutubei/browser.js"
+            },
+            {
+                "id": "backend",
+                "title": "youtubeManagerBackend.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "youtubeManagerBackend.js"
+            },
+            {
+                "id": "lib-store",
+                "title": "libYouTubeStore.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "libYouTubeStore.js"
+            },
+            {
+                "id": "settings-page",
+                "title": "Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "database",
+                "title": "Database",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-backend",
+                "title": "libSettings.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "../../libs/libsettings/libsettings-backend.js"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "view"
+            },
+            {
+                "parent": "view",
+                "child": "style"
+            },
+            {
+                "parent": "view",
+                "child": "lib-youtube"
+            },
+            {
+                "parent": "lib-youtube",
+                "child": "youtubei"
+            },
+            {
+                "parent": "launcher",
+                "child": "backend"
+            },
+            {
+                "parent": "backend",
+                "child": "libsettings-backend"
+            },
+            {
+                "parent": "backend",
+                "child": "lib-store"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings-page"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "persistence",
+                "child": "database"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "view"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "view",
+                "type": "settingsPageNote",
+                "to": "settings-page"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "managerPageNote",
+                "to": "launcher"
+            },
+            {
+                "from": "backend",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "backend",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "backend",
+                "type": "databaseNote",
+                "to": "database"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "backend",
+                "name": "customRequestHandler",
+                "value": "youtubeManager"
+            },
+            {
+                "note": "youtubei",
+                "name": "customResourceProvider",
+                "value": "libYoutubei.js"
+            },
+            {
+                "note": "style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "database",
+                "name": "youtubeManagerDatabase",
+                "value": ""
+            },
+            {
+                "note": "launcher",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "view",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "backend",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "lib-youtube",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "lib-store",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "schema",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "config",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            },
+            {
+                "note": "database",
+                "name": "iconClass",
+                "value": "bx bx-data"
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-cog"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bxl-youtube"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
+    }
+}
