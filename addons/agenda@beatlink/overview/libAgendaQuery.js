@@ -1,9 +1,20 @@
-const task = require("libAgendaTask.js")
 const multisort = require("libMultisort.js")
 const config = require("libAgendaConfig.js")
 const { loadData, getActiveProfile, getAllProfiles } = config
 
 const NO_VALUE_KEY = "__novalue__"
+const RRULE_FREQUENCIES = ["YEARLY", "MONTHLY", "WEEKLY", "DAILY", "HOURLY", "MINUTELY", "SECONDLY"]
+
+// The FREQ word of an rrule string, or "NONE" when the note carries no
+// recurrence or the rule names no recognised frequency. Read out of the string
+// directly rather than through a real rrule parse: grouping by recurrence only
+// ever needs the frequency word, and reading it here keeps agenda off
+// agenda-task@beatlink's recurrence library.
+function frequencyOf(recurrence) {
+    const match = /(?:^|[;:])\s*FREQ\s*=\s*([A-Za-z]+)/.exec(recurrence || "")
+    const frequency = match ? match[1].toUpperCase() : null
+    return RRULE_FREQUENCIES.includes(frequency) ? frequency : "NONE"
+}
 
 // Evaluates a dayjs date rule (e.g. ["isBefore", "endOfToday"]) against a date
 // string. Named moments in the rule are resolved relative to now.
@@ -112,7 +123,7 @@ async function classifyNote(noteId, info, dateRules) {
     }
     if (info.type === "recurrence") {
         const recurrence = (await api.getNote(noteId)).getLabelValue(info.label)
-        return { kind: "recurrence", frequency: task.frequencyOf(recurrence) }
+        return { kind: "recurrence", frequency: frequencyOf(recurrence) }
     }
     return null
 }
@@ -232,9 +243,9 @@ module.exports = {
     setGroupForNote,
     getTaskList,
     getSortedTaskList,
-    // Re-exported so libAgendaOverview reaches config/task through this single
-    // module instead of requiring libAgendaConfig and libAgendaTask directly,
-    // which would bundle them twice (once here, once there) in each widget.
+    // Re-exported so libAgendaOverview reaches config through this single module
+    // instead of requiring libAgendaConfig directly, which would bundle it twice
+    // (once here, once there) in each widget.
     loadData: config.loadData,
     saveProfile: config.saveProfile,
     getAllProfiles: config.getAllProfiles,
@@ -242,7 +253,5 @@ module.exports = {
     setActiveProfile: config.setActiveProfile,
     getMatchingProfile: config.getMatchingProfile,
     getSectionState: config.getSectionState,
-    saveSectionState: config.saveSectionState,
-    refreshDisplayLabels: task.refreshDisplayLabels,
-    rescheduleByDays: task.rescheduleByDays
+    saveSectionState: config.saveSectionState
 }

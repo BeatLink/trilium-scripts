@@ -1,0 +1,633 @@
+{
+    "startDatetimeLabel": "startDateTime",
+    "dueDatetimeLabel": "dueDateTime",
+    "recurrenceLabel": "recurrence",
+    "inboxNoteId": "",
+    "overviewNoteId": "",
+    "activeProfileId": "default",
+    "sectionState": {},
+    "dimensions": {
+        "area": {
+            "name": "Area",
+            "label": "area",
+            "writeColor": true,
+            "triage": true,
+            "actionableOnly": false,
+            "scaffoldsAreas": true,
+            "values": {
+                "career": {
+                    "name": "Career",
+                    "key": "career",
+                    "color": "red"
+                },
+                "finances": {
+                    "name": "Finances",
+                    "key": "finances",
+                    "color": "red"
+                },
+                "legal": {
+                    "name": "Legal",
+                    "key": "legal",
+                    "color": "red"
+                },
+                "home": {
+                    "name": "Home",
+                    "key": "home",
+                    "color": "darkorange"
+                },
+                "car": {
+                    "name": "Car",
+                    "key": "car",
+                    "color": "darkorange"
+                },
+                "tech": {
+                    "name": "Tech",
+                    "key": "tech",
+                    "color": "darkorange"
+                },
+                "fitness": {
+                    "name": "Fitness",
+                    "key": "fitness",
+                    "color": "gold"
+                },
+                "grooming": {
+                    "name": "Grooming",
+                    "key": "grooming",
+                    "color": "gold"
+                },
+                "sexual": {
+                    "name": "Sexual",
+                    "key": "sexual",
+                    "color": "gold"
+                },
+                "social": {
+                    "name": "Social",
+                    "key": "social",
+                    "color": "lime"
+                },
+                "mental": {
+                    "name": "Mental",
+                    "key": "mental",
+                    "color": "lime"
+                },
+                "identity": {
+                    "name": "Identity",
+                    "key": "identity",
+                    "color": "lime"
+                },
+                "fun": {
+                    "name": "Fun",
+                    "key": "fun",
+                    "color": "magenta"
+                }
+            }
+        },
+        "priority": {
+            "name": "Priority",
+            "label": "priority",
+            "writeColor": true,
+            "triage": true,
+            "actionableOnly": true,
+            "scaffoldsAreas": false,
+            "values": {
+                "4-critical": {
+                    "name": "Must Do",
+                    "key": "4-critical",
+                    "color": "red"
+                },
+                "3-high": {
+                    "name": "Should Do",
+                    "key": "3-high",
+                    "color": "gold"
+                },
+                "2-medium": {
+                    "name": "Could Do",
+                    "key": "2-medium",
+                    "color": "lime"
+                },
+                "1-low": {
+                    "name": "Want to Do",
+                    "key": "1-low",
+                    "color": "cyan"
+                }
+            }
+        }
+    },
+    "profiles": {
+        "default": {
+            "name": "default",
+            "viewType": "list",
+            "sortSelected": "startDate",
+            "prefixSelected": "interval",
+            "colorSelected": "dim-priority",
+            "groupingSelected": "dim-priority"
+        }
+    },
+    "searchGroups": {
+        "type": {
+            "name": "Note Type",
+            "profileId": "default",
+            "children": {
+                "all": {
+                    "name": "All Tasks",
+                    "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": false
+                },
+                "goal": {
+                    "name": "1. Goal",
+                    "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": true
+                },
+                "routine": {
+                    "name": "2. Routines",
+                    "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": true
+                },
+                "tasks": {
+                    "name": "3. Tasks",
+                    "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": true
+                },
+                "future": {
+                    "name": "4. Future",
+                    "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": true
+                },
+                "project": {
+                    "name": "5. Projects",
+                    "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task')",
+                    "enabled": true
+                }
+            }
+        },
+        "leaf": {
+            "name": "Leaf Tasks",
+            "profileId": "default",
+            "children": {
+                "leafTasks": {
+                    "name": "Leaf Subtasks",
+                    "rule": "~template.title='3. Task' AND note.ancestors.relations.template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
+                    "enabled": false
+                },
+                "leafTasksAnyDepth": {
+                    "name": "Leaf Tasks (Any Depth)",
+                    "rule": "~template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
+                    "enabled": false
+                }
+            }
+        }
+    },
+    "filterGroups": {
+        "date": {
+            "name": "Date",
+            "profileId": "default",
+            "children": {
+                "noDate": {
+                    "name": "No Date",
+                    "type": "dayjs",
+                    "dateRuleId": "noDate",
+                    "enabled": false
+                },
+                "overdue": {
+                    "name": "Overdue",
+                    "type": "dayjs",
+                    "dateRuleId": "overdue",
+                    "enabled": true
+                },
+                "now": {
+                    "name": "Now",
+                    "type": "dayjs",
+                    "dateRuleId": "now",
+                    "enabled": true
+                },
+                "restOfDay": {
+                    "name": "Later Today",
+                    "type": "dayjs",
+                    "dateRuleId": "restOfDay",
+                    "enabled": true
+                },
+                "tomorrow": {
+                    "name": "Tomorrow",
+                    "type": "dayjs",
+                    "dateRuleId": "tomorrow",
+                    "enabled": false
+                },
+                "thisWeek": {
+                    "name": "This Week",
+                    "type": "dayjs",
+                    "dateRuleId": "thisWeek",
+                    "enabled": false
+                },
+                "thisMonth": {
+                    "name": "This Month",
+                    "type": "dayjs",
+                    "dateRuleId": "thisMonth",
+                    "enabled": false
+                },
+                "thisYear": {
+                    "name": "This Year",
+                    "type": "dayjs",
+                    "dateRuleId": "thisYear",
+                    "enabled": false
+                },
+                "future": {
+                    "name": "Future",
+                    "type": "dayjs",
+                    "dateRuleId": "future",
+                    "enabled": false
+                }
+            }
+        },
+        "recurrence": {
+            "name": "Recurrence",
+            "profileId": "default",
+            "children": {
+                "hourly": {
+                    "name": "Hourly",
+                    "type": "search",
+                    "rule": "#recurrence *=* HOURLY",
+                    "enabled": true
+                },
+                "daily": {
+                    "name": "Daily",
+                    "type": "search",
+                    "rule": "#recurrence *=* DAILY",
+                    "enabled": true
+                },
+                "weekly": {
+                    "name": "Weekly",
+                    "type": "search",
+                    "rule": "#recurrence *=* WEEKLY",
+                    "enabled": true
+                },
+                "monthly": {
+                    "name": "Monthly",
+                    "type": "search",
+                    "rule": "#recurrence *=* MONTHLY",
+                    "enabled": true
+                },
+                "yearly": {
+                    "name": "Yearly",
+                    "type": "search",
+                    "rule": "#recurrence *=* YEARLY",
+                    "enabled": true
+                },
+                "noRecurrence": {
+                    "name": "No Recurrence",
+                    "type": "search",
+                    "rule": "#!recurrence OR (#recurrence='')",
+                    "enabled": true
+                }
+            }
+        }
+    },
+    "sorts": {
+        "startDate": {
+            "name": "Start Date",
+            "criteria": [
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        },
+        "title": {
+            "name": "Title",
+            "criteria": [
+                {
+                    "attribute": "title",
+                    "desc": false,
+                    "caseInsensitive": true
+                }
+            ]
+        },
+        "typePriorityStartDate": {
+            "name": "Type → Priority → Start Date",
+            "criteria": [
+                {
+                    "attribute": "type",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "priority",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        },
+        "typeStartDate": {
+            "name": "Type → Start Date",
+            "criteria": [
+                {
+                    "attribute": "type",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        },
+        "area": {
+            "name": "Area → Start Date",
+            "criteria": [
+                {
+                    "attribute": "area",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        },
+        "priorityStartDate": {
+            "name": "Priority → Start Date",
+            "criteria": [
+                {
+                    "attribute": "priority",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        },
+        "priorityTypeStartDate": {
+            "name": "Priority → Type → Start Date",
+            "criteria": [
+                {
+                    "attribute": "priority",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "type",
+                    "desc": false,
+                    "caseInsensitive": false
+                },
+                {
+                    "attribute": "startDateTime",
+                    "desc": false,
+                    "caseInsensitive": false
+                }
+            ]
+        }
+    },
+    "prefixes": {
+        "interval": {
+            "name": "Interval",
+            "type": "dayjs",
+            "intervals": {
+                "overdue": {
+                    "dateRuleId": "overdue",
+                    "formatString": "MMM D, YYYY HH:mm"
+                },
+                "now": {
+                    "dateRuleId": "now",
+                    "formatString": "HH:mm"
+                },
+                "restOfDay": {
+                    "dateRuleId": "restOfDay",
+                    "formatString": "HH:mm"
+                },
+                "tomorrow": {
+                    "dateRuleId": "tomorrow",
+                    "formatString": "[Tmrw] HH:mm"
+                },
+                "thisWeek": {
+                    "dateRuleId": "thisWeek",
+                    "formatString": "ddd"
+                },
+                "thisMonth": {
+                    "dateRuleId": "thisMonth",
+                    "formatString": "Do"
+                },
+                "thisYear": {
+                    "dateRuleId": "thisYear",
+                    "formatString": "MMMM"
+                },
+                "future": {
+                    "dateRuleId": "future",
+                    "formatString": "YYYY"
+                }
+            },
+            "noValuePrefix": "No Date Set"
+        }
+    },
+    "colors": {
+        "interval": {
+            "name": "Interval",
+            "type": "dayjs",
+            "intervals": {
+                "overdue": {
+                    "dateRuleId": "overdue",
+                    "color": "red"
+                },
+                "now": {
+                    "dateRuleId": "now",
+                    "color": "lime"
+                },
+                "restOfDay": {
+                    "dateRuleId": "restOfDay",
+                    "color": "cyan"
+                },
+                "tomorrow": {
+                    "dateRuleId": "tomorrow",
+                    "color": "gray"
+                },
+                "thisWeek": {
+                    "dateRuleId": "thisWeek",
+                    "color": "lightgray"
+                },
+                "thisMonth": {
+                    "dateRuleId": "thisMonth",
+                    "color": "lightgray"
+                },
+                "thisYear": {
+                    "dateRuleId": "thisYear",
+                    "color": "lightgray"
+                },
+                "future": {
+                    "dateRuleId": "future",
+                    "color": "lightgray"
+                }
+            }
+        }
+    },
+    "groupings": {
+        "interval": {
+            "name": "By Interval",
+            "type": "dayjs",
+            "intervals": {
+                "overdue": {
+                    "dateRuleId": "overdue",
+                    "display": "Overdue",
+                    "color": "red"
+                },
+                "now": {
+                    "dateRuleId": "now",
+                    "display": "Now",
+                    "color": "lime"
+                },
+                "restOfDay": {
+                    "dateRuleId": "restOfDay",
+                    "display": "Later Today",
+                    "color": "cyan"
+                },
+                "tomorrow": {
+                    "dateRuleId": "tomorrow",
+                    "display": "Tomorrow",
+                    "color": "gray"
+                },
+                "thisWeek": {
+                    "dateRuleId": "thisWeek",
+                    "display": "This Week",
+                    "color": "lightgray"
+                },
+                "thisMonth": {
+                    "dateRuleId": "thisMonth",
+                    "display": "This Month",
+                    "color": "lightgray"
+                },
+                "thisYear": {
+                    "dateRuleId": "thisYear",
+                    "display": "This Year",
+                    "color": "lightgray"
+                },
+                "future": {
+                    "dateRuleId": "future",
+                    "display": "Future",
+                    "color": "lightgray"
+                }
+            }
+        },
+        "recurrence": {
+            "name": "By Recurrence",
+            "type": "recurrence",
+            "label": "recurrence",
+            "children": {
+                "HOURLY": {
+                    "labelValue": "HOURLY",
+                    "display": "Hourly",
+                    "color": "red"
+                },
+                "DAILY": {
+                    "labelValue": "DAILY",
+                    "display": "Daily",
+                    "color": "gold"
+                },
+                "WEEKLY": {
+                    "labelValue": "WEEKLY",
+                    "display": "Weekly",
+                    "color": "lime"
+                },
+                "MONTHLY": {
+                    "labelValue": "MONTHLY",
+                    "display": "Monthly",
+                    "color": "cyan"
+                },
+                "YEARLY": {
+                    "labelValue": "YEARLY",
+                    "display": "Yearly",
+                    "color": "magenta"
+                },
+                "NONE": {
+                    "labelValue": "NONE",
+                    "display": "One-off",
+                    "color": "gray"
+                }
+            }
+        }
+    },
+    "dateRules": {
+        "noDate": {
+            "name": "No Date",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isNull"
+        },
+        "overdue": {
+            "name": "Overdue",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBefore",
+            "moment1": "startOfToday"
+        },
+        "now": {
+            "name": "Now",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "startOfToday",
+            "moment2": "now",
+            "bracket": "[]"
+        },
+        "restOfDay": {
+            "name": "Later Today",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "now",
+            "moment2": "endOfToday",
+            "bracket": "[]"
+        },
+        "tomorrow": {
+            "name": "Tomorrow",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "endOfToday",
+            "moment2": "endOfTomorrow",
+            "bracket": "[]"
+        },
+        "thisWeek": {
+            "name": "This Week",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "endOfToday",
+            "moment2": "endOfThisWeek",
+            "bracket": "[)"
+        },
+        "thisMonth": {
+            "name": "This Month",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "endOfThisWeek",
+            "moment2": "endOfThisMonth",
+            "bracket": "[)"
+        },
+        "thisYear": {
+            "name": "This Year",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isBetween",
+            "moment1": "endOfThisMonth",
+            "moment2": "endOfThisYear",
+            "bracket": "[]"
+        },
+        "future": {
+            "name": "Future",
+            "dateLabel": "startDateTime",
+            "useNumberOfDays": false,
+            "operator": "isAfter",
+            "moment1": "endOfThisYear"
+        }
+    }
+}
