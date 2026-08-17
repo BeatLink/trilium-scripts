@@ -1,0 +1,206 @@
+{
+    "id": "video-speed-controller@beatlink",
+    "name": "Video Speed Controller",
+    "description": "A port of the Video Speed Controller browser extension. Puts a draggable speed overlay on every HTML5 video and audio player in Trilium, with keyboard shortcuts to slow down, speed up, reset, rewind, advance, mark and jump. Works on the pages you browse in Trilium Desktop's Web View note type - where the controller is injected into the guest page the way the extension injects into a tab - and on Trilium's own video and audio notes. Speed step, preferred speed, seek distance, per-site remembered speed, controller position and opacity, every key binding, and a per-site blacklist are all configurable.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/video-speed-controller@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "settings-launcher",
+        "notes": [
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "script",
+                "title": "videoSpeedController.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/videoSpeedController.js"
+            },
+            {
+                "id": "lib",
+                "title": "libVideoSpeedController.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/libVideoSpeedController.js"
+            },
+            {
+                "id": "settings-launcher",
+                "title": "video-speed-controller@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/settings.jsx"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/addons/video-speed-controller@beatlink/schema.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "colorpicker",
+                "title": "ColorPicker.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.jsx"
+            },
+            {
+                "id": "colorpicker-css",
+                "title": "ColorPicker.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "https://raw.githubusercontent.com/BeatLink/trilium-scripts/refs/heads/main/libs/libformcontrols/ColorPicker.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "script",
+                "child": "lib"
+            },
+            {
+                "parent": "script",
+                "child": "schema"
+            },
+            {
+                "parent": "root",
+                "child": "settings-launcher"
+            },
+            {
+                "parent": "settings-launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "colorpicker"
+            },
+            {
+                "parent": "colorpicker",
+                "child": "colorpicker-css"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [
+            {
+                "from": "script",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings-launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            }
+        ],
+        "labels": [
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "colorpicker-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "settings-launcher",
+                "name": "iconClass",
+                "value": "bx bx-fast-forward"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "config": "config"
+        }
+    }
+}
