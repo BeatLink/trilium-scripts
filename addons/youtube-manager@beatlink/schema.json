@@ -1,4 +1,11 @@
 {
+    "displayNoteId": {
+        "type": "note",
+        "hidden": true,
+        "label": "Display Note",
+        "description": "Optional. A note of your choosing that shows the manager: selecting it converts that note into a render note pointing at the widget; clearing it reverts the previously-chosen note to a text note.",
+        "tab": "Feed"
+    },
     "videosPerChannel": {
         "type": "number",
         "label": "Videos Per Channel",

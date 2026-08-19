@@ -13,9 +13,9 @@
  *
  * The session is created with retrieve_player: false and
  * generate_session_locally: true, so it never fetches or evaluates YouTube's JS
- * player. That is enough for channel metadata and upload listings, and skips
- * the slowest part of session creation. It is deliberately not enough to decode
- * media streams, which is why playback uses YouTube's iframe embed instead.
+ * player. That is enough for channel metadata, upload listings, and search, and
+ * skips the slowest part of session creation. It is deliberately not enough to
+ * decode media streams, which is why playback uses YouTube's iframe embed.
  */
 
 const BUNDLE_RESOURCE = "custom/libYoutubei.js"
@@ -180,13 +180,40 @@ function mapVideo(node, channelId) {
 
     return {
         id,
-        channelId,
+        // Feed listings know the channel they were fetched from; search results
+        // carry it on the node instead, so both paths land the same shape.
+        channelId: channelId || node.author?.id || "",
+        channelName: node.author?.name || "",
         title: node.title?.text || node.overlay_metadata?.primary_text?.text || node.accessibility_text || "",
         thumbnail: thumbnailFor(id),
         duration,
         isShort: shortByType || (duration !== null && duration <= SHORT_MAX_SECONDS),
         views: parseViews(node.view_count?.text || node.short_view_count?.text),
         publishedAt: estimatePublished(node.published?.text)
+    }
+}
+
+// The widest thumbnail in a node's list. Avatar URLs sometimes come back
+// protocol-relative ("//yt3..."), which no <img> in Trilium can load.
+function bestThumbnail(thumbnails) {
+    const list = Array.isArray(thumbnails) ? [...thumbnails] : []
+    if (!list.length) return ""
+    const url = list.sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url || ""
+    return url.startsWith("//") ? `https:${url}` : url
+}
+
+// One channel out of a search result list. YouTube now returns the @handle in
+// subscriberCountText and the subscriber text in videoCountText, so the two are
+// told apart by their content rather than by the field they arrive in.
+function mapSearchChannel(node) {
+    const texts = [node?.subscriber_count?.text, node?.video_count?.text].filter(Boolean)
+    return {
+        id: node?.id || node?.author?.id || "",
+        name: node?.author?.name || "",
+        thumbnail: bestThumbnail(node?.author?.thumbnails),
+        handle: texts.find(text => text.startsWith("@")) || "",
+        subscribers: texts.find(text => !text.startsWith("@")) || "",
+        description: node?.description_snippet?.text || ""
     }
 }
 
@@ -220,6 +247,50 @@ function channelUrlFor(input) {
     if (/^https?:\/\//i.test(raw)) return raw
     if (raw.startsWith("@")) return `https://www.youtube.com/${raw}`
     return `https://www.youtube.com/@${raw}`
+}
+
+// --- search input -----------------------------------------------------------
+
+// The video id in a watch, shorts, embed, live, or youtu.be URL, if there is
+// one. The id shape is checked as well as the path, so a URL that carries some
+// other value in that position is not mistaken for a video.
+function videoIdInUrl(raw) {
+    let url
+    try {
+        url = new URL(raw)
+    } catch (e) {
+        return null
+    }
+
+    const host = url.hostname.toLowerCase().replace(/^www\./, "")
+    const asId = value => /^[A-Za-z0-9_-]{11}$/.test(String(value || "")) ? value : null
+
+    if (host === "youtu.be") return asId(url.pathname.slice(1))
+    if (!/^(.+\.)?youtube(-nocookie)?\.com$/.test(host)) return null
+
+    const segments = url.pathname.split("/").filter(Boolean)
+    if (segments[0] === "watch") return asId(url.searchParams.get("v"))
+    if (["shorts", "embed", "live", "v"].includes(segments[0])) return asId(segments[1])
+    return null
+}
+
+// Decides what one box of text means: a video URL opens that video, a channel
+// URL, @handle, or UC id opens that channel, and anything else is a search.
+//
+// Only a URL is ever read as a video. A bare eleven-character word is a
+// perfectly plausible search term, so guessing at one would silently swallow
+// the search instead of running it.
+function parseTarget(input) {
+    const raw = String(input || "").trim()
+    if (!raw) return null
+
+    if (/^https?:\/\//i.test(raw)) {
+        const videoId = videoIdInUrl(raw)
+        return videoId ? { kind: "video", id: videoId } : { kind: "channel", input: raw }
+    }
+    if (/^@[^\s/]+$/.test(raw)) return { kind: "channel", input: raw }
+    if (/^UC[A-Za-z0-9_-]{22}$/.test(raw)) return { kind: "channel", input: raw }
+    return { kind: "query", query: raw }
 }
 
 // --- public API -------------------------------------------------------------
@@ -256,6 +327,72 @@ async function fetchChannelVideos(channelId, limit) {
     }
 
     return videos.slice(0, limit)
+}
+
+// Videos matching a search term, across all of YouTube.
+async function searchVideos(query, limit) {
+    const yt = await getInnertube()
+    const results = await yt.search(query)
+
+    const videos = []
+    for (const node of results.videos || []) {
+        const video = mapVideo(node, null)
+        if (video) videos.push(video)
+    }
+    return videos.slice(0, limit)
+}
+
+// Channels matching a search term. A separate request from searchVideos: the
+// unfiltered result page carries at most a channel or two, so the channel
+// filter is the only way to get a list worth subscribing from.
+async function searchChannels(query, limit) {
+    const yt = await getInnertube()
+    const results = await yt.search(query, { type: "channel" })
+    return (results.channels || [])
+        .map(mapSearchChannel)
+        .filter(channel => channel.id)
+        .slice(0, limit)
+}
+
+// Videos matching a search term within one channel, using the channel's own
+// search tab. A channel that does not expose that tab reports it rather than
+// silently returning nothing.
+async function searchChannelVideos(channelId, query, limit) {
+    const yt = await getInnertube()
+    const channel = await yt.getChannel(channelId)
+    if (typeof channel.search !== "function") throw new Error("This channel cannot be searched")
+
+    const results = await channel.search(query)
+    const videos = []
+    for (const node of results.videos || []) {
+        const video = mapVideo(node, channelId)
+        if (video) videos.push(video)
+    }
+    return videos.slice(0, limit)
+}
+
+// One video's metadata, for a pasted watch URL. getBasicInfo only reads the
+// watch response's own details, so it works without the JS player this session
+// deliberately never fetches. Unlike a listing, it carries a real publish date.
+async function fetchVideo(videoId) {
+    const yt = await getInnertube()
+    const details = (await yt.getBasicInfo(videoId)).basic_info || {}
+
+    const duration = Number.isFinite(details.duration) ? details.duration : null
+    // start_timestamp arrives as a Date, not a string, so it is read as one.
+    const published = new Date(details.start_timestamp || 0).getTime()
+
+    return {
+        id: videoId,
+        channelId: details.channel_id || "",
+        channelName: details.author || "",
+        title: details.title || videoId,
+        thumbnail: thumbnailFor(videoId),
+        duration,
+        isShort: duration !== null && duration <= SHORT_MAX_SECONDS,
+        views: Number.isFinite(details.view_count) ? details.view_count : null,
+        publishedAt: published ? new Date(published).toISOString() : ""
+    }
 }
 
 // Reads a FreeTube subscription export (.db). Each line is one profile as JSON,
@@ -298,8 +435,13 @@ function parseFreeTubeExport(text) {
 
 module.exports = {
     callBackend,
+    parseTarget,
     resolveChannel,
     fetchChannelVideos,
+    fetchVideo,
+    searchVideos,
+    searchChannels,
+    searchChannelVideos,
     parseFreeTubeExport,
     estimatePublished,
     parseDuration,

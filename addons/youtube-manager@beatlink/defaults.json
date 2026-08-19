@@ -1,4 +1,5 @@
 {
+    "displayNoteId": "",
     "videosPerChannel": 15,
     "retentionDays": 60,
     "refreshIntervalHours": 6,

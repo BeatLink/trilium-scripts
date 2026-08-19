@@ -4,8 +4,9 @@ import { activateNote } from "trilium:api"
 /*
  * youtube-manager@beatlink -- the widget.
  *
- * Two tabs:
+ * Three tabs:
  *   Feed           every recent upload across your subscriptions, watched-aware
+ *   Search         YouTube search: videos, channels, and one channel's uploads
  *   Subscriptions  the channel list, plus adding and importing channels
  *
  * The whole library lives in one JSON note. The backend owns every read and
@@ -23,6 +24,13 @@ const FILTERS = [
     ["watched", "Watched"],
     ["all", "All"]
 ]
+
+// Search result caps. Fixed rather than configurable: one page of results is
+// what the box is for, and following continuations to reach a larger number
+// would make every search several requests instead of one.
+const SEARCH_VIDEO_LIMIT = 30
+const SEARCH_CHANNEL_LIMIT = 5
+const CHANNEL_VIDEO_LIMIT = 30
 
 // --- formatting -------------------------------------------------------------
 
@@ -187,7 +195,7 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
         return (
             <div class="ym-empty">
                 <p>No subscriptions yet.</p>
-                <p>Add a channel on the Subscriptions tab to start building a feed.</p>
+                <p>Add a channel on the Subscriptions tab, or find one on the Search tab.</p>
             </div>
         )
     }
@@ -265,6 +273,254 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
                     onToggleWatched={onToggleWatched}
                 />
             ))}
+        </div>
+    )
+}
+
+// --- search -----------------------------------------------------------------
+
+function ChannelResult({ channel, subscribed, busy, onOpen, onSubscribe }) {
+    return (
+        <div class="ym-channel">
+            {channel.thumbnail
+                ? <img class="ym-avatar" src={channel.thumbnail} alt="" loading="lazy" />
+                : <div class="ym-avatar ym-avatar-blank" />}
+            <div class="ym-channel-body">
+                <button class="ym-channel-name" onClick={() => onOpen(channel)}>{channel.name}</button>
+                <div class="ym-channel-meta">
+                    {channel.handle && <span>{channel.handle}</span>}
+                    {channel.subscribers && <span>{channel.subscribers}</span>}
+                </div>
+                {channel.description && <div class="ym-channel-desc">{channel.description}</div>}
+            </div>
+            <button class={`ym-btn ${subscribed ? "" : "ym-btn-primary"}`}
+                disabled={busy || subscribed}
+                onClick={() => onSubscribe(channel)}>
+                {subscribed ? "Subscribed" : "Subscribe"}
+            </button>
+        </div>
+    )
+}
+
+// One box for everything. A watch URL opens that video, a channel URL, @handle,
+// or UC id opens that channel, and anything else is searched for -- so pasting
+// whatever was on the clipboard does the obvious thing without a mode switch.
+//
+// Nothing here is remembered between sessions and nothing is written to the
+// cache: results are live YouTube data, and only what you mark watched and who
+// you subscribe to become part of the library.
+function SearchTab({ data, onToggleWatched, onChanged }) {
+    const [input, setInput] = useState("")
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState(null)
+    const [results, setResults] = useState(null)
+    const [channel, setChannel] = useState(null)
+    const [channelQuery, setChannelQuery] = useState("")
+    const [playing, setPlaying] = useState(null)
+
+    const watched = data.watched
+    const subscribed = data.channels
+
+    const run = async job => {
+        setBusy(true)
+        setError(null)
+        try {
+            await job()
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    // Same opt-in as the Feed: an embedded player reports nothing back about how
+    // much was actually watched, so starting a video is the only signal there is.
+    const play = video => {
+        setPlaying(video)
+        if (data.settings.markWatchedOnPlay && !watched[video.id]) onToggleWatched(video.id, true)
+    }
+
+    // Channel-tab listings carry no author, so the channel is stamped on each
+    // video here -- the player bar reads it off the video it was handed.
+    const showChannel = async record => {
+        const videos = await yt.fetchChannelVideos(record.id, CHANNEL_VIDEO_LIMIT)
+        setResults(null)
+        setChannelQuery("")
+        setChannel({ record, videos: videos.map(video => ({ ...video, channelName: record.name })) })
+    }
+
+    const openChannel = record => run(() => showChannel(record))
+
+    const submit = () => run(async () => {
+        const target = yt.parseTarget(input)
+        if (!target) return
+
+        if (target.kind === "video") {
+            play(await yt.fetchVideo(target.id))
+            return
+        }
+        if (target.kind === "channel") {
+            await showChannel(await yt.resolveChannel(target.input))
+            return
+        }
+
+        // Videos and channels are separate requests: the unfiltered result page
+        // carries at most a channel or two, so the channel filter is the only
+        // way to get a list worth subscribing from.
+        const [videos, channels] = await Promise.all([
+            yt.searchVideos(target.query, SEARCH_VIDEO_LIMIT),
+            yt.searchChannels(target.query, SEARCH_CHANNEL_LIMIT)
+        ])
+        setChannel(null)
+        setResults({ videos, channels })
+    })
+
+    // An empty box goes back to the channel's uploads, so clearing the search
+    // undoes it rather than leaving the page empty.
+    const searchInChannel = () => run(async () => {
+        const query = channelQuery.trim()
+        if (!query) return showChannel(channel.record)
+
+        const videos = await yt.searchChannelVideos(channel.record.id, query, SEARCH_VIDEO_LIMIT)
+        setChannel(current => ({
+            ...current,
+            videos: videos.map(video => ({ ...video, channelName: current.record.name }))
+        }))
+    })
+
+    const subscribe = record => run(async () => {
+        await yt.callBackend("addChannels", {}, {
+            channels: [{
+                id: record.id,
+                name: record.name,
+                thumbnail: record.thumbnail,
+                handle: record.handle
+            }]
+        })
+        await onChanged()
+    })
+
+    const onKeyDown = (event, action) => {
+        if (event.key === "Enter") action()
+    }
+
+    return (
+        <div class="ym-search-tab">
+            {playing && (
+                <Player
+                    video={playing}
+                    channelName={playing.channelName || ""}
+                    watched={!!watched[playing.id]}
+                    onToggleWatched={onToggleWatched}
+                    onClose={() => setPlaying(null)}
+                />
+            )}
+
+            <div class="ym-toolbar">
+                <input
+                    class="ym-search"
+                    type="search"
+                    placeholder="Search YouTube, or paste a video or channel URL"
+                    value={input}
+                    onInput={event => setInput(event.target.value)}
+                    onKeyDown={event => onKeyDown(event, submit)}
+                />
+                <button class="ym-btn ym-btn-primary" disabled={busy || !input.trim()} onClick={submit}>
+                    {busy ? "Searching..." : "Search"}
+                </button>
+            </div>
+
+            {error && <pre class="ym-error">{error}</pre>}
+
+            {channel && (
+                <>
+                    <div class="ym-channel ym-channel-header">
+                        {channel.record.thumbnail
+                            ? <img class="ym-avatar" src={channel.record.thumbnail} alt="" loading="lazy" />
+                            : <div class="ym-avatar ym-avatar-blank" />}
+                        <div class="ym-channel-body">
+                            <a class="ym-channel-name"
+                                href={`https://www.youtube.com/channel/${channel.record.id}`}
+                                target="_blank" rel="noreferrer">{channel.record.name}</a>
+                            <div class="ym-channel-meta">
+                                {channel.record.handle && <span>{channel.record.handle}</span>}
+                                <span>{channel.videos.length} shown</span>
+                            </div>
+                        </div>
+                        <button class={`ym-btn ${subscribed[channel.record.id] ? "" : "ym-btn-primary"}`}
+                            disabled={busy || !!subscribed[channel.record.id]}
+                            onClick={() => subscribe(channel.record)}>
+                            {subscribed[channel.record.id] ? "Subscribed" : "Subscribe"}
+                        </button>
+                    </div>
+
+                    <div class="ym-toolbar">
+                        <input
+                            class="ym-search"
+                            type="search"
+                            placeholder={`Search within ${channel.record.name}`}
+                            value={channelQuery}
+                            onInput={event => setChannelQuery(event.target.value)}
+                            onKeyDown={event => onKeyDown(event, searchInChannel)}
+                        />
+                        <button class="ym-btn" disabled={busy} onClick={searchInChannel}>
+                            Search channel
+                        </button>
+                    </div>
+
+                    {!busy && channel.videos.length === 0 && (
+                        <div class="ym-empty"><p>No videos found.</p></div>
+                    )}
+
+                    {channel.videos.map(video => (
+                        <VideoRow
+                            key={video.id}
+                            video={video}
+                            channelName={channel.record.name}
+                            watched={!!watched[video.id]}
+                            onPlay={play}
+                            onToggleWatched={onToggleWatched}
+                        />
+                    ))}
+                </>
+            )}
+
+            {results && (
+                <>
+                    {results.channels.map(result => (
+                        <ChannelResult
+                            key={result.id}
+                            channel={result}
+                            subscribed={!!subscribed[result.id]}
+                            busy={busy}
+                            onOpen={openChannel}
+                            onSubscribe={subscribe}
+                        />
+                    ))}
+
+                    {results.videos.length === 0 && results.channels.length === 0 && (
+                        <div class="ym-empty"><p>Nothing found.</p></div>
+                    )}
+
+                    {results.videos.map(video => (
+                        <VideoRow
+                            key={video.id}
+                            video={video}
+                            channelName={video.channelName}
+                            watched={!!watched[video.id]}
+                            onPlay={play}
+                            onToggleWatched={onToggleWatched}
+                        />
+                    ))}
+                </>
+            )}
+
+            {!results && !channel && !error && (
+                <div class="ym-empty">
+                    <p>Search YouTube without leaving Trilium.</p>
+                    <p>Subscribe to a channel from its result, or paste a video URL to watch it here.</p>
+                </div>
+            )}
         </div>
     )
 }
@@ -548,7 +804,7 @@ export default function YouTubeManager() {
     return (
         <div class="ym-view">
             <div class="ym-tabs">
-                {[["feed", "Feed"], ["subs", "Subscriptions"]].map(([key, label]) => (
+                {[["feed", "Feed"], ["search", "Search"], ["subs", "Subscriptions"]].map(([key, label]) => (
                     <button key={key} class={`ym-tab ${tab === key ? "ym-tab-on" : ""}`}
                         onClick={() => setTab(key)}>{label}</button>
                 ))}
@@ -576,6 +832,9 @@ export default function YouTubeManager() {
                     onToggleWatched={toggleWatched}
                     onMarkAllWatched={markAllWatched}
                 />
+            )}
+            {tab === "search" && (
+                <SearchTab data={data} onToggleWatched={toggleWatched} onChanged={reload} />
             )}
             {tab === "subs" && <SubscriptionsTab data={data} onChanged={reload} />}
         </div>

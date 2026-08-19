@@ -2,7 +2,8 @@
 
 A YouTube subscription tracker for TriliumNext, in the spirit of
 [NoUTube](https://github.com/noutube): subscribe to channels, get **one feed** of everything they
-upload, and keep a permanent record of what you watched.
+upload, and keep a permanent record of what you watched. Search YouTube from the same widget, and
+subscribe to what you find.
 
 No Google API key. No quota. No account sign-in.
 
@@ -14,6 +15,13 @@ No Google API key. No quota. No account sign-in.
 
 That is the whole setup. There is no library root to choose and no key to paste, because the addon
 stores its data in its own persistence tree and reads YouTube without authenticating.
+
+Optionally, pick a note on the **Display Note** tab in Settings to show the manager somewhere else
+in your tree: the chosen note is converted to a **render note** pointing at the widget and given a
+YouTube icon, so opening it shows the manager itself. Choosing a different note reverts the old one
+back to a plain text note, and clearing the setting reverts it without selecting a replacement. This
+is only a second place to open the manager from -- your data still lives in the addon's persistence
+tree either way.
 
 ## Using it
 
@@ -43,6 +51,35 @@ Clicking a thumbnail or title opens the video **inside the widget**, in YouTube'
 **Mark Watched When Played** in Settings marks a video watched the moment it starts. It is off by
 default, because an embedded player reports nothing back about how much was actually watched, so
 starting a video is the only signal available.
+
+### Search
+
+The **Search** tab is one box that decides what you meant:
+
+- a **watch, shorts, or youtu.be URL** opens that video in the player
+- a **channel URL, `@handle`, or `UC...` id** opens that channel
+- **anything else** is searched for on YouTube
+
+Only a URL is ever read as a video. A bare eleven-character word is a perfectly plausible search
+term, so guessing at one would silently swallow the search instead of running it.
+
+Results come back as matching **channels** first, then **videos**. Every video row is the same row
+the Feed uses: playable in place, and markable watched even though it is not in your subscriptions,
+because the watched record is keyed by video id and does not care where the video came from.
+
+Each channel result carries a **Subscribe** button, so finding a channel and following it is one
+click rather than a trip to the Subscriptions tab. Clicking a channel's name opens it.
+
+### A channel's own page
+
+Opening a channel shows its avatar, handle, a Subscribe button, and its recent uploads. The box
+under the header searches **within that channel**, using YouTube's own per-channel search rather
+than filtering what is already on screen, so it reaches the whole back catalogue and not just the
+uploads that were fetched. Clearing it goes back to the recent uploads.
+
+Nothing on this tab is written to the cache and nothing is remembered between sessions. Search
+results are live YouTube data; only what you mark watched and who you subscribe to become part of
+your library.
 
 ### Subscriptions
 
@@ -160,8 +197,8 @@ request forwarder into whatever your server can reach, including its loopback in
 private network it sits on.
 
 The session uses `retrieve_player: false` and `generate_session_locally: true`, so it never fetches
-or evaluates YouTube's JS player. That is enough for channel metadata and upload listings, and skips
-the slowest part of session creation.
+or evaluates YouTube's JS player. That is enough for channel metadata, upload listings, and search,
+and skips the slowest part of session creation.
 
 ### Why playback is an iframe
 
@@ -198,6 +235,8 @@ date. A precise-looking date would overstate what is actually known.
 - **Shorts detection is a heuristic.** YouTube's Videos tab already excludes Shorts, so this only
   catches the ones that leak into a listing, by duration. YouTube has allowed Shorts up to three
   minutes since 2024, so a longer Short reads as a normal video.
+- **Search reaches one page.** A search returns YouTube's first page of results and does not follow
+  continuations, so it is a way to find something rather than a way to enumerate everything.
 - **View counts can be approximate.** YouTube sometimes returns an abbreviated count (`"1.2M
   views"`), which is expanded back to a round number rather than an exact one.
 - **YouTube.js is a reverse-engineered client** against a private API. YouTube changes response
