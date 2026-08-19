@@ -52,5 +52,10 @@
         "type": "note",
         "label": "Save Location",
         "description": "Where Save files the note. Left empty, it uses the note labelled #inbox."
+    },
+    "syncNoteTitle": {
+        "type": "boolean",
+        "label": "Follow Page Title",
+        "description": "Renames the Web View note to match the loaded page's title whenever the page reports a new one. A title you set yourself is overwritten."
     }
 }

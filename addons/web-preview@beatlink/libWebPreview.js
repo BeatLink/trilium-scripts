@@ -21,6 +21,24 @@ async function createWebViewNote(parentNoteId, url, title) {
 }
 
 // ---------------------------------------------------------------------------
+// Renames a note, skipping the write when the title already matches so that a
+// page reporting the same title repeatedly doesn't churn the note's revisions.
+// ---------------------------------------------------------------------------
+async function renameNote(noteId, title) {
+    const trimmed = (title || "").trim();
+    if (!trimmed) return;
+
+    const note = await api.getNote(noteId);
+    if (!note || note.title === trimmed) return;
+
+    await api.runOnBackend((noteId, title) => {
+        const note = api.getNote(noteId);
+        note.title = title;
+        note.save();
+    }, [noteId, trimmed]);
+}
+
+// ---------------------------------------------------------------------------
 // The note a saved page is filed under: the one configured in settings, else
 // whichever note carries an #inbox label.
 // ---------------------------------------------------------------------------
@@ -123,4 +141,4 @@ function hostnameOf(url) {
     }
 }
 
-module.exports = { createWebViewNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };
+module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };

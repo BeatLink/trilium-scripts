@@ -38,6 +38,8 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Save Button** — off by default; turning it on adds the Save button to the toolbar.
 - **Save Location** — the note Save files pages under. Left empty it uses whichever note carries an
   `#inbox` label, and Save reports an error if there is none.
+- **Follow Page Title** — on by default; renames the Web View note to match the page's own title
+  as it changes. Turn it off to keep whatever title you gave the note.
 
 ## How it works
 
@@ -50,6 +52,9 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.
+- **Follow Page Title** (a setting, on by default) renames the Web View note whenever the loaded
+  page reports a new title — on navigation, or when a single-page app swaps its `<title>`. A note
+  you titled yourself is renamed too, so turn it off to keep your own titles.
 - **Save** files the page you are currently reading as a Web View note under the Save Location,
   taking the page's own title. It is the way to keep a page you found while browsing, since the
   child notes link interception creates live inside the browsing tree and get pruned with it.

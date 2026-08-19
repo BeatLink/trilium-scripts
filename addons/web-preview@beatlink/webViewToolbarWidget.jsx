@@ -4,7 +4,7 @@
     element that Trilium's built-in Web View note type already renders —
     no separate popup window needed.
 */
-import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect, useRef } from "trilium:preact"
 import { currentNote } from "trilium:api"
 import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
@@ -27,6 +27,10 @@ function WebViewToolbar({ noteId }) {
     const [deleting, setDeleting] = useState(false)
     const [saving, setSaving] = useState(false)
     const [settings, setSettings] = useState(null)
+    // The <webview> listeners are bound once per note, so they read settings through a ref
+    // rather than a closure that would still hold the null from before settings loaded.
+    const settingsRef = useRef(null)
+    settingsRef.current = settings
 
     useEffect(() => {
         (async () => {
@@ -42,6 +46,7 @@ function WebViewToolbar({ noteId }) {
         let onRefresh = null
         let onDomReady = null
         let onConsole = null
+        let onTitle = null
         let attempts = 0
 
         // Trilium mounts the <webview> after this widget re-renders for the new note.
@@ -71,6 +76,14 @@ function WebViewToolbar({ noteId }) {
                     console.error("web-preview: could not open the clicked link as a note", err)
                 }
             }
+            // Fires on the guest's own title changes too, not just on load, so a SPA
+            // swapping its <title> keeps the note's title in step.
+            onTitle = (event) => {
+                if (!settingsRef.current?.syncNoteTitle) return
+                lib.renameNote(noteId, event.title).catch((err) =>
+                    console.error("web-preview: could not rename the note to the page title", err))
+            }
+            wv.addEventListener("page-title-updated", onTitle)
             wv.addEventListener("did-navigate", onRefresh)
             wv.addEventListener("did-navigate-in-page", onRefresh)
             wv.addEventListener("dom-ready", onDomReady)
@@ -85,6 +98,7 @@ function WebViewToolbar({ noteId }) {
                 wv.removeEventListener("did-navigate-in-page", onRefresh)
                 wv.removeEventListener("dom-ready", onDomReady)
                 wv.removeEventListener("console-message", onConsole)
+                wv.removeEventListener("page-title-updated", onTitle)
             }
             setState({ found: false, canGoBack: false, canGoForward: false, url: "" })
         }
