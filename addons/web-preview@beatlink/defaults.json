@@ -22,5 +22,15 @@
     "newTabParentNoteId": "",
     "showSaveButton": false,
     "saveParentNoteId": "",
-    "syncNoteTitle": true
+    "syncNoteTitle": true,
+    "sponsorBlockEnabled": true,
+    "sponsorBlockNotify": true,
+    "skipSponsor": true,
+    "skipSelfPromo": true,
+    "skipInteraction": true,
+    "skipIntro": false,
+    "skipOutro": false,
+    "skipPreview": false,
+    "skipMusicOfftopic": false,
+    "skipFiller": false
 }

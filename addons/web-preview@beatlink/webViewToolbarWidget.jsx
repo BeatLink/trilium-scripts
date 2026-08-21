@@ -23,7 +23,7 @@ function getWebviewEl() {
 }
 
 function WebViewToolbar({ noteId }) {
-    const [state, setState] = useState({ found: false, canGoBack: false, canGoForward: false, url: "" })
+    const [state, setState] = useState({ found: false, canGoBack: false, canGoForward: false, url: "", nav: 0 })
     const [deleting, setDeleting] = useState(false)
     const [saving, setSaving] = useState(false)
     const [settings, setSettings] = useState(null)
@@ -58,7 +58,7 @@ function WebViewToolbar({ noteId }) {
             }
             clearInterval(poll)
             wv = found
-            onRefresh = () => setState({ found: true, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL() })
+            onRefresh = () => setState((prev) => ({ found: true, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL(), nav: prev.nav + 1 }))
             // Injection only works once the guest document exists, so the first pass
             // (before dom-ready has fired) is expected to fail and is left to the event.
             onDomReady = () => {
@@ -100,9 +100,48 @@ function WebViewToolbar({ noteId }) {
                 wv.removeEventListener("console-message", onConsole)
                 wv.removeEventListener("page-title-updated", onTitle)
             }
-            setState({ found: false, canGoBack: false, canGoForward: false, url: "" })
+            setState({ found: false, canGoBack: false, canGoForward: false, url: "", nav: 0 })
         }
     }, [noteId])
+
+    // SponsorBlock. Re-runs on every navigation and reload: injecting the skipper is
+    // idempotent, but a reload gives the guest a new document that has lost it, and a
+    // single-page navigation to another video needs the new video's segments pushed in.
+    useEffect(() => {
+        if (!state.found || !settings?.sponsorBlockEnabled) return
+
+        const lib = require("libWebPreview.js")
+        const wv = getWebviewEl()
+        if (!wv) return
+
+        const videoId = lib.parseYouTubeVideoId(state.url)
+        const notify = settings.sponsorBlockNotify
+        let cancelled = false
+
+        ;(async () => {
+            try {
+                // The injected script is the record of what is already set up: a reload
+                // leaves the new document without it, and YouTube fires an in-page
+                // navigation for things like a chapter click, which need no new lookup.
+                const applied = await wv.executeJavaScript("window.__webPreviewSponsorBlock ? window.__webPreviewSponsorBlock.videoId : null")
+                if (videoId && applied === videoId) return
+
+                await wv.executeJavaScript(lib.SPONSORBLOCK_SCRIPT)
+                // Clear first, so the previous video's segments can't act on this one
+                // while its own are still being fetched.
+                await wv.executeJavaScript(lib.sponsorBlockApplyScript({ videoId: videoId || "", segments: [], notify }))
+                if (!videoId) return
+
+                const segments = await lib.fetchSponsorSegments(videoId, lib.sponsorBlockCategories(settings))
+                if (cancelled || segments.length === 0) return
+                await wv.executeJavaScript(lib.sponsorBlockApplyScript({ videoId, segments, notify }))
+            } catch (err) {
+                console.error("web-preview: SponsorBlock could not be applied", err)
+            }
+        })()
+
+        return () => { cancelled = true }
+    }, [state.found, state.nav, settings])
 
     function handleBack() {
         const wv = getWebviewEl()

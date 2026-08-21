@@ -141,4 +141,131 @@ function hostnameOf(url) {
     }
 }
 
-module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget };
+// ---------------------------------------------------------------------------
+// SponsorBlock. The video id a YouTube URL points at, or null for any other URL.
+// ---------------------------------------------------------------------------
+const YOUTUBE_ID_RE = /^(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/i;
+
+function parseYouTubeVideoId(url) {
+    const match = YOUTUBE_ID_RE.exec(url || "");
+    return match ? match[1] : null;
+}
+
+// The SponsorBlock category each settings key turns on.
+const SPONSORBLOCK_CATEGORIES = {
+    sponsor: "skipSponsor",
+    selfpromo: "skipSelfPromo",
+    interaction: "skipInteraction",
+    intro: "skipIntro",
+    outro: "skipOutro",
+    preview: "skipPreview",
+    music_offtopic: "skipMusicOfftopic",
+    filler: "skipFiller"
+};
+
+function sponsorBlockCategories(settings) {
+    return Object.keys(SPONSORBLOCK_CATEGORIES).filter((category) => settings?.[SPONSORBLOCK_CATEGORIES[category]]);
+}
+
+// ---------------------------------------------------------------------------
+// The segments to skip in `videoId`, from SponsorBlock's privacy-preserving
+// endpoint: it is asked for the first four hex characters of the video id's
+// SHA-256, so the server never learns which of that prefix's videos is being
+// watched, and its answer is filtered down to the one asked about here.
+// ---------------------------------------------------------------------------
+const SPONSORBLOCK_API = "https://sponsor.ajay.app/api/skipSegments";
+
+async function fetchSponsorSegments(videoId, categories) {
+    if (categories.length === 0) return [];
+
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(videoId));
+    const hash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const query = encodeURIComponent(JSON.stringify(categories));
+
+    const response = await fetch(`${SPONSORBLOCK_API}/${hash.slice(0, 4)}?categories=${query}`);
+    // 404 is the API's answer for a prefix nobody has submitted segments under.
+    if (response.status === 404) return [];
+    if (!response.ok) throw new Error(`SponsorBlock returned ${response.status}`);
+
+    const entry = (await response.json()).find((item) => item.videoID === videoId);
+    return (entry?.segments || [])
+        // "skip" is the only action type handled here; "mute" and "poi" need player
+        // controls this toolbar doesn't have. A downvoted segment is a wrong one.
+        .filter((segment) => segment.actionType === "skip" && segment.votes > -2)
+        .map((segment) => ({ start: segment.segment[0], end: segment.segment[1], category: segment.category, uuid: segment.UUID }));
+}
+
+// ---------------------------------------------------------------------------
+// Guest-page script that seeks the page's <video> past whichever segments the
+// host has pushed into it. Injected on every load like the link interceptor,
+// and self-guarding so re-injection is harmless. It polls rather than listening
+// for timeupdate because YouTube replaces the <video> element between videos.
+// ---------------------------------------------------------------------------
+const SPONSORBLOCK_SCRIPT = `(() => {
+    if (window.__webPreviewSponsorBlock) return;
+
+    const state = { videoId: "", segments: [], notify: true, skipped: new Set() };
+    window.__webPreviewSponsorBlock = state;
+
+    state.apply = (next) => {
+        state.videoId = next.videoId || "";
+        state.segments = next.segments || [];
+        state.notify = !!next.notify;
+        state.skipped = new Set();
+    };
+
+    const LABELS = {
+        sponsor: "Sponsor",
+        selfpromo: "Self-promotion",
+        interaction: "Interaction reminder",
+        intro: "Intro",
+        outro: "Outro",
+        preview: "Preview",
+        music_offtopic: "Non-music section",
+        filler: "Filler"
+    };
+
+    function toast(text) {
+        let el = document.getElementById("web-preview-sponsorblock-toast");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "web-preview-sponsorblock-toast";
+            el.style.cssText = "position:fixed;top:16px;right:16px;z-index:2147483647;background:rgba(0,0,0,.85);color:#fff;font:13px sans-serif;padding:8px 12px;border-radius:6px;pointer-events:none;transition:opacity .3s";
+            document.body.appendChild(el);
+        }
+        el.textContent = text;
+        el.style.opacity = "1";
+        clearTimeout(el.hideTimer);
+        el.hideTimer = setTimeout(() => { el.style.opacity = "0"; }, 2500);
+    }
+
+    const ID_RE = new RegExp(${JSON.stringify(YOUTUBE_ID_RE.source)}, "i");
+
+    setInterval(() => {
+        if (state.segments.length === 0) return;
+        // Segments fetched for the previous video must never be applied to the one
+        // a single-page navigation has already swapped in.
+        const match = ID_RE.exec(location.href);
+        if (!match || match[1] !== state.videoId) return;
+
+        const video = document.querySelector("video");
+        if (!video || video.paused) return;
+
+        for (const segment of state.segments) {
+            // A segment is skipped once only, so rewinding into one plays it.
+            if (state.skipped.has(segment.uuid)) continue;
+            if (video.currentTime < segment.start || video.currentTime >= segment.end - 0.2) continue;
+            state.skipped.add(segment.uuid);
+            video.currentTime = segment.end;
+            if (state.notify) toast("Skipped: " + (LABELS[segment.category] || segment.category));
+            break;
+        }
+    }, 250);
+})()`;
+
+// The call that hands the guest script a video's segments.
+function sponsorBlockApplyScript(payload) {
+    return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
+}
+
+module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, parseYouTubeVideoId, sponsorBlockCategories, fetchSponsorSegments, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };

@@ -6,6 +6,9 @@ Delete Note) directly above any note of type "Web View" — driving the actual E
 element Trilium already renders for that note type. A **New Tab** button in the launchbar starts
 a browsing session from an address or a web search.
 
+YouTube videos watched in a Web View note have their sponsor segments skipped, using
+[SponsorBlock](https://sponsor.ajay.app)'s crowd-sourced segment database.
+
 ## New Tab
 
 The addon registers a **New Tab** launcher in the launchbar on every start. Pressing it opens the
@@ -22,6 +25,26 @@ Where that note is filed is a setting, defaulting to **the note you were on when
 button** — so a new tab continues the tree you were already browsing. Set it to a specific note
 instead to collect every new tab in one place. Opening the New Tab page from the tree rather than
 from the launchbar leaves no note to file under, so those land at the tree root.
+
+## SponsorBlock
+
+A YouTube video opened in a Web View note has its sponsor segments skipped automatically. Segments
+come from [SponsorBlock](https://sponsor.ajay.app), the same crowd-sourced database the browser
+extension uses.
+
+- Which kinds of segment get skipped is a setting. Sponsor, unpaid/self promotion and interaction
+  reminders are skipped by default; intros, outros, previews, non-music sections and filler
+  tangents are left alone until you turn them on.
+- Each skip shows a short notice in the corner of the page, which can be turned off.
+- A segment is skipped once per video. Rewinding back into one plays it, so nothing stops you
+  watching a part that was skipped.
+- Only skippable segments are handled — SponsorBlock's "mute" and "highlight" segments need player
+  controls this toolbar doesn't have.
+
+The lookup is the privacy-preserving one: the server is asked for every video whose id starts with
+the same four hex characters of its SHA-256, and the answer is narrowed down to the video actually
+playing here, so SponsorBlock never learns what you are watching. It is still a request to a third
+party for every video, so **Skip Sponsor Segments** turns the whole thing off.
 
 ## Settings
 
@@ -40,6 +63,10 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   `#inbox` label, and Save reports an error if there is none.
 - **Follow Page Title** — on by default; renames the Web View note to match the page's own title
   as it changes. Turn it off to keep whatever title you gave the note.
+- **Skip Sponsor Segments** — on by default; the SponsorBlock skipping described above. Off, no
+  request is ever made to SponsorBlock.
+- **Show A Notice On Skip** — on by default; the brief notice shown in the page's corner on a skip.
+- **Categories** — one switch per segment kind SponsorBlock classifies.
 
 ## How it works
 
@@ -49,6 +76,12 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   `goForward()` / `getURL()` / `getTitle()` methods directly — no IPC needed for navigation, since
   those methods are exposed on the element itself.
 - **Open in Browser** uses the renderer's `window.electronApi.shell` bridge.
+- **SponsorBlock** runs in two halves. Trilium's frontend does the lookup, because the `<webview>`
+  has no preload script and the page itself is not asked to talk to SponsorBlock. The segments are
+  then pushed into a small script injected in the page, which polls the `<video>` element and seeks
+  it past a segment it lands in. Segments are re-pushed on every navigation — including YouTube's
+  own in-page ones — and the injected script checks the page's current video id before acting, so
+  segments never bleed from one video to the next.
 - **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.

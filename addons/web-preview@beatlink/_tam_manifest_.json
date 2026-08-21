@@ -1,11 +1,11 @@
 {
     "id": "web-preview@beatlink",
     "name": "Web Preview",
-    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address or searches it with a configured provider.",
+    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address or searches it with a configured provider. Skips sponsor segments in YouTube videos played inside a Web View note, using SponsorBlock.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.9.0",
+    "latestVersion": "1.10.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",
