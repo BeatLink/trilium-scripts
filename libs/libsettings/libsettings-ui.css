@@ -248,9 +248,7 @@
     border-radius: 0.5rem !important;
     background-color: var(--main-background-color) !important;
 
-    & > summary {
-        cursor: pointer !important;
-        user-select: none !important;
+    & > .collapsible-title {
         padding: 0.5rem 0.75rem !important;
         font-weight: 600 !important;
     }

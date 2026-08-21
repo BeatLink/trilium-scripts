@@ -2,12 +2,13 @@ import {
     useState,
     useEffect,
     Button,
+    Collapsible,
+    ColorPicker,
     FormTextBox,
     FormCheckbox,
     FormDropdownList,
     NoteAutocomplete
 } from "trilium:preact"
-import { ColorPicker } from "ColorPicker.jsx"
 import { isPlainObject, blankItem, mergeSchemas, mergeSources, filterBySchema, titleFor } from "libSettingsCore.js"
 
 
@@ -121,6 +122,14 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
     await persistValues(sources, schema, configNoteId, values)
 }
 
+// The sixteen swatches the picker has always offered, as hex because Trilium's
+// ColorPicker compares a preset against the normalized (hex) form of the value.
+const COLOR_PRESETS = [
+    "#ff0000", "#ffa500", "#ff8c00", "#ffd700", "#ffff00",
+    "#00ff00", "#008000", "#008080", "#00ffff", "#0000ff",
+    "#4b0082", "#800080", "#ff00ff", "#ffc0cb", "#a52a2a", "#808080"
+]
+
 // `registries` is the full top-level values object (every schema key's
 // current value, keyed the same as the schema) — threaded down through
 // every Field/ListItems/RegistryItems call so a `reference` field anywhere
@@ -178,8 +187,7 @@ function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }
                 <div class="lst-checklist">
                     {groups.length === 0 && <p class="lst-list-empty">Nothing assigned yet.</p>}
                     {groups.map(([groupId, group]) => (
-                        <details class="lst-checklist-group" key={groupId} open>
-                            <summary>{group.name}</summary>
+                        <Collapsible className="lst-checklist-group" key={groupId} title={group.name} initiallyExpanded>
                             <div class="lst-checklist-items">
                                 {Object.entries(group.children || {}).map(([childId, child]) => (
                                     <FormCheckbox
@@ -199,7 +207,7 @@ function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }
                                     />
                                 ))}
                             </div>
-                        </details>
+                        </Collapsible>
                     ))}
                 </div>
             )
@@ -217,7 +225,7 @@ function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }
             )
         }
         case "color":
-            return <ColorPicker currentValue={value} onChange={onChange} />
+            return <ColorPicker currentValue={value} onChange={v => onChange(v ?? "")} presets={COLOR_PRESETS} />
         default:
             return <FormTextBox currentValue={value} onChange={onChange} />
     }

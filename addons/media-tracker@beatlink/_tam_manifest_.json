@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/media-tracker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.2.0",
+    "latestVersion": "1.2.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/media-tracker@beatlink/_tam_manifest_.json",
@@ -124,20 +124,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
-            },
-            {
-                "id": "colorpicker",
-                "title": "ColorPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
-            },
-            {
-                "id": "colorpicker-css",
-                "title": "ColorPicker.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -212,14 +198,6 @@
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
-            },
-            {
-                "parent": "libsettings-ui",
-                "child": "colorpicker"
-            },
-            {
-                "parent": "colorpicker",
-                "child": "colorpicker-css"
             },
             {
                 "parent": "launcher",
@@ -316,11 +294,6 @@
             },
             {
                 "note": "libsettings-style",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
             },

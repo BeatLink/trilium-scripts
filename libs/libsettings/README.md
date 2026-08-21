@@ -464,8 +464,10 @@ repeatable stack of forms of the above, `registry` → id-keyed stack of forms o
 its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't dictate
 page layout, only the fields.
 
-`color` fields are rendered by [`libcolorpicker@beatlink`](../libcolorpicker@beatlink/) — a
-dependency of this library, not something a consumer needs to declare directly.
+`color` fields are rendered by Trilium's built-in `ColorPicker` (`trilium:preact`, 0.105+), so they
+carry no dependency of their own. Picks are stored as lowercase hex; values stored as CSS colour
+names by earlier versions still render and still match their swatch, and become hex the next time
+the field is edited.
 
 #### `extraPanels` — injecting custom (non-schema) tabs
 

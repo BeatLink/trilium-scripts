@@ -1,11 +1,11 @@
 {
     "id": "cinnamon-applet-agenda@beatlink",
     "name": "Cinnamon Applet Agenda",
-    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet \u2014 surfaces the earliest (or latest) past-due task matched by a configurable date label.",
+    "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the earliest (or latest) past-due task matched by a configurable date label.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.8.0",
+    "latestVersion": "1.8.1",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-agenda@beatlink/_tam_manifest_.json",
@@ -89,20 +89,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
-            },
-            {
-                "id": "colorpicker",
-                "title": "ColorPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
-            },
-            {
-                "id": "colorpicker-css",
-                "title": "ColorPicker.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -141,14 +127,6 @@
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
-            },
-            {
-                "parent": "libsettings-ui",
-                "child": "colorpicker"
-            },
-            {
-                "parent": "colorpicker",
-                "child": "colorpicker-css"
             },
             {
                 "parent": "settings",
@@ -199,11 +177,6 @@
             },
             {
                 "note": "libsettings-style",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
             }

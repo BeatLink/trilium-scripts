@@ -145,20 +145,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
-            },
-            {
-                "id": "colorpicker",
-                "title": "ColorPicker.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.jsx"
-            },
-            {
-                "id": "colorpicker-css",
-                "title": "ColorPicker.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "../../libs/libformcontrols/ColorPicker.css"
             }
         ],
         "children": [
@@ -217,14 +203,6 @@
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
-            },
-            {
-                "parent": "libsettings-ui",
-                "child": "colorpicker"
-            },
-            {
-                "parent": "colorpicker",
-                "child": "colorpicker-css"
             },
             {
                 "parent": "launcher",
@@ -322,11 +300,6 @@
             },
             {
                 "note": "libsettings-style",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "colorpicker-css",
                 "name": "appCss",
                 "value": ""
             },
