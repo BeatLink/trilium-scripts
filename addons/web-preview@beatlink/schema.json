@@ -58,6 +58,11 @@
         "label": "Follow Page Title",
         "description": "Renames the Web View note to match the loaded page's title whenever the page reports a new one. A title you set yourself is overwritten."
     },
+    "reuseExistingNotes": {
+        "type": "boolean",
+        "label": "Reuse Existing Notes",
+        "description": "Before making a Web View note, looks for one anywhere in the tree already pointing at the same URL and clones that one instead, so the same page is a single note in several places."
+    },
     "sponsorBlockEnabled": {
         "type": "boolean",
         "label": "Skip Sponsor Segments",

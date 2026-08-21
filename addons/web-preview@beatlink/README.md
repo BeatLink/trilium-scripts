@@ -63,6 +63,9 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   `#inbox` label, and Save reports an error if there is none.
 - **Follow Page Title** — on by default; renames the Web View note to match the page's own title
   as it changes. Turn it off to keep whatever title you gave the note.
+- **Reuse Existing Notes** — on by default; before making a Web View note, looks for one anywhere
+  in the tree already pointing at the same URL and clones that one into the new place instead, so a
+  page you've already got is a single note rather than a fresh copy.
 - **Skip Sponsor Segments** — on by default; the SponsorBlock skipping described above. Off, no
   request is ever made to SponsorBlock.
 - **Show A Notice On Skip** — on by default; the brief notice shown in the page's corner on a skip.
@@ -91,6 +94,11 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Save** files the page you are currently reading as a Web View note under the Save Location,
   taking the page's own title. It is the way to keep a page you found while browsing, since the
   child notes link interception creates live inside the browsing tree and get pruned with it.
+- **Duplicates** (a settings tab) finds sets of Web View notes that already point at the same URL —
+  the ones made before **Reuse Existing Notes** was on. For each set you pick the note to keep and
+  the rest are folded into it: their child notes and any attributes the keeper lacks move over, the
+  keeper is cloned into every parent they sat under, and only then are they deleted, so no note or
+  placement is lost. Skip leaves a set alone.
 - **Delete Note** is the other end of that loop: it deletes the Web View note you are currently
   reading, for clearing saved links once you're done with them. It asks for confirmation first,
   and Trilium's delete is soft, so the note stays recoverable from Recent Changes. The note's

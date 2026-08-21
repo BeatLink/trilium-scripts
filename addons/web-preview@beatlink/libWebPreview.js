@@ -5,9 +5,22 @@
 
 // ---------------------------------------------------------------------------
 // Creates a Web View note for `url` under `parentNoteId` and returns its noteId.
+// With `reuseExisting`, a Web View note anywhere in the tree already pointing at
+// the same URL is cloned under `parentNoteId` instead of a second one being made.
 // ---------------------------------------------------------------------------
-async function createWebViewNote(parentNoteId, url, title) {
-    return api.runOnBackend((parentNoteId, url, title) => {
+async function createWebViewNote(parentNoteId, url, title, reuseExisting) {
+    return api.runOnBackend((parentNoteId, url, title, reuseExisting) => {
+        if (reuseExisting) {
+            // Matching is done in JS rather than in the search query because a URL
+            // carries characters the search syntax would otherwise interpret.
+            const existing = api.searchForNotes("#webViewSrc")
+                .find((note) => note.type === "webView" && note.getLabelValue("webViewSrc") === url);
+            if (existing) {
+                api.toggleNoteInParent(true, existing.noteId, parentNoteId, "");
+                return existing.noteId;
+            }
+        }
+
         const { note } = api.createNewNote({
             parentNoteId,
             title: title || url,
@@ -17,7 +30,104 @@ async function createWebViewNote(parentNoteId, url, title) {
         });
         note.setLabel("webViewSrc", url);
         return note.noteId;
-    }, [parentNoteId, url, title]);
+    }, [parentNoteId, url, title, reuseExisting]);
+}
+
+// ---------------------------------------------------------------------------
+// Every set of two or more Web View notes pointing at the same URL, so the
+// settings page can offer to fold each set into one note. Oldest first within a
+// group, since that is the one worth keeping by default.
+// ---------------------------------------------------------------------------
+async function findDuplicateWebViews() {
+    return api.runOnBackend(() => {
+        const byUrl = new Map();
+        for (const note of api.searchForNotes("#webViewSrc")) {
+            if (note.type !== "webView" || note.isDeleted) continue;
+            const url = note.getLabelValue("webViewSrc");
+            if (!url) continue;
+            if (!byUrl.has(url)) byUrl.set(url, []);
+            byUrl.get(url).push({
+                noteId: note.noteId,
+                title: note.title,
+                dateCreated: note.dateCreated,
+                childCount: note.getChildNotes().length,
+                attributeCount: note.getOwnedAttributes().length,
+                parents: note.getParentNotes().map((parent) => ({ noteId: parent.noteId, title: parent.title }))
+            });
+        }
+
+        return [...byUrl.entries()]
+            .filter(([, notes]) => notes.length > 1)
+            .map(([url, notes]) => ({
+                url,
+                notes: notes.sort((a, b) => String(a.dateCreated || "").localeCompare(String(b.dateCreated || "")))
+            }))
+            .sort((a, b) => b.notes.length - a.notes.length);
+    }, []);
+}
+
+// ---------------------------------------------------------------------------
+// Folds `duplicateNoteIds` into `keeperNoteId`: everything each duplicate holds
+// is moved onto the keeper — child notes, owned attributes it doesn't already
+// have, and a clone of the keeper into every parent the duplicate sat under —
+// before the now-empty duplicate is deleted. Returns a per-duplicate report.
+// ---------------------------------------------------------------------------
+async function mergeWebViewDuplicates(keeperNoteId, duplicateNoteIds) {
+    return api.runOnBackend((keeperNoteId, duplicateNoteIds) => {
+        const keeper = api.getNote(keeperNoteId);
+        if (!keeper || keeper.isDeleted) throw new Error("the note to keep no longer exists");
+
+        const merged = [];
+        const skipped = [];
+
+        for (const noteId of duplicateNoteIds) {
+            if (noteId === keeperNoteId) continue;
+
+            const note = api.getNote(noteId);
+            if (!note || note.isDeleted) {
+                skipped.push({ noteId, reason: "note no longer exists" });
+                continue;
+            }
+
+            // The keeper's own placement under the duplicate is dropped rather than
+            // moved, since a note can't be its own child.
+            for (const child of note.getChildNotes()) {
+                if (child.noteId !== keeperNoteId) api.ensureNoteIsPresentInParent(child.noteId, keeperNoteId);
+                api.toggleNoteInParent(false, child.noteId, noteId, "");
+            }
+
+            for (const attribute of note.getOwnedAttributes()) {
+                if (attribute.type === "label" && attribute.name === "webViewSrc") continue;
+                const held = keeper.getOwnedAttributes(attribute.type, attribute.name);
+                if (held.some((existing) => existing.value === attribute.value)) continue;
+                keeper.addAttribute(attribute.type, attribute.name, attribute.value, attribute.isInheritable);
+            }
+
+            // Deleting is only safe once the keeper provably sits everywhere the
+            // duplicate did, so a failed clone must not cost a placement.
+            const keeperParents = new Set(keeper.getParentNotes().map((parent) => parent.noteId));
+            let failure = null;
+            for (const parent of note.getParentNotes()) {
+                if (keeperParents.has(parent.noteId)) continue;
+                try {
+                    api.ensureNoteIsPresentInParent(keeperNoteId, parent.noteId);
+                    keeperParents.add(parent.noteId);
+                } catch (error) {
+                    failure = `could not clone into "${parent.title}": ${error.message}`;
+                    break;
+                }
+            }
+            if (failure) {
+                skipped.push({ noteId, reason: failure });
+                continue;
+            }
+
+            note.deleteNote();
+            merged.push(noteId);
+        }
+
+        return { merged, skipped };
+    }, [keeperNoteId, duplicateNoteIds]);
 }
 
 // ---------------------------------------------------------------------------
@@ -211,4 +321,4 @@ function sponsorBlockApplyScript(payload) {
     return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
 }
 
-module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
+module.exports = { createWebViewNote, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };

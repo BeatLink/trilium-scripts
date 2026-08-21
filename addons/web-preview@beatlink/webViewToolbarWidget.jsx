@@ -71,7 +71,7 @@ function WebViewToolbar({ noteId }) {
                 const link = lib.parseLinkMessage(event.message)
                 if (!link) return
                 try {
-                    await api.activateNote(await lib.createWebViewNote(noteId, link.url, link.title))
+                    await api.activateNote(await lib.createWebViewNote(noteId, link.url, link.title, settingsRef.current?.reuseExistingNotes))
                 } catch (err) {
                     console.error("web-preview: could not open the clicked link as a note", err)
                 }
@@ -171,7 +171,7 @@ function WebViewToolbar({ noteId }) {
         try {
             const lib = require("libWebPreview.js")
             const parentNoteId = await lib.resolveSaveParentNoteId(settings?.saveParentNoteId)
-            await lib.createWebViewNote(parentNoteId, wv.getURL(), wv.getTitle() || wv.getURL())
+            await lib.createWebViewNote(parentNoteId, wv.getURL(), wv.getTitle() || wv.getURL(), settings?.reuseExistingNotes)
             api.showMessage("Page saved.")
         } catch (err) {
             api.showError(`Could not save this page: ${err.message}`)

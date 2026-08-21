@@ -23,6 +23,7 @@
     "showSaveButton": false,
     "saveParentNoteId": "",
     "syncNoteTitle": true,
+    "reuseExistingNotes": true,
     "sponsorBlockEnabled": true,
     "sponsorBlockNotify": true,
     "skipSponsor": true,

@@ -59,7 +59,7 @@ export default function NewTabPage() {
         setBusy(true)
         setError(null)
         try {
-            const noteId = await lib.createWebViewNote(resolveParentNoteId(settings), target.url, target.title)
+            const noteId = await lib.createWebViewNote(resolveParentNoteId(settings), target.url, target.title, settings?.reuseExistingNotes)
             await api.activateNote(noteId)
         } catch (err) {
             setBusy(false)
