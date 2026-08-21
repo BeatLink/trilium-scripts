@@ -111,10 +111,11 @@ function WebViewToolbar({ noteId }) {
         if (!state.found || !settings?.sponsorBlockEnabled) return
 
         const lib = require("libWebPreview.js")
+        const sb = require("libSponsorBlock.js")
         const wv = getWebviewEl()
         if (!wv) return
 
-        const videoId = lib.parseYouTubeVideoId(state.url)
+        const videoId = sb.parseYouTubeVideoId(state.url)
         const notify = settings.sponsorBlockNotify
         let cancelled = false
 
@@ -132,7 +133,7 @@ function WebViewToolbar({ noteId }) {
                 await wv.executeJavaScript(lib.sponsorBlockApplyScript({ videoId: videoId || "", segments: [], notify }))
                 if (!videoId) return
 
-                const segments = await lib.fetchSponsorSegments(videoId, lib.sponsorBlockCategories(settings))
+                const segments = await sb.fetchSponsorSegments(videoId, sb.sponsorBlockCategories(settings))
                 if (cancelled || segments.length === 0) return
                 await wv.executeJavaScript(lib.sponsorBlockApplyScript({ videoId, segments, notify }))
             } catch (err) {

@@ -142,58 +142,10 @@ function hostnameOf(url) {
 }
 
 // ---------------------------------------------------------------------------
-// SponsorBlock. The video id a YouTube URL points at, or null for any other URL.
+// SponsorBlock. The lookup itself is shared with youtube-manager@beatlink; what
+// belongs here is applying its answer to a page loaded in the <webview>.
 // ---------------------------------------------------------------------------
-const YOUTUBE_ID_RE = /^(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/i;
-
-function parseYouTubeVideoId(url) {
-    const match = YOUTUBE_ID_RE.exec(url || "");
-    return match ? match[1] : null;
-}
-
-// The SponsorBlock category each settings key turns on.
-const SPONSORBLOCK_CATEGORIES = {
-    sponsor: "skipSponsor",
-    selfpromo: "skipSelfPromo",
-    interaction: "skipInteraction",
-    intro: "skipIntro",
-    outro: "skipOutro",
-    preview: "skipPreview",
-    music_offtopic: "skipMusicOfftopic",
-    filler: "skipFiller"
-};
-
-function sponsorBlockCategories(settings) {
-    return Object.keys(SPONSORBLOCK_CATEGORIES).filter((category) => settings?.[SPONSORBLOCK_CATEGORIES[category]]);
-}
-
-// ---------------------------------------------------------------------------
-// The segments to skip in `videoId`, from SponsorBlock's privacy-preserving
-// endpoint: it is asked for the first four hex characters of the video id's
-// SHA-256, so the server never learns which of that prefix's videos is being
-// watched, and its answer is filtered down to the one asked about here.
-// ---------------------------------------------------------------------------
-const SPONSORBLOCK_API = "https://sponsor.ajay.app/api/skipSegments";
-
-async function fetchSponsorSegments(videoId, categories) {
-    if (categories.length === 0) return [];
-
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(videoId));
-    const hash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    const query = encodeURIComponent(JSON.stringify(categories));
-
-    const response = await fetch(`${SPONSORBLOCK_API}/${hash.slice(0, 4)}?categories=${query}`);
-    // 404 is the API's answer for a prefix nobody has submitted segments under.
-    if (response.status === 404) return [];
-    if (!response.ok) throw new Error(`SponsorBlock returned ${response.status}`);
-
-    const entry = (await response.json()).find((item) => item.videoID === videoId);
-    return (entry?.segments || [])
-        // "skip" is the only action type handled here; "mute" and "poi" need player
-        // controls this toolbar doesn't have. A downvoted segment is a wrong one.
-        .filter((segment) => segment.actionType === "skip" && segment.votes > -2)
-        .map((segment) => ({ start: segment.segment[0], end: segment.segment[1], category: segment.category, uuid: segment.UUID }));
-}
+const sponsorBlock = require("libSponsorBlock.js");
 
 // ---------------------------------------------------------------------------
 // Guest-page script that seeks the page's <video> past whichever segments the
@@ -214,16 +166,7 @@ const SPONSORBLOCK_SCRIPT = `(() => {
         state.skipped = new Set();
     };
 
-    const LABELS = {
-        sponsor: "Sponsor",
-        selfpromo: "Self-promotion",
-        interaction: "Interaction reminder",
-        intro: "Intro",
-        outro: "Outro",
-        preview: "Preview",
-        music_offtopic: "Non-music section",
-        filler: "Filler"
-    };
+    const LABELS = ${JSON.stringify(sponsorBlock.SPONSORBLOCK_LABELS)};
 
     function toast(text) {
         let el = document.getElementById("web-preview-sponsorblock-toast");
@@ -239,7 +182,7 @@ const SPONSORBLOCK_SCRIPT = `(() => {
         el.hideTimer = setTimeout(() => { el.style.opacity = "0"; }, 2500);
     }
 
-    const ID_RE = new RegExp(${JSON.stringify(YOUTUBE_ID_RE.source)}, "i");
+    const ID_RE = new RegExp(${JSON.stringify(sponsorBlock.YOUTUBE_ID_RE.source)}, "i");
 
     setInterval(() => {
         if (state.segments.length === 0) return;
@@ -268,4 +211,4 @@ function sponsorBlockApplyScript(payload) {
     return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
 }
 
-module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, parseYouTubeVideoId, sponsorBlockCategories, fetchSponsorSegments, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
+module.exports = { createWebViewNote, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
