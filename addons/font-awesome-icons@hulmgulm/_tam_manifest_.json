@@ -1,0 +1,70 @@
+{
+    "id": "font-awesome-icons@hulmgulm",
+    "name": "Font Awesome Icons",
+    "description": "Font Awesome 7 free solid and brand icons as note icons, under the fa-solid and fa-brands prefixes.",
+    "author": "hulmgulm",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/font-awesome-icons@hulmgulm",
+    "license": "OFL-1.1",
+    "latestVersion": "1.2.1",
+    "type": "iconpack",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/font-awesome-icons@hulmgulm/_tam_manifest_.json",
+    "manifest": {
+        "readmeNote": "readme",
+        "notes": [
+            {
+                "id": "solid",
+                "title": "Font Awesome Icons",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "fa-solid.json",
+                "attachments": [
+                    {
+                        "title": "fa-solid-900.woff2",
+                        "role": "file",
+                        "mime": "font/woff2",
+                        "sourceUrl": "fa-solid-900.woff2"
+                    }
+                ]
+            },
+            {
+                "id": "brands",
+                "title": "Font Awesome Brand Icons",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "fa-brands.json",
+                "attachments": [
+                    {
+                        "title": "fa-brands-400.woff2",
+                        "role": "file",
+                        "mime": "font/woff2",
+                        "sourceUrl": "fa-brands-400.woff2"
+                    }
+                ]
+            },
+            {
+                "id": "readme",
+                "title": "Font Awesome Icons README",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md"
+            }
+        ],
+        "children": [
+            {"parent": "root", "child": "solid"},
+            {"parent": "root", "child": "brands"},
+            {"parent": "root", "child": "readme"}
+        ],
+        "relations": [],
+        "labels": [
+            {"note": "solid", "name": "iconPack", "value": "fa-solid"},
+            {"note": "solid", "name": "iconClass", "value": "fa-solid fa-font"},
+            {"note": "solid", "name": "readOnly", "value": ""},
+            {"note": "solid", "name": "displayMode", "value": "preview"},
+            {"note": "brands", "name": "iconPack", "value": "fa-brands"},
+            {"note": "brands", "name": "iconClass", "value": "fa-brands fa-github"},
+            {"note": "brands", "name": "readOnly", "value": ""},
+            {"note": "brands", "name": "displayMode", "value": "preview"}
+        ]
+    }
+}

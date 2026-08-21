@@ -1,0 +1,3658 @@
+{
+  "icons": {
+    "fa-firefox-browser": {
+      "glyph": "\\e007",
+      "terms": [
+        "firefox browser"
+      ]
+    },
+    "fa-ideal": {
+      "glyph": "\\e013",
+      "terms": [
+        "ideal"
+      ]
+    },
+    "fa-microblog": {
+      "glyph": "\\e01a",
+      "terms": [
+        "microblog"
+      ]
+    },
+    "fa-square-pied-piper": {
+      "glyph": "\\e01e",
+      "terms": [
+        "square pied piper"
+      ]
+    },
+    "fa-pied-piper-square": {
+      "glyph": "\\e01e",
+      "terms": [
+        "pied piper square"
+      ]
+    },
+    "fa-unity": {
+      "glyph": "\\e049",
+      "terms": [
+        "unity"
+      ]
+    },
+    "fa-dailymotion": {
+      "glyph": "\\e052",
+      "terms": [
+        "dailymotion"
+      ]
+    },
+    "fa-square-instagram": {
+      "glyph": "\\e055",
+      "terms": [
+        "square instagram"
+      ]
+    },
+    "fa-instagram-square": {
+      "glyph": "\\e055",
+      "terms": [
+        "instagram square"
+      ]
+    },
+    "fa-mixer": {
+      "glyph": "\\e056",
+      "terms": [
+        "mixer"
+      ]
+    },
+    "fa-shopify": {
+      "glyph": "\\e057",
+      "terms": [
+        "shopify"
+      ]
+    },
+    "fa-deezer": {
+      "glyph": "\\e077",
+      "terms": [
+        "deezer"
+      ]
+    },
+    "fa-edge-legacy": {
+      "glyph": "\\e078",
+      "terms": [
+        "edge legacy"
+      ]
+    },
+    "fa-google-pay": {
+      "glyph": "\\e079",
+      "terms": [
+        "google pay"
+      ]
+    },
+    "fa-rust": {
+      "glyph": "\\e07a",
+      "terms": [
+        "rust"
+      ]
+    },
+    "fa-tiktok": {
+      "glyph": "\\e07b",
+      "terms": [
+        "tiktok"
+      ]
+    },
+    "fa-unsplash": {
+      "glyph": "\\e07c",
+      "terms": [
+        "unsplash"
+      ]
+    },
+    "fa-cloudflare": {
+      "glyph": "\\e07d",
+      "terms": [
+        "cloudflare"
+      ]
+    },
+    "fa-guilded": {
+      "glyph": "\\e07e",
+      "terms": [
+        "guilded"
+      ]
+    },
+    "fa-hive": {
+      "glyph": "\\e07f",
+      "terms": [
+        "hive"
+      ]
+    },
+    "fa-42-group": {
+      "glyph": "\\e080",
+      "terms": [
+        "42 group"
+      ]
+    },
+    "fa-innosoft": {
+      "glyph": "\\e080",
+      "terms": [
+        "innosoft"
+      ]
+    },
+    "fa-instalod": {
+      "glyph": "\\e081",
+      "terms": [
+        "instalod"
+      ]
+    },
+    "fa-octopus-deploy": {
+      "glyph": "\\e082",
+      "terms": [
+        "octopus deploy"
+      ]
+    },
+    "fa-perbyte": {
+      "glyph": "\\e083",
+      "terms": [
+        "perbyte"
+      ]
+    },
+    "fa-uncharted": {
+      "glyph": "\\e084",
+      "terms": [
+        "uncharted"
+      ]
+    },
+    "fa-watchman-monitoring": {
+      "glyph": "\\e087",
+      "terms": [
+        "watchman monitoring"
+      ]
+    },
+    "fa-wodu": {
+      "glyph": "\\e088",
+      "terms": [
+        "wodu"
+      ]
+    },
+    "fa-wirsindhandwerk": {
+      "glyph": "\\e2d0",
+      "terms": [
+        "wirsindhandwerk"
+      ]
+    },
+    "fa-wsh": {
+      "glyph": "\\e2d0",
+      "terms": [
+        "wsh"
+      ]
+    },
+    "fa-bots": {
+      "glyph": "\\e340",
+      "terms": [
+        "bots"
+      ]
+    },
+    "fa-cmplid": {
+      "glyph": "\\e360",
+      "terms": [
+        "cmplid"
+      ]
+    },
+    "fa-bilibili": {
+      "glyph": "\\e3d9",
+      "terms": [
+        "bilibili"
+      ]
+    },
+    "fa-golang": {
+      "glyph": "\\e40f",
+      "terms": [
+        "golang"
+      ]
+    },
+    "fa-pix": {
+      "glyph": "\\e43a",
+      "terms": [
+        "pix"
+      ]
+    },
+    "fa-sitrox": {
+      "glyph": "\\e44a",
+      "terms": [
+        "sitrox"
+      ]
+    },
+    "fa-hashnode": {
+      "glyph": "\\e499",
+      "terms": [
+        "hashnode"
+      ]
+    },
+    "fa-meta": {
+      "glyph": "\\e49b",
+      "terms": [
+        "meta"
+      ]
+    },
+    "fa-padlet": {
+      "glyph": "\\e4a0",
+      "terms": [
+        "padlet"
+      ]
+    },
+    "fa-nfc-directional": {
+      "glyph": "\\e530",
+      "terms": [
+        "nfc directional"
+      ]
+    },
+    "fa-nfc-symbol": {
+      "glyph": "\\e531",
+      "terms": [
+        "nfc symbol"
+      ]
+    },
+    "fa-screenpal": {
+      "glyph": "\\e570",
+      "terms": [
+        "screenpal"
+      ]
+    },
+    "fa-space-awesome": {
+      "glyph": "\\e5ac",
+      "terms": [
+        "space awesome"
+      ]
+    },
+    "fa-square-font-awesome": {
+      "glyph": "\\e5ad",
+      "terms": [
+        "square font awesome"
+      ]
+    },
+    "fa-square-gitlab": {
+      "glyph": "\\e5ae",
+      "terms": [
+        "square gitlab"
+      ]
+    },
+    "fa-gitlab-square": {
+      "glyph": "\\e5ae",
+      "terms": [
+        "gitlab square"
+      ]
+    },
+    "fa-odysee": {
+      "glyph": "\\e5c6",
+      "terms": [
+        "odysee"
+      ]
+    },
+    "fa-stubber": {
+      "glyph": "\\e5c7",
+      "terms": [
+        "stubber"
+      ]
+    },
+    "fa-debian": {
+      "glyph": "\\e60b",
+      "terms": [
+        "debian"
+      ]
+    },
+    "fa-shoelace": {
+      "glyph": "\\e60c",
+      "terms": [
+        "shoelace"
+      ]
+    },
+    "fa-threads": {
+      "glyph": "\\e618",
+      "terms": [
+        "threads"
+      ]
+    },
+    "fa-square-threads": {
+      "glyph": "\\e619",
+      "terms": [
+        "square threads"
+      ]
+    },
+    "fa-square-x-twitter": {
+      "glyph": "\\e61a",
+      "terms": [
+        "square x twitter"
+      ]
+    },
+    "fa-x-twitter": {
+      "glyph": "\\e61b",
+      "terms": [
+        "x twitter"
+      ]
+    },
+    "fa-opensuse": {
+      "glyph": "\\e62b",
+      "terms": [
+        "opensuse"
+      ]
+    },
+    "fa-letterboxd": {
+      "glyph": "\\e62d",
+      "terms": [
+        "letterboxd"
+      ]
+    },
+    "fa-square-letterboxd": {
+      "glyph": "\\e62e",
+      "terms": [
+        "square letterboxd"
+      ]
+    },
+    "fa-mintbit": {
+      "glyph": "\\e62f",
+      "terms": [
+        "mintbit"
+      ]
+    },
+    "fa-google-scholar": {
+      "glyph": "\\e63b",
+      "terms": [
+        "google scholar"
+      ]
+    },
+    "fa-brave": {
+      "glyph": "\\e63c",
+      "terms": [
+        "brave"
+      ]
+    },
+    "fa-brave-reverse": {
+      "glyph": "\\e63d",
+      "terms": [
+        "brave reverse"
+      ]
+    },
+    "fa-pixiv": {
+      "glyph": "\\e640",
+      "terms": [
+        "pixiv"
+      ]
+    },
+    "fa-upwork": {
+      "glyph": "\\e641",
+      "terms": [
+        "upwork"
+      ]
+    },
+    "fa-webflow": {
+      "glyph": "\\e65c",
+      "terms": [
+        "webflow"
+      ]
+    },
+    "fa-signal-messenger": {
+      "glyph": "\\e663",
+      "terms": [
+        "signal messenger"
+      ]
+    },
+    "fa-bluesky": {
+      "glyph": "\\e671",
+      "terms": [
+        "bluesky"
+      ]
+    },
+    "fa-jxl": {
+      "glyph": "\\e67b",
+      "terms": [
+        "jxl"
+      ]
+    },
+    "fa-square-upwork": {
+      "glyph": "\\e67c",
+      "terms": [
+        "square upwork"
+      ]
+    },
+    "fa-web-awesome": {
+      "glyph": "\\e682",
+      "terms": [
+        "web awesome"
+      ]
+    },
+    "fa-square-web-awesome": {
+      "glyph": "\\e683",
+      "terms": [
+        "square web awesome"
+      ]
+    },
+    "fa-square-web-awesome-stroke": {
+      "glyph": "\\e684",
+      "terms": [
+        "square web awesome stroke"
+      ]
+    },
+    "fa-dart-lang": {
+      "glyph": "\\e693",
+      "terms": [
+        "dart lang"
+      ]
+    },
+    "fa-flutter": {
+      "glyph": "\\e694",
+      "terms": [
+        "flutter"
+      ]
+    },
+    "fa-files-pinwheel": {
+      "glyph": "\\e69f",
+      "terms": [
+        "files pinwheel"
+      ]
+    },
+    "fa-css": {
+      "glyph": "\\e6a2",
+      "terms": [
+        "css"
+      ]
+    },
+    "fa-square-bluesky": {
+      "glyph": "\\e6a3",
+      "terms": [
+        "square bluesky"
+      ]
+    },
+    "fa-openai": {
+      "glyph": "\\e7cf",
+      "terms": [
+        "openai"
+      ]
+    },
+    "fa-square-linkedin": {
+      "glyph": "\\e7d0",
+      "terms": [
+        "square linkedin"
+      ]
+    },
+    "fa-cash-app": {
+      "glyph": "\\e7d4",
+      "terms": [
+        "cash app"
+      ]
+    },
+    "fa-disqus": {
+      "glyph": "\\e7d5",
+      "terms": [
+        "disqus"
+      ]
+    },
+    "fa-eleventy": {
+      "glyph": "\\e7d6",
+      "terms": [
+        "eleventy"
+      ]
+    },
+    "fa-11ty": {
+      "glyph": "\\e7d6",
+      "terms": [
+        "11ty"
+      ]
+    },
+    "fa-kakao-talk": {
+      "glyph": "\\e7d7",
+      "terms": [
+        "kakao talk"
+      ]
+    },
+    "fa-linktree": {
+      "glyph": "\\e7d8",
+      "terms": [
+        "linktree"
+      ]
+    },
+    "fa-notion": {
+      "glyph": "\\e7d9",
+      "terms": [
+        "notion"
+      ]
+    },
+    "fa-pandora": {
+      "glyph": "\\e7da",
+      "terms": [
+        "pandora"
+      ]
+    },
+    "fa-pixelfed": {
+      "glyph": "\\e7db",
+      "terms": [
+        "pixelfed"
+      ]
+    },
+    "fa-tidal": {
+      "glyph": "\\e7dc",
+      "terms": [
+        "tidal"
+      ]
+    },
+    "fa-vsco": {
+      "glyph": "\\e7dd",
+      "terms": [
+        "vsco"
+      ]
+    },
+    "fa-w3c": {
+      "glyph": "\\e7de",
+      "terms": [
+        "w3c"
+      ]
+    },
+    "fa-lumon": {
+      "glyph": "\\e7e2",
+      "terms": [
+        "lumon"
+      ]
+    },
+    "fa-lumon-drop": {
+      "glyph": "\\e7e3",
+      "terms": [
+        "lumon drop"
+      ]
+    },
+    "fa-square-figma": {
+      "glyph": "\\e7e4",
+      "terms": [
+        "square figma"
+      ]
+    },
+    "fa-tex": {
+      "glyph": "\\e7ff",
+      "terms": [
+        "tex"
+      ]
+    },
+    "fa-duolingo": {
+      "glyph": "\\e812",
+      "terms": [
+        "duolingo"
+      ]
+    },
+    "fa-supportnow": {
+      "glyph": "\\e833",
+      "terms": [
+        "supportnow"
+      ]
+    },
+    "fa-tor-browser": {
+      "glyph": "\\e838",
+      "terms": [
+        "tor browser"
+      ]
+    },
+    "fa-typescript": {
+      "glyph": "\\e840",
+      "terms": [
+        "typescript"
+      ]
+    },
+    "fa-square-deskpro": {
+      "glyph": "\\e844",
+      "terms": [
+        "square deskpro"
+      ]
+    },
+    "fa-circle-zulip": {
+      "glyph": "\\e851",
+      "terms": [
+        "circle zulip"
+      ]
+    },
+    "fa-julia": {
+      "glyph": "\\e852",
+      "terms": [
+        "julia"
+      ]
+    },
+    "fa-zulip": {
+      "glyph": "\\e853",
+      "terms": [
+        "zulip"
+      ]
+    },
+    "fa-unison": {
+      "glyph": "\\e854",
+      "terms": [
+        "unison"
+      ]
+    },
+    "fa-board-game-geek": {
+      "glyph": "\\e855",
+      "terms": [
+        "board game geek"
+      ]
+    },
+    "fa-bgg": {
+      "glyph": "\\e855",
+      "terms": [
+        "bgg"
+      ]
+    },
+    "fa-ko-fi": {
+      "glyph": "\\e856",
+      "terms": [
+        "ko fi"
+      ]
+    },
+    "fa-kubernetes": {
+      "glyph": "\\e857",
+      "terms": [
+        "kubernetes"
+      ]
+    },
+    "fa-postgresql": {
+      "glyph": "\\e858",
+      "terms": [
+        "postgresql"
+      ]
+    },
+    "fa-scaleway": {
+      "glyph": "\\e859",
+      "terms": [
+        "scaleway"
+      ]
+    },
+    "fa-venmo": {
+      "glyph": "\\e85a",
+      "terms": [
+        "venmo"
+      ]
+    },
+    "fa-venmo-v": {
+      "glyph": "\\e85b",
+      "terms": [
+        "venmo v"
+      ]
+    },
+    "fa-unreal-engine": {
+      "glyph": "\\e85c",
+      "terms": [
+        "unreal engine"
+      ]
+    },
+    "fa-globaleaks": {
+      "glyph": "\\e85d",
+      "terms": [
+        "globaleaks"
+      ]
+    },
+    "fa-solana": {
+      "glyph": "\\e85e",
+      "terms": [
+        "solana"
+      ]
+    },
+    "fa-threema": {
+      "glyph": "\\e85f",
+      "terms": [
+        "threema"
+      ]
+    },
+    "fa-forgejo": {
+      "glyph": "\\e860",
+      "terms": [
+        "forgejo"
+      ]
+    },
+    "fa-claude": {
+      "glyph": "\\e861",
+      "terms": [
+        "claude"
+      ]
+    },
+    "fa-gitee": {
+      "glyph": "\\e863",
+      "terms": [
+        "gitee"
+      ]
+    },
+    "fa-xmpp": {
+      "glyph": "\\e864",
+      "terms": [
+        "xmpp"
+      ]
+    },
+    "fa-fediverse": {
+      "glyph": "\\e865",
+      "terms": [
+        "fediverse"
+      ]
+    },
+    "fa-tailwind-css": {
+      "glyph": "\\e866",
+      "terms": [
+        "tailwind css"
+      ]
+    },
+    "fa-arch-linux": {
+      "glyph": "\\e867",
+      "terms": [
+        "arch linux"
+      ]
+    },
+    "fa-svelte": {
+      "glyph": "\\e868",
+      "terms": [
+        "svelte"
+      ]
+    },
+    "fa-hugging-face": {
+      "glyph": "\\e869",
+      "terms": [
+        "hugging face"
+      ]
+    },
+    "fa-leetcode": {
+      "glyph": "\\e86a",
+      "terms": [
+        "leetcode"
+      ]
+    },
+    "fa-openstreetmap": {
+      "glyph": "\\e86b",
+      "terms": [
+        "openstreetmap"
+      ]
+    },
+    "fa-ultralytics": {
+      "glyph": "\\e86d",
+      "terms": [
+        "ultralytics"
+      ]
+    },
+    "fa-ultralytics-hub": {
+      "glyph": "\\e86e",
+      "terms": [
+        "ultralytics hub"
+      ]
+    },
+    "fa-ultralytics-yolo": {
+      "glyph": "\\e86f",
+      "terms": [
+        "ultralytics yolo"
+      ]
+    },
+    "fa-obsidian": {
+      "glyph": "\\e879",
+      "terms": [
+        "obsidian"
+      ]
+    },
+    "fa-zoom": {
+      "glyph": "\\e87b",
+      "terms": [
+        "zoom"
+      ]
+    },
+    "fa-vim": {
+      "glyph": "\\e88a",
+      "terms": [
+        "vim"
+      ]
+    },
+    "fa-symfonycasts": {
+      "glyph": "\\e8ab",
+      "terms": [
+        "symfonycasts"
+      ]
+    },
+    "fa-build-awesome": {
+      "glyph": "\\e8ac",
+      "terms": [
+        "build awesome"
+      ]
+    },
+    "fa-codeberg": {
+      "glyph": "\\e8ad",
+      "terms": [
+        "codeberg"
+      ]
+    },
+    "fa-devpost": {
+      "glyph": "\\e8ae",
+      "terms": [
+        "devpost"
+      ]
+    },
+    "fa-internet-archive": {
+      "glyph": "\\e8b1",
+      "terms": [
+        "internet archive"
+      ]
+    },
+    "fa-lets-encrypt": {
+      "glyph": "\\e8b2",
+      "terms": [
+        "lets encrypt"
+      ]
+    },
+    "fa-matrix": {
+      "glyph": "\\e8b3",
+      "terms": [
+        "matrix"
+      ]
+    },
+    "fa-mattermost": {
+      "glyph": "\\e8b4",
+      "terms": [
+        "mattermost"
+      ]
+    },
+    "fa-nextcloud": {
+      "glyph": "\\e8b5",
+      "terms": [
+        "nextcloud"
+      ]
+    },
+    "fa-roblox-creator-studio": {
+      "glyph": "\\e8b6",
+      "terms": [
+        "roblox creator studio"
+      ]
+    },
+    "fa-square-build-awesome-stroke": {
+      "glyph": "\\e8b7",
+      "terms": [
+        "square build awesome stroke"
+      ]
+    },
+    "fa-substack": {
+      "glyph": "\\e8b8",
+      "terms": [
+        "substack"
+      ]
+    },
+    "fa-tesla": {
+      "glyph": "\\e8b9",
+      "terms": [
+        "tesla"
+      ]
+    },
+    "fa-xrp": {
+      "glyph": "\\e8ba",
+      "terms": [
+        "xrp"
+      ]
+    },
+    "fa-xrpl": {
+      "glyph": "\\e8bb",
+      "terms": [
+        "xrpl"
+      ]
+    },
+    "fa-youtube-shorts": {
+      "glyph": "\\e8bc",
+      "terms": [
+        "youtube shorts"
+      ]
+    },
+    "fa-ror": {
+      "glyph": "\\e8bd",
+      "terms": [
+        "ror"
+      ]
+    },
+    "fa-visual-studio": {
+      "glyph": "\\e8be",
+      "terms": [
+        "visual studio"
+      ]
+    },
+    "fa-dolibarr": {
+      "glyph": "\\e8bf",
+      "terms": [
+        "dolibarr"
+      ]
+    },
+    "fa-obs-studio": {
+      "glyph": "\\e8c0",
+      "terms": [
+        "obs studio"
+      ]
+    },
+    "fa-storybook": {
+      "glyph": "\\e8c1",
+      "terms": [
+        "storybook"
+      ]
+    },
+    "fa-a11y-project": {
+      "glyph": "\\e8c2",
+      "terms": [
+        "a11y project"
+      ]
+    },
+    "fa-copilot": {
+      "glyph": "\\e8c7",
+      "terms": [
+        "copilot"
+      ]
+    },
+    "fa-square-twitter": {
+      "glyph": "\\f081",
+      "terms": [
+        "square twitter"
+      ]
+    },
+    "fa-twitter-square": {
+      "glyph": "\\f081",
+      "terms": [
+        "twitter square"
+      ]
+    },
+    "fa-square-facebook": {
+      "glyph": "\\f082",
+      "terms": [
+        "square facebook"
+      ]
+    },
+    "fa-facebook-square": {
+      "glyph": "\\f082",
+      "terms": [
+        "facebook square"
+      ]
+    },
+    "fa-linkedin": {
+      "glyph": "\\f08c",
+      "terms": [
+        "linkedin"
+      ]
+    },
+    "fa-square-github": {
+      "glyph": "\\f092",
+      "terms": [
+        "square github"
+      ]
+    },
+    "fa-github-square": {
+      "glyph": "\\f092",
+      "terms": [
+        "github square"
+      ]
+    },
+    "fa-twitter": {
+      "glyph": "\\f099",
+      "terms": [
+        "twitter"
+      ]
+    },
+    "fa-facebook": {
+      "glyph": "\\f09a",
+      "terms": [
+        "facebook"
+      ]
+    },
+    "fa-github": {
+      "glyph": "\\f09b",
+      "terms": [
+        "github"
+      ]
+    },
+    "fa-pinterest": {
+      "glyph": "\\f0d2",
+      "terms": [
+        "pinterest"
+      ]
+    },
+    "fa-square-pinterest": {
+      "glyph": "\\f0d3",
+      "terms": [
+        "square pinterest"
+      ]
+    },
+    "fa-pinterest-square": {
+      "glyph": "\\f0d3",
+      "terms": [
+        "pinterest square"
+      ]
+    },
+    "fa-square-google-plus": {
+      "glyph": "\\f0d4",
+      "terms": [
+        "square google plus"
+      ]
+    },
+    "fa-google-plus-square": {
+      "glyph": "\\f0d4",
+      "terms": [
+        "google plus square"
+      ]
+    },
+    "fa-google-plus-g": {
+      "glyph": "\\f0d5",
+      "terms": [
+        "google plus g"
+      ]
+    },
+    "fa-linkedin-in": {
+      "glyph": "\\f0e1",
+      "terms": [
+        "linkedin in"
+      ]
+    },
+    "fa-github-alt": {
+      "glyph": "\\f113",
+      "terms": [
+        "github alt"
+      ]
+    },
+    "fa-maxcdn": {
+      "glyph": "\\f136",
+      "terms": [
+        "maxcdn"
+      ]
+    },
+    "fa-html5": {
+      "glyph": "\\f13b",
+      "terms": [
+        "html5"
+      ]
+    },
+    "fa-css3": {
+      "glyph": "\\f13c",
+      "terms": [
+        "css3"
+      ]
+    },
+    "fa-btc": {
+      "glyph": "\\f15a",
+      "terms": [
+        "btc"
+      ]
+    },
+    "fa-youtube": {
+      "glyph": "\\f167",
+      "terms": [
+        "youtube"
+      ]
+    },
+    "fa-xing": {
+      "glyph": "\\f168",
+      "terms": [
+        "xing"
+      ]
+    },
+    "fa-square-xing": {
+      "glyph": "\\f169",
+      "terms": [
+        "square xing"
+      ]
+    },
+    "fa-xing-square": {
+      "glyph": "\\f169",
+      "terms": [
+        "xing square"
+      ]
+    },
+    "fa-dropbox": {
+      "glyph": "\\f16b",
+      "terms": [
+        "dropbox"
+      ]
+    },
+    "fa-stack-overflow": {
+      "glyph": "\\f16c",
+      "terms": [
+        "stack overflow"
+      ]
+    },
+    "fa-instagram": {
+      "glyph": "\\f16d",
+      "terms": [
+        "instagram"
+      ]
+    },
+    "fa-flickr": {
+      "glyph": "\\f16e",
+      "terms": [
+        "flickr"
+      ]
+    },
+    "fa-adn": {
+      "glyph": "\\f170",
+      "terms": [
+        "adn"
+      ]
+    },
+    "fa-bitbucket": {
+      "glyph": "\\f171",
+      "terms": [
+        "bitbucket"
+      ]
+    },
+    "fa-tumblr": {
+      "glyph": "\\f173",
+      "terms": [
+        "tumblr"
+      ]
+    },
+    "fa-square-tumblr": {
+      "glyph": "\\f174",
+      "terms": [
+        "square tumblr"
+      ]
+    },
+    "fa-tumblr-square": {
+      "glyph": "\\f174",
+      "terms": [
+        "tumblr square"
+      ]
+    },
+    "fa-apple": {
+      "glyph": "\\f179",
+      "terms": [
+        "apple"
+      ]
+    },
+    "fa-windows": {
+      "glyph": "\\f17a",
+      "terms": [
+        "windows"
+      ]
+    },
+    "fa-android": {
+      "glyph": "\\f17b",
+      "terms": [
+        "android"
+      ]
+    },
+    "fa-linux": {
+      "glyph": "\\f17c",
+      "terms": [
+        "linux"
+      ]
+    },
+    "fa-dribbble": {
+      "glyph": "\\f17d",
+      "terms": [
+        "dribbble"
+      ]
+    },
+    "fa-skype": {
+      "glyph": "\\f17e",
+      "terms": [
+        "skype"
+      ]
+    },
+    "fa-foursquare": {
+      "glyph": "\\f180",
+      "terms": [
+        "foursquare"
+      ]
+    },
+    "fa-trello": {
+      "glyph": "\\f181",
+      "terms": [
+        "trello"
+      ]
+    },
+    "fa-gratipay": {
+      "glyph": "\\f184",
+      "terms": [
+        "gratipay"
+      ]
+    },
+    "fa-vk": {
+      "glyph": "\\f189",
+      "terms": [
+        "vk"
+      ]
+    },
+    "fa-weibo": {
+      "glyph": "\\f18a",
+      "terms": [
+        "weibo"
+      ]
+    },
+    "fa-renren": {
+      "glyph": "\\f18b",
+      "terms": [
+        "renren"
+      ]
+    },
+    "fa-pagelines": {
+      "glyph": "\\f18c",
+      "terms": [
+        "pagelines"
+      ]
+    },
+    "fa-stack-exchange": {
+      "glyph": "\\f18d",
+      "terms": [
+        "stack exchange"
+      ]
+    },
+    "fa-square-vimeo": {
+      "glyph": "\\f194",
+      "terms": [
+        "square vimeo"
+      ]
+    },
+    "fa-vimeo-square": {
+      "glyph": "\\f194",
+      "terms": [
+        "vimeo square"
+      ]
+    },
+    "fa-slack": {
+      "glyph": "\\f198",
+      "terms": [
+        "slack"
+      ]
+    },
+    "fa-slack-hash": {
+      "glyph": "\\f198",
+      "terms": [
+        "slack hash"
+      ]
+    },
+    "fa-wordpress": {
+      "glyph": "\\f19a",
+      "terms": [
+        "wordpress"
+      ]
+    },
+    "fa-openid": {
+      "glyph": "\\f19b",
+      "terms": [
+        "openid"
+      ]
+    },
+    "fa-yahoo": {
+      "glyph": "\\f19e",
+      "terms": [
+        "yahoo"
+      ]
+    },
+    "fa-google": {
+      "glyph": "\\f1a0",
+      "terms": [
+        "google"
+      ]
+    },
+    "fa-reddit": {
+      "glyph": "\\f1a1",
+      "terms": [
+        "reddit"
+      ]
+    },
+    "fa-square-reddit": {
+      "glyph": "\\f1a2",
+      "terms": [
+        "square reddit"
+      ]
+    },
+    "fa-reddit-square": {
+      "glyph": "\\f1a2",
+      "terms": [
+        "reddit square"
+      ]
+    },
+    "fa-stumbleupon-circle": {
+      "glyph": "\\f1a3",
+      "terms": [
+        "stumbleupon circle"
+      ]
+    },
+    "fa-stumbleupon": {
+      "glyph": "\\f1a4",
+      "terms": [
+        "stumbleupon"
+      ]
+    },
+    "fa-delicious": {
+      "glyph": "\\f1a5",
+      "terms": [
+        "delicious"
+      ]
+    },
+    "fa-digg": {
+      "glyph": "\\f1a6",
+      "terms": [
+        "digg"
+      ]
+    },
+    "fa-pied-piper-pp": {
+      "glyph": "\\f1a7",
+      "terms": [
+        "pied piper pp"
+      ]
+    },
+    "fa-pied-piper-alt": {
+      "glyph": "\\f1a8",
+      "terms": [
+        "pied piper alt"
+      ]
+    },
+    "fa-drupal": {
+      "glyph": "\\f1a9",
+      "terms": [
+        "drupal"
+      ]
+    },
+    "fa-joomla": {
+      "glyph": "\\f1aa",
+      "terms": [
+        "joomla"
+      ]
+    },
+    "fa-behance": {
+      "glyph": "\\f1b4",
+      "terms": [
+        "behance"
+      ]
+    },
+    "fa-square-behance": {
+      "glyph": "\\f1b5",
+      "terms": [
+        "square behance"
+      ]
+    },
+    "fa-behance-square": {
+      "glyph": "\\f1b5",
+      "terms": [
+        "behance square"
+      ]
+    },
+    "fa-steam": {
+      "glyph": "\\f1b6",
+      "terms": [
+        "steam"
+      ]
+    },
+    "fa-square-steam": {
+      "glyph": "\\f1b7",
+      "terms": [
+        "square steam"
+      ]
+    },
+    "fa-steam-square": {
+      "glyph": "\\f1b7",
+      "terms": [
+        "steam square"
+      ]
+    },
+    "fa-spotify": {
+      "glyph": "\\f1bc",
+      "terms": [
+        "spotify"
+      ]
+    },
+    "fa-deviantart": {
+      "glyph": "\\f1bd",
+      "terms": [
+        "deviantart"
+      ]
+    },
+    "fa-soundcloud": {
+      "glyph": "\\f1be",
+      "terms": [
+        "soundcloud"
+      ]
+    },
+    "fa-vine": {
+      "glyph": "\\f1ca",
+      "terms": [
+        "vine"
+      ]
+    },
+    "fa-codepen": {
+      "glyph": "\\f1cb",
+      "terms": [
+        "codepen"
+      ]
+    },
+    "fa-jsfiddle": {
+      "glyph": "\\f1cc",
+      "terms": [
+        "jsfiddle"
+      ]
+    },
+    "fa-rebel": {
+      "glyph": "\\f1d0",
+      "terms": [
+        "rebel"
+      ]
+    },
+    "fa-empire": {
+      "glyph": "\\f1d1",
+      "terms": [
+        "empire"
+      ]
+    },
+    "fa-square-git": {
+      "glyph": "\\f1d2",
+      "terms": [
+        "square git"
+      ]
+    },
+    "fa-git-square": {
+      "glyph": "\\f1d2",
+      "terms": [
+        "git square"
+      ]
+    },
+    "fa-git": {
+      "glyph": "\\f1d3",
+      "terms": [
+        "git"
+      ]
+    },
+    "fa-hacker-news": {
+      "glyph": "\\f1d4",
+      "terms": [
+        "hacker news"
+      ]
+    },
+    "fa-tencent-weibo": {
+      "glyph": "\\f1d5",
+      "terms": [
+        "tencent weibo"
+      ]
+    },
+    "fa-qq": {
+      "glyph": "\\f1d6",
+      "terms": [
+        "qq"
+      ]
+    },
+    "fa-weixin": {
+      "glyph": "\\f1d7",
+      "terms": [
+        "weixin"
+      ]
+    },
+    "fa-slideshare": {
+      "glyph": "\\f1e7",
+      "terms": [
+        "slideshare"
+      ]
+    },
+    "fa-twitch": {
+      "glyph": "\\f1e8",
+      "terms": [
+        "twitch"
+      ]
+    },
+    "fa-yelp": {
+      "glyph": "\\f1e9",
+      "terms": [
+        "yelp"
+      ]
+    },
+    "fa-paypal": {
+      "glyph": "\\f1ed",
+      "terms": [
+        "paypal"
+      ]
+    },
+    "fa-google-wallet": {
+      "glyph": "\\f1ee",
+      "terms": [
+        "google wallet"
+      ]
+    },
+    "fa-cc-visa": {
+      "glyph": "\\f1f0",
+      "terms": [
+        "cc visa"
+      ]
+    },
+    "fa-cc-mastercard": {
+      "glyph": "\\f1f1",
+      "terms": [
+        "cc mastercard"
+      ]
+    },
+    "fa-cc-discover": {
+      "glyph": "\\f1f2",
+      "terms": [
+        "cc discover"
+      ]
+    },
+    "fa-cc-amex": {
+      "glyph": "\\f1f3",
+      "terms": [
+        "cc amex"
+      ]
+    },
+    "fa-cc-paypal": {
+      "glyph": "\\f1f4",
+      "terms": [
+        "cc paypal"
+      ]
+    },
+    "fa-cc-stripe": {
+      "glyph": "\\f1f5",
+      "terms": [
+        "cc stripe"
+      ]
+    },
+    "fa-lastfm": {
+      "glyph": "\\f202",
+      "terms": [
+        "lastfm"
+      ]
+    },
+    "fa-square-lastfm": {
+      "glyph": "\\f203",
+      "terms": [
+        "square lastfm"
+      ]
+    },
+    "fa-lastfm-square": {
+      "glyph": "\\f203",
+      "terms": [
+        "lastfm square"
+      ]
+    },
+    "fa-ioxhost": {
+      "glyph": "\\f208",
+      "terms": [
+        "ioxhost"
+      ]
+    },
+    "fa-angellist": {
+      "glyph": "\\f209",
+      "terms": [
+        "angellist"
+      ]
+    },
+    "fa-buysellads": {
+      "glyph": "\\f20d",
+      "terms": [
+        "buysellads"
+      ]
+    },
+    "fa-connectdevelop": {
+      "glyph": "\\f20e",
+      "terms": [
+        "connectdevelop"
+      ]
+    },
+    "fa-dashcube": {
+      "glyph": "\\f210",
+      "terms": [
+        "dashcube"
+      ]
+    },
+    "fa-forumbee": {
+      "glyph": "\\f211",
+      "terms": [
+        "forumbee"
+      ]
+    },
+    "fa-leanpub": {
+      "glyph": "\\f212",
+      "terms": [
+        "leanpub"
+      ]
+    },
+    "fa-sellsy": {
+      "glyph": "\\f213",
+      "terms": [
+        "sellsy"
+      ]
+    },
+    "fa-shirtsinbulk": {
+      "glyph": "\\f214",
+      "terms": [
+        "shirtsinbulk"
+      ]
+    },
+    "fa-simplybuilt": {
+      "glyph": "\\f215",
+      "terms": [
+        "simplybuilt"
+      ]
+    },
+    "fa-skyatlas": {
+      "glyph": "\\f216",
+      "terms": [
+        "skyatlas"
+      ]
+    },
+    "fa-pinterest-p": {
+      "glyph": "\\f231",
+      "terms": [
+        "pinterest p"
+      ]
+    },
+    "fa-whatsapp": {
+      "glyph": "\\f232",
+      "terms": [
+        "whatsapp"
+      ]
+    },
+    "fa-viacoin": {
+      "glyph": "\\f237",
+      "terms": [
+        "viacoin"
+      ]
+    },
+    "fa-medium": {
+      "glyph": "\\f23a",
+      "terms": [
+        "medium"
+      ]
+    },
+    "fa-medium-m": {
+      "glyph": "\\f23a",
+      "terms": [
+        "medium m"
+      ]
+    },
+    "fa-y-combinator": {
+      "glyph": "\\f23b",
+      "terms": [
+        "y combinator"
+      ]
+    },
+    "fa-optin-monster": {
+      "glyph": "\\f23c",
+      "terms": [
+        "optin monster"
+      ]
+    },
+    "fa-opencart": {
+      "glyph": "\\f23d",
+      "terms": [
+        "opencart"
+      ]
+    },
+    "fa-expeditedssl": {
+      "glyph": "\\f23e",
+      "terms": [
+        "expeditedssl"
+      ]
+    },
+    "fa-cc-jcb": {
+      "glyph": "\\f24b",
+      "terms": [
+        "cc jcb"
+      ]
+    },
+    "fa-cc-diners-club": {
+      "glyph": "\\f24c",
+      "terms": [
+        "cc diners club"
+      ]
+    },
+    "fa-creative-commons": {
+      "glyph": "\\f25e",
+      "terms": [
+        "creative commons"
+      ]
+    },
+    "fa-gg": {
+      "glyph": "\\f260",
+      "terms": [
+        "gg"
+      ]
+    },
+    "fa-gg-circle": {
+      "glyph": "\\f261",
+      "terms": [
+        "gg circle"
+      ]
+    },
+    "fa-odnoklassniki": {
+      "glyph": "\\f263",
+      "terms": [
+        "odnoklassniki"
+      ]
+    },
+    "fa-square-odnoklassniki": {
+      "glyph": "\\f264",
+      "terms": [
+        "square odnoklassniki"
+      ]
+    },
+    "fa-odnoklassniki-square": {
+      "glyph": "\\f264",
+      "terms": [
+        "odnoklassniki square"
+      ]
+    },
+    "fa-get-pocket": {
+      "glyph": "\\f265",
+      "terms": [
+        "get pocket"
+      ]
+    },
+    "fa-wikipedia-w": {
+      "glyph": "\\f266",
+      "terms": [
+        "wikipedia w"
+      ]
+    },
+    "fa-safari": {
+      "glyph": "\\f267",
+      "terms": [
+        "safari"
+      ]
+    },
+    "fa-chrome": {
+      "glyph": "\\f268",
+      "terms": [
+        "chrome"
+      ]
+    },
+    "fa-firefox": {
+      "glyph": "\\f269",
+      "terms": [
+        "firefox"
+      ]
+    },
+    "fa-opera": {
+      "glyph": "\\f26a",
+      "terms": [
+        "opera"
+      ]
+    },
+    "fa-internet-explorer": {
+      "glyph": "\\f26b",
+      "terms": [
+        "internet explorer"
+      ]
+    },
+    "fa-contao": {
+      "glyph": "\\f26d",
+      "terms": [
+        "contao"
+      ]
+    },
+    "fa-500px": {
+      "glyph": "\\f26e",
+      "terms": [
+        "500px"
+      ]
+    },
+    "fa-amazon": {
+      "glyph": "\\f270",
+      "terms": [
+        "amazon"
+      ]
+    },
+    "fa-houzz": {
+      "glyph": "\\f27c",
+      "terms": [
+        "houzz"
+      ]
+    },
+    "fa-vimeo-v": {
+      "glyph": "\\f27d",
+      "terms": [
+        "vimeo v"
+      ]
+    },
+    "fa-black-tie": {
+      "glyph": "\\f27e",
+      "terms": [
+        "black tie"
+      ]
+    },
+    "fa-fonticons": {
+      "glyph": "\\f280",
+      "terms": [
+        "fonticons"
+      ]
+    },
+    "fa-reddit-alien": {
+      "glyph": "\\f281",
+      "terms": [
+        "reddit alien"
+      ]
+    },
+    "fa-edge": {
+      "glyph": "\\f282",
+      "terms": [
+        "edge"
+      ]
+    },
+    "fa-codiepie": {
+      "glyph": "\\f284",
+      "terms": [
+        "codiepie"
+      ]
+    },
+    "fa-modx": {
+      "glyph": "\\f285",
+      "terms": [
+        "modx"
+      ]
+    },
+    "fa-fort-awesome": {
+      "glyph": "\\f286",
+      "terms": [
+        "fort awesome"
+      ]
+    },
+    "fa-usb": {
+      "glyph": "\\f287",
+      "terms": [
+        "usb"
+      ]
+    },
+    "fa-product-hunt": {
+      "glyph": "\\f288",
+      "terms": [
+        "product hunt"
+      ]
+    },
+    "fa-mixcloud": {
+      "glyph": "\\f289",
+      "terms": [
+        "mixcloud"
+      ]
+    },
+    "fa-scribd": {
+      "glyph": "\\f28a",
+      "terms": [
+        "scribd"
+      ]
+    },
+    "fa-bluetooth": {
+      "glyph": "\\f293",
+      "terms": [
+        "bluetooth"
+      ]
+    },
+    "fa-bluetooth-b": {
+      "glyph": "\\f294",
+      "terms": [
+        "bluetooth b"
+      ]
+    },
+    "fa-gitlab": {
+      "glyph": "\\f296",
+      "terms": [
+        "gitlab"
+      ]
+    },
+    "fa-wpbeginner": {
+      "glyph": "\\f297",
+      "terms": [
+        "wpbeginner"
+      ]
+    },
+    "fa-wpforms": {
+      "glyph": "\\f298",
+      "terms": [
+        "wpforms"
+      ]
+    },
+    "fa-envira": {
+      "glyph": "\\f299",
+      "terms": [
+        "envira"
+      ]
+    },
+    "fa-glide": {
+      "glyph": "\\f2a5",
+      "terms": [
+        "glide"
+      ]
+    },
+    "fa-glide-g": {
+      "glyph": "\\f2a6",
+      "terms": [
+        "glide g"
+      ]
+    },
+    "fa-viadeo": {
+      "glyph": "\\f2a9",
+      "terms": [
+        "viadeo"
+      ]
+    },
+    "fa-square-viadeo": {
+      "glyph": "\\f2aa",
+      "terms": [
+        "square viadeo"
+      ]
+    },
+    "fa-viadeo-square": {
+      "glyph": "\\f2aa",
+      "terms": [
+        "viadeo square"
+      ]
+    },
+    "fa-snapchat": {
+      "glyph": "\\f2ab",
+      "terms": [
+        "snapchat"
+      ]
+    },
+    "fa-snapchat-ghost": {
+      "glyph": "\\f2ab",
+      "terms": [
+        "snapchat ghost"
+      ]
+    },
+    "fa-square-snapchat": {
+      "glyph": "\\f2ad",
+      "terms": [
+        "square snapchat"
+      ]
+    },
+    "fa-snapchat-square": {
+      "glyph": "\\f2ad",
+      "terms": [
+        "snapchat square"
+      ]
+    },
+    "fa-pied-piper": {
+      "glyph": "\\f2ae",
+      "terms": [
+        "pied piper"
+      ]
+    },
+    "fa-first-order": {
+      "glyph": "\\f2b0",
+      "terms": [
+        "first order"
+      ]
+    },
+    "fa-yoast": {
+      "glyph": "\\f2b1",
+      "terms": [
+        "yoast"
+      ]
+    },
+    "fa-themeisle": {
+      "glyph": "\\f2b2",
+      "terms": [
+        "themeisle"
+      ]
+    },
+    "fa-google-plus": {
+      "glyph": "\\f2b3",
+      "terms": [
+        "google plus"
+      ]
+    },
+    "fa-font-awesome": {
+      "glyph": "\\f2b4",
+      "terms": [
+        "font awesome"
+      ]
+    },
+    "fa-font-awesome-flag": {
+      "glyph": "\\f2b4",
+      "terms": [
+        "font awesome flag"
+      ]
+    },
+    "fa-font-awesome-logo-full": {
+      "glyph": "\\f2b4",
+      "terms": [
+        "font awesome logo full"
+      ]
+    },
+    "fa-linode": {
+      "glyph": "\\f2b8",
+      "terms": [
+        "linode"
+      ]
+    },
+    "fa-quora": {
+      "glyph": "\\f2c4",
+      "terms": [
+        "quora"
+      ]
+    },
+    "fa-free-code-camp": {
+      "glyph": "\\f2c5",
+      "terms": [
+        "free code camp"
+      ]
+    },
+    "fa-telegram": {
+      "glyph": "\\f2c6",
+      "terms": [
+        "telegram"
+      ]
+    },
+    "fa-telegram-plane": {
+      "glyph": "\\f2c6",
+      "terms": [
+        "telegram plane"
+      ]
+    },
+    "fa-bandcamp": {
+      "glyph": "\\f2d5",
+      "terms": [
+        "bandcamp"
+      ]
+    },
+    "fa-grav": {
+      "glyph": "\\f2d6",
+      "terms": [
+        "grav"
+      ]
+    },
+    "fa-etsy": {
+      "glyph": "\\f2d7",
+      "terms": [
+        "etsy"
+      ]
+    },
+    "fa-imdb": {
+      "glyph": "\\f2d8",
+      "terms": [
+        "imdb"
+      ]
+    },
+    "fa-ravelry": {
+      "glyph": "\\f2d9",
+      "terms": [
+        "ravelry"
+      ]
+    },
+    "fa-sellcast": {
+      "glyph": "\\f2da",
+      "terms": [
+        "sellcast"
+      ]
+    },
+    "fa-superpowers": {
+      "glyph": "\\f2dd",
+      "terms": [
+        "superpowers"
+      ]
+    },
+    "fa-wpexplorer": {
+      "glyph": "\\f2de",
+      "terms": [
+        "wpexplorer"
+      ]
+    },
+    "fa-meetup": {
+      "glyph": "\\f2e0",
+      "terms": [
+        "meetup"
+      ]
+    },
+    "fa-square-font-awesome-stroke": {
+      "glyph": "\\f35c",
+      "terms": [
+        "square font awesome stroke"
+      ]
+    },
+    "fa-font-awesome-alt": {
+      "glyph": "\\f35c",
+      "terms": [
+        "font awesome alt"
+      ]
+    },
+    "fa-accessible-icon": {
+      "glyph": "\\f368",
+      "terms": [
+        "accessible icon"
+      ]
+    },
+    "fa-accusoft": {
+      "glyph": "\\f369",
+      "terms": [
+        "accusoft"
+      ]
+    },
+    "fa-adversal": {
+      "glyph": "\\f36a",
+      "terms": [
+        "adversal"
+      ]
+    },
+    "fa-affiliatetheme": {
+      "glyph": "\\f36b",
+      "terms": [
+        "affiliatetheme"
+      ]
+    },
+    "fa-algolia": {
+      "glyph": "\\f36c",
+      "terms": [
+        "algolia"
+      ]
+    },
+    "fa-amilia": {
+      "glyph": "\\f36d",
+      "terms": [
+        "amilia"
+      ]
+    },
+    "fa-angrycreative": {
+      "glyph": "\\f36e",
+      "terms": [
+        "angrycreative"
+      ]
+    },
+    "fa-app-store": {
+      "glyph": "\\f36f",
+      "terms": [
+        "app store"
+      ]
+    },
+    "fa-app-store-ios": {
+      "glyph": "\\f370",
+      "terms": [
+        "app store ios"
+      ]
+    },
+    "fa-apper": {
+      "glyph": "\\f371",
+      "terms": [
+        "apper"
+      ]
+    },
+    "fa-asymmetrik": {
+      "glyph": "\\f372",
+      "terms": [
+        "asymmetrik"
+      ]
+    },
+    "fa-audible": {
+      "glyph": "\\f373",
+      "terms": [
+        "audible"
+      ]
+    },
+    "fa-avianex": {
+      "glyph": "\\f374",
+      "terms": [
+        "avianex"
+      ]
+    },
+    "fa-aws": {
+      "glyph": "\\f375",
+      "terms": [
+        "aws"
+      ]
+    },
+    "fa-bimobject": {
+      "glyph": "\\f378",
+      "terms": [
+        "bimobject"
+      ]
+    },
+    "fa-bitcoin": {
+      "glyph": "\\f379",
+      "terms": [
+        "bitcoin"
+      ]
+    },
+    "fa-bity": {
+      "glyph": "\\f37a",
+      "terms": [
+        "bity"
+      ]
+    },
+    "fa-blackberry": {
+      "glyph": "\\f37b",
+      "terms": [
+        "blackberry"
+      ]
+    },
+    "fa-blogger": {
+      "glyph": "\\f37c",
+      "terms": [
+        "blogger"
+      ]
+    },
+    "fa-blogger-b": {
+      "glyph": "\\f37d",
+      "terms": [
+        "blogger b"
+      ]
+    },
+    "fa-buromobelexperte": {
+      "glyph": "\\f37f",
+      "terms": [
+        "buromobelexperte"
+      ]
+    },
+    "fa-centercode": {
+      "glyph": "\\f380",
+      "terms": [
+        "centercode"
+      ]
+    },
+    "fa-cloudscale": {
+      "glyph": "\\f383",
+      "terms": [
+        "cloudscale"
+      ]
+    },
+    "fa-cloudsmith": {
+      "glyph": "\\f384",
+      "terms": [
+        "cloudsmith"
+      ]
+    },
+    "fa-cloudversify": {
+      "glyph": "\\f385",
+      "terms": [
+        "cloudversify"
+      ]
+    },
+    "fa-cpanel": {
+      "glyph": "\\f388",
+      "terms": [
+        "cpanel"
+      ]
+    },
+    "fa-css3-alt": {
+      "glyph": "\\f38b",
+      "terms": [
+        "css3 alt"
+      ]
+    },
+    "fa-cuttlefish": {
+      "glyph": "\\f38c",
+      "terms": [
+        "cuttlefish"
+      ]
+    },
+    "fa-d-and-d": {
+      "glyph": "\\f38d",
+      "terms": [
+        "d and d"
+      ]
+    },
+    "fa-deploydog": {
+      "glyph": "\\f38e",
+      "terms": [
+        "deploydog"
+      ]
+    },
+    "fa-deskpro": {
+      "glyph": "\\f38f",
+      "terms": [
+        "deskpro"
+      ]
+    },
+    "fa-digital-ocean": {
+      "glyph": "\\f391",
+      "terms": [
+        "digital ocean"
+      ]
+    },
+    "fa-discord": {
+      "glyph": "\\f392",
+      "terms": [
+        "discord"
+      ]
+    },
+    "fa-discourse": {
+      "glyph": "\\f393",
+      "terms": [
+        "discourse"
+      ]
+    },
+    "fa-dochub": {
+      "glyph": "\\f394",
+      "terms": [
+        "dochub"
+      ]
+    },
+    "fa-docker": {
+      "glyph": "\\f395",
+      "terms": [
+        "docker"
+      ]
+    },
+    "fa-draft2digital": {
+      "glyph": "\\f396",
+      "terms": [
+        "draft2digital"
+      ]
+    },
+    "fa-square-dribbble": {
+      "glyph": "\\f397",
+      "terms": [
+        "square dribbble"
+      ]
+    },
+    "fa-dribbble-square": {
+      "glyph": "\\f397",
+      "terms": [
+        "dribbble square"
+      ]
+    },
+    "fa-dyalog": {
+      "glyph": "\\f399",
+      "terms": [
+        "dyalog"
+      ]
+    },
+    "fa-earlybirds": {
+      "glyph": "\\f39a",
+      "terms": [
+        "earlybirds"
+      ]
+    },
+    "fa-erlang": {
+      "glyph": "\\f39d",
+      "terms": [
+        "erlang"
+      ]
+    },
+    "fa-facebook-f": {
+      "glyph": "\\f39e",
+      "terms": [
+        "facebook f"
+      ]
+    },
+    "fa-facebook-messenger": {
+      "glyph": "\\f39f",
+      "terms": [
+        "facebook messenger"
+      ]
+    },
+    "fa-firstdraft": {
+      "glyph": "\\f3a1",
+      "terms": [
+        "firstdraft"
+      ]
+    },
+    "fa-fonticons-fi": {
+      "glyph": "\\f3a2",
+      "terms": [
+        "fonticons fi"
+      ]
+    },
+    "fa-fort-awesome-alt": {
+      "glyph": "\\f3a3",
+      "terms": [
+        "fort awesome alt"
+      ]
+    },
+    "fa-freebsd": {
+      "glyph": "\\f3a4",
+      "terms": [
+        "freebsd"
+      ]
+    },
+    "fa-gitkraken": {
+      "glyph": "\\f3a6",
+      "terms": [
+        "gitkraken"
+      ]
+    },
+    "fa-gofore": {
+      "glyph": "\\f3a7",
+      "terms": [
+        "gofore"
+      ]
+    },
+    "fa-goodreads": {
+      "glyph": "\\f3a8",
+      "terms": [
+        "goodreads"
+      ]
+    },
+    "fa-goodreads-g": {
+      "glyph": "\\f3a9",
+      "terms": [
+        "goodreads g"
+      ]
+    },
+    "fa-google-drive": {
+      "glyph": "\\f3aa",
+      "terms": [
+        "google drive"
+      ]
+    },
+    "fa-google-play": {
+      "glyph": "\\f3ab",
+      "terms": [
+        "google play"
+      ]
+    },
+    "fa-gripfire": {
+      "glyph": "\\f3ac",
+      "terms": [
+        "gripfire"
+      ]
+    },
+    "fa-grunt": {
+      "glyph": "\\f3ad",
+      "terms": [
+        "grunt"
+      ]
+    },
+    "fa-gulp": {
+      "glyph": "\\f3ae",
+      "terms": [
+        "gulp"
+      ]
+    },
+    "fa-square-hacker-news": {
+      "glyph": "\\f3af",
+      "terms": [
+        "square hacker news"
+      ]
+    },
+    "fa-hacker-news-square": {
+      "glyph": "\\f3af",
+      "terms": [
+        "hacker news square"
+      ]
+    },
+    "fa-hire-a-helper": {
+      "glyph": "\\f3b0",
+      "terms": [
+        "hire a helper"
+      ]
+    },
+    "fa-hotjar": {
+      "glyph": "\\f3b1",
+      "terms": [
+        "hotjar"
+      ]
+    },
+    "fa-hubspot": {
+      "glyph": "\\f3b2",
+      "terms": [
+        "hubspot"
+      ]
+    },
+    "fa-itunes": {
+      "glyph": "\\f3b4",
+      "terms": [
+        "itunes"
+      ]
+    },
+    "fa-itunes-note": {
+      "glyph": "\\f3b5",
+      "terms": [
+        "itunes note"
+      ]
+    },
+    "fa-jenkins": {
+      "glyph": "\\f3b6",
+      "terms": [
+        "jenkins"
+      ]
+    },
+    "fa-joget": {
+      "glyph": "\\f3b7",
+      "terms": [
+        "joget"
+      ]
+    },
+    "fa-js": {
+      "glyph": "\\f3b8",
+      "terms": [
+        "js"
+      ]
+    },
+    "fa-square-js": {
+      "glyph": "\\f3b9",
+      "terms": [
+        "square js"
+      ]
+    },
+    "fa-js-square": {
+      "glyph": "\\f3b9",
+      "terms": [
+        "js square"
+      ]
+    },
+    "fa-keycdn": {
+      "glyph": "\\f3ba",
+      "terms": [
+        "keycdn"
+      ]
+    },
+    "fa-kickstarter": {
+      "glyph": "\\f3bb",
+      "terms": [
+        "kickstarter"
+      ]
+    },
+    "fa-square-kickstarter": {
+      "glyph": "\\f3bb",
+      "terms": [
+        "square kickstarter"
+      ]
+    },
+    "fa-kickstarter-k": {
+      "glyph": "\\f3bc",
+      "terms": [
+        "kickstarter k"
+      ]
+    },
+    "fa-laravel": {
+      "glyph": "\\f3bd",
+      "terms": [
+        "laravel"
+      ]
+    },
+    "fa-line": {
+      "glyph": "\\f3c0",
+      "terms": [
+        "line"
+      ]
+    },
+    "fa-lyft": {
+      "glyph": "\\f3c3",
+      "terms": [
+        "lyft"
+      ]
+    },
+    "fa-magento": {
+      "glyph": "\\f3c4",
+      "terms": [
+        "magento"
+      ]
+    },
+    "fa-medapps": {
+      "glyph": "\\f3c6",
+      "terms": [
+        "medapps"
+      ]
+    },
+    "fa-medrt": {
+      "glyph": "\\f3c8",
+      "terms": [
+        "medrt"
+      ]
+    },
+    "fa-microsoft": {
+      "glyph": "\\f3ca",
+      "terms": [
+        "microsoft"
+      ]
+    },
+    "fa-mix": {
+      "glyph": "\\f3cb",
+      "terms": [
+        "mix"
+      ]
+    },
+    "fa-mizuni": {
+      "glyph": "\\f3cc",
+      "terms": [
+        "mizuni"
+      ]
+    },
+    "fa-monero": {
+      "glyph": "\\f3d0",
+      "terms": [
+        "monero"
+      ]
+    },
+    "fa-napster": {
+      "glyph": "\\f3d2",
+      "terms": [
+        "napster"
+      ]
+    },
+    "fa-node-js": {
+      "glyph": "\\f3d3",
+      "terms": [
+        "node js"
+      ]
+    },
+    "fa-npm": {
+      "glyph": "\\f3d4",
+      "terms": [
+        "npm"
+      ]
+    },
+    "fa-ns8": {
+      "glyph": "\\f3d5",
+      "terms": [
+        "ns8"
+      ]
+    },
+    "fa-nutritionix": {
+      "glyph": "\\f3d6",
+      "terms": [
+        "nutritionix"
+      ]
+    },
+    "fa-page4": {
+      "glyph": "\\f3d7",
+      "terms": [
+        "page4"
+      ]
+    },
+    "fa-palfed": {
+      "glyph": "\\f3d8",
+      "terms": [
+        "palfed"
+      ]
+    },
+    "fa-patreon": {
+      "glyph": "\\f3d9",
+      "terms": [
+        "patreon"
+      ]
+    },
+    "fa-periscope": {
+      "glyph": "\\f3da",
+      "terms": [
+        "periscope"
+      ]
+    },
+    "fa-phabricator": {
+      "glyph": "\\f3db",
+      "terms": [
+        "phabricator"
+      ]
+    },
+    "fa-phoenix-framework": {
+      "glyph": "\\f3dc",
+      "terms": [
+        "phoenix framework"
+      ]
+    },
+    "fa-playstation": {
+      "glyph": "\\f3df",
+      "terms": [
+        "playstation"
+      ]
+    },
+    "fa-pushed": {
+      "glyph": "\\f3e1",
+      "terms": [
+        "pushed"
+      ]
+    },
+    "fa-python": {
+      "glyph": "\\f3e2",
+      "terms": [
+        "python"
+      ]
+    },
+    "fa-red-river": {
+      "glyph": "\\f3e3",
+      "terms": [
+        "red river"
+      ]
+    },
+    "fa-wpressr": {
+      "glyph": "\\f3e4",
+      "terms": [
+        "wpressr"
+      ]
+    },
+    "fa-rendact": {
+      "glyph": "\\f3e4",
+      "terms": [
+        "rendact"
+      ]
+    },
+    "fa-replyd": {
+      "glyph": "\\f3e6",
+      "terms": [
+        "replyd"
+      ]
+    },
+    "fa-resolving": {
+      "glyph": "\\f3e7",
+      "terms": [
+        "resolving"
+      ]
+    },
+    "fa-rocketchat": {
+      "glyph": "\\f3e8",
+      "terms": [
+        "rocketchat"
+      ]
+    },
+    "fa-rockrms": {
+      "glyph": "\\f3e9",
+      "terms": [
+        "rockrms"
+      ]
+    },
+    "fa-schlix": {
+      "glyph": "\\f3ea",
+      "terms": [
+        "schlix"
+      ]
+    },
+    "fa-searchengin": {
+      "glyph": "\\f3eb",
+      "terms": [
+        "searchengin"
+      ]
+    },
+    "fa-servicestack": {
+      "glyph": "\\f3ec",
+      "terms": [
+        "servicestack"
+      ]
+    },
+    "fa-sistrix": {
+      "glyph": "\\f3ee",
+      "terms": [
+        "sistrix"
+      ]
+    },
+    "fa-speakap": {
+      "glyph": "\\f3f3",
+      "terms": [
+        "speakap"
+      ]
+    },
+    "fa-staylinked": {
+      "glyph": "\\f3f5",
+      "terms": [
+        "staylinked"
+      ]
+    },
+    "fa-steam-symbol": {
+      "glyph": "\\f3f6",
+      "terms": [
+        "steam symbol"
+      ]
+    },
+    "fa-sticker-mule": {
+      "glyph": "\\f3f7",
+      "terms": [
+        "sticker mule"
+      ]
+    },
+    "fa-studiovinari": {
+      "glyph": "\\f3f8",
+      "terms": [
+        "studiovinari"
+      ]
+    },
+    "fa-supple": {
+      "glyph": "\\f3f9",
+      "terms": [
+        "supple"
+      ]
+    },
+    "fa-uber": {
+      "glyph": "\\f402",
+      "terms": [
+        "uber"
+      ]
+    },
+    "fa-uikit": {
+      "glyph": "\\f403",
+      "terms": [
+        "uikit"
+      ]
+    },
+    "fa-uniregistry": {
+      "glyph": "\\f404",
+      "terms": [
+        "uniregistry"
+      ]
+    },
+    "fa-untappd": {
+      "glyph": "\\f405",
+      "terms": [
+        "untappd"
+      ]
+    },
+    "fa-ussunnah": {
+      "glyph": "\\f407",
+      "terms": [
+        "ussunnah"
+      ]
+    },
+    "fa-vaadin": {
+      "glyph": "\\f408",
+      "terms": [
+        "vaadin"
+      ]
+    },
+    "fa-viber": {
+      "glyph": "\\f409",
+      "terms": [
+        "viber"
+      ]
+    },
+    "fa-vimeo": {
+      "glyph": "\\f40a",
+      "terms": [
+        "vimeo"
+      ]
+    },
+    "fa-vnv": {
+      "glyph": "\\f40b",
+      "terms": [
+        "vnv"
+      ]
+    },
+    "fa-square-whatsapp": {
+      "glyph": "\\f40c",
+      "terms": [
+        "square whatsapp"
+      ]
+    },
+    "fa-whatsapp-square": {
+      "glyph": "\\f40c",
+      "terms": [
+        "whatsapp square"
+      ]
+    },
+    "fa-whmcs": {
+      "glyph": "\\f40d",
+      "terms": [
+        "whmcs"
+      ]
+    },
+    "fa-wordpress-simple": {
+      "glyph": "\\f411",
+      "terms": [
+        "wordpress simple"
+      ]
+    },
+    "fa-xbox": {
+      "glyph": "\\f412",
+      "terms": [
+        "xbox"
+      ]
+    },
+    "fa-yandex": {
+      "glyph": "\\f413",
+      "terms": [
+        "yandex"
+      ]
+    },
+    "fa-yandex-international": {
+      "glyph": "\\f414",
+      "terms": [
+        "yandex international"
+      ]
+    },
+    "fa-apple-pay": {
+      "glyph": "\\f415",
+      "terms": [
+        "apple pay"
+      ]
+    },
+    "fa-cc-apple-pay": {
+      "glyph": "\\f416",
+      "terms": [
+        "cc apple pay"
+      ]
+    },
+    "fa-fly": {
+      "glyph": "\\f417",
+      "terms": [
+        "fly"
+      ]
+    },
+    "fa-node": {
+      "glyph": "\\f419",
+      "terms": [
+        "node"
+      ]
+    },
+    "fa-osi": {
+      "glyph": "\\f41a",
+      "terms": [
+        "osi"
+      ]
+    },
+    "fa-react": {
+      "glyph": "\\f41b",
+      "terms": [
+        "react"
+      ]
+    },
+    "fa-autoprefixer": {
+      "glyph": "\\f41c",
+      "terms": [
+        "autoprefixer"
+      ]
+    },
+    "fa-less": {
+      "glyph": "\\f41d",
+      "terms": [
+        "less"
+      ]
+    },
+    "fa-sass": {
+      "glyph": "\\f41e",
+      "terms": [
+        "sass"
+      ]
+    },
+    "fa-vuejs": {
+      "glyph": "\\f41f",
+      "terms": [
+        "vuejs"
+      ]
+    },
+    "fa-angular": {
+      "glyph": "\\f420",
+      "terms": [
+        "angular"
+      ]
+    },
+    "fa-aviato": {
+      "glyph": "\\f421",
+      "terms": [
+        "aviato"
+      ]
+    },
+    "fa-ember": {
+      "glyph": "\\f423",
+      "terms": [
+        "ember"
+      ]
+    },
+    "fa-gitter": {
+      "glyph": "\\f426",
+      "terms": [
+        "gitter"
+      ]
+    },
+    "fa-hooli": {
+      "glyph": "\\f427",
+      "terms": [
+        "hooli"
+      ]
+    },
+    "fa-strava": {
+      "glyph": "\\f428",
+      "terms": [
+        "strava"
+      ]
+    },
+    "fa-stripe": {
+      "glyph": "\\f429",
+      "terms": [
+        "stripe"
+      ]
+    },
+    "fa-stripe-s": {
+      "glyph": "\\f42a",
+      "terms": [
+        "stripe s"
+      ]
+    },
+    "fa-typo3": {
+      "glyph": "\\f42b",
+      "terms": [
+        "typo3"
+      ]
+    },
+    "fa-amazon-pay": {
+      "glyph": "\\f42c",
+      "terms": [
+        "amazon pay"
+      ]
+    },
+    "fa-cc-amazon-pay": {
+      "glyph": "\\f42d",
+      "terms": [
+        "cc amazon pay"
+      ]
+    },
+    "fa-ethereum": {
+      "glyph": "\\f42e",
+      "terms": [
+        "ethereum"
+      ]
+    },
+    "fa-korvue": {
+      "glyph": "\\f42f",
+      "terms": [
+        "korvue"
+      ]
+    },
+    "fa-elementor": {
+      "glyph": "\\f430",
+      "terms": [
+        "elementor"
+      ]
+    },
+    "fa-square-youtube": {
+      "glyph": "\\f431",
+      "terms": [
+        "square youtube"
+      ]
+    },
+    "fa-youtube-square": {
+      "glyph": "\\f431",
+      "terms": [
+        "youtube square"
+      ]
+    },
+    "fa-flipboard": {
+      "glyph": "\\f44d",
+      "terms": [
+        "flipboard"
+      ]
+    },
+    "fa-hips": {
+      "glyph": "\\f452",
+      "terms": [
+        "hips"
+      ]
+    },
+    "fa-php": {
+      "glyph": "\\f457",
+      "terms": [
+        "php"
+      ]
+    },
+    "fa-quinscape": {
+      "glyph": "\\f459",
+      "terms": [
+        "quinscape"
+      ]
+    },
+    "fa-readme": {
+      "glyph": "\\f4d5",
+      "terms": [
+        "readme"
+      ]
+    },
+    "fa-java": {
+      "glyph": "\\f4e4",
+      "terms": [
+        "java"
+      ]
+    },
+    "fa-pied-piper-hat": {
+      "glyph": "\\f4e5",
+      "terms": [
+        "pied piper hat"
+      ]
+    },
+    "fa-creative-commons-by": {
+      "glyph": "\\f4e7",
+      "terms": [
+        "creative commons by"
+      ]
+    },
+    "fa-creative-commons-nc": {
+      "glyph": "\\f4e8",
+      "terms": [
+        "creative commons nc"
+      ]
+    },
+    "fa-creative-commons-nc-eu": {
+      "glyph": "\\f4e9",
+      "terms": [
+        "creative commons nc eu"
+      ]
+    },
+    "fa-creative-commons-nc-jp": {
+      "glyph": "\\f4ea",
+      "terms": [
+        "creative commons nc jp"
+      ]
+    },
+    "fa-creative-commons-nd": {
+      "glyph": "\\f4eb",
+      "terms": [
+        "creative commons nd"
+      ]
+    },
+    "fa-creative-commons-pd": {
+      "glyph": "\\f4ec",
+      "terms": [
+        "creative commons pd"
+      ]
+    },
+    "fa-creative-commons-pd-alt": {
+      "glyph": "\\f4ed",
+      "terms": [
+        "creative commons pd alt"
+      ]
+    },
+    "fa-creative-commons-remix": {
+      "glyph": "\\f4ee",
+      "terms": [
+        "creative commons remix"
+      ]
+    },
+    "fa-creative-commons-sa": {
+      "glyph": "\\f4ef",
+      "terms": [
+        "creative commons sa"
+      ]
+    },
+    "fa-creative-commons-sampling": {
+      "glyph": "\\f4f0",
+      "terms": [
+        "creative commons sampling"
+      ]
+    },
+    "fa-creative-commons-sampling-plus": {
+      "glyph": "\\f4f1",
+      "terms": [
+        "creative commons sampling plus"
+      ]
+    },
+    "fa-creative-commons-share": {
+      "glyph": "\\f4f2",
+      "terms": [
+        "creative commons share"
+      ]
+    },
+    "fa-creative-commons-zero": {
+      "glyph": "\\f4f3",
+      "terms": [
+        "creative commons zero"
+      ]
+    },
+    "fa-ebay": {
+      "glyph": "\\f4f4",
+      "terms": [
+        "ebay"
+      ]
+    },
+    "fa-keybase": {
+      "glyph": "\\f4f5",
+      "terms": [
+        "keybase"
+      ]
+    },
+    "fa-mastodon": {
+      "glyph": "\\f4f6",
+      "terms": [
+        "mastodon"
+      ]
+    },
+    "fa-r-project": {
+      "glyph": "\\f4f7",
+      "terms": [
+        "r project"
+      ]
+    },
+    "fa-researchgate": {
+      "glyph": "\\f4f8",
+      "terms": [
+        "researchgate"
+      ]
+    },
+    "fa-teamspeak": {
+      "glyph": "\\f4f9",
+      "terms": [
+        "teamspeak"
+      ]
+    },
+    "fa-first-order-alt": {
+      "glyph": "\\f50a",
+      "terms": [
+        "first order alt"
+      ]
+    },
+    "fa-fulcrum": {
+      "glyph": "\\f50b",
+      "terms": [
+        "fulcrum"
+      ]
+    },
+    "fa-galactic-republic": {
+      "glyph": "\\f50c",
+      "terms": [
+        "galactic republic"
+      ]
+    },
+    "fa-galactic-senate": {
+      "glyph": "\\f50d",
+      "terms": [
+        "galactic senate"
+      ]
+    },
+    "fa-jedi-order": {
+      "glyph": "\\f50e",
+      "terms": [
+        "jedi order"
+      ]
+    },
+    "fa-mandalorian": {
+      "glyph": "\\f50f",
+      "terms": [
+        "mandalorian"
+      ]
+    },
+    "fa-old-republic": {
+      "glyph": "\\f510",
+      "terms": [
+        "old republic"
+      ]
+    },
+    "fa-phoenix-squadron": {
+      "glyph": "\\f511",
+      "terms": [
+        "phoenix squadron"
+      ]
+    },
+    "fa-sith": {
+      "glyph": "\\f512",
+      "terms": [
+        "sith"
+      ]
+    },
+    "fa-trade-federation": {
+      "glyph": "\\f513",
+      "terms": [
+        "trade federation"
+      ]
+    },
+    "fa-wolf-pack-battalion": {
+      "glyph": "\\f514",
+      "terms": [
+        "wolf pack battalion"
+      ]
+    },
+    "fa-hornbill": {
+      "glyph": "\\f592",
+      "terms": [
+        "hornbill"
+      ]
+    },
+    "fa-mailchimp": {
+      "glyph": "\\f59e",
+      "terms": [
+        "mailchimp"
+      ]
+    },
+    "fa-megaport": {
+      "glyph": "\\f5a3",
+      "terms": [
+        "megaport"
+      ]
+    },
+    "fa-nimblr": {
+      "glyph": "\\f5a8",
+      "terms": [
+        "nimblr"
+      ]
+    },
+    "fa-rev": {
+      "glyph": "\\f5b2",
+      "terms": [
+        "rev"
+      ]
+    },
+    "fa-shopware": {
+      "glyph": "\\f5b5",
+      "terms": [
+        "shopware"
+      ]
+    },
+    "fa-squarespace": {
+      "glyph": "\\f5be",
+      "terms": [
+        "squarespace"
+      ]
+    },
+    "fa-themeco": {
+      "glyph": "\\f5c6",
+      "terms": [
+        "themeco"
+      ]
+    },
+    "fa-weebly": {
+      "glyph": "\\f5cc",
+      "terms": [
+        "weebly"
+      ]
+    },
+    "fa-wix": {
+      "glyph": "\\f5cf",
+      "terms": [
+        "wix"
+      ]
+    },
+    "fa-ello": {
+      "glyph": "\\f5f1",
+      "terms": [
+        "ello"
+      ]
+    },
+    "fa-hackerrank": {
+      "glyph": "\\f5f7",
+      "terms": [
+        "hackerrank"
+      ]
+    },
+    "fa-kaggle": {
+      "glyph": "\\f5fa",
+      "terms": [
+        "kaggle"
+      ]
+    },
+    "fa-markdown": {
+      "glyph": "\\f60f",
+      "terms": [
+        "markdown"
+      ]
+    },
+    "fa-neos": {
+      "glyph": "\\f612",
+      "terms": [
+        "neos"
+      ]
+    },
+    "fa-zhihu": {
+      "glyph": "\\f63f",
+      "terms": [
+        "zhihu"
+      ]
+    },
+    "fa-alipay": {
+      "glyph": "\\f642",
+      "terms": [
+        "alipay"
+      ]
+    },
+    "fa-the-red-yeti": {
+      "glyph": "\\f69d",
+      "terms": [
+        "the red yeti"
+      ]
+    },
+    "fa-critical-role": {
+      "glyph": "\\f6c9",
+      "terms": [
+        "critical role"
+      ]
+    },
+    "fa-d-and-d-beyond": {
+      "glyph": "\\f6ca",
+      "terms": [
+        "d and d beyond"
+      ]
+    },
+    "fa-dev": {
+      "glyph": "\\f6cc",
+      "terms": [
+        "dev"
+      ]
+    },
+    "fa-fantasy-flight-games": {
+      "glyph": "\\f6dc",
+      "terms": [
+        "fantasy flight games"
+      ]
+    },
+    "fa-wizards-of-the-coast": {
+      "glyph": "\\f730",
+      "terms": [
+        "wizards of the coast"
+      ]
+    },
+    "fa-think-peaks": {
+      "glyph": "\\f731",
+      "terms": [
+        "think peaks"
+      ]
+    },
+    "fa-reacteurope": {
+      "glyph": "\\f75d",
+      "terms": [
+        "reacteurope"
+      ]
+    },
+    "fa-artstation": {
+      "glyph": "\\f77a",
+      "terms": [
+        "artstation"
+      ]
+    },
+    "fa-atlassian": {
+      "glyph": "\\f77b",
+      "terms": [
+        "atlassian"
+      ]
+    },
+    "fa-canadian-maple-leaf": {
+      "glyph": "\\f785",
+      "terms": [
+        "canadian maple leaf"
+      ]
+    },
+    "fa-centos": {
+      "glyph": "\\f789",
+      "terms": [
+        "centos"
+      ]
+    },
+    "fa-confluence": {
+      "glyph": "\\f78d",
+      "terms": [
+        "confluence"
+      ]
+    },
+    "fa-dhl": {
+      "glyph": "\\f790",
+      "terms": [
+        "dhl"
+      ]
+    },
+    "fa-diaspora": {
+      "glyph": "\\f791",
+      "terms": [
+        "diaspora"
+      ]
+    },
+    "fa-fedex": {
+      "glyph": "\\f797",
+      "terms": [
+        "fedex"
+      ]
+    },
+    "fa-fedora": {
+      "glyph": "\\f798",
+      "terms": [
+        "fedora"
+      ]
+    },
+    "fa-figma": {
+      "glyph": "\\f799",
+      "terms": [
+        "figma"
+      ]
+    },
+    "fa-intercom": {
+      "glyph": "\\f7af",
+      "terms": [
+        "intercom"
+      ]
+    },
+    "fa-invision": {
+      "glyph": "\\f7b0",
+      "terms": [
+        "invision"
+      ]
+    },
+    "fa-jira": {
+      "glyph": "\\f7b1",
+      "terms": [
+        "jira"
+      ]
+    },
+    "fa-mendeley": {
+      "glyph": "\\f7b3",
+      "terms": [
+        "mendeley"
+      ]
+    },
+    "fa-raspberry-pi": {
+      "glyph": "\\f7bb",
+      "terms": [
+        "raspberry pi"
+      ]
+    },
+    "fa-redhat": {
+      "glyph": "\\f7bc",
+      "terms": [
+        "redhat"
+      ]
+    },
+    "fa-sketch": {
+      "glyph": "\\f7c6",
+      "terms": [
+        "sketch"
+      ]
+    },
+    "fa-sourcetree": {
+      "glyph": "\\f7d3",
+      "terms": [
+        "sourcetree"
+      ]
+    },
+    "fa-suse": {
+      "glyph": "\\f7d6",
+      "terms": [
+        "suse"
+      ]
+    },
+    "fa-ubuntu": {
+      "glyph": "\\f7df",
+      "terms": [
+        "ubuntu"
+      ]
+    },
+    "fa-ups": {
+      "glyph": "\\f7e0",
+      "terms": [
+        "ups"
+      ]
+    },
+    "fa-usps": {
+      "glyph": "\\f7e1",
+      "terms": [
+        "usps"
+      ]
+    },
+    "fa-yarn": {
+      "glyph": "\\f7e3",
+      "terms": [
+        "yarn"
+      ]
+    },
+    "fa-airbnb": {
+      "glyph": "\\f834",
+      "terms": [
+        "airbnb"
+      ]
+    },
+    "fa-battle-net": {
+      "glyph": "\\f835",
+      "terms": [
+        "battle net"
+      ]
+    },
+    "fa-bootstrap": {
+      "glyph": "\\f836",
+      "terms": [
+        "bootstrap"
+      ]
+    },
+    "fa-buffer": {
+      "glyph": "\\f837",
+      "terms": [
+        "buffer"
+      ]
+    },
+    "fa-chromecast": {
+      "glyph": "\\f838",
+      "terms": [
+        "chromecast"
+      ]
+    },
+    "fa-evernote": {
+      "glyph": "\\f839",
+      "terms": [
+        "evernote"
+      ]
+    },
+    "fa-itch-io": {
+      "glyph": "\\f83a",
+      "terms": [
+        "itch io"
+      ]
+    },
+    "fa-salesforce": {
+      "glyph": "\\f83b",
+      "terms": [
+        "salesforce"
+      ]
+    },
+    "fa-speaker-deck": {
+      "glyph": "\\f83c",
+      "terms": [
+        "speaker deck"
+      ]
+    },
+    "fa-symfony": {
+      "glyph": "\\f83d",
+      "terms": [
+        "symfony"
+      ]
+    },
+    "fa-waze": {
+      "glyph": "\\f83f",
+      "terms": [
+        "waze"
+      ]
+    },
+    "fa-yammer": {
+      "glyph": "\\f840",
+      "terms": [
+        "yammer"
+      ]
+    },
+    "fa-git-alt": {
+      "glyph": "\\f841",
+      "terms": [
+        "git alt"
+      ]
+    },
+    "fa-stackpath": {
+      "glyph": "\\f842",
+      "terms": [
+        "stackpath"
+      ]
+    },
+    "fa-cotton-bureau": {
+      "glyph": "\\f89e",
+      "terms": [
+        "cotton bureau"
+      ]
+    },
+    "fa-buy-n-large": {
+      "glyph": "\\f8a6",
+      "terms": [
+        "buy n large"
+      ]
+    },
+    "fa-mdb": {
+      "glyph": "\\f8ca",
+      "terms": [
+        "mdb"
+      ]
+    },
+    "fa-orcid": {
+      "glyph": "\\f8d2",
+      "terms": [
+        "orcid"
+      ]
+    },
+    "fa-swift": {
+      "glyph": "\\f8e1",
+      "terms": [
+        "swift"
+      ]
+    },
+    "fa-umbraco": {
+      "glyph": "\\f8e8",
+      "terms": [
+        "umbraco"
+      ]
+    }
+  }
+}
