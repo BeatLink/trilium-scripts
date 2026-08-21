@@ -1,4 +1,4 @@
-const { loadConfig } = require("config.js")
+const { loadConfig } = await tamRequire("togglenotes@beatlink/config-js")
 
 async function getActiveParents(noteId, parentIds) {
     return await api.runOnBackend(

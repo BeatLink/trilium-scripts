@@ -1,5 +1,5 @@
 import { useState, useEffect, useNoteContext, useNoteProperty, Button } from "trilium:preact"
-const { loadConfig, getActiveParents, getLauncherInfo, toggleLauncher } = require("lib.js")
+const { loadConfig, getActiveParents, getLauncherInfo, toggleLauncher } = await tamRequire("togglenotes@beatlink/lib-js")
 
 function LauncherButtons({ variant }) {
     const { note } = useNoteContext();

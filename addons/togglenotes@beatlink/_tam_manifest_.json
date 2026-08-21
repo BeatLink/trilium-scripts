@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/togglenotes@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.2",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/togglenotes@beatlink/_tam_manifest_.json",
@@ -100,36 +100,28 @@
                 "child": "settings-jsx"
             },
             {
-                "parent": "settings-jsx",
+                "parent": "persistence",
+                "child": "settings-json"
+            },
+            {
+                "parent": "togglenote",
                 "child": "config-js"
             },
             {
-                "parent": "persistence",
-                "child": "settings-json"
+                "parent": "togglenote",
+                "child": "lib-js"
+            },
+            {
+                "parent": "togglenote",
+                "child": "launcherbuttons-jsx"
             },
             {
                 "parent": "togglenote",
                 "child": "leftpane-jsx"
             },
             {
-                "parent": "leftpane-jsx",
-                "child": "launcherbuttons-jsx"
-            },
-            {
-                "parent": "launcherbuttons-jsx",
-                "child": "lib-js"
-            },
-            {
-                "parent": "lib-js",
-                "child": "config-js"
-            },
-            {
                 "parent": "togglenote",
                 "child": "rightpane-jsx"
-            },
-            {
-                "parent": "rightpane-jsx",
-                "child": "launcherbuttons-jsx"
             },
             {
                 "parent": "togglenote",
