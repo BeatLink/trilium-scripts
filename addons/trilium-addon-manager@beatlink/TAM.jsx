@@ -60,6 +60,7 @@ const ISSUE_TITLES = {
     "unverifiable-source": "Source carries no hashes",
     "partial-sync": "Sync half-failed",
     "missing-note": "Note not installed",
+    "missing-attachment": "Attachment not installed",
     "content-drift": "Content doesn't match manifest",
     "broken-wiring": "Wiring not applied",
     "duplicate-child-title": "Duplicate child name breaks the script bundle"

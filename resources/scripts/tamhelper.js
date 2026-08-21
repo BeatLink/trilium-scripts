@@ -251,6 +251,7 @@ function loadAddons() {
 const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
 const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
+const ICON_PACK_FONT_MIMES = new Set(["font/woff2", "font/woff", "font/ttf"]);
 
 
 async function cmdValidate(args) {
@@ -551,6 +552,79 @@ async function cmdValidate(args) {
             }
         }
 
+        // Attachments are how Trilium carries an icon pack's font file (it reads
+        // getAttachmentsByRole("file") and picks by mime), and an attachment is
+        // matched on its title, so a blank one can never be found again.
+        const seenAttachments = new Set();
+        for (const note of notes) {
+            const nid = note.id || note.title || "?";
+            if (note.attachments !== undefined && !Array.isArray(note.attachments)) {
+                error(manifestFile, `note '${nid}': 'attachments' must be an array`);
+                continue;
+            }
+            for (const att of note.attachments || []) {
+                if (!att.title) {
+                    error(manifestFile, `note '${nid}': an attachment is missing 'title', which is what TAM matches it on across syncs`);
+                    continue;
+                }
+                const key = `${nid}\u0000${att.title}`;
+                if (seenAttachments.has(key)) {
+                    error(manifestFile, `note '${nid}': two attachments share the title '${att.title}' -- the second would overwrite the first`);
+                }
+                seenAttachments.add(key);
+                if (!att.mime) {
+                    error(manifestFile, `note '${nid}': attachment '${att.title}' is missing 'mime'`);
+                }
+                if (att.role && att.role !== "file" && att.role !== "image") {
+                    warn(manifestFile, `note '${nid}': attachment '${att.title}' has role '${att.role}' -- expected 'file' or 'image'`);
+                }
+                if (!att.sourceUrl && att.content == null) {
+                    error(manifestFile, `note '${nid}': attachment '${att.title}' ships no content (sourceUrl/content)`);
+                }
+                if (att.sourceUrl) {
+                    try {
+                        await readSource(att.sourceUrl, manifestFile);
+                    } catch (e) {
+                        error(manifestFile, `note '${nid}': attachment '${att.title}' sourceUrl '${att.sourceUrl}' could not be read (${e.message})`);
+                    }
+                }
+            }
+        }
+
+        // An icon pack is a JSON manifest note labelled #iconPack=<prefix> with the
+        // font as an attachment. Any of the three missing and Trilium drops the pack
+        // with nothing but a line in the server log.
+        for (const label of (m.labels || []).filter((lbl) => lbl.name === "iconPack")) {
+            const nid = label.note;
+            const note = byId[nid];
+            if (!note) continue;
+            if (!/^[a-zA-Z0-9_-]+$/.test(label.value || "")) {
+                error(manifestFile, `note '${nid}': #iconPack prefix '${label.value || ""}' must be non-empty and only alphanumerics, hyphens and underscores`);
+            }
+            if (label.value === "bx") {
+                error(manifestFile, `note '${nid}': #iconPack prefix 'bx' is taken by Trilium's built-in Boxicons pack`);
+            }
+            if (note.type !== "code" || note.mime !== "application/json") {
+                error(manifestFile, `note '${nid}': an #iconPack note must be type 'code' with mime 'application/json', not '${note.type}'/'${note.mime}'`);
+            }
+            const font = (note.attachments || []).find((att) => ICON_PACK_FONT_MIMES.has(att.mime));
+            if (!font) {
+                error(manifestFile, `note '${nid}': #iconPack note has no font attachment -- it needs one with mime ${[...ICON_PACK_FONT_MIMES].join(", ")}`);
+            } else if ((font.role || "file") !== "file") {
+                error(manifestFile, `note '${nid}': #iconPack font attachment '${font.title}' has role '${font.role}' -- Trilium only reads role 'file'`);
+            }
+            if (note.sourceUrl) {
+                try {
+                    const parsed = JSON.parse((await readSource(note.sourceUrl, manifestFile)).toString("utf8"));
+                    if (!parsed || typeof parsed.icons !== "object" || !parsed.icons) {
+                        error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' has no 'icons' object`);
+                    }
+                } catch (e) {
+                    error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' is not readable JSON (${e.message})`);
+                }
+            }
+        }
+
         // children references. "root"/"persistence" are reserved parent keywords meaning
         // "TAM's synthesized structural/persistence anchor" -- never real declared notes.
         // A cross-addon child (c.addon set) names an export from that OTHER addon's manifest,
@@ -793,6 +867,35 @@ async function processManifest(fullManifest, manifestFile) {
         zipFiles.push([dirPrefix + dataName, content]);
         const childPrefix = dirName ? dirPrefix + dirName + "/" : dirPrefix;
 
+        // Trilium's importer looks an attachment's data file up as a sibling of its
+        // owner note's own, named "{note base}_{attachment title}" -- and skips any
+        // entry with no attachmentId, so each needs a generated one like a note.
+        const attachments = [];
+        let attPos = 10;
+        for (const att of noteDef.attachments || []) {
+            const attName = uniqueBase(dirPrefix, safeName(`${base}_${att.title}`));
+            let attContent;
+            if (att.sourceUrl) {
+                try {
+                    attContent = await readSource(att.sourceUrl, manifestFile);
+                } catch (e) {
+                    warnings.push(`note '${localId}': attachment '${att.title}' sourceUrl '${att.sourceUrl}' could not be read (${e.message}) -- skipped`);
+                    continue;
+                }
+            } else {
+                attContent = (att.binary ?? true) && typeof att.content === "string"
+                    ? Buffer.from(att.content, "base64")
+                    : Buffer.from(att.content ?? "");
+            }
+            zipFiles.push([dirPrefix + attName, attContent]);
+            attachments.push({
+                attachmentId: randChoices(ID_CHARS, 12),
+                title: att.title, role: att.role || "file", mime: att.mime,
+                position: attPos, dataFileName: attName,
+            });
+            attPos += 10;
+        }
+
         const attrs = [];
         let pos = 10;
         // Every TAM-managed note carries a permanent #TAMFILEID label
@@ -849,7 +952,7 @@ async function processManifest(fullManifest, manifestFile) {
             isClone: false, noteId: noteUuid, notePath: currentPath,
             title, notePosition: notePosition, prefix: null,
             isExpanded: hasChildren, type: noteType, mime: noteMime,
-            attributes: attrs, attachments: [], dataFileName: dataName,
+            attributes: attrs, attachments, dataFileName: dataName,
         };
         if (dirName) entry.dirFileName = dirName;
         if (childEntries.length) entry.children = childEntries;
@@ -1052,6 +1155,28 @@ function cmdZipToTam(args) {
                 type: noteType, mime, sourceUrl,
             };
             if (noteType === "file") note.binary = true;
+
+            // An attachment's data file is a sibling of its owner note's, named by
+            // the exporter rather than after the attachment alone, so it is looked
+            // up by the dataFileName the meta gives it.
+            const attachments = [];
+            for (const att of entry.attachments || []) {
+                let attKey = metaPrefix + dirPrefix + att.dataFileName;
+                if (!(attKey in extracted)) {
+                    attKey = (byBasename[path.basename(att.dataFileName || "")] || [])[0] || null;
+                }
+                if (!attKey || !(attKey in extracted)) {
+                    console.log(`WARNING: attachment '${att.title}' of note '${localId}' has no data file in the ZIP -- skipped`);
+                    continue;
+                }
+                const destName = uniqueName(att.title, usedFilenames);
+                fs.writeFileSync(path.join(outDir, destName), extracted[attKey]);
+                attachments.push({
+                    title: att.title, role: att.role || "file",
+                    mime: att.mime, sourceUrl: destName,
+                });
+            }
+            if (attachments.length) note.attachments = attachments;
             notes.push(note);
 
             if (effectiveParentLocalId) {
@@ -1137,6 +1262,7 @@ const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]);
 const TYPE_COLORS = {
     widget: "#2563eb", theme: "#7c3aed", css: "#059669",
     script: "#d97706", library: "#0891b2", template: "#be185d",
+    iconpack: "#c2410c",
 };
 
 
@@ -1511,26 +1637,37 @@ function publishManifest(manifest, manifestFile, repoRoot, baseUrl, identityBase
 
     const notes = published.manifest?.notes || [];
     const hashNotes = hashInput.manifest?.notes || [];
-    for (let i = 0; i < notes.length; i++) {
-        const note = notes[i];
-        if (!note.sourceUrl) continue;
-        if (/^https?:\/\//.test(note.sourceUrl)) continue;
-        const filePath = path.join(addonDir, note.sourceUrl);
-        if (!exists(filePath)) die(`ERROR: ${manifestFile}: note '${note.id}' points at missing file ${note.sourceUrl}`);
+
+    function pin(target, hashTarget, describe, withIdentity) {
+        if (!target.sourceUrl) return;
+        if (/^https?:\/\//.test(target.sourceUrl)) return;
+        const filePath = path.join(addonDir, target.sourceUrl);
+        if (!exists(filePath)) die(`ERROR: ${manifestFile}: ${describe} points at missing file ${target.sourceUrl}`);
         const relativeToRepo = path.relative(repoRoot, path.resolve(filePath)).split(path.sep).join("/");
         // encodeURI, not encodeURIComponent: a literal "@" in an addon dir name
         // is legal in a path and is what every already-installed note carries as
         // its #TAMSOURCEURL, which sourceId has to keep matching.
         const encodedPath = encodeURI(relativeToRepo);
-        note.sha = sha256(fs.readFileSync(filePath));
-        note.sourceUrl = baseUrl + encodedPath;
-        note.sourceId = identityBaseUrl + encodedPath;
+        target.sha = sha256(fs.readFileSync(filePath));
+        target.sourceUrl = baseUrl + encodedPath;
+        // Only a note carries a sourceId -- it is what two addons vendoring one
+        // file are matched on, and an attachment belongs to exactly one note.
+        if (withIdentity) target.sourceId = identityBaseUrl + encodedPath;
         // The pinned URL changes on every commit, so hashing it would report an
         // update for every addon on every push; the file's own hash is what a
         // change actually means.
-        hashNotes[i].sourceUrl = note.sha;
-        hashNotes[i].sha = note.sha;
-        delete hashNotes[i].sourceId;
+        hashTarget.sourceUrl = target.sha;
+        hashTarget.sha = target.sha;
+        delete hashTarget.sourceId;
+    }
+
+    for (let i = 0; i < notes.length; i++) {
+        const note = notes[i];
+        pin(note, hashNotes[i], `note '${note.id}'`, true);
+        const attachments = note.attachments || [];
+        for (let j = 0; j < attachments.length; j++) {
+            pin(attachments[j], hashNotes[i].attachments[j], `note '${note.id}' attachment '${attachments[j].title}'`, false);
+        }
     }
     published.contentHash = sha256(Buffer.from(canonicalJson(hashInput), "utf8"));
     return published;

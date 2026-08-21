@@ -24,7 +24,7 @@ below), so an addon's manifest and its source files can live anywhere on the web
 | `homepage` | Yes | URL to the addon's GitHub page. Purely a human-facing link (TAM's "Home Page" button) — never used by any install/fetch logic. |
 | `license` | Yes | SPDX license identifier (e.g., `GPL-3.0-or-later`). |
 | `latestVersion` | Yes | Current version string. Follows semver. Incrementing this triggers an update prompt in TAM. |
-| `type` | Yes | Addon category. One of: `widget`, `theme`, `css`, `script`, `library`. Used for display only. |
+| `type` | Yes | Addon category. One of: `widget`, `theme`, `css`, `script`, `library`, `iconpack`. Used for display only. |
 | `manifestSourceUrl` | No¹ | A URL where this exact manifest document can always be fetched from. Written by `publish`; see [Publishing](ARCHITECTURE.md#publishing). |
 | `contentHash` | — | *Published manifests only.* A hash over the manifest's structure and every note's content — what TAM compares to detect an update. Never hand-authored. |
 | `readme` | No | Relative path to the README file for the catalog website (e.g., `README.md`). |
@@ -234,7 +234,8 @@ An array of note definitions. Each entry describes one note to create:
   "mime":         "application/javascript;env=frontend",
   "sourceUrl":    "filename.js",
   "skipOnUpdate": false,
-  "promptOnUpdate": false
+  "promptOnUpdate": false,
+  "attachments":  []
 }
 ```
 
@@ -250,6 +251,57 @@ An array of note definitions. Each entry describes one note to create:
 | `content` | An escape hatch: a literal inline content string, used directly (no fetch at all) if present. Mostly useful for hand-authored/special-case notes. |
 | `skipOnUpdate` | If `true`, TAM never overwrites this note's content during updates. Use for user-configurable notes (settings, database). |
 | `promptOnUpdate` | If `true`, TAM detects content changes during an update and prompts the user to choose between their current version and the new default. Use for notes users are expected to customize but that may receive meaningful upstream changes. |
+| `attachments` | Binary or text blobs attached to this note rather than shipped as child notes. See [`attachments`](#attachments). |
+
+#### `attachments`
+
+Trilium attachments hanging off this note. An attachment is not a note — it has no place in the
+tree, no `#TAMFILEID`, and cannot be a `children[]`/`relations[]` target — so it is declared inline
+on its owner instead of in `notes[]`:
+
+```json
+"attachments": [
+  {
+    "title":     "fa-solid-900.woff2",
+    "role":      "file",
+    "mime":      "font/woff2",
+    "sourceUrl": "fa-solid-900.woff2"
+  }
+]
+```
+
+| Field | Description |
+|-------|-------------|
+| `title` | Required. The attachment's Trilium title, **and** the key TAM matches it on across syncs (`saveAttachment(..., "title")`), so it is the one field that must stay stable. Two attachments on one note may not share it. |
+| `role` | `file` (default) or `image`. Trilium's icon-pack lookup only reads `file`. |
+| `mime` | Required. What Trilium picks the attachment by — an icon pack's font must be `font/woff2`, `font/woff` or `font/ttf`. |
+| `sourceUrl` | Where the bytes come from, resolved exactly like a note's `sourceUrl`: relative to the manifest in a source manifest, rewritten to a commit-pinned absolute URL by `publish`, fetched fresh backend-side at sync time. |
+| `content` | Inline literal content instead of a fetch. Base64 unless `"binary": false`. |
+| `binary` | Defaults to `true`. Set `false` only for an attachment whose content is text. |
+| `sha` | *Published only.* SHA-256 of the file, written by `publish`. TAM skips the fetch and the write when it matches what the last sync recorded. |
+
+An attachment this addon shipped at the last sync and no longer declares is deleted — a font renamed
+across a version bump would otherwise leave the old one behind, and Trilium picks a font by mime
+alone, so which of two same-mime attachments wins is arbitrary. Attachments TAM never shipped (one
+the user added by hand) are left alone.
+
+#### Icon packs
+
+A [Trilium icon pack](https://docs.triliumnotes.org/user-guide/concepts/themes/icon-packs) is
+three things on one note, so a TAM addon ships it as one `notes[]` entry:
+
+1. a `type: "code"` / `mime: "application/json"` note whose content is the glyph manifest
+   (`{"icons": {"fa-rocket": {"glyph": "\uf135", "terms": ["rocket"]}}}`),
+2. an `#iconPack=<prefix>` label giving the pack its prefix (alphanumerics, hyphens and underscores
+   only; `bx` is taken by Trilium's built-in Boxicons), and
+3. the font as an [attachment](#attachments) with role `file` and a `font/woff2`/`font/woff`/`font/ttf`
+   mime.
+
+`validate` enforces all three, since Trilium drops a malformed pack with nothing but a line in the
+server log. `iconPack` is one of TAM's activation labels (see
+[Enabling and Disabling](ARCHITECTURE.md#enabling-and-disabling)), so disabling the addon takes the
+pack out of the icon picker without uninstalling it. See `font-awesome-icons@hulmgulm` for a
+worked example.
 
 #### `children`
 
@@ -388,6 +440,8 @@ Validates all `_tam_manifest_.json` files before publishing. Checks:
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
 - `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
 - `manifest.settings`, when present, names a `schema`, a `defaults` and a `config` that all exist in `manifest.notes`. The schema and defaults notes must not be attached under the reserved `"persistence"` parent (both ship anew every update), and the defaults note must ship content; the config must be persistent, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). The config must carry a `sourceConfig` relation to the defaults note, or libsettings would read no defaults at all. A mime other than `application/json` on any of them is a warning.
+- Every attachment has a `title` (unique within its note) and a `mime`, ships content, and its relative `sourceUrl` resolves to a real file on disk. A `role` other than `file`/`image` is a warning.
+- Every note carrying an `#iconPack` label is a valid icon pack: a legal, non-`bx` prefix, `code`/`application/json`, a readable manifest with an `icons` object, and a `role: "file"` font attachment in a supported format.
 - Every `manifest.hooks` entry names a known phase, points at a note that exists in `manifest.notes`, is a frontend script (`text/jsx` or `env=frontend`), and is not attached under the reserved `"persistence"` parent. An `updateReview` hook on an addon with no persistent notes is a warning.
 
 Run in CI before every publish. Exits with code 1 if any errors are found.
@@ -401,6 +455,7 @@ node resources/scripts/tamhelper.js validate [--fix]
 Converts a `_tam_manifest_.json` into a Trilium-importable ZIP export (the format Trilium's "Import" function accepts). Automatically discovers and bundles dependency addons from the sibling `addons/` directory.
 
 - For each note in the manifest, fresh Trilium note IDs are generated. Content comes off disk for a relative `sourceUrl` (so a ZIP always matches the working copy, and builds offline); only an absolute one is fetched.
+- Each declared attachment is written as a sibling of its owner note's data file, named `{note base}_{attachment title}` with a generated `attachmentId`, exactly as Trilium's own exporter does — an entry with no `attachmentId` is skipped on import.
 - Every note gets a real `#TAMFILEID="{addonId}/{localId}"` label baked into the exported ZIP (see [Note Identity](ARCHITECTURE.md#note-identity-tamfileid)) — a manually-imported ZIP is fully self-identifying from the moment of import, with no separate bootstrap/tagging step needed for TAM to recognize its own notes on a later sync.
 - Dependency addons are read from `addons/{dep-id}/_tam_manifest_.json` in the same repo and bundled as additional root entries in the ZIP's `!!!meta.json` — this only works for a bare-id dependency (or an explicit one that happens to also have a local sibling folder); a dependency that only exists at a remote `manifestSourceUrl` can't be bundled into an offline ZIP and is skipped with a warning.
 - Cross-addon clone children and relations are wired using the generated UUIDs, resolved via each dependency's `exports` map.
@@ -425,6 +480,7 @@ Converts a Trilium export ZIP into a `_tam_manifest_.json` + flat source files. 
 - Assigns stable local IDs to notes by slugifying their titles.
 - Copies source files flat into the output directory, resolving each note's data file by its exact path in the archive (so notes that share a basename, e.g. several bundled deps each with a `README.md`, don't collide).
 - Handles clone entries (notes that appear under multiple parents) correctly — they become extra `children` entries referencing the same local ID rather than duplicate note entries.
+- Recovers each note's attachments, copying their data files out flat and declaring them under the note's `attachments`.
 - Filters out `noImport` scaffold entries.
 - Writes each note's `sourceUrl` as a plain filename relative to the manifest, the form a source manifest uses; `publish` resolves it later, so no `manifestSourceUrl` is scaffolded at all.
 - Outputs a `_tam_manifest_.json` with `FILL_IN` placeholders for top-level metadata fields that must be filled in manually.

@@ -245,11 +245,19 @@ async function fetchManifest(manifestSourceUrl) {
     return manifest
 }
 
+// The hash key an attachment's shipped content is recorded under, alongside its owner note's own.
+function attachmentHashKey(localId, title) {
+    return `${localId}#${title}`
+}
+
 // A published manifest's per-note content hashes, keyed by local id.
 function noteHashesOf(m) {
     const hashes = {}
     for (const noteDef of (m?.notes || [])) {
         if (noteDef.sha) hashes[noteDef.id] = noteDef.sha
+        for (const att of (noteDef.attachments || [])) {
+            if (att.sha) hashes[attachmentHashKey(noteDef.id, att.title)] = att.sha
+        }
     }
     return hashes
 }
@@ -259,9 +267,12 @@ function noteHashesOf(m) {
 // read it as already current.
 function recordedNoteHashes(m, noteMap, storedNoteHashes) {
     const hashes = {}
-    for (const [localId, sha] of Object.entries(noteHashesOf(m))) {
-        const value = noteMap[localId] ? sha : storedNoteHashes?.[localId]
-        if (value) hashes[localId] = value
+    for (const [key, sha] of Object.entries(noteHashesOf(m))) {
+        // An attachment is recorded under its owner note's resolution, since that
+        // is what decides whether it was written this sync.
+        const localId = key.split("#")[0]
+        const value = noteMap[localId] ? sha : storedNoteHashes?.[key]
+        if (value) hashes[key] = value
     }
     return hashes
 }
@@ -386,6 +397,74 @@ async function applyLabels(labels, noteMap) {
                 note.setLabel(targetName, value)
             }
         }, [realNoteId, name, String(label.value ?? ""), isInheritable])
+    }
+}
+
+// Installs a note's declared attachments, matched by title so a re-sync updates in place.
+// Trilium reads an icon pack's font this way (getAttachmentsByRole("file")), and an
+// attachment is not a note, so nothing in resolveNotes can carry one.
+async function resolveAttachments(addonId, noteDef, realNoteId, storedNoteHashes) {
+    const declared = noteDef.attachments || []
+    // Titles this addon shipped last sync, so a renamed one is dropped rather than
+    // left behind - Trilium picks a font by mime, and which of two same-mime
+    // attachments wins is arbitrary.
+    const previousTitles = Object.keys(storedNoteHashes || {})
+        .filter(key => key.startsWith(`${noteDef.id}#`))
+        .map(key => key.slice(noteDef.id.length + 1))
+    if (!declared.length && !previousTitles.length) return
+    const specs = declared.map(att => ({
+        title: att.title,
+        role: att.role || "file",
+        mime: att.mime,
+        binary: att.binary ?? true,
+        content: att.content ?? null,
+        sourceUrl: att.sourceUrl || null,
+        unchanged: !!(att.sha && storedNoteHashes?.[attachmentHashKey(noteDef.id, att.title)] === att.sha)
+    }))
+    const stale = previousTitles.filter(title => !specs.some(spec => spec.title === title))
+    try {
+        await api.runAsyncOnBackendWithManualTransactionHandling(async (noteId, specs, stale) => {
+            async function fetchWithRetry(url, maxRetries = 5) {
+                for (let attempt = 0; ; attempt++) {
+                    const response = await fetch(new URL(url).href)
+                    if (response.status !== 429 || attempt >= maxRetries) return response
+                    const retryAfter = Number(response.headers.get("retry-after"))
+                    const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+                        ? retryAfter * 1000
+                        : Math.min(1000 * 2 ** attempt, 15000)
+                    await new Promise(resolve => setTimeout(resolve, delayMs))
+                }
+            }
+            const note = api.getNote(noteId)
+            if (!note) return
+            const existingByTitle = {}
+            for (const att of note.getAttachments()) existingByTitle[att.title] = att
+            for (const title of stale) existingByTitle[title]?.markAsDeleted()
+            for (const spec of specs) {
+                const existing = existingByTitle[spec.title]
+                if (existing && spec.unchanged) continue
+                let content
+                if (spec.content !== null) {
+                    content = spec.binary ? Buffer.from(spec.content, "base64") : spec.content
+                } else if (spec.sourceUrl) {
+                    const response = await fetchWithRetry(spec.sourceUrl)
+                    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${spec.sourceUrl}`)
+                    content = spec.binary ? Buffer.from(await response.arrayBuffer()) : await response.text()
+                } else {
+                    content = ""
+                }
+                const attachment = note.saveAttachment({ title: spec.title, role: spec.role, mime: spec.mime, content }, "title")
+                // saveAttachment only ever writes content, so a mime or role that
+                // moved since the last sync has to be corrected here.
+                if (attachment.mime !== spec.mime || attachment.role !== spec.role) {
+                    attachment.mime = spec.mime
+                    attachment.role = spec.role
+                    attachment.save()
+                }
+            }
+        }, [realNoteId, specs, stale])
+    } catch (e) {
+        log("error", `${addonId}: note '${noteDef.id}' attachments failed to install - ${e.message}`)
     }
 }
 
@@ -536,6 +615,7 @@ async function resolveNotes(m, addonId, fallbackParentNoteId, options = {}) {
             continue
         }
         noteMap[localId] = realNoteId
+        await resolveAttachments(addonId, noteDef, realNoteId, storedNoteHashes)
         if (!contentUnchanged) log("info", `${addonId}: installed ${noteDef.title}`)
     }
     await reconcileNoteParenting(m, addonId, noteMap, fallbackParentNoteId, rootExternallyParented, entryLocalId)
@@ -1616,6 +1696,7 @@ async function readLiveAddon(addonId, noteDefs, contentIds) {
                 children: note.getChildNotes().map(child => ({ noteId: child.noteId, title: child.title })),
                 labels: attributes.filter(a => a.type === "label").map(a => ({ name: a.name, value: a.value })),
                 relations: attributes.filter(a => a.type === "relation").map(a => ({ name: a.name, value: a.value })),
+                attachments: note.getAttachments().map(a => a.title),
                 content: contentIds.includes(localId) ? note.getContent() : null
             }
         }
@@ -1760,6 +1841,20 @@ async function diagnose() {
             if (await sha256Hex(entry.content) !== noteDef.sha) {
                 rows.push(issueRow(addonId, "content-drift", noteDef.title,
                     "the installed copy doesn't match the manifest - stale bytes, or edited by hand",
+                    resyncFixes))
+            }
+        }
+
+        // An attachment is invisible in the tree and its absence is only ever
+        // logged server-side, so an icon pack whose font never landed just
+        // silently stops being offered.
+        for (const noteDef of notes) {
+            const entry = live[noteDef.id]
+            if (!entry) continue
+            for (const att of (noteDef.attachments || [])) {
+                if (entry.attachments.includes(att.title)) continue
+                rows.push(issueRow(addonId, "missing-attachment", `${noteDef.title}/${att.title}`,
+                    `declared attachment '${att.title}' is not installed on note '${noteDef.id}'`,
                     resyncFixes))
             }
         }
