@@ -1,11 +1,11 @@
 {
     "id": "youtube-manager@beatlink",
     "name": "YouTube Manager",
-    "description": "A YouTube subscription tracker for TriliumNext, in the spirit of NoUTube: subscribe to channels, get one feed of everything they upload, and keep a permanent record of what you watched. No Google API key and no quota. Channel data comes from YouTube.js, which reads YouTube's own InnerTube API and runs entirely in the frontend, proxied through a narrow host-allowlisted backend endpoint because YouTube sends no CORS headers. Your subscriptions, the rolling video cache, and your watch history live in one JSON note you can back up, inspect, or hand-edit. Add channels by pasting URLs or @handles, import a FreeTube subscription export in one go, or search YouTube from the widget and subscribe to a result. The search box also opens a pasted video URL in the player and a pasted channel URL as that channel, whose back catalogue can be searched on its own. Playback is YouTube's iframe embed inside the widget. Shorts are hidden by default. There is no background sync: YouTube.js ships ESM-only and cannot be loaded by a Trilium backend script, so refreshes happen while the widget is open.",
+    "description": "A YouTube subscription tracker for TriliumNext, in the spirit of NoUTube: subscribe to channels, get one feed of everything they upload, and keep a permanent record of what you watched. No Google API key and no quota. Channel data comes from YouTube.js, which reads YouTube's own InnerTube API and runs entirely in the frontend, proxied through a narrow host-allowlisted backend endpoint because YouTube sends no CORS headers. Your subscriptions, the rolling video cache, and your watch history live in one JSON note you can back up, inspect, or hand-edit. Add channels by pasting URLs or @handles, import a FreeTube subscription export in one go, or search YouTube from the widget and subscribe to a result. The search box also opens a pasted video URL in the player and a pasted channel URL as that channel, whose back catalogue can be searched on its own. Playback is YouTube's iframe embed inside the widget. Sponsor segments in a playing video are skipped automatically, using SponsorBlock. Shorts are hidden by default. There is no background sync: YouTube.js ships ESM-only and cannot be loaded by a Trilium backend script, so refreshes happen while the widget is open.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/youtube-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.3.0",
+    "latestVersion": "1.4.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/youtube-manager@beatlink/_tam_manifest_.json",
@@ -39,6 +39,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "libYouTube.js"
+            },
+            {
+                "id": "libsponsorblock",
+                "title": "libSponsorBlock.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsponsorblock/libsponsorblock.js"
             },
             {
                 "id": "youtubei",
@@ -170,6 +177,10 @@
             {
                 "parent": "view",
                 "child": "lib-youtube"
+            },
+            {
+                "parent": "view",
+                "child": "libsponsorblock"
             },
             {
                 "parent": "lib-youtube",

@@ -7,5 +7,15 @@
     "hideShorts": true,
     "viewFilter": "unwatched",
     "viewChannel": "all",
-    "viewSortDesc": true
+    "viewSortDesc": true,
+    "sponsorBlockEnabled": true,
+    "sponsorBlockNotify": true,
+    "skipSponsor": true,
+    "skipSelfPromo": true,
+    "skipInteraction": true,
+    "skipIntro": false,
+    "skipOutro": false,
+    "skipPreview": false,
+    "skipMusicOfftopic": false,
+    "skipFiller": false
 }

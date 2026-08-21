@@ -56,5 +56,73 @@
         "label": "Last Sort Direction",
         "description": "Remembered Feed view state. Managed by the widget, not edited here.",
         "tab": "Feed"
+    },
+    "sponsorBlockEnabled": {
+        "type": "boolean",
+        "label": "Skip Sponsor Segments",
+        "description": "Skips crowd-sourced segments of the video playing in the widget. Each video's segments are looked up on sponsor.ajay.app, which is asked about a hash prefix rather than the video id, so it never learns what you are watching.",
+        "tab": "SponsorBlock"
+    },
+    "sponsorBlockNotify": {
+        "type": "boolean",
+        "label": "Show A Notice On Skip",
+        "description": "Shows a short \"Skipped: Sponsor\" notice over the player each time a segment is skipped.",
+        "tab": "SponsorBlock"
+    },
+    "skipSponsor": {
+        "type": "boolean",
+        "label": "Sponsor",
+        "description": "Paid promotion, paid referrals and direct advertisements.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipSelfPromo": {
+        "type": "boolean",
+        "label": "Unpaid / Self Promotion",
+        "description": "The creator's own merch, Patreon or other videos.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipInteraction": {
+        "type": "boolean",
+        "label": "Interaction Reminder",
+        "description": "Brief reminders to like, subscribe or comment.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipIntro": {
+        "type": "boolean",
+        "label": "Intro",
+        "description": "Intro animations and pauses with no content.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipOutro": {
+        "type": "boolean",
+        "label": "Outro",
+        "description": "End cards and credits.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipPreview": {
+        "type": "boolean",
+        "label": "Preview / Recap",
+        "description": "Recaps of this video's own content, or previews of what's coming.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipMusicOfftopic": {
+        "type": "boolean",
+        "label": "Non-Music Section",
+        "description": "In a music video, the parts that are not music.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
+    },
+    "skipFiller": {
+        "type": "boolean",
+        "label": "Filler Tangent",
+        "description": "Tangents and jokes that add no information.",
+        "tab": "SponsorBlock",
+        "subgroup": "Categories"
     }
 }

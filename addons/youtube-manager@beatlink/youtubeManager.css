@@ -125,6 +125,19 @@
     border: 0;
 }
 
+/* Sits over the embed, which cannot be drawn into from here. */
+.ym-skip-notice {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-size: 12px;
+    pointer-events: none;
+}
+
 .ym-player-bar {
     display: flex;
     align-items: center;

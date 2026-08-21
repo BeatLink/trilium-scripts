@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "trilium:preact"
+import { useState, useEffect, useCallback, useMemo, useRef } from "trilium:preact"
 import { activateNote } from "trilium:api"
 
 /*
@@ -18,6 +18,7 @@ import { activateNote } from "trilium:api"
  */
 
 const yt = require("libYouTube.js")
+const sb = require("libSponsorBlock.js")
 
 const FILTERS = [
     ["unwatched", "Unwatched"],
@@ -82,19 +83,93 @@ function formatRefreshed(iso) {
 // cannot decode their streams here -- that needs PO-token minting, SABR part
 // parsing, a DASH player, and a binary segment proxy -- so playback is handed
 // back to YouTube. nocookie is the privacy-preserving host of the same player.
-function Player({ video, channelName, onClose, onToggleWatched, watched }) {
-    const src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0`
+const EMBED_ORIGIN = "https://www.youtube-nocookie.com"
+
+// One message of the embed's own postMessage protocol, which `enablejsapi=1`
+// turns on: `listening` asks the player to start reporting, and a `command`
+// drives it.
+function postToEmbed(frame, message) {
+    frame?.contentWindow?.postMessage(JSON.stringify({ ...message, id: 1, channel: "widget" }), EMBED_ORIGIN)
+}
+
+function Player({ video, channelName, onClose, onToggleWatched, watched, settings }) {
+    const frameRef = useRef(null)
+    // The message handler is bound once per video and reads both of these as it
+    // runs: the segments arrive after it is bound, and what has been skipped is
+    // not worth a re-render.
+    const segmentsRef = useRef([])
+    const skippedRef = useRef(new Set())
+    const [skipNotice, setSkipNotice] = useState("")
+
+    // The embed only talks back when asked to, and only to the origin declared
+    // here, so the frame is addressable without loading YouTube's own API script.
+    const src = `https://www.youtube-nocookie.com/embed/${video.id}` +
+        `?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`
+
+    useEffect(() => {
+        segmentsRef.current = []
+        skippedRef.current = new Set()
+        setSkipNotice("")
+        if (!settings?.sponsorBlockEnabled) return
+
+        let cancelled = false
+        sb.fetchSponsorSegments(video.id, sb.sponsorBlockCategories(settings))
+            .then(segments => { if (!cancelled) segmentsRef.current = segments })
+            .catch(error => console.error("youtube-manager: SponsorBlock lookup failed", error))
+
+        // The player reports its position roughly four times a second, which is
+        // what a skip is decided on.
+        const onMessage = event => {
+            const frame = frameRef.current
+            if (!frame || event.source !== frame.contentWindow) return
+
+            let message
+            try {
+                message = JSON.parse(event.data)
+            } catch {
+                return
+            }
+
+            const time = message?.info?.currentTime
+            if (typeof time !== "number") return
+
+            const segment = sb.segmentAt(segmentsRef.current, time, skippedRef.current)
+            if (!segment) return
+
+            // Once per segment, so rewinding into one plays it.
+            skippedRef.current.add(segment.uuid)
+            postToEmbed(frame, { event: "command", func: "seekTo", args: [segment.end, true] })
+            if (settings.sponsorBlockNotify) {
+                setSkipNotice(sb.SPONSORBLOCK_LABELS[segment.category] || segment.category)
+            }
+        }
+
+        window.addEventListener("message", onMessage)
+        return () => {
+            cancelled = true
+            window.removeEventListener("message", onMessage)
+        }
+    }, [video.id, settings])
+
+    useEffect(() => {
+        if (!skipNotice) return
+        const timer = setTimeout(() => setSkipNotice(""), 2500)
+        return () => clearTimeout(timer)
+    }, [skipNotice])
 
     return (
         <div class="ym-player">
             <div class="ym-player-frame">
                 <iframe
+                    ref={frameRef}
                     src={src}
                     title={video.title}
                     frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
+                    onLoad={() => postToEmbed(frameRef.current, { event: "listening" })}
                 />
+                {skipNotice && <div class="ym-skip-notice">Skipped: {skipNotice}</div>}
             </div>
             <div class="ym-player-bar">
                 <div class="ym-player-meta">
@@ -207,6 +282,7 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
                     video={playing}
                     channelName={channels[playing.channelId]?.name || ""}
                     watched={playingWatched}
+                    settings={data.settings}
                     onToggleWatched={onToggleWatched}
                     onClose={() => setPlaying(null)}
                 />
@@ -411,6 +487,7 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
                     video={playing}
                     channelName={playing.channelName || ""}
                     watched={!!watched[playing.id]}
+                    settings={data.settings}
                     onToggleWatched={onToggleWatched}
                     onClose={() => setPlaying(null)}
                 />

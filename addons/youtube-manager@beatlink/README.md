@@ -115,6 +115,23 @@ what is new, and never removes a channel or touches your watched history.
 
 OPML, NewPipe, and Google Takeout CSV are **not** supported here. Export as FreeTube.
 
+### Skipping sponsor segments
+
+A video playing in the widget has its sponsor segments skipped automatically, using
+[SponsorBlock](https://sponsor.ajay.app)'s crowd-sourced database — the same one the browser
+extension uses.
+
+Sponsor, unpaid/self promotion and interaction reminders are skipped by default; intros, outros,
+previews, non-music sections and filler tangents are left alone until you turn them on in Settings.
+A skip shows a short notice over the player, which can be turned off, and each segment is skipped
+once, so rewinding into one plays it. Only SponsorBlock's skippable segments are handled: its
+"mute" and "highlight" segments are ignored.
+
+The lookup is the privacy-preserving one — SponsorBlock is asked about every video id whose SHA-256
+starts with the same four hex characters, and the answer is narrowed down here — but it is still a
+request to a third party for every video you play, so **Skip Sponsor Segments** turns the whole
+thing off.
+
 ## Refreshing, and why there is no background sync
 
 **Refreshes only happen while the widget is open.** This is a hard constraint, not a choice:
@@ -219,6 +236,14 @@ feed order stable: revising it on every refresh would let the same video drift a
 Because the underlying value is an estimate, the feed shows an **age** (`"3 days ago"`) rather than a
 date. A precise-looking date would overstate what is actually known.
 
+### Driving the embed
+
+Playback is YouTube's own iframe embed, which is cross-origin: the page inside it cannot be read or
+scripted from here. It can still be *talked to*, because `enablejsapi=1` turns on the embed's
+postMessage protocol. The widget sends one `listening` message when the frame loads, after which
+the player reports its position about four times a second, and answers a `seekTo` command — which
+is all a skip needs, so YouTube's own API script is never loaded.
+
 ## Settings
 
 | Setting | What it does |
@@ -228,6 +253,9 @@ date. A precise-looking date would overstate what is actually known.
 | **Hours Between Automatic Refreshes** | Minimum gap before opening the widget triggers a refresh. `0` means Refresh-button only. |
 | **Mark Watched When Played** | Mark a video watched as soon as it starts. Off by default. |
 | **Hide Shorts** | Also toggled on the Feed tab. |
+| **Skip Sponsor Segments** | On by default. Off, no request is ever made to SponsorBlock. |
+| **Show A Notice On Skip** | The brief notice shown over the player on a skip. On by default. |
+| **Categories** | One switch per segment kind SponsorBlock classifies. |
 
 ## Known caveats
 
@@ -237,6 +265,9 @@ date. A precise-looking date would overstate what is actually known.
   minutes since 2024, so a longer Short reads as a normal video.
 - **Search reaches one page.** A search returns YouTube's first page of results and does not follow
   continuations, so it is a way to find something rather than a way to enumerate everything.
+- **A skip is only as good as the submission.** Segment times come from SponsorBlock's
+  contributors, so a wrong or stale one skips the wrong part. Downvoted segments are ignored here,
+  but voting on them needs the extension or the app.
 - **View counts can be approximate.** YouTube sometimes returns an abbreviated count (`"1.2M
   views"`), which is expanded back to a round number rather than an exact one.
 - **YouTube.js is a reverse-engineered client** against a private API. YouTube changes response
