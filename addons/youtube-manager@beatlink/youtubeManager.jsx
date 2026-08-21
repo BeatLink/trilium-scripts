@@ -31,7 +31,9 @@ const FILTERS = [
 // would make every search several requests instead of one.
 const SEARCH_VIDEO_LIMIT = 30
 const SEARCH_CHANNEL_LIMIT = 5
-const CHANNEL_VIDEO_LIMIT = 30
+const PLAYLIST_LIMIT = 50
+const PLAYLIST_VIDEO_LIMIT = 200
+const FEATURED_LIMIT = 12
 
 // --- formatting -------------------------------------------------------------
 
@@ -176,7 +178,7 @@ function Player({ video, channelName, onClose, onToggleWatched, watched, setting
                     <div class="ym-player-title">{video.title}</div>
                     <div class="ym-player-channel">{channelName}</div>
                 </div>
-                <button class="ym-btn" onClick={() => onToggleWatched(video.id, !watched)}>
+                <button class="ym-btn" onClick={() => onToggleWatched(video.id, !watched, video)}>
                     {watched ? "Mark unwatched" : "Mark watched"}
                 </button>
                 <a class="ym-btn" href={`https://www.youtube.com/watch?v=${video.id}`}
@@ -189,7 +191,11 @@ function Player({ video, channelName, onClose, onToggleWatched, watched, setting
 
 // --- feed -------------------------------------------------------------------
 
-function VideoRow({ video, channelName, watched, onPlay, onToggleWatched }) {
+// One row, everywhere a video appears. `meta` replaces the default line when a
+// view has something more useful to say than the publish age -- the history
+// says when you watched it -- and `actions` adds buttons beside the mark
+// button, for the reorder and remove controls a playlist needs.
+function VideoRow({ video, channelName, watched, onPlay, onToggleWatched, onAddToPlaylist, meta, actions }) {
     return (
         <div class={`ym-row ${watched ? "ym-row-watched" : ""}`}>
             <button class="ym-thumb" onClick={() => onPlay(video)} title="Play">
@@ -204,22 +210,35 @@ function VideoRow({ video, channelName, watched, onPlay, onToggleWatched }) {
                 <button class="ym-row-title" onClick={() => onPlay(video)}>{video.title}</button>
                 <div class="ym-row-meta">
                     <span class="ym-row-channel">{channelName}</span>
-                    <span>{formatAge(video.publishedAt)}</span>
-                    {video.views !== null && <span>{formatViews(video.views)}</span>}
+                    {meta
+                        ? meta.filter(Boolean).map(text => <span key={text}>{text}</span>)
+                        : (
+                            <>
+                                <span>{formatAge(video.publishedAt)}</span>
+                                {Number.isFinite(video.views) && <span>{formatViews(video.views)}</span>}
+                            </>
+                        )}
                 </div>
             </div>
+
+            {actions}
+
+            {onAddToPlaylist && (
+                <button class="ym-btn ym-btn-icon" title="Add to a playlist"
+                    onClick={() => onAddToPlaylist(video)}>+</button>
+            )}
 
             <button
                 class={`ym-mark ${watched ? "ym-mark-on" : ""}`}
                 title={watched ? "Mark unwatched" : "Mark watched"}
-                onClick={() => onToggleWatched(video.id, !watched)}>
+                onClick={() => onToggleWatched(video.id, !watched, video)}>
                 {watched ? "Watched" : "Mark watched"}
             </button>
         </div>
     )
 }
 
-function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy }) {
+function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, onAddToPlaylist, busy }) {
     const [playing, setPlaying] = useState(null)
     const [search, setSearch] = useState("")
 
@@ -263,7 +282,7 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
     // was actually watched -- starting a video is the only signal available.
     const play = video => {
         setPlaying(video)
-        if (data.settings.markWatchedOnPlay && !watched[video.id]) onToggleWatched(video.id, true)
+        if (data.settings.markWatchedOnPlay && !watched[video.id]) onToggleWatched(video.id, true, video)
     }
 
     if (!Object.keys(channels).length) {
@@ -331,7 +350,7 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
                 <span>{visible.length} shown, {unwatchedCount} unwatched</span>
                 {view.filter !== "watched" && visible.some(video => !watched[video.id]) && (
                     <button class="ym-btn" disabled={busy}
-                        onClick={() => onMarkAllWatched(visible.filter(v => !watched[v.id]).map(v => v.id))}>
+                        onClick={() => onMarkAllWatched(visible.filter(v => !watched[v.id]))}>
                         Mark these watched
                     </button>
                 )}
@@ -347,8 +366,612 @@ function FeedTab({ data, view, setView, onToggleWatched, onMarkAllWatched, busy 
                     watched={!!watched[video.id]}
                     onPlay={play}
                     onToggleWatched={onToggleWatched}
+                    onAddToPlaylist={onAddToPlaylist}
                 />
             ))}
+        </div>
+    )
+}
+
+// --- history ----------------------------------------------------------------
+
+// The watch history, newest first. Its entries carry the video's own details
+// rather than pointing into the cache, so a video that aged out -- or was
+// pulled from YouTube -- still reads as a row instead of a bare id.
+//
+// Entries written before those details existed have nothing to show but the id,
+// and the backend fills in what it still can from the cache on load. Nothing
+// here can invent what was never recorded.
+function HistoryTab({ data, onToggleWatched, onPlay, onAddToPlaylist, onClearHistory, busy }) {
+    const [search, setSearch] = useState("")
+
+    const rows = useMemo(() => {
+        const term = search.trim().toLowerCase()
+        return Object.entries(data.watched)
+            .map(([id, entry]) => ({
+                id,
+                title: entry.title || id,
+                thumbnail: entry.thumbnail || `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+                duration: entry.duration ?? null,
+                isShort: !!entry.isShort,
+                channelId: entry.channelId || "",
+                channelName: entry.channelName || "",
+                views: null,
+                publishedAt: "",
+                watchedAt: entry.watchedAt || "",
+                watchCount: entry.watchCount || 1
+            }))
+            .filter(row => !term || row.title.toLowerCase().includes(term))
+            .sort((a, b) => Date.parse(b.watchedAt) - Date.parse(a.watchedAt))
+    }, [data.watched, search])
+
+    if (!Object.keys(data.watched).length) {
+        return (
+            <div class="ym-empty">
+                <p>Nothing watched yet.</p>
+                <p>Marking a video watched anywhere in the widget records it here.</p>
+            </div>
+        )
+    }
+
+    return (
+        <div class="ym-history">
+            <div class="ym-toolbar">
+                <input
+                    class="ym-search"
+                    type="search"
+                    placeholder="Search titles"
+                    value={search}
+                    onInput={event => setSearch(event.target.value)}
+                />
+                <button class="ym-btn ym-btn-danger" disabled={busy} onClick={onClearHistory}>
+                    Clear history
+                </button>
+            </div>
+
+            <div class="ym-summary">
+                <span>{rows.length} of {Object.keys(data.watched).length} shown</span>
+            </div>
+
+            {rows.length === 0 && <div class="ym-empty"><p>Nothing matches that search.</p></div>}
+
+            {rows.map(row => (
+                <VideoRow
+                    key={row.id}
+                    video={row}
+                    channelName={row.channelName}
+                    watched={true}
+                    onPlay={onPlay}
+                    onToggleWatched={onToggleWatched}
+                    onAddToPlaylist={onAddToPlaylist}
+                    meta={[
+                        row.watchedAt ? `watched ${formatAge(row.watchedAt)}` : "",
+                        row.watchCount > 1 ? `${row.watchCount} times` : ""
+                    ]}
+                />
+            ))}
+        </div>
+    )
+}
+
+// --- playlists --------------------------------------------------------------
+
+// Playlists you made and playlists you follow, in one list.
+//
+// A personal playlist is yours to edit. A followed one is a snapshot of someone
+// else's, taken when you followed it: its contents belong to its author, so it
+// is read-only here and carries the time it was last pulled rather than
+// pretending to be live. Refresh takes a new snapshot.
+function PlaylistsTab({ data, onToggleWatched, onPlay, onAddToPlaylist, onChanged, busy, run }) {
+    const [openId, setOpenId] = useState(null)
+    const [title, setTitle] = useState("")
+
+    const watched = data.watched
+    const playlists = useMemo(
+        () => Object.values(data.playlists).sort((a, b) => {
+            if (a.kind !== b.kind) return a.kind === "personal" ? -1 : 1
+            return a.title.localeCompare(b.title)
+        }),
+        [data.playlists]
+    )
+
+    const open = openId ? data.playlists[openId] : null
+
+    const create = () => run(async () => {
+        if (!title.trim()) return
+        await yt.callBackend("savePlaylist", {}, { title })
+        setTitle("")
+        await onChanged()
+    })
+
+    const rename = playlist => run(async () => {
+        const next = prompt("Rename playlist", playlist.title)
+        if (next === null || !next.trim()) return
+        await yt.callBackend("savePlaylist", {}, { playlistId: playlist.id, title: next })
+        await onChanged()
+    })
+
+    const remove = playlist => run(async () => {
+        const what = playlist.kind === "personal" ? "Delete" : "Unfollow"
+        if (!confirm(`${what} "${playlist.title}"? Your watched history is kept.`)) return
+        await yt.callBackend("deletePlaylist", { playlistId: playlist.id })
+        setOpenId(null)
+        await onChanged()
+    })
+
+    const edit = (playlistId, body) => run(async () => {
+        await yt.callBackend("editPlaylist", {}, { playlistId, ...body })
+        await onChanged()
+    })
+
+    // Re-following overwrites the stored snapshot, which is what refreshing one
+    // means: the author's copy is the truth and ours is a copy of it.
+    const refresh = playlist => run(async () => {
+        const fetched = await yt.fetchPlaylist(playlist.id, PLAYLIST_VIDEO_LIMIT)
+        await yt.callBackend("followPlaylist", {}, { playlist: fetched })
+        await onChanged()
+    })
+
+    if (open) {
+        const personal = open.kind === "personal"
+        return (
+            <div class="ym-playlist-view">
+                <div class="ym-summary">
+                    <button class="ym-btn" onClick={() => setOpenId(null)}>Back to playlists</button>
+                    <span>{open.title}</span>
+                    <span>{open.videos.length} video(s)</span>
+                    {!personal && open.fetchedAt && <span>fetched {formatAge(open.fetchedAt)}</span>}
+                    {personal
+                        ? <button class="ym-btn" disabled={busy} onClick={() => rename(open)}>Rename</button>
+                        : <button class="ym-btn" disabled={busy} onClick={() => refresh(open)}>Refresh</button>}
+                    <button class="ym-btn ym-btn-danger" disabled={busy} onClick={() => remove(open)}>
+                        {personal ? "Delete" : "Unfollow"}
+                    </button>
+                </div>
+
+                {open.videos.length === 0 && (
+                    <div class="ym-empty"><p>This playlist is empty.</p></div>
+                )}
+
+                {open.videos.map((video, index) => (
+                    <VideoRow
+                        key={video.id}
+                        video={video}
+                        channelName={video.channelName}
+                        watched={!!watched[video.id]}
+                        onPlay={onPlay}
+                        onToggleWatched={onToggleWatched}
+                        onAddToPlaylist={personal ? null : onAddToPlaylist}
+                        actions={personal ? (
+                            <span class="ym-row-actions">
+                                <button class="ym-btn ym-btn-icon" title="Move up"
+                                    disabled={busy || index === 0}
+                                    onClick={() => edit(open.id, { op: "move", videoId: video.id, delta: -1 })}>
+                                    ^
+                                </button>
+                                <button class="ym-btn ym-btn-icon" title="Move down"
+                                    disabled={busy || index === open.videos.length - 1}
+                                    onClick={() => edit(open.id, { op: "move", videoId: video.id, delta: 1 })}>
+                                    v
+                                </button>
+                                <button class="ym-btn ym-btn-icon" title="Remove from playlist"
+                                    disabled={busy}
+                                    onClick={() => edit(open.id, { op: "remove", videoId: video.id })}>
+                                    x
+                                </button>
+                            </span>
+                        ) : null}
+                    />
+                ))}
+            </div>
+        )
+    }
+
+    return (
+        <div class="ym-playlists-tab">
+            <div class="ym-toolbar">
+                <input
+                    class="ym-search"
+                    type="text"
+                    placeholder="New playlist name"
+                    value={title}
+                    onInput={event => setTitle(event.target.value)}
+                    onKeyDown={event => event.key === "Enter" && create()}
+                />
+                <button class="ym-btn ym-btn-primary" disabled={busy || !title.trim()} onClick={create}>
+                    Create
+                </button>
+            </div>
+
+            {playlists.length === 0 && (
+                <div class="ym-empty">
+                    <p>No playlists yet.</p>
+                    <p>Create one above, or follow a channel's playlist from its page on the Search tab.</p>
+                </div>
+            )}
+
+            {playlists.map(playlist => (
+                <div class="ym-channel" key={playlist.id}>
+                    {playlist.thumbnail
+                        ? <img class="ym-avatar ym-avatar-square" src={playlist.thumbnail} alt="" loading="lazy" />
+                        : <div class="ym-avatar ym-avatar-square ym-avatar-blank" />}
+                    <div class="ym-channel-body">
+                        <button class="ym-channel-name" onClick={() => setOpenId(playlist.id)}>
+                            {playlist.title}
+                        </button>
+                        <div class="ym-channel-meta">
+                            <span>{playlist.kind === "personal" ? "Yours" : "Followed"}</span>
+                            <span>{playlist.videos.length} video(s)</span>
+                            {playlist.author && <span>{playlist.author}</span>}
+                        </div>
+                    </div>
+                    <button class="ym-btn ym-btn-danger" disabled={busy} onClick={() => remove(playlist)}>
+                        {playlist.kind === "personal" ? "Delete" : "Unfollow"}
+                    </button>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// --- add to playlist --------------------------------------------------------
+
+// The picker one "+" opens. Only personal playlists are offered, because a
+// followed playlist is someone else's and adding to the local copy would only
+// last until the next refresh overwrote it.
+function AddToPlaylist({ video, playlists, busy, onAdd, onCreate, onClose }) {
+    const [title, setTitle] = useState("")
+
+    const targets = useMemo(
+        () => Object.values(playlists)
+            .filter(playlist => playlist.kind === "personal")
+            .sort((a, b) => a.title.localeCompare(b.title)),
+        [playlists]
+    )
+
+    return (
+        <div class="ym-picker">
+            <div class="ym-picker-head">
+                <span>Add "{video.title}" to</span>
+                <button class="ym-btn" onClick={onClose}>Close</button>
+            </div>
+
+            {targets.length === 0 && <p class="ym-status">You have no playlists of your own yet.</p>}
+
+            <div class="ym-picker-list">
+                {targets.map(playlist => {
+                    const already = playlist.videos.some(entry => entry.id === video.id)
+                    return (
+                        <button key={playlist.id} class="ym-btn" disabled={busy || already}
+                            onClick={() => onAdd(playlist.id)}>
+                            {already ? `${playlist.title} (already in)` : playlist.title}
+                        </button>
+                    )
+                })}
+            </div>
+
+            <div class="ym-toolbar">
+                <input
+                    class="ym-search"
+                    type="text"
+                    placeholder="New playlist name"
+                    value={title}
+                    onInput={event => setTitle(event.target.value)}
+                    onKeyDown={event => event.key === "Enter" && onCreate(title)}
+                />
+                <button class="ym-btn ym-btn-primary" disabled={busy || !title.trim()}
+                    onClick={() => onCreate(title)}>
+                    Create and add
+                </button>
+            </div>
+        </div>
+    )
+}
+
+// --- channel page -----------------------------------------------------------
+
+function PlaylistCard({ playlist, followed, busy, onOpen, onFollow }) {
+    return (
+        <div class="ym-playlist">
+            <button class="ym-playlist-open" onClick={() => onOpen(playlist)}>
+                {playlist.thumbnail
+                    ? <img src={playlist.thumbnail} alt="" loading="lazy" />
+                    : <div class="ym-playlist-blank" />}
+                <div class="ym-playlist-title">{playlist.title}</div>
+                {playlist.count && <div class="ym-playlist-count">{playlist.count}</div>}
+            </button>
+            <button class="ym-btn ym-playlist-follow" disabled={busy || followed}
+                onClick={() => onFollow(playlist)}>
+                {followed ? "Followed" : "Follow"}
+            </button>
+        </div>
+    )
+}
+
+// A channel, as its own page: header, uploads with a server-side sort and
+// paging, its playlists, and the About panel.
+//
+// Each tab loads on first use rather than up front. The channel object is a
+// separate request per tab either way, so fetching all of them on mount would
+// spend three requests to fill two panels nobody had opened yet.
+function ChannelPage({ channelId, seed, data, busy, run, onPlay, onToggleWatched, onAddToPlaylist, onOpenChannel, onSubscribe, onChanged }) {
+    const [info, setInfo] = useState(seed)
+    const [tab, setTab] = useState("videos")
+    const [sort, setSort] = useState(yt.CHANNEL_SORTS[0])
+    const [videos, setVideos] = useState([])
+    const [next, setNext] = useState(null)
+    const [query, setQuery] = useState("")
+    const [searched, setSearched] = useState(false)
+    const [hideWatched, setHideWatched] = useState(false)
+    const [playlists, setPlaylists] = useState(null)
+    const [openPlaylist, setOpenPlaylist] = useState(null)
+    const [featured, setFeatured] = useState(null)
+
+    const watched = data.watched
+    const subscribed = !!data.channels[channelId]
+
+    // Videos are stamped with the channel here because a channel-tab listing
+    // carries no author of its own, and the player bar reads the name off the
+    // video it was handed.
+    const stamp = list => list.map(video => ({ ...video, channelName: info?.name || "" }))
+
+    const loadPage = order => run(async () => {
+        const page = await yt.fetchChannelPage(channelId, order)
+        setVideos(stamp(page.videos))
+        setNext(() => page.next)
+        setSearched(false)
+    })
+
+    // The caller keys this component by channel id, so a different channel
+    // remounts it and nothing from the previous one survives into the new page.
+    useEffect(() => {
+        run(async () => {
+            const [loaded, page] = await Promise.all([
+                yt.fetchChannelInfo(channelId),
+                yt.fetchChannelPage(channelId, yt.CHANNEL_SORTS[0])
+            ])
+            setInfo(loaded)
+            setVideos(page.videos.map(video => ({ ...video, channelName: loaded.name })))
+            setNext(() => page.next)
+        })
+    }, [])
+
+    const loadMore = () => run(async () => {
+        const page = await next()
+        setVideos(current => [...current, ...stamp(page.videos)])
+        setNext(() => page.next)
+    })
+
+    const changeSort = order => {
+        setSort(order)
+        loadPage(order)
+    }
+
+    // An empty box goes back to the uploads, so clearing the search undoes it
+    // rather than leaving the list empty.
+    const searchHere = () => {
+        const term = query.trim()
+        if (!term) return loadPage(sort)
+        run(async () => {
+            setVideos(stamp(await yt.searchChannelVideos(channelId, term, SEARCH_VIDEO_LIMIT)))
+            setNext(null)
+            setSearched(true)
+        })
+    }
+
+    const showPlaylists = () => {
+        setTab("playlists")
+        setOpenPlaylist(null)
+        if (playlists === null) {
+            run(async () => setPlaylists(await yt.fetchChannelPlaylists(channelId, PLAYLIST_LIMIT)))
+        }
+    }
+
+    const showAbout = () => {
+        setTab("about")
+        if (featured === null) {
+            run(async () => setFeatured(await yt.fetchFeaturedChannels(channelId, FEATURED_LIMIT)))
+        }
+    }
+
+    const openPlaylistVideos = playlist => run(async () => {
+        setOpenPlaylist(await yt.fetchPlaylist(playlist.id, PLAYLIST_VIDEO_LIMIT))
+    })
+
+    // Following stores a snapshot of the playlist as it is now, which is also
+    // what re-following it later does.
+    const follow = playlist => run(async () => {
+        const fetched = playlist.videos
+            ? playlist
+            : await yt.fetchPlaylist(playlist.id, PLAYLIST_VIDEO_LIMIT)
+        await yt.callBackend("followPlaylist", {}, {
+            playlist: { ...fetched, author: fetched.author || info?.name || "", authorId: channelId }
+        })
+        await onChanged()
+    })
+
+    const shown = hideWatched ? videos.filter(video => !watched[video.id]) : videos
+
+    const tabs = [["videos", "Videos"]]
+    if (info?.hasPlaylists) tabs.push(["playlists", "Playlists"])
+    tabs.push(["about", "About"])
+
+    const showTab = key => {
+        if (key === "playlists") return showPlaylists()
+        if (key === "about") return showAbout()
+        setTab("videos")
+    }
+
+    if (!info) return <div class="ym-empty"><p>Loading channel...</p></div>
+
+    return (
+        <div class="ym-channel-page">
+            {info.banner && <img class="ym-banner" src={info.banner} alt="" />}
+
+            <div class="ym-channel ym-channel-header">
+                {info.thumbnail
+                    ? <img class="ym-avatar ym-avatar-big" src={info.thumbnail} alt="" />
+                    : <div class="ym-avatar ym-avatar-big ym-avatar-blank" />}
+                <div class="ym-channel-body">
+                    <a class="ym-channel-name ym-channel-title"
+                        href={`https://www.youtube.com/channel/${info.id}`}
+                        target="_blank" rel="noreferrer">{info.name}</a>
+                    <div class="ym-channel-meta">
+                        {info.handle && <span>{info.handle}</span>}
+                        {info.subscribers && <span>{info.subscribers}</span>}
+                        {info.videoCount && <span>{info.videoCount}</span>}
+                    </div>
+                </div>
+                <button class={`ym-btn ${subscribed ? "ym-btn-danger" : "ym-btn-primary"}`}
+                    disabled={busy}
+                    onClick={() => onSubscribe(info, subscribed)}>
+                    {subscribed ? "Unsubscribe" : "Subscribe"}
+                </button>
+            </div>
+
+            <div class="ym-tabs ym-subtabs">
+                {tabs.map(([key, label]) => (
+                    <button key={key} class={`ym-tab ${tab === key ? "ym-tab-on" : ""}`}
+                        onClick={() => showTab(key)}>{label}</button>
+                ))}
+            </div>
+
+            {tab === "videos" && (
+                <>
+                    <div class="ym-toolbar">
+                        <input
+                            class="ym-search"
+                            type="search"
+                            placeholder={`Search within ${info.name}`}
+                            value={query}
+                            onInput={event => setQuery(event.target.value)}
+                            onKeyDown={event => event.key === "Enter" && searchHere()}
+                        />
+                        <button class="ym-btn" disabled={busy} onClick={searchHere}>Search channel</button>
+
+                        <select value={sort} disabled={busy || searched}
+                            onChange={event => changeSort(event.target.value)}>
+                            {yt.CHANNEL_SORTS.map(order => (
+                                <option key={order} value={order}>{order}</option>
+                            ))}
+                        </select>
+
+                        <label class="ym-check">
+                            <input type="checkbox" checked={hideWatched}
+                                onChange={event => setHideWatched(event.target.checked)} />
+                            Hide watched
+                        </label>
+                    </div>
+
+                    <div class="ym-summary">
+                        <span>{shown.length} shown{searched ? ", matching your search" : ""}</span>
+                    </div>
+
+                    {!busy && shown.length === 0 && (
+                        <div class="ym-empty"><p>No videos to show.</p></div>
+                    )}
+
+                    {shown.map(video => (
+                        <VideoRow
+                            key={video.id}
+                            video={video}
+                            channelName={info.name}
+                            watched={!!watched[video.id]}
+                            onPlay={onPlay}
+                            onToggleWatched={onToggleWatched}
+                            onAddToPlaylist={onAddToPlaylist}
+                        />
+                    ))}
+
+                    {next && (
+                        <button class="ym-btn ym-load-more" disabled={busy} onClick={loadMore}>
+                            {busy ? "Loading..." : "Load more"}
+                        </button>
+                    )}
+                </>
+            )}
+
+            {tab === "playlists" && !openPlaylist && (
+                <>
+                    {playlists?.length === 0 && (
+                        <div class="ym-empty"><p>This channel has no public playlists.</p></div>
+                    )}
+                    <div class="ym-playlists">
+                        {(playlists || []).map(playlist => (
+                            <PlaylistCard key={playlist.id} playlist={playlist}
+                                followed={!!data.playlists[playlist.id]}
+                                busy={busy}
+                                onOpen={openPlaylistVideos}
+                                onFollow={follow} />
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {tab === "playlists" && openPlaylist && (
+                <>
+                    <div class="ym-summary">
+                        <button class="ym-btn" onClick={() => setOpenPlaylist(null)}>
+                            Back to playlists
+                        </button>
+                        <span>{openPlaylist.title}</span>
+                        <span>{openPlaylist.videos.length} video(s)</span>
+                        <button class="ym-btn" disabled={busy || !!data.playlists[openPlaylist.id]}
+                            onClick={() => follow(openPlaylist)}>
+                            {data.playlists[openPlaylist.id] ? "Followed" : "Follow"}
+                        </button>
+                    </div>
+                    {openPlaylist.videos.map(video => (
+                        <VideoRow
+                            key={video.id}
+                            video={video}
+                            channelName={video.channelName}
+                            watched={!!watched[video.id]}
+                            onPlay={onPlay}
+                            onToggleWatched={onToggleWatched}
+                            onAddToPlaylist={onAddToPlaylist}
+                        />
+                    ))}
+                </>
+            )}
+
+            {tab === "about" && (
+                <div class="ym-about">
+                    {info.description
+                        ? <p class="ym-about-text">{info.description}</p>
+                        : <p class="ym-about-text">This channel has no description.</p>}
+
+                    <div class="ym-about-facts">
+                        {info.subscribers && <span>{info.subscribers}</span>}
+                        {info.videoCount && <span>{info.videoCount}</span>}
+                        {info.totalViews && <span>{info.totalViews}</span>}
+                        {info.joined && <span>{info.joined}</span>}
+                        {info.country && <span>{info.country}</span>}
+                    </div>
+
+                    {featured?.length > 0 && (
+                        <>
+                            <h4 class="ym-about-heading">Featured channels</h4>
+                            {featured.map(channel => (
+                                <div class="ym-channel" key={channel.id}>
+                                    {channel.thumbnail
+                                        ? <img class="ym-avatar" src={channel.thumbnail} alt="" loading="lazy" />
+                                        : <div class="ym-avatar ym-avatar-blank" />}
+                                    <div class="ym-channel-body">
+                                        <button class="ym-channel-name"
+                                            onClick={() => onOpenChannel(channel.id, channel)}>
+                                            {channel.name}
+                                        </button>
+                                        {channel.subscribers && (
+                                            <div class="ym-channel-meta"><span>{channel.subscribers}</span></div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
@@ -362,7 +985,9 @@ function ChannelResult({ channel, subscribed, busy, onOpen, onSubscribe }) {
                 ? <img class="ym-avatar" src={channel.thumbnail} alt="" loading="lazy" />
                 : <div class="ym-avatar ym-avatar-blank" />}
             <div class="ym-channel-body">
-                <button class="ym-channel-name" onClick={() => onOpen(channel)}>{channel.name}</button>
+                <button class="ym-channel-name" onClick={() => onOpen(channel.id, channel)}>
+                    {channel.name}
+                </button>
                 <div class="ym-channel-meta">
                     {channel.handle && <span>{channel.handle}</span>}
                     {channel.subscribers && <span>{channel.subscribers}</span>}
@@ -371,7 +996,7 @@ function ChannelResult({ channel, subscribed, busy, onOpen, onSubscribe }) {
             </div>
             <button class={`ym-btn ${subscribed ? "" : "ym-btn-primary"}`}
                 disabled={busy || subscribed}
-                onClick={() => onSubscribe(channel)}>
+                onClick={() => onSubscribe(channel, false)}>
                 {subscribed ? "Subscribed" : "Subscribe"}
             </button>
         </div>
@@ -385,13 +1010,12 @@ function ChannelResult({ channel, subscribed, busy, onOpen, onSubscribe }) {
 // Nothing here is remembered between sessions and nothing is written to the
 // cache: results are live YouTube data, and only what you mark watched and who
 // you subscribe to become part of the library.
-function SearchTab({ data, onToggleWatched, onChanged }) {
+function SearchTab({ data, onToggleWatched, onAddToPlaylist, onChanged }) {
     const [input, setInput] = useState("")
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState(null)
     const [results, setResults] = useState(null)
     const [channel, setChannel] = useState(null)
-    const [channelQuery, setChannelQuery] = useState("")
     const [playing, setPlaying] = useState(null)
 
     const watched = data.watched
@@ -413,19 +1037,17 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
     // much was actually watched, so starting a video is the only signal there is.
     const play = video => {
         setPlaying(video)
-        if (data.settings.markWatchedOnPlay && !watched[video.id]) onToggleWatched(video.id, true)
+        if (data.settings.markWatchedOnPlay && !watched[video.id]) onToggleWatched(video.id, true, video)
     }
 
-    // Channel-tab listings carry no author, so the channel is stamped on each
-    // video here -- the player bar reads it off the video it was handed.
-    const showChannel = async record => {
-        const videos = await yt.fetchChannelVideos(record.id, CHANNEL_VIDEO_LIMIT)
+    // The seed is whatever was already known about the channel -- a search
+    // result's name and avatar -- so the header paints before its own request
+    // comes back.
+    const openChannel = (channelId, seed) => {
         setResults(null)
-        setChannelQuery("")
-        setChannel({ record, videos: videos.map(video => ({ ...video, channelName: record.name })) })
+        setError(null)
+        setChannel({ id: channelId, seed: seed || null })
     }
-
-    const openChannel = record => run(() => showChannel(record))
 
     const submit = () => run(async () => {
         const target = yt.parseTarget(input)
@@ -436,7 +1058,8 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
             return
         }
         if (target.kind === "channel") {
-            await showChannel(await yt.resolveChannel(target.input))
+            const record = await yt.resolveChannel(target.input)
+            openChannel(record.id, record)
             return
         }
 
@@ -451,34 +1074,24 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
         setResults({ videos, channels })
     })
 
-    // An empty box goes back to the channel's uploads, so clearing the search
-    // undoes it rather than leaving the page empty.
-    const searchInChannel = () => run(async () => {
-        const query = channelQuery.trim()
-        if (!query) return showChannel(channel.record)
-
-        const videos = await yt.searchChannelVideos(channel.record.id, query, SEARCH_VIDEO_LIMIT)
-        setChannel(current => ({
-            ...current,
-            videos: videos.map(video => ({ ...video, channelName: current.record.name }))
-        }))
-    })
-
-    const subscribe = record => run(async () => {
-        await yt.callBackend("addChannels", {}, {
-            channels: [{
-                id: record.id,
-                name: record.name,
-                thumbnail: record.thumbnail,
-                handle: record.handle
-            }]
-        })
+    // Unsubscribing keeps the watched history, exactly as it does on the
+    // Subscriptions tab -- only the channel and its cached videos go.
+    const toggleSubscribed = (record, isSubscribed) => run(async () => {
+        if (isSubscribed) {
+            if (!confirm(`Unsubscribe from ${record.name}? Its cached videos are dropped; your watched history is kept.`)) return
+            await yt.callBackend("removeChannel", { channelId: record.id })
+        } else {
+            await yt.callBackend("addChannels", {}, {
+                channels: [{
+                    id: record.id,
+                    name: record.name,
+                    thumbnail: record.thumbnail,
+                    handle: record.handle
+                }]
+            })
+        }
         await onChanged()
     })
-
-    const onKeyDown = (event, action) => {
-        if (event.key === "Enter") action()
-    }
 
     return (
         <div class="ym-search-tab">
@@ -500,66 +1113,33 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
                     placeholder="Search YouTube, or paste a video or channel URL"
                     value={input}
                     onInput={event => setInput(event.target.value)}
-                    onKeyDown={event => onKeyDown(event, submit)}
+                    onKeyDown={event => event.key === "Enter" && submit()}
                 />
                 <button class="ym-btn ym-btn-primary" disabled={busy || !input.trim()} onClick={submit}>
-                    {busy ? "Searching..." : "Search"}
+                    {busy ? "Working..." : "Search"}
                 </button>
+                {channel && (
+                    <button class="ym-btn" onClick={() => setChannel(null)}>Close channel</button>
+                )}
             </div>
 
             {error && <pre class="ym-error">{error}</pre>}
 
             {channel && (
-                <>
-                    <div class="ym-channel ym-channel-header">
-                        {channel.record.thumbnail
-                            ? <img class="ym-avatar" src={channel.record.thumbnail} alt="" loading="lazy" />
-                            : <div class="ym-avatar ym-avatar-blank" />}
-                        <div class="ym-channel-body">
-                            <a class="ym-channel-name"
-                                href={`https://www.youtube.com/channel/${channel.record.id}`}
-                                target="_blank" rel="noreferrer">{channel.record.name}</a>
-                            <div class="ym-channel-meta">
-                                {channel.record.handle && <span>{channel.record.handle}</span>}
-                                <span>{channel.videos.length} shown</span>
-                            </div>
-                        </div>
-                        <button class={`ym-btn ${subscribed[channel.record.id] ? "" : "ym-btn-primary"}`}
-                            disabled={busy || !!subscribed[channel.record.id]}
-                            onClick={() => subscribe(channel.record)}>
-                            {subscribed[channel.record.id] ? "Subscribed" : "Subscribe"}
-                        </button>
-                    </div>
-
-                    <div class="ym-toolbar">
-                        <input
-                            class="ym-search"
-                            type="search"
-                            placeholder={`Search within ${channel.record.name}`}
-                            value={channelQuery}
-                            onInput={event => setChannelQuery(event.target.value)}
-                            onKeyDown={event => onKeyDown(event, searchInChannel)}
-                        />
-                        <button class="ym-btn" disabled={busy} onClick={searchInChannel}>
-                            Search channel
-                        </button>
-                    </div>
-
-                    {!busy && channel.videos.length === 0 && (
-                        <div class="ym-empty"><p>No videos found.</p></div>
-                    )}
-
-                    {channel.videos.map(video => (
-                        <VideoRow
-                            key={video.id}
-                            video={video}
-                            channelName={channel.record.name}
-                            watched={!!watched[video.id]}
-                            onPlay={play}
-                            onToggleWatched={onToggleWatched}
-                        />
-                    ))}
-                </>
+                <ChannelPage
+                    key={channel.id}
+                    channelId={channel.id}
+                    seed={channel.seed}
+                    data={data}
+                    busy={busy}
+                    run={run}
+                    onPlay={play}
+                    onToggleWatched={onToggleWatched}
+                    onAddToPlaylist={onAddToPlaylist}
+                    onOpenChannel={openChannel}
+                    onSubscribe={toggleSubscribed}
+                    onChanged={onChanged}
+                />
             )}
 
             {results && (
@@ -571,7 +1151,7 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
                             subscribed={!!subscribed[result.id]}
                             busy={busy}
                             onOpen={openChannel}
-                            onSubscribe={subscribe}
+                            onSubscribe={toggleSubscribed}
                         />
                     ))}
 
@@ -587,6 +1167,7 @@ function SearchTab({ data, onToggleWatched, onChanged }) {
                             watched={!!watched[video.id]}
                             onPlay={play}
                             onToggleWatched={onToggleWatched}
+                            onAddToPlaylist={onAddToPlaylist}
                         />
                     ))}
                 </>
@@ -750,6 +1331,8 @@ export default function YouTubeManager() {
     const [busy, setBusy] = useState(false)
     const [status, setStatus] = useState(null)
     const [settingsPageNoteId, setSettingsPageNoteId] = useState("")
+    const [pickerVideo, setPickerVideo] = useState(null)
+    const [playing, setPlaying] = useState(null)
     const [view, setViewState] = useState({
         filter: "unwatched",
         channel: "all",
@@ -841,29 +1424,48 @@ export default function YouTubeManager() {
         })().catch(error => setStatus({ error: error.message }))
     }, [])
 
-    const toggleWatched = useCallback(async (videoId, watched) => {
+    // The video travels with the id because a watched entry keeps its own copy
+    // of the details: the history has to read long after the video has dropped
+    // out of the cache.
+    const toggleWatched = useCallback(async (videoId, watched, video) => {
         // Applied locally first so a row responds immediately; the write is
         // small and a failure surfaces in the status line.
         setData(current => ({
             ...current,
             watched: watched
-                ? { ...current.watched, [videoId]: new Date().toISOString() }
+                ? {
+                    ...current.watched,
+                    [videoId]: {
+                        watchedAt: new Date().toISOString(),
+                        watchCount: (current.watched[videoId]?.watchCount || 0) + 1,
+                        title: video?.title || "",
+                        channelId: video?.channelId || "",
+                        channelName: video?.channelName || "",
+                        thumbnail: video?.thumbnail || "",
+                        duration: video?.duration ?? null,
+                        isShort: !!video?.isShort
+                    }
+                }
                 : Object.fromEntries(Object.entries(current.watched).filter(([id]) => id !== videoId))
         }))
         try {
-            await yt.callBackend("setWatched", { videoId, watched: String(watched) })
+            await yt.callBackend("setWatched", { videoId, watched: String(watched) }, { video: video || null })
         } catch (error) {
             setStatus({ error: error.message })
             await reload()
         }
     }, [reload])
 
-    const markAllWatched = useCallback(async videoIds => {
-        if (!videoIds.length) return
-        if (!confirm(`Mark ${videoIds.length} video(s) watched?`)) return
+    const markAllWatched = useCallback(async videos => {
+        if (!videos.length) return
+        if (!confirm(`Mark ${videos.length} video(s) watched?`)) return
         setBusy(true)
         try {
-            await yt.callBackend("setWatchedMany", {}, { videoIds, watched: true })
+            await yt.callBackend("setWatchedMany", {}, {
+                videoIds: videos.map(video => video.id),
+                videos,
+                watched: true
+            })
             await reload()
         } catch (error) {
             setStatus({ error: error.message })
@@ -871,6 +1473,73 @@ export default function YouTubeManager() {
             setBusy(false)
         }
     }, [reload])
+
+    // Clearing the history is the only thing here that discards data the addon
+    // cannot get back, so it asks twice as loudly as anything else.
+    const clearHistory = useCallback(async () => {
+        const count = Object.keys(data?.watched || {}).length
+        if (!confirm(`Delete the whole watch history? ${count} entr(ies) go, and nothing can bring them back. Your subscriptions and playlists are kept.`)) return
+        setBusy(true)
+        try {
+            await yt.callBackend("clearWatched")
+            await reload()
+        } catch (error) {
+            setStatus({ error: error.message })
+        } finally {
+            setBusy(false)
+        }
+    }, [data, reload])
+
+    // The picker is at the root because a "+" can be pressed from any tab, and
+    // a panel per tab would be four copies of the same list.
+    const addToPlaylist = useCallback(async (playlistId, video) => {
+        setBusy(true)
+        try {
+            await yt.callBackend("editPlaylist", {}, { playlistId, op: "add", video })
+            setPickerVideo(null)
+            await reload()
+        } catch (error) {
+            setStatus({ error: error.message })
+        } finally {
+            setBusy(false)
+        }
+    }, [reload])
+
+    const createAndAdd = useCallback(async (title, video) => {
+        if (!title.trim()) return
+        setBusy(true)
+        try {
+            const created = await yt.callBackend("savePlaylist", {}, { title })
+            await yt.callBackend("editPlaylist", {}, { playlistId: created.id, op: "add", video })
+            setPickerVideo(null)
+            await reload()
+        } catch (error) {
+            setStatus({ error: error.message })
+        } finally {
+            setBusy(false)
+        }
+    }, [reload])
+
+    // Playback for the tabs that have no list of their own to hang it off.
+    // Feed and Search each open a video inside their own list; Playlists and
+    // History are flat, so their player sits here.
+    const playRoot = useCallback(video => {
+        setPlaying(video)
+        if (data?.settings.markWatchedOnPlay && !data.watched[video.id]) {
+            toggleWatched(video.id, true, video)
+        }
+    }, [data, toggleWatched])
+
+    const run = useCallback(async job => {
+        setBusy(true)
+        try {
+            await job()
+        } catch (error) {
+            setStatus({ error: error.message })
+        } finally {
+            setBusy(false)
+        }
+    }, [])
 
     // Settings live on a render note; activating the code note would open its
     // source instead of the rendered form.
@@ -881,7 +1550,8 @@ export default function YouTubeManager() {
     return (
         <div class="ym-view">
             <div class="ym-tabs">
-                {[["feed", "Feed"], ["search", "Search"], ["subs", "Subscriptions"]].map(([key, label]) => (
+                {[["feed", "Feed"], ["search", "Search"], ["playlists", "Playlists"],
+                    ["history", "History"], ["subs", "Subscriptions"]].map(([key, label]) => (
                     <button key={key} class={`ym-tab ${tab === key ? "ym-tab-on" : ""}`}
                         onClick={() => setTab(key)}>{label}</button>
                 ))}
@@ -900,6 +1570,28 @@ export default function YouTubeManager() {
             {status?.text && <p class="ym-status">{status.text}</p>}
             {status?.error && <pre class="ym-error">{status.error}</pre>}
 
+            {playing && (tab === "playlists" || tab === "history") && (
+                <Player
+                    video={playing}
+                    channelName={playing.channelName || ""}
+                    watched={!!data.watched[playing.id]}
+                    settings={data.settings}
+                    onToggleWatched={toggleWatched}
+                    onClose={() => setPlaying(null)}
+                />
+            )}
+
+            {pickerVideo && (
+                <AddToPlaylist
+                    video={pickerVideo}
+                    playlists={data.playlists}
+                    busy={busy}
+                    onAdd={playlistId => addToPlaylist(playlistId, pickerVideo)}
+                    onCreate={title => createAndAdd(title, pickerVideo)}
+                    onClose={() => setPickerVideo(null)}
+                />
+            )}
+
             {tab === "feed" && (
                 <FeedTab
                     data={data}
@@ -908,10 +1600,37 @@ export default function YouTubeManager() {
                     busy={busy}
                     onToggleWatched={toggleWatched}
                     onMarkAllWatched={markAllWatched}
+                    onAddToPlaylist={setPickerVideo}
                 />
             )}
             {tab === "search" && (
-                <SearchTab data={data} onToggleWatched={toggleWatched} onChanged={reload} />
+                <SearchTab
+                    data={data}
+                    onToggleWatched={toggleWatched}
+                    onAddToPlaylist={setPickerVideo}
+                    onChanged={reload}
+                />
+            )}
+            {tab === "playlists" && (
+                <PlaylistsTab
+                    data={data}
+                    busy={busy}
+                    run={run}
+                    onPlay={playRoot}
+                    onToggleWatched={toggleWatched}
+                    onAddToPlaylist={setPickerVideo}
+                    onChanged={reload}
+                />
+            )}
+            {tab === "history" && (
+                <HistoryTab
+                    data={data}
+                    busy={busy}
+                    onPlay={playRoot}
+                    onToggleWatched={toggleWatched}
+                    onAddToPlaylist={setPickerVideo}
+                    onClearHistory={clearHistory}
+                />
             )}
             {tab === "subs" && <SubscriptionsTab data={data} onChanged={reload} />}
         </div>

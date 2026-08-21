@@ -29,8 +29,13 @@
  *   addChannels     POST; merge channel records into the subscription list
  *   removeChannel   drop a channel and its cached videos
  *   mergeVideos     POST; merge a refresh result, then prune the cache
- *   setWatched      mark one video watched or unwatched
+ *   setWatched      POST; mark one video watched or unwatched
  *   setWatchedMany  POST; same for a list of ids, in one write
+ *   clearWatched    drop the whole watch history
+ *   savePlaylist    POST; create or rename a personal playlist
+ *   deletePlaylist  drop a playlist, personal or subscribed
+ *   editPlaylist    POST; add, remove, or move one video in a personal playlist
+ *   followPlaylist  POST; store or refresh a snapshot of someone else's playlist
  *   saveView        persist the widget's remembered view state
  */
 
@@ -173,10 +178,17 @@ async function proxy(payload) {
 function load() {
     const settings = getSettings()
     const doc = loadDocument()
+    // Watched entries written before they carried the video's details are
+    // filled in from whatever is still cached, so the history stops showing
+    // bare ids for videos the addon can still describe.
+    const backfilled = store.backfillWatched(doc)
+    if (backfilled.filled) saveDocument(doc)
+
     return {
         channels: doc.channels,
         videos: doc.videos,
         watched: doc.watched,
+        playlists: doc.playlists,
         lastRefresh: doc.lastRefresh,
         settings: {
             hideShorts: settings.hideShorts,
@@ -221,18 +233,70 @@ function mergeVideos(videos) {
     return { ...merged, ...pruned, lastRefresh: doc.lastRefresh }
 }
 
-function setWatched(videoId, watched) {
+function setWatched(videoId, watched, video) {
     if (!videoId) throw new Error("setWatched needs a videoId")
     const doc = loadDocument()
-    const result = store.setWatched(doc, videoId, watched)
+    const result = store.setWatched(doc, videoId, watched, video)
     saveDocument(doc)
     return result
 }
 
-function setWatchedMany(videoIds, watched) {
+function setWatchedMany(videoIds, watched, videos) {
     if (!Array.isArray(videoIds)) throw new Error("setWatchedMany needs a videoIds array")
     const doc = loadDocument()
-    const result = store.setWatchedMany(doc, videoIds, watched)
+    const result = store.setWatchedMany(doc, videoIds, watched, videos)
+    saveDocument(doc)
+    return result
+}
+
+function clearWatched() {
+    const doc = loadDocument()
+    const result = store.clearWatched(doc)
+    saveDocument(doc)
+    return result
+}
+
+// --- playlists --------------------------------------------------------------
+
+// One action for both create and rename: the widget's form is the same either
+// way, and which one it is is decided by whether an id came with it.
+function savePlaylist(playlistId, title) {
+    const doc = loadDocument()
+    const result = playlistId
+        ? store.renamePlaylist(doc, playlistId, title)
+        : store.createPlaylist(doc, title)
+    saveDocument(doc)
+    return result
+}
+
+function deletePlaylist(playlistId) {
+    if (!playlistId) throw new Error("deletePlaylist needs a playlistId")
+    const doc = loadDocument()
+    const result = store.deletePlaylist(doc, playlistId)
+    saveDocument(doc)
+    return result
+}
+
+// The three edits to a personal playlist's contents, routed by `op` so a
+// reorder is one request rather than a remove and an add.
+function editPlaylist(body) {
+    const { playlistId, op } = body
+    if (!playlistId || !op) throw new Error("editPlaylist needs a playlistId and an op")
+
+    const doc = loadDocument()
+    let result
+    if (op === "add") result = store.addToPlaylist(doc, playlistId, body.video)
+    else if (op === "remove") result = store.removeFromPlaylist(doc, playlistId, body.videoId)
+    else if (op === "move") result = store.movePlaylistVideo(doc, playlistId, body.videoId, body.delta)
+    else throw new Error(`Unknown playlist op: ${op}`)
+
+    saveDocument(doc)
+    return result
+}
+
+function followPlaylist(playlist) {
+    const doc = loadDocument()
+    const result = store.saveSubscribedPlaylist(doc, playlist)
     saveDocument(doc)
     return result
 }
@@ -277,9 +341,19 @@ async function handle() {
             case "mergeVideos":
                 return sendJson(200, mergeVideos(body.videos))
             case "setWatched":
-                return sendJson(200, setWatched(query.videoId, query.watched === "true"))
+                return sendJson(200, setWatched(query.videoId, query.watched === "true", body.video))
             case "setWatchedMany":
-                return sendJson(200, setWatchedMany(body.videoIds, body.watched === true))
+                return sendJson(200, setWatchedMany(body.videoIds, body.watched === true, body.videos))
+            case "clearWatched":
+                return sendJson(200, clearWatched())
+            case "savePlaylist":
+                return sendJson(200, savePlaylist(body.playlistId, body.title))
+            case "deletePlaylist":
+                return sendJson(200, deletePlaylist(query.playlistId))
+            case "editPlaylist":
+                return sendJson(200, editPlaylist(body))
+            case "followPlaylist":
+                return sendJson(200, followPlaylist(body.playlist))
             case "saveView":
                 return sendJson(200, saveView(query))
             default:

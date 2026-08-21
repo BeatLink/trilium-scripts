@@ -2,8 +2,8 @@
 
 A YouTube subscription tracker for TriliumNext, in the spirit of
 [NoUTube](https://github.com/noutube): subscribe to channels, get **one feed** of everything they
-upload, and keep a permanent record of what you watched. Search YouTube from the same widget, and
-subscribe to what you find.
+upload, and keep a permanent record of what you watched. Search YouTube from the same widget,
+subscribe to what you find, and collect videos into playlists of your own.
 
 No Google API key. No quota. No account sign-in.
 
@@ -68,18 +68,68 @@ the Feed uses: playable in place, and markable watched even though it is not in 
 because the watched record is keyed by video id and does not care where the video came from.
 
 Each channel result carries a **Subscribe** button, so finding a channel and following it is one
-click rather than a trip to the Subscriptions tab. Clicking a channel's name opens it.
+click rather than a trip to the Subscriptions tab. Clicking a channel's name opens its page.
 
-### A channel's own page
+### A channel's page
 
-Opening a channel shows its avatar, handle, a Subscribe button, and its recent uploads. The box
-under the header searches **within that channel**, using YouTube's own per-channel search rather
-than filtering what is already on screen, so it reaches the whole back catalogue and not just the
-uploads that were fetched. Clearing it goes back to the recent uploads.
+Opening a channel gives it a page of its own: banner, avatar, name, `@handle`, subscriber and video
+counts, and a **Subscribe** / **Unsubscribe** button. Unsubscribing here behaves exactly as it does
+on the Subscriptions tab, keeping your watched history.
 
-Nothing on this tab is written to the cache and nothing is remembered between sessions. Search
-results are live YouTube data; only what you mark watched and who you subscribe to become part of
-your library.
+**Videos** lists the uploads, oldest requests first:
+
+- a **sort** of Latest, Popular, or Oldest. This is applied by YouTube, not here. The only date a
+  listing gives is a humanized label (`"8 years ago"`), which dozens of videos share, so sorting
+  locally cannot separate them.
+- **Hide watched**, for working through a back catalogue
+- **Load more**, which follows YouTube's continuations a page at a time rather than fetching
+  thousands of videos up front
+- a box that searches **within that channel**, using YouTube's own per-channel search rather than
+  filtering what is already on screen, so it reaches uploads the page has not paged to yet. Clearing
+  it goes back to the sorted list.
+
+**Playlists** shows the channel's public playlists; opening one lists its videos, playable and
+markable in place. **Follow** stores a snapshot of one on your own Playlists tab.
+
+**About** carries the full description, the join date, total views, video count, and country, plus
+the channel's **featured channels** -- each of which opens as a page of its own, so you can walk
+from one channel to the next.
+
+Each tab is fetched the first time you open it. Every tab costs a separate request either way, so
+loading all of them up front would spend requests filling panels nobody had opened.
+
+### Playlists
+
+The **Playlists** tab holds two kinds of list, together:
+
+**Yours.** Create one by name, then add videos to it with the **+** on any video row anywhere in the
+widget. Inside a playlist you can reorder with **^** and **v**, remove with **x**, rename, and
+delete. Reordering moves one step at a time, which is what a list can do without a drag surface.
+
+**Followed.** A playlist belonging to someone else, taken from a channel's Playlists tab with
+**Follow**. It is a **snapshot**, not a live view: its contents belong to its author, so what you
+have is what it held when you followed it, and the tab shows how long ago that was. **Refresh**
+takes a new snapshot. It is read-only for the same reason -- an edit would only last until the next
+refresh overwrote it.
+
+Deleting a playlist, or unfollowing one, never touches your watched history.
+
+Playlist entries carry their own copy of each video rather than pointing at the cache, so a playlist
+keeps working after a video ages out of the cache or is pulled from YouTube.
+
+### History
+
+Everything you have marked watched, newest first, with the title, channel, when you watched it, and
+how many times. Rows are playable, addable to a playlist, and removable one at a time; a search box
+narrows by title. **Clear history** empties it.
+
+**Clearing is the only thing in this addon that destroys data it cannot get back.** Subscriptions
+re-fetch and the video cache rebuilds itself; the watch history is the one thing YouTube cannot tell
+you. It asks for confirmation and says how many entries are going.
+
+Entries written by an older version carry only the timestamp. The addon fills in what it still can
+from the video cache when the widget loads, and shows the bare id for the rest -- there is nowhere
+left to read those from.
 
 ### Subscriptions
 
@@ -171,12 +221,25 @@ survives updates and can be backed up, inspected, or hand-edited.
             "views": 246682, "publishedAt": "2026-08-11T18:08:30.000Z"
         }
     },
-    "watched": { "ofNcSiFpDUk": "2026-08-12T09:14:00.000Z" },
+    "watched": {
+        "ofNcSiFpDUk": {
+            "watchedAt": "2026-08-12T09:14:00.000Z", "watchCount": 2,
+            "title": "Tech Russian Roulette", "channelId": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+            "channelName": "Linus Tech Tips", "duration": 58, "isShort": true
+        }
+    },
+    "playlists": {
+        "local-m1a2b3-x9k2qp": {
+            "id": "local-m1a2b3-x9k2qp", "kind": "personal", "title": "Watch later",
+            "videos": [{ "id": "ofNcSiFpDUk", "title": "Tech Russian Roulette" }],
+            "createdAt": "2026-08-12T10:00:00.000Z", "updatedAt": "2026-08-12T10:05:00.000Z"
+        }
+    },
     "lastRefresh": "2026-08-12T09:00:00.000Z"
 }
 ```
 
-The three parts are not equally precious, and the addon treats them accordingly:
+The four parts are not equally precious, and the addon treats them accordingly:
 
 - **`videos` is a cache.** It is rebuilt from YouTube on every refresh, so pruning it is safe.
   Videos older than **Keep Videos For (Days)** are dropped on each refresh, which is what keeps the
@@ -184,9 +247,23 @@ The three parts are not equally precious, and the addon treats them accordingly:
 - **`watched` is the actual data.** It is keyed by video id and **never pruned**. A video that ages
   out of the cache and later comes back is still known to be watched, so it does not reappear as
   new.
+- **`playlists` is also yours**, and is never pruned either.
 - **`channels` is your subscription list**, only ever changed by you.
 
 A blank or malformed document is treated as empty rather than crashing the widget.
+
+### Two things that carry copies, not references
+
+A **watched entry** and a **playlist entry** both keep their own copy of the video's title, channel,
+thumbnail, and duration, rather than pointing into `videos`. Both outlive the cache by design, so a
+reference would leave the History and your playlists full of bare ids as soon as a video aged out or
+was pulled from YouTube.
+
+A watched entry used to be nothing but the timestamp. Old entries are **read** as the new shape
+rather than rewritten, because a rewrite would be a destructive pass over the one part of the
+document that cannot be regenerated. What it can, the addon fills in from the cache the next time
+the widget loads; a video long gone from the cache leaves an entry with nothing to show but its id,
+because there is nowhere left to read it from.
 
 Since videos are JSON entries rather than notes, they are not individually linkable or cloneable,
 and Trilium collection views cannot browse them. The widget is the UI.
@@ -251,7 +328,7 @@ is all a skip needs, so YouTube's own API script is never loaded.
 | **Videos Per Channel** | Uploads pulled from each channel per refresh. Higher values follow more continuations, so refreshes take longer. |
 | **Keep Videos For (Days)** | Cache retention. `0` keeps everything. Never affects watched history. |
 | **Hours Between Automatic Refreshes** | Minimum gap before opening the widget triggers a refresh. `0` means Refresh-button only. |
-| **Mark Watched When Played** | Mark a video watched as soon as it starts. Off by default. |
+| **Mark Watched When Played** | Mark a video watched as soon as it starts. Off by default. Also fills in that video's History entry. |
 | **Hide Shorts** | Also toggled on the Feed tab. |
 | **Skip Sponsor Segments** | On by default. Off, no request is ever made to SponsorBlock. |
 | **Show A Notice On Skip** | The brief notice shown over the player on a skip. On by default. |
@@ -264,10 +341,13 @@ is all a skip needs, so YouTube's own API script is never loaded.
   catches the ones that leak into a listing, by duration. YouTube has allowed Shorts up to three
   minutes since 2024, so a longer Short reads as a normal video.
 - **Search reaches one page.** A search returns YouTube's first page of results and does not follow
-  continuations, so it is a way to find something rather than a way to enumerate everything.
+  continuations, so it is a way to find something rather than a way to enumerate everything. A
+  channel's own Videos tab does page, with **Load more**.
 - **A skip is only as good as the submission.** Segment times come from SponsorBlock's
   contributors, so a wrong or stale one skips the wrong part. Downvoted segments are ignored here,
   but voting on them needs the extension or the app.
+- **A channel page is read live and not cached.** Leaving it and coming back re-fetches. Only your
+  subscriptions and watched history are stored; nothing browsed here is written to the video cache.
 - **View counts can be approximate.** YouTube sometimes returns an abbreviated count (`"1.2M
   views"`), which is expanded back to a round number rather than an exact one.
 - **YouTube.js is a reverse-engineered client** against a private API. YouTube changes response

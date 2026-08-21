@@ -73,6 +73,13 @@
     color: #d33;
 }
 
+/* Square, for the one-character reorder and add controls on a row. */
+.ym-btn-icon {
+    padding: 3px 8px;
+    font-family: monospace;
+    line-height: 1.2;
+}
+
 /* --- status -------------------------------------------------------------- */
 
 .ym-status {
@@ -397,11 +404,153 @@
     -webkit-box-orient: vertical;
 }
 
-/* --- search -------------------------------------------------------------- */
+/* --- channel page -------------------------------------------------------- */
 
-/* The channel being browsed is the heading for the list under it, so it sits
-   apart from the result rows rather than reading as one of them. */
+.ym-banner {
+    display: block;
+    width: 100%;
+    max-height: 160px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-bottom: 12px;
+}
+
+/* The channel being browsed is the heading for everything under it, so it sits
+   apart from the rows rather than reading as one of them. */
 .ym-channel-header {
     border-bottom-width: 2px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+
+.ym-avatar-big {
+    flex: 0 0 72px;
+    width: 72px;
+    height: 72px;
+}
+
+.ym-channel-title {
+    font-size: 20px;
+}
+
+/* Nested inside the widget's own tab row, so it reads as a level down. */
+.ym-subtabs .ym-tab {
+    padding: 4px 10px;
+    font-size: 13px;
+}
+
+.ym-load-more {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+}
+
+/* --- playlists ----------------------------------------------------------- */
+
+.ym-playlists {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.ym-playlist {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--main-border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ym-playlist-open {
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--main-text-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ym-playlist-follow {
+    margin: 6px 8px 8px;
+}
+
+.ym-playlist img,
+.ym-playlist-blank {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--main-border-color);
+}
+
+.ym-playlist-title {
+    padding: 6px 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ym-playlist-count {
+    padding: 2px 8px 8px;
+    font-size: 12px;
+    color: var(--muted-text-color, gray);
+}
+
+/* --- about --------------------------------------------------------------- */
+
+.ym-about-text {
+    margin: 0 0 10px;
+    white-space: pre-wrap;
+}
+
+.ym-about-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted-text-color, gray);
+}
+
+.ym-about-heading {
+    margin: 18px 0 6px;
+    font-size: 14px;
+}
+
+/* --- history and stored playlists ---------------------------------------- */
+
+/* A playlist's cover is not a face, so it keeps its corners. */
+.ym-avatar-square {
+    border-radius: 6px;
+}
+
+.ym-row-actions {
+    display: flex;
+    gap: 4px;
+}
+
+/* --- add to playlist ------------------------------------------------------ */
+
+/* Sits above the tab panel rather than over it: a video row stays readable
+   while its destination is chosen. */
+.ym-picker {
+    padding: 10px 12px;
+    border: 1px solid var(--main-text-color);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.ym-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.ym-picker-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     margin-bottom: 10px;
 }

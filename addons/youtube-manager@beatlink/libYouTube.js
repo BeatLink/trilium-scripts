@@ -36,6 +36,14 @@ const RELATIVE_UNITS = {
     year: 31557600000
 }
 
+// The orders YouTube offers on a channel's Videos tab. The first is its
+// default, so selecting it costs no extra request.
+const CHANNEL_SORTS = ["Latest", "Popular", "Oldest"]
+
+// Upper bound on playlist continuation requests, so following a playlist with
+// thousands of entries cannot spin. YouTube returns 100 per page.
+const MAX_PLAYLIST_PAGES = 20
+
 let innertubePromise = null
 
 // --- transport --------------------------------------------------------------
@@ -169,14 +177,41 @@ function firstUrl(candidates) {
     return ""
 }
 
+// The rendered text parts of a LockupView, YouTube's newer grid shape. It
+// carries no view count or publish date of its own: both arrive as pre-rendered
+// strings in a metadata row, typically ["1.4M views", "2 weeks ago"].
+function lockupTexts(node) {
+    return (node?.metadata?.metadata?.metadata_rows || [])
+        .flatMap(row => row?.metadata_parts || [])
+        .map(part => part?.text?.text)
+        .filter(text => typeof text === "string" && text)
+}
+
+// A LockupView's duration, which sits in a badge on the thumbnail overlay
+// rather than in a field. Badges also carry things like "LIVE" and "4K", so the
+// one that parses as a duration is the one that is a duration.
+function lockupDurationText(node) {
+    const badges = (node?.content_image?.overlays || [])
+        .flatMap(overlay => overlay?.badges || [])
+        .map(badge => badge?.text)
+        .filter(Boolean)
+    return badges.find(text => parseDuration(text) !== null) || ""
+}
+
 // Maps one listing node to a stored video. Returns null for anything without a
 // video id, which covers the shelves and banners YouTube mixes into a tab.
+//
+// Two node shapes reach here. The older ones expose every field directly; a
+// LockupView exposes almost none of them, so each value has a second place to
+// be looked for.
 function mapVideo(node, channelId) {
-    const id = node?.video_id || node?.id || node?.on_tap_endpoint?.payload?.videoId
+    const id = node?.video_id || node?.id || node?.content_id || node?.on_tap_endpoint?.payload?.videoId
     if (!id) return null
 
-    const duration = parseDuration(node.length_text?.text)
+    const texts = lockupTexts(node)
+    const duration = parseDuration(node.length_text?.text || lockupDurationText(node))
     const shortByType = node.type === "ShortsLockupView" || node.type === "ReelItem"
+        || node.content_type === "SHORT"
 
     return {
         id,
@@ -184,12 +219,32 @@ function mapVideo(node, channelId) {
         // carry it on the node instead, so both paths land the same shape.
         channelId: channelId || node.author?.id || "",
         channelName: node.author?.name || "",
-        title: node.title?.text || node.overlay_metadata?.primary_text?.text || node.accessibility_text || "",
+        title: node.title?.text || node.metadata?.title?.text
+            || node.overlay_metadata?.primary_text?.text || node.accessibility_text || "",
         thumbnail: thumbnailFor(id),
         duration,
         isShort: shortByType || (duration !== null && duration <= SHORT_MAX_SECONDS),
-        views: parseViews(node.view_count?.text || node.short_view_count?.text),
-        publishedAt: estimatePublished(node.published?.text)
+        views: parseViews(node.view_count?.text || node.short_view_count?.text
+            || texts.find(text => /view/i.test(text))),
+        publishedAt: estimatePublished(node.published?.text
+            || texts.find(text => /ago$/i.test(text)))
+    }
+}
+
+// A playlist card, in either the legacy shape or a LockupView. The video count
+// arrives as a thumbnail badge ("27 episodes") when there is no counted field.
+function mapPlaylist(node) {
+    const thumbnail = node?.content_image?.primary_thumbnail
+    const badge = (thumbnail?.overlays || [])
+        .flatMap(overlay => overlay?.badges || [])
+        .map(item => item?.text)
+        .find(Boolean)
+
+    return {
+        id: node?.id || node?.content_id || "",
+        title: node?.title?.text || node?.metadata?.title?.text || "",
+        thumbnail: bestThumbnail(thumbnail?.image || node?.thumbnails || node?.thumbnail),
+        count: node?.video_count?.text || badge || ""
     }
 }
 
@@ -200,6 +255,21 @@ function bestThumbnail(thumbnails) {
     if (!list.length) return ""
     const url = list.sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url || ""
     return url.startsWith("//") ? `https:${url}` : url
+}
+
+// YouTube returns some values as a plain string and the same value as a text
+// node elsewhere, depending on which shape of response it came from.
+function textOf(value) {
+    return typeof value === "string" ? value : (value?.text || "")
+}
+
+// The rendered strings in a channel header's metadata row: the @handle, the
+// subscriber count, and the video count, in no guaranteed order.
+function headerTexts(header) {
+    return (header?.content?.metadata?.metadata_rows || [])
+        .flatMap(row => row?.metadata_parts || [])
+        .map(part => part?.text?.text)
+        .filter(text => typeof text === "string" && text)
 }
 
 // One channel out of a search result list. YouTube now returns the @handle in
@@ -329,6 +399,159 @@ async function fetchChannelVideos(channelId, limit) {
     return videos.slice(0, limit)
 }
 
+// Everything the channel page shows above its video list. mapChannel supplies
+// the identity; the header and the About panel supply the rest.
+async function fetchChannelInfo(channelId) {
+    const yt = await getInnertube()
+    const channel = await yt.getChannel(channelId)
+    const record = mapChannel(channel)
+    const header = channel?.header || {}
+    const texts = headerTexts(header)
+
+    // The About panel is a second request, so losing it costs the page its
+    // description and details rather than costing the page.
+    let about = {}
+    try {
+        const fetched = await channel.getAbout()
+        about = fetched?.metadata || fetched || {}
+    } catch (e) {
+        about = {}
+    }
+
+    return {
+        ...record,
+        thumbnail: record.thumbnail
+            || bestThumbnail(header?.content?.image?.image || header?.content?.image?.avatar?.image),
+        banner: bestThumbnail(header?.content?.banner?.image || header?.banner?.image),
+        handle: record.handle || texts.find(text => text.startsWith("@")) || "",
+        subscribers: textOf(about.subscriber_count) || texts.find(text => /subscriber/i.test(text)) || "",
+        videoCount: textOf(about.video_count) || texts.find(text => /video/i.test(text)) || "",
+        totalViews: textOf(about.view_count),
+        joined: textOf(about.joined_date),
+        country: textOf(about.country),
+        description: textOf(about.description) || channel?.metadata?.description || "",
+        hasPlaylists: !!channel?.has_playlists
+    }
+}
+
+// Turns one feed page into videos plus the call that fetches the next page, or
+// null at the end of the tab. Paging is the caller's to drive, so a channel
+// with thousands of uploads loads on demand instead of in one burst.
+function pageOf(feed, channelId) {
+    const videos = []
+    for (const node of feed?.videos || []) {
+        const video = mapVideo(node, channelId)
+        if (video) videos.push(video)
+    }
+    return {
+        videos,
+        next: feed?.has_continuation
+            ? () => feed.getContinuation().then(page => pageOf(page, channelId))
+            : null
+    }
+}
+
+// The first page of a channel's uploads in the requested order.
+//
+// The order has to be applied server-side. The only date a listing gives is a
+// humanized label ("8 years ago"), which dozens of videos share, so sorting
+// locally cannot separate them; YouTube orders by the real timestamp.
+async function fetchChannelPage(channelId, sort) {
+    const yt = await getInnertube()
+    const channel = await yt.getChannel(channelId)
+    let feed = await channel.getVideos()
+
+    if (sort && sort !== CHANNEL_SORTS[0]) {
+        try {
+            feed = await feed.applyFilter(sort)
+        } catch (e) {
+            // A channel that does not offer the chip falls back to its default
+            // order rather than showing nothing.
+        }
+    }
+    return pageOf(feed, channelId)
+}
+
+// The channel's own playlists.
+async function fetchChannelPlaylists(channelId, limit) {
+    const yt = await getInnertube()
+    const channel = await yt.getChannel(channelId)
+    if (!channel.has_playlists) return []
+
+    const tab = await channel.getPlaylists()
+    return (tab?.playlists || [])
+        .map(mapPlaylist)
+        .filter(playlist => playlist.id)
+        .slice(0, limit)
+}
+
+// Channels this channel features. YouTube retired the dedicated Channels tab,
+// so they now arrive as a shelf on the Home tab; the feed's own channel index
+// finds them wherever in the page they were placed.
+async function fetchFeaturedChannels(channelId, limit) {
+    const yt = await getInnertube()
+    const channel = await yt.getChannel(channelId)
+    if (!channel.has_home) return []
+
+    let home
+    try {
+        home = await channel.getHome()
+    } catch (e) {
+        return []
+    }
+
+    const seen = new Set()
+    const featured = []
+    for (const node of home?.channels || []) {
+        const id = node?.id || node?.author?.id
+        if (!id || id === channelId || seen.has(id)) continue
+        seen.add(id)
+        featured.push({
+            id,
+            name: node?.author?.name || "",
+            thumbnail: bestThumbnail(node?.author?.thumbnails),
+            subscribers: node?.subscribers?.text || ""
+        })
+        if (featured.length >= limit) break
+    }
+    return featured
+}
+
+// One playlist, with enough of its own details to be stored as a snapshot.
+// Continuations are followed to `limit`, because a followed playlist is only
+// worth having if it holds more than its first page.
+async function fetchPlaylist(playlistId, limit) {
+    const yt = await getInnertube()
+    let feed = await yt.getPlaylist(playlistId)
+    const info = feed?.info || {}
+
+    const videos = []
+    let pages = 0
+    while (feed && pages < MAX_PLAYLIST_PAGES) {
+        for (const node of feed.videos || []) {
+            const video = mapVideo(node, null)
+            if (video) videos.push(video)
+        }
+        pages++
+        if (videos.length >= limit || !feed.has_continuation) break
+        try {
+            feed = await feed.getContinuation()
+        } catch (e) {
+            // Continuations expire; keep what came back rather than failing.
+            break
+        }
+    }
+
+    return {
+        id: playlistId,
+        title: textOf(info.title) || playlistId,
+        author: info.author?.name || "",
+        authorId: info.author?.id || "",
+        thumbnail: bestThumbnail(info.thumbnails),
+        videos: videos.slice(0, limit)
+    }
+}
+
 // Videos matching a search term, across all of YouTube.
 async function searchVideos(query, limit) {
     const yt = await getInnertube()
@@ -434,9 +657,15 @@ function parseFreeTubeExport(text) {
 }
 
 module.exports = {
+    CHANNEL_SORTS,
     callBackend,
     parseTarget,
     resolveChannel,
+    fetchChannelInfo,
+    fetchChannelPage,
+    fetchChannelPlaylists,
+    fetchFeaturedChannels,
+    fetchPlaylist,
     fetchChannelVideos,
     fetchVideo,
     searchVideos,
