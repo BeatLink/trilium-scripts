@@ -42,7 +42,7 @@ note sorted by title.
 
 ## Bundled templates
 
-This addon ships eight ready-made templates under its own **Templates** container note, persisted so
+This addon ships nine ready-made templates under its own **Templates** container note, persisted so
 your edits survive updates. Run **Scan** to register them in your dropdown if they aren't there
 already.
 
@@ -53,7 +53,15 @@ same way but one setting at a time, so nothing you configured is ever replaced w
 Seven are **item templates** — **Ideas**, **Goal**, **Routine**, **Task**, **Future**, **Project**,
 **Note** — moved here from `agenda@beatlink` in 1.5.0.
 
-The eighth, **AreaCollection**, is a **container** template: it carries `#viewType=list` and
+**Link** (added in 1.14.0) is a saved web page: a **Web View** note whose `#webViewSrc` and `#url`
+labels hold the address, which is the note shape
+[`web-preview@beatlink`](../web-preview@beatlink/README.md) drives its toolbar from and the
+Web2Trilium browser extension writes when it saves a bookmark or tab. Creating a note from it gives
+you an empty Web View note with both labels settable as fields; fill in the address and the page
+loads inline. Assigning it to an *existing* note only adds the labels — Trilium takes a note's type
+from its template at creation time, so switch the note's type to Web View yourself.
+
+The last one, **AreaCollection**, is a **container** template: it carries `#viewType=list` and
 `#type=areacollection`, and is meant for the per-area root notes that
 [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)'s triage queues walk. It is not
 meant to be picked as an item's own type — leave its registry row **disabled**.
@@ -61,7 +69,7 @@ meant to be picked as an item's own type — leave its registry row **disabled**
 ## Bundled roots
 
 The addon also ships one **root container note** per bundled item template — **Ideas**, **Goals**,
-**Routines**, **Tasks**, **Future**, **Projects**, **Notes** — inside the persisted **Templates**
+**Routines**, **Tasks**, **Future**, **Projects**, **Notes**, **Links** — inside the persisted **Templates**
 container, beside the templates themselves.
 
 Each root is an empty text note carrying the matching template's `#iconClass`, `#viewType=list`, and

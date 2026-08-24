@@ -1,11 +1,11 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. It also ships one empty root container note per bundled item template (Ideas / Goals / Routines / Tasks / Future / Projects / Notes), carrying only the template's icon and #viewType=list; as of 1.13.0 they sit beside the templates in the Templates container instead of under the AreaCollection template, so a new Area no longer comes out holding copies of them. Each registry row has a Root Note field so other addons can resolve a template's root.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships nine bundled template notes under its own persisted Templates container: eight item types (Ideas / Goal / Routine / Task / Future / Project / Note / Link, the last a Web View note carrying #webViewSrc and #url for a saved web page) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. It also ships one empty root container note per bundled item template (Ideas / Goals / Routines / Tasks / Future / Projects / Notes / Links), carrying only the template's icon and #viewType=list; as of 1.13.0 they sit beside the templates in the Templates container instead of under the AreaCollection template, so a new Area no longer comes out holding copies of them. Each registry row has a Root Note field so other addons can resolve a template's root.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.13.0",
+    "latestVersion": "1.14.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/template-picker@beatlink/_tam_manifest_.json",
@@ -193,6 +193,13 @@
                 "sourceUrl": "templates/note.html"
             },
             {
+                "id": "tpl-link",
+                "title": "Link",
+                "type": "webView",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
                 "id": "tpl-area",
                 "title": "Area",
                 "type": "text",
@@ -244,6 +251,13 @@
             {
                 "id": "root-note",
                 "title": "Notes",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "root-link",
+                "title": "Links",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -384,6 +398,10 @@
             },
             {
                 "parent": "templates-root",
+                "child": "tpl-link"
+            },
+            {
+                "parent": "templates-root",
                 "child": "tpl-area"
             },
             {
@@ -413,6 +431,10 @@
             {
                 "parent": "templates-root",
                 "child": "root-note"
+            },
+            {
+                "parent": "templates-root",
+                "child": "root-link"
             }
         ],
         "relations": [
@@ -674,6 +696,36 @@
                 "value": "note"
             },
             {
+                "note": "tpl-link",
+                "name": "template",
+                "value": ""
+            },
+            {
+                "note": "tpl-link",
+                "name": "iconClass",
+                "value": "bx bx-link"
+            },
+            {
+                "note": "tpl-link",
+                "name": "label:webViewSrc",
+                "value": "single,url"
+            },
+            {
+                "note": "tpl-link",
+                "name": "label:url",
+                "value": "single,url"
+            },
+            {
+                "note": "tpl-link",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "tpl-link",
+                "name": "type",
+                "value": "link"
+            },
+            {
                 "note": "tpl-area",
                 "name": "template",
                 "value": ""
@@ -800,6 +852,21 @@
             },
             {
                 "note": "root-note",
+                "name": "label:area",
+                "value": "single"
+            },
+            {
+                "note": "root-link",
+                "name": "iconClass",
+                "value": "bx bx-link"
+            },
+            {
+                "note": "root-link",
+                "name": "viewType",
+                "value": "list"
+            },
+            {
+                "note": "root-link",
                 "name": "label:area",
                 "value": "single"
             }
