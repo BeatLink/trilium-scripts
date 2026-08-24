@@ -51,6 +51,10 @@ const NOTIFICATIONS = new Set(["database-locked", "database-unlocked"]);
 
 const DATABASE_NOT_OPENED = 1;
 
+// KeePassXC reports "nothing matched this URL" as an error rather than an empty entry list, and on
+// most pages that is the ordinary answer.
+const NO_LOGINS_FOUND = 15;
+
 // --- encoding ---------------------------------------------------------------
 
 const encode = (bytes) => Buffer.from(bytes).toString("base64");
@@ -330,18 +334,42 @@ async function associate(options = {}) {
     });
 }
 
-/* Credentials for one URL. `keys` is the whole key ring, since KeePassXC picks the entry matching
-   whichever database is currently open rather than the caller having to guess. */
+/* Credentials for one URL. `keyring` maps a database hash to the association held for it, because
+   which one applies is decided by whichever database happens to be open right now.
+
+   The three requests are not optional. KeePassXC refuses get-logins outright unless *this connection*
+   has already proved its association (`m_associated` in BrowserAction, reset on every new socket), and
+   the only thing that sets it is associate or test-associate — a stored key ring counts for nothing on
+   its own. Asking for the hash first is what says which association to prove. */
 async function getLogins(options = {}) {
-    const keys = options.keys || [];
-    if (!keys.length) throw new Error("Not associated with any KeePassXC database yet");
+    const keyring = options.keyring || {};
+    const hashes = Object.keys(keyring);
+    if (!hashes.length) throw new Error("Not associated with any KeePassXC database yet");
 
     return session(options, async (context) => {
-        const message = { id: keys[0].id, url: options.url, keys };
+        const unlock = options.triggerUnlock ? { triggerUnlock: "true" } : {};
+
+        const { hash } = await send(context, "get-databasehash", { connectedKeys: hashes }, unlock);
+        const association = keyring[hash];
+        if (!association) throw new Error("The open KeePassXC database is not the one this Trilium is associated with — connect to it from the settings page");
+
+        const proof = await send(context, "test-associate", { id: association.id, key: association.key });
+        if (proof.success !== "true") throw new Error("KeePassXC no longer recognises this association — connect again from the settings page");
+
+        const message = {
+            id: association.id,
+            url: options.url,
+            keys: hashes.map((key) => ({ id: keyring[key].id, key: keyring[key].key }))
+        };
         if (options.submitUrl) message.submitUrl = options.submitUrl;
 
-        const response = await send(context, "get-logins", message, options.triggerUnlock ? { triggerUnlock: "true" } : {});
-        return { hash: response.hash || "", entries: response.entries || [] };
+        try {
+            const response = await send(context, "get-logins", message, unlock);
+            return { hash: response.hash || "", entries: response.entries || [] };
+        } catch (error) {
+            if (error.errorCode === NO_LOGINS_FOUND) return { hash, entries: [] };
+            throw error;
+        }
     });
 }
 

@@ -60,6 +60,12 @@ Each call opens its own connection, exchanges keys, does its work and hangs up. 
 trip costs well under a millisecond, and a frontend `runOnBackend` call is evaluated in a fresh
 bundle every time, so there is nowhere to keep a persistent connection even if it were worth having.
 
+A fetch is therefore three requests, not one. KeePassXC refuses `get-logins` unless *that connection*
+has already proved its association — `m_associated` in `BrowserAction`, reset on every new socket —
+and only `associate` or `test-associate` sets it, so a stored key ring counts for nothing on its own.
+Each fetch asks for the database hash, proves the association held for that hash, and only then asks
+for logins.
+
 ### Bridge (`libWebViewKeePassXc.js`, frontend)
 
 A frontend script cannot open a socket, so every protocol call goes through

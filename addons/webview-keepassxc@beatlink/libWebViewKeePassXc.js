@@ -61,8 +61,6 @@ async function saveKeyring(noteId, keyring) {
     );
 }
 
-const keyList = (keyring) => Object.values(keyring).map(({ id, key }) => ({ id, key }));
-
 // --- actions ----------------------------------------------------------------
 
 /* Whether KeePassXC answers, which database is open, and whether this client already knows it. */
@@ -90,10 +88,9 @@ async function forget(noteId) {
    dropped, since KeePassXC only returns them when the user has allowed expired credentials. */
 async function loginsFor(noteId, url, socketPath, triggerUnlock) {
     const keyring = await loadKeyring(noteId);
-    const keys = keyList(keyring);
-    if (!keys.length) return [];
+    if (!Object.keys(keyring).length) return [];
 
-    const { entries } = await callBackend("getLogins", { socketPath, url, keys, triggerUnlock });
+    const { entries } = await callBackend("getLogins", { socketPath, url, keyring, triggerUnlock });
     return entries.slice().sort((a, b) => (a.expired === "true" ? 1 : 0) - (b.expired === "true" ? 1 : 0));
 }
 
