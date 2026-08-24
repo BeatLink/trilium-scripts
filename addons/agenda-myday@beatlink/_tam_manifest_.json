@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "13.0.1",
+    "latestVersion": "13.0.2",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-myday@beatlink/_tam_manifest_.json",
@@ -148,13 +148,6 @@
                 "type": "code",
                 "mime": "text/css",
                 "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
-            },
-            {
-                "id": "libnotification-lib",
-                "title": "libNotification.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../../libs/libnotification/libnotification.js"
             }
         ],
         "children": [
