@@ -29,6 +29,9 @@ async function createWebViewNote(parentNoteId, url, title, reuseExisting) {
             mime: "text/html"
         });
         note.setLabel("webViewSrc", url);
+        // Records the title as this addon's own, so page-title syncing may replace it
+        // until the user renames the note themselves.
+        note.setLabel("webViewAutoTitle", note.title);
         return note.noteId;
     }, [parentNoteId, url, title, reuseExisting]);
 }
@@ -131,20 +134,37 @@ async function mergeWebViewDuplicates(keeperNoteId, duplicateNoteIds) {
 }
 
 // ---------------------------------------------------------------------------
-// Renames a note, skipping the write when the title already matches so that a
-// page reporting the same title repeatedly doesn't churn the note's revisions.
+// Renames a note to the page's title, but only while its title is still one this
+// addon generated: a title the user set themselves is kept. #webViewAutoTitle holds
+// the last auto-applied title, so a title that no longer matches it is the user's.
+// Notes predating that label count as auto-titled only while their title is still
+// the URL or its hostname, which is what a note gets when it is created here.
 // ---------------------------------------------------------------------------
 async function renameNote(noteId, title) {
     const trimmed = (title || "").trim();
     if (!trimmed) return;
 
-    const note = await api.getNote(noteId);
-    if (!note || note.title === trimmed) return;
-
     await api.runOnBackend((noteId, title) => {
         const note = api.getNote(noteId);
-        note.title = title;
-        note.save();
+        if (!note) return;
+
+        const auto = note.getLabelValue("webViewAutoTitle");
+        if (auto === null || auto === undefined) {
+            const src = note.getLabelValue("webViewSrc") || "";
+            let hostname = "";
+            try { hostname = new URL(src).hostname; } catch {}
+            if (note.title !== src && note.title !== hostname) return;
+        } else if (auto !== note.title) {
+            return;
+        }
+
+        // Skipping the write when nothing changed keeps a page reporting the same
+        // title repeatedly from churning the note's revisions.
+        if (note.title !== title) {
+            note.title = title;
+            note.save();
+        }
+        if (auto !== title) note.setLabel("webViewAutoTitle", title);
     }, [noteId, trimmed]);
 }
 

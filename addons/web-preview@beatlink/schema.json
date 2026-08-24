@@ -56,7 +56,7 @@
     "syncNoteTitle": {
         "type": "boolean",
         "label": "Follow Page Title",
-        "description": "Renames the Web View note to match the loaded page's title whenever the page reports a new one. A title you set yourself is overwritten."
+        "description": "Names the Web View note after the loaded page's title whenever the page reports a new one. A title you set yourself is kept; rename a note back to the page's title to hand it back to this setting."
     },
     "reuseExistingNotes": {
         "type": "boolean",

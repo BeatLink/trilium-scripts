@@ -61,8 +61,8 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Save Button** — off by default; turning it on adds the Save button to the toolbar.
 - **Save Location** — the note Save files pages under. Left empty it uses whichever note carries an
   `#inbox` label, and Save reports an error if there is none.
-- **Follow Page Title** — on by default; renames the Web View note to match the page's own title
-  as it changes. Turn it off to keep whatever title you gave the note.
+- **Follow Page Title** — on by default; names the Web View note after the page's own title as it
+  changes, until you rename the note yourself. Turn it off to stop it naming notes entirely.
 - **Reuse Existing Notes** — on by default; before making a Web View note, looks for one anywhere
   in the tree already pointing at the same URL and clones that one into the new place instead, so a
   page you've already got is a single note rather than a fresh copy.
@@ -89,8 +89,10 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.
 - **Follow Page Title** (a setting, on by default) renames the Web View note whenever the loaded
-  page reports a new title — on navigation, or when a single-page app swaps its `<title>`. A note
-  you titled yourself is renamed too, so turn it off to keep your own titles.
+  page reports a new title — on navigation, or when a single-page app swaps its `<title>`. A title
+  you set yourself is left alone: the addon remembers the title it last applied in a
+  `#webViewAutoTitle` label, and stops renaming the note once its title no longer matches. Renaming
+  the note back to that label's value (or deleting the label) hands it back to automatic naming.
 - **Save** files the page you are currently reading as a Web View note under the Save Location,
   taking the page's own title. It is the way to keep a page you found while browsing, since the
   child notes link interception creates live inside the browsing tree and get pruned with it.
