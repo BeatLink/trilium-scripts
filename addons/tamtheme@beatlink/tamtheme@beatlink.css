@@ -42,7 +42,7 @@ Based on https://github.com/TriliumNext/Notes/blob/develop/apps/client/src/style
     --t-overlay: rgba(15, 23, 42, 0.45) !important;
     --t-dropdown-shadow-opacity: 0.15 !important;
 
-    --native-titlebar-background: transparent !important;
+    --native-titlebar-background: #00000000 !important;
 
     /* Typography/shape — without these, only colors differ from stock
        "next" and the two themes read as nearly identical (same Inter font,
