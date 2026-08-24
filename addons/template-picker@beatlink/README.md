@@ -60,23 +60,16 @@ meant to be picked as an item's own type — leave its registry row **disabled**
 
 ## Bundled roots
 
-Since 1.9.0 the addon also ships one **root container note** per bundled item template — **Ideas Root**,
-**Goal Root**, **Routine Root**, **Task Root**, **Future Root**, **Project Root**, **Note Root** —
-as **children of the AreaCollection template**, so every note you create from that template gets its
-own copy of the whole set. Trilium deep-duplicates a template's children into the instance, so a new
-Area comes out already holding its Ideas / Goal / Routine / Task / Future / Project / Note roots,
-ready to file into.
+The addon also ships one **root container note** per bundled item template — **Ideas**, **Goals**,
+**Routines**, **Tasks**, **Future**, **Projects**, **Notes** — inside the persisted **Templates**
+container, beside the templates themselves.
 
 Each root is an empty text note carrying the matching template's `#iconClass`, `#viewType=list`, and
 a `#label:area=single` promoted-attribute definition (the same one the templates carry), so `#area`
 is a settable field on the root itself. Nothing files notes into them automatically.
 
-Two consequences of how Trilium templates work:
-
-- The copy happens **on creation only**. Attaching `~template` to a note that already exists does not
-  retroactively give it the roots — create the note from the template instead.
-- The originals live under the AreaCollection template (inside the persisted **Templates** note), so
-  editing one changes what *future* areas get, never the copies already made.
+Since 1.13.0 they are no longer children of the AreaCollection template, so a note created from that
+template does not come out holding its own copy of the set — move or copy a root where you want it.
 
 They stand in for the type roots that used to be provisioned for you, so the containers still exist
 now that no addon scaffolds a notebook structure. Set a template's **Root Note** in the registry if

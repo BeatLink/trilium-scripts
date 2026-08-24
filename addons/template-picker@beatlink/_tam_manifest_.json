@@ -1,11 +1,11 @@
 {
     "id": "template-picker@beatlink",
     "name": "Template Picker",
-    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. As of 1.9.0 it also ships one empty root container note per bundled item template (Ideas Root / Goal Root / Routine Root / Task Root / Future Root / Project Root / Note Root), carrying only the template's icon and #viewType=list. They are children of the AreaCollection template, so Trilium deep-duplicates the whole set into every note created from it and a new Area comes out already holding its type roots - standing in for the roots that used to be provisioned automatically. Each registry row gained a Root Note field so other addons can resolve a template's root.",
+    "description": "A right-pane widget for assigning or changing the template of the currently active note, plus a Missing Templates page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker. Ships eight bundled template notes under its own persisted Templates container: seven item types (Ideas / Goal / Routine / Task / Future / Project / Note) and the AreaCollection container template, meant for per-area root notes rather than as an item's own type. It also ships one empty root container note per bundled item template (Ideas / Goals / Routines / Tasks / Future / Projects / Notes), carrying only the template's icon and #viewType=list; as of 1.13.0 they sit beside the templates in the Templates container instead of under the AreaCollection template, so a new Area no longer comes out holding copies of them. Each registry row has a Root Note field so other addons can resolve a template's root.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.12.0",
+    "latestVersion": "1.13.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/template-picker@beatlink/_tam_manifest_.json",
@@ -387,31 +387,31 @@
                 "child": "tpl-area"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-idea"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-goal"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-routine"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-task"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-future"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-project"
             },
             {
-                "parent": "tpl-area",
+                "parent": "templates-root",
                 "child": "root-note"
             }
         ],
