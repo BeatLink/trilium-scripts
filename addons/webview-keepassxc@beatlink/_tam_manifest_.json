@@ -1,0 +1,253 @@
+{
+    "id": "webview-keepassxc@beatlink",
+    "name": "Web View KeePassXC",
+    "description": "Fills logins from KeePassXC into Trilium Desktop's built-in Web View note type. Speaks the same encrypted browser protocol keepassxc-browser speaks, straight to KeePassXC's local socket, then injects an entry picker into the page and fills the username, password and one-time code of whichever entry you choose.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/webview-keepassxc@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/webview-keepassxc@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "launcher",
+        "notes": [
+            {
+                "id": "launcher",
+                "title": "webview-keepassxc@beatlink",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "script",
+                "title": "webViewKeePassXc.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "webViewKeePassXc.js"
+            },
+            {
+                "id": "lib",
+                "title": "libWebViewKeePassXc.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "libWebViewKeePassXc.js"
+            },
+            {
+                "id": "protocol",
+                "title": "libKeePassXc.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "libKeePassXc.js"
+            },
+            {
+                "id": "nacl",
+                "title": "nacl-fast.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "../../libs/libtweetnacl/nacl-fast.min.js"
+            },
+            {
+                "id": "nacl-crypto",
+                "title": "crypto",
+                "type": "code",
+                "mime": "application/javascript;env=backend",
+                "sourceUrl": "../../libs/libtweetnacl/crypto-shim.js"
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "keyring",
+                "title": "keyring.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "settings.jsx"
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "launcher"
+            },
+            {
+                "parent": "launcher",
+                "child": "script"
+            },
+            {
+                "parent": "launcher",
+                "child": "schema"
+            },
+            {
+                "parent": "launcher",
+                "child": "defaults"
+            },
+            {
+                "parent": "launcher",
+                "child": "settings"
+            },
+            {
+                "parent": "launcher",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "persistence",
+                "child": "keyring"
+            },
+            {
+                "parent": "script",
+                "child": "lib"
+            },
+            {
+                "parent": "script",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "settings",
+                "child": "lib"
+            },
+            {
+                "parent": "settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib",
+                "child": "protocol"
+            },
+            {
+                "parent": "protocol",
+                "child": "nacl"
+            },
+            {
+                "parent": "nacl",
+                "child": "nacl-crypto"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            }
+        ],
+        "relations": [
+            {
+                "from": "launcher",
+                "type": "renderNote",
+                "to": "settings"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "keyringNote",
+                "to": "keyring"
+            },
+            {
+                "from": "script",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "script",
+                "type": "settingsNote",
+                "to": "settings"
+            },
+            {
+                "from": "script",
+                "type": "keyringNote",
+                "to": "keyring"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
+    }
+}

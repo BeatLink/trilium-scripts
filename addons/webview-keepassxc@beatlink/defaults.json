@@ -1,0 +1,6 @@
+{
+    "autoFill": false,
+    "showIcon": true,
+    "fillTotp": true,
+    "socketPath": ""
+}

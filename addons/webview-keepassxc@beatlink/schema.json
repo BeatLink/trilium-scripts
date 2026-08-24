@@ -1,0 +1,22 @@
+{
+    "autoFill": {
+        "type": "boolean",
+        "label": "Fill automatically when one entry matches",
+        "description": "Fills as soon as the page loads, without waiting for a click, but only when the database holds exactly one entry for that URL. The page's own scripts can read a filled field, so leave this off for sites you do not trust."
+    },
+    "showIcon": {
+        "type": "boolean",
+        "label": "Show the KeePassXC button in login fields",
+        "description": "Puts a small button at the right edge of the username field when entries are available. Turning it off leaves automatic filling as the only way to fill."
+    },
+    "fillTotp": {
+        "type": "boolean",
+        "label": "Fill one-time codes",
+        "description": "Fills the entry's current TOTP into a one-time-code field when the page has one. Entries without TOTP configured are unaffected."
+    },
+    "socketPath": {
+        "type": "string",
+        "label": "KeePassXC socket path",
+        "description": "Leave empty to look in the usual places. Set it when KeePassXC runs somewhere unusual (a Flatpak or Snap sandbox, a custom XDG_RUNTIME_DIR) and the connection cannot be found."
+    }
+}
