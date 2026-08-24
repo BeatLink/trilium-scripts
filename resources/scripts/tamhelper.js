@@ -263,6 +263,7 @@ async function cmdValidate(args) {
     const requireRe = /require\(\s*["']([^"']+)["']\s*\)/g;
     const importRe = /^\s*import\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/gm;
     const exportRe = /^\s*export\s+(const|let|var|function|class|default|\{)/m;
+    const tamRequireRe = /tamRequire\(\s*["']([^"']+)["']\s*\)/g;
 
     const manifestFiles = iterManifests();
     for (const manifestFile of manifestFiles) {
@@ -364,6 +365,11 @@ async function cmdValidate(args) {
         for (const note of notes) {
             const nid = note.id || note.title;
             if (nid) {
+                // A repeated id resolves to one note, so the later entry is silently
+                // dropped -- and if the two differ, which one installs is not obvious.
+                if (noteIds.has(nid)) {
+                    error(manifestFile, `note '${nid}' is declared more than once in notes`);
+                }
                 noteIds.add(nid);
                 byId[nid] = note;
             }
@@ -660,6 +666,9 @@ async function cmdValidate(args) {
 
         // require()/import targets must be co-installed in the requiring note's subtree
         await validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn);
+
+        // tamRequire("addon@author/localId") targets must name a real, frontend-loadable note
+        await validateTamRequireTargets(manifestFile, addonId, m, notes, tamRequireRe, error);
     }
 
     for (const msg of [...fixes, ...warnings, ...errors]) {
@@ -732,6 +741,76 @@ async function validateRequireReachability(manifestFile, m, notes, requireRe, im
                 warn(manifestFile, `note '${nid}': require/import of '${t}' resolves to a local note wired outside this note's subtree -- it won't be found at runtime`);
             } else {
                 warn(manifestFile, `note '${nid}': require/import of '${t}' is not installed in this note's subtree -- wire it under '${nid}' via children[]`);
+            }
+        }
+    }
+}
+
+
+let addonManifestCache = null;
+
+// Every addon's parsed manifest in this repo, keyed by addon id.
+function loadAddonManifests() {
+    if (addonManifestCache) return addonManifestCache;
+    addonManifestCache = {};
+    for (const mf of iterManifests()) {
+        try {
+            const parsed = JSON.parse(readText(mf));
+            if (parsed.id) addonManifestCache[parsed.id] = parsed;
+        } catch {
+            continue; // invalid JSON is already reported by the main validate loop
+        }
+    }
+    return addonManifestCache;
+}
+
+// Whether a note can be loaded by FNote.executeScript, mirroring Trilium's getScriptEnv().
+function isFrontendLoadable(note) {
+    const mime = note.mime || "";
+    if (note.type !== "code") return false;
+    return mime === "text/jsx" || (mime.startsWith("application/javascript") && mime.endsWith("env=frontend"));
+}
+
+async function validateTamRequireTargets(manifestFile, addonId, m, notes, tamRequireRe, error) {
+    // tamRequire() resolves a note by its #TAMFILEID rather than by tree position, so the
+    // require-reachability check above cannot see it. Check the id names a loadable note instead.
+    for (const note of notes) {
+        if (note.type !== "code") continue;
+        const mime = note.mime || "";
+        if (!(mime.startsWith("application/javascript") || mime.includes("jsx"))) continue;
+        const sourceUrl = note.sourceUrl || "";
+        if (!sourceUrl) continue;
+
+        let src;
+        try {
+            src = (await readSource(sourceUrl, manifestFile)).toString("utf8");
+        } catch (e) {
+            continue; // already reported by the sourceUrl-must-be-fetchable check above
+        }
+
+        const nid = note.id || note.title;
+        for (const mm of src.matchAll(tamRequireRe)) {
+            const target = mm[1];
+            const slash = target.indexOf("/");
+            if (slash < 1) {
+                error(manifestFile, `note '${nid}': tamRequire('${target}') is not of the form 'addonId/localId'`);
+                continue;
+            }
+            const targetAddonId = target.slice(0, slash);
+            const targetLocalId = target.slice(slash + 1);
+
+            const isLocal = targetAddonId === addonId;
+            const targetManifest = isLocal ? m : (loadAddonManifests()[targetAddonId] || {}).manifest;
+            if (!targetManifest) continue; // a dependency addon outside this repo, nothing to check against
+
+            const targetNote = (targetManifest.notes || []).find((n) => (n.id || n.title) === targetLocalId);
+            if (!targetNote) {
+                const where = isLocal ? "this manifest" : `addon '${targetAddonId}'`;
+                error(manifestFile, `note '${nid}': tamRequire('${target}') names no note in ${where}`);
+                continue;
+            }
+            if (!isFrontendLoadable(targetNote)) {
+                error(manifestFile, `note '${nid}': tamRequire('${target}') targets a note of type '${targetNote.type}'/'${targetNote.mime || ""}', which executeScript cannot load`);
             }
         }
     }
