@@ -46,12 +46,20 @@ const ready = (async () => {
     } catch (error) {
         console.warn("webview-keepassxc: settings could not be read, using defaults", error);
     }
+    console.info(`webview-keepassxc: started, key ring note ${keyringNoteId || "MISSING"}`);
 })();
 
 async function offer(webview) {
     await ready;
 
-    const url = webview.getURL();
+    // Throws outright on a web view that is not attached and past dom-ready yet, which is the
+    // normal answer when this runs speculatively against an element that was just wired.
+    let url;
+    try {
+        url = webview.getURL();
+    } catch (error) {
+        return;
+    }
     if (!/^https?:/i.test(url || "")) return;
 
     let entries;
@@ -60,9 +68,11 @@ async function offer(webview) {
     } catch (error) {
         // A locked database, a KeePassXC that is not running, or a site the user denied are all
         // ordinary states here, so they belong in the console rather than in the user's face.
-        console.info(`webview-keepassxc: no credentials for ${url} — ${error.message}`);
+        console.info(`webview-keepassxc: could not ask KeePassXC about ${url} — ${error.message}`);
         return;
     }
+
+    console.info(`webview-keepassxc: ${entries.length} entries for ${url}`);
     if (!entries.length) return;
 
     offered.set(webview, entries);
@@ -100,6 +110,10 @@ function wire(webview) {
     wired.add(webview);
     webview.addEventListener("dom-ready", () => offer(webview));
     webview.addEventListener("console-message", (event) => handleMessage(webview, event.message));
+
+    // A web view already showing a page when this script starts has had its dom-ready, and will not
+    // have another until the user navigates — so ask about whatever it is already showing.
+    offer(webview);
 }
 
 function wireAll(root) {
