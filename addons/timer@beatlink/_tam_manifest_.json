@@ -5,20 +5,13 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/timer@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.0",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/timer@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "timer-settings-page",
         "notes": [
-            {
-                "id": "timer-widget",
-                "title": "Widget.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "ui/Widget.jsx"
-            },
             {
                 "id": "timer",
                 "title": "Timer.jsx",
@@ -125,7 +118,7 @@
         "children": [
             {
                 "parent": "root",
-                "child": "timer-widget"
+                "child": "timer"
             },
             {
                 "parent": "root",
@@ -144,7 +137,7 @@
                 "child": "timer-config"
             },
             {
-                "parent": "timer-widget",
+                "parent": "timer",
                 "child": "timer"
             },
             {
@@ -184,7 +177,7 @@
                 "child": "libsettings-style"
             },
             {
-                "parent": "timer-widget",
+                "parent": "timer",
                 "child": "timer-settings"
             }
         ],
@@ -217,7 +210,7 @@
                 "value": ""
             },
             {
-                "note": "timer-widget",
+                "note": "timer",
                 "name": "widget",
                 "value": ""
             },
@@ -245,11 +238,6 @@
                 "note": "wav-end",
                 "name": "customResourceProvider",
                 "value": "libtimerEnd.wav"
-            },
-            {
-                "note": "timer-widget",
-                "name": "iconClass",
-                "value": "bx bx-timer"
             },
             {
                 "note": "timer",

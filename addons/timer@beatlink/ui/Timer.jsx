@@ -1,10 +1,14 @@
-import { ActionButton, FormDropdownList, useEffect, useState, useMemo } from "trilium:preact";
+// The countdown timer: the component, and the right-pane panel it is drawn in.
+
+import { ActionButton, FormDropdownList, RightPanelWidget, defineWidget, useEffect, useState, useMemo } from "trilium:preact";
+
+import { getTimerSettings } from "Settings.jsx"
 
 const hourOptions = Array.from({ length: 25 }, (_, i) => ({ key: i, name: `${i}h` }));
 const minuteOptions = Array.from({ length: 60 }, (_, i) => ({ key: i, name: `${i}m` }));
 const secondOptions = Array.from({ length: 60 }, (_, i) => ({ key: i, name: `${i}s` }));
 
-export function Timer({
+function Timer({
     initialHours = 0,
     initialMinutes = 0,
     initialSeconds = 0,
@@ -157,3 +161,28 @@ export function Timer({
         </div>
     )
 }
+
+
+function TimerPanel() {
+    const [settings, setSettings] = useState(null)
+
+    useEffect(() => {
+        (async () => setSettings(await getTimerSettings()))()
+    }, [])
+
+    if (!settings) return null
+
+    return (
+        <RightPanelWidget id="x-timer" title="Timer">
+            <div className="timerControls">
+                <Timer initialEnableSounds={settings.enableSounds} />
+            </div>
+        </RightPanelWidget>
+    )
+}
+
+export default defineWidget({
+    parent: "right-pane",
+    position: 6,
+    render: TimerPanel
+});

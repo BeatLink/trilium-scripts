@@ -24,14 +24,14 @@ Three WAVs ship with the addon as `#customResourceProvider` files, served at
 dropdown change and on pause, a chime on start, and an alarm on expiry and reset. The single
 **Enable Timer Sounds** setting mutes all three.
 
-`ui/Timer.jsx` takes the three URLs as props, so a caller that imports the component directly can point
-them elsewhere; the shipped widget uses the defaults.
+The `Timer` component in `ui/Timer.jsx` takes the three URLs as props, so a caller can point them
+elsewhere; the panel in the same file uses the defaults.
 
 ## Configuration
 
 One settings note holds a `schema.json` / `defaults.json` / `config.json` set, tagged **`#timerConfig`**
 and anchored on the **Timer Settings** page, which is both the anchor and the UI that edits it.
-`ui/Settings.jsx` holds both that page and the `getTimerSettings()` the widget reads: it finds the note
+`ui/Settings.jsx` holds both that page and the `getTimerSettings()` the panel reads: it finds the note
 at runtime through the label and falls back to the shipped defaults when it isn't discoverable.
 
 | Setting | Default | What it does |
@@ -46,7 +46,7 @@ Sources are grouped by kind, and note titles match the file names:
 
 | Folder | Holds |
 | ------ | ----- |
-| `ui/` | `Widget.jsx` (the right-pane panel), `Timer.jsx` (the component), `Settings.jsx` (the settings page plus the accessors the widget reads), `style.css` |
+| `ui/` | `Timer.jsx` (the component and the right-pane panel it is drawn in), `Settings.jsx` (the settings page plus the accessors the panel reads), `style.css` |
 | `config/` | `schema.json`, `defaults.json` |
 | `static/` | `select.wav`, `start.wav`, `end.wav` |
 
