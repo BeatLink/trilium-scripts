@@ -6,6 +6,10 @@ panel; it shares no code, settings note, or labels with the agenda addons and wo
 
 ## The panel
 
+An editable label sits above the controls, naming what is being timed. It starts empty, showing a
+`Label` placeholder, and is edited in place at any time, including while the timer runs. Like the
+countdown itself it is not persisted, so it clears with the page.
+
 Three dropdowns pick hours, minutes and seconds (0-24h, 0-59m, 0-59s). While the timer is idle they
 are the whole panel; starting it swaps them for the remaining time as `HH:MM:SS`.
 
@@ -25,7 +29,7 @@ dropdown change and on pause, a chime on start, and an alarm on expiry and reset
 **Enable Timer Sounds** setting mutes all three.
 
 The `Timer` component in `ui/Timer.jsx` takes the three URLs as props, so a caller can point them
-elsewhere; the panel in the same file uses the defaults.
+elsewhere; the panel in the same file uses the defaults. `initialLabel` seeds the label the same way.
 
 ## Configuration
 

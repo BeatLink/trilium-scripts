@@ -9,6 +9,7 @@ const minuteOptions = Array.from({ length: 60 }, (_, i) => ({ key: i, name: `${i
 const secondOptions = Array.from({ length: 60 }, (_, i) => ({ key: i, name: `${i}s` }));
 
 function Timer({
+    initialLabel = "",
     initialHours = 0,
     initialMinutes = 0,
     initialSeconds = 0,
@@ -17,6 +18,7 @@ function Timer({
     startSoundUrl = "custom/libtimerStart.wav",
     endSoundUrl = "custom/libtimerEnd.wav"
 }){
+    const [label, setLabel] = useState(initialLabel);
     const [hours, setHours] = useState(initialHours);
     const [minutes, setMinutes] = useState(initialMinutes);
     const [seconds, setSeconds] = useState(initialSeconds);
@@ -72,92 +74,100 @@ function Timer({
     const timerUnset = remainingSeconds === 0;
 
     return (
-        <div className="timer">
-            {!timerRunning && !timerExpired && !timerPaused && (
-                <>
-                    <FormDropdownList
-                        values={hourOptions}
-                        currentValue={hours}
-                        onChange={v => { setHours(Number(v)); enableSounds && selectSound.play(); }}
-                        keyProperty="key"
-                        titleProperty="name"
-                        dropdownOptions={{ popperConfig: { placement: 'top' } }}
-                    />
-                    <FormDropdownList
-                        values={minuteOptions}
-                        currentValue={minutes}
-                        onChange={v => { setMinutes(Number(v)); enableSounds && selectSound.play(); }}
-                        keyProperty="key"
-                        titleProperty="name"
-                        dropdownOptions={{ popperConfig: { placement: 'top' } }}
-                    />
-                    <FormDropdownList
-                        values={secondOptions}
-                        currentValue={seconds}
-                        onChange={v => { setSeconds(Number(v)); enableSounds && selectSound.play(); }}
-                        keyProperty="key"
-                        titleProperty="name"
-                        dropdownOptions={{ popperConfig: { placement: 'top' } }}
-                    />
-                </>
-            )}
+        <div className="timerBox">
+            <input
+                className="timerLabel"
+                value={label}
+                placeholder="Label"
+                onInput={e => setLabel(e.target.value)}
+            />
+            <div className="timer">
+                {!timerRunning && !timerExpired && !timerPaused && (
+                    <>
+                        <FormDropdownList
+                            values={hourOptions}
+                            currentValue={hours}
+                            onChange={v => { setHours(Number(v)); enableSounds && selectSound.play(); }}
+                            keyProperty="key"
+                            titleProperty="name"
+                            dropdownOptions={{ popperConfig: { placement: 'top' } }}
+                        />
+                        <FormDropdownList
+                            values={minuteOptions}
+                            currentValue={minutes}
+                            onChange={v => { setMinutes(Number(v)); enableSounds && selectSound.play(); }}
+                            keyProperty="key"
+                            titleProperty="name"
+                            dropdownOptions={{ popperConfig: { placement: 'top' } }}
+                        />
+                        <FormDropdownList
+                            values={secondOptions}
+                            currentValue={seconds}
+                            onChange={v => { setSeconds(Number(v)); enableSounds && selectSound.play(); }}
+                            keyProperty="key"
+                            titleProperty="name"
+                            dropdownOptions={{ popperConfig: { placement: 'top' } }}
+                        />
+                    </>
+                )}
 
-            { (timerRunning || timerExpired || timerPaused) && (
-                <span
-                    className={[
-                        timerRunning ? "running" : "",
-                        timerRunning && !timerExpired ? "flash-accent" : "",
-                        timerExpired ? "flash-red" : ""
-                    ].join(" ")}>
-                    {displayHours}:{displayMinutes}:{displaySeconds}
-                </span>
-            )}
+                { (timerRunning || timerExpired || timerPaused) && (
+                    <span
+                        className={[
+                            timerRunning ? "running" : "",
+                            timerRunning && !timerExpired ? "flash-accent" : "",
+                            timerExpired ? "flash-red" : ""
+                        ].join(" ")}>
+                        {displayHours}:{displayMinutes}:{displaySeconds}
+                    </span>
+                )}
 
-            {!timerRunning && !timerExpired && (
-                <ActionButton
-                    icon="bx bx-play"
-                    text="Start Timer"
-                    onClick={() => {
-                        if (!timerUnset) {
-                            setTimerRunning(true);
+                {!timerRunning && !timerExpired && (
+                    <ActionButton
+                        icon="bx bx-play"
+                        text="Start Timer"
+                        onClick={() => {
+                            if (!timerUnset) {
+                                setTimerRunning(true);
+                                setTimerPaused(false);
+                                setTimerExpired(false);
+                                enableSounds && startSound.play();
+                            }
+                        }}
+                        disabled={timerUnset}
+                        titlePosition="top"
+                    />
+                )}
+                {timerRunning && !timerExpired && !timerPaused && (
+                    <ActionButton
+                        icon="bx bx-pause"
+                        text="Pause Timer"
+                        onClick={() => {
+                            setTimerRunning(false);
+                            setTimerPaused(true);
+                            enableSounds && selectSound.play();
+                        }}
+                        titlePosition="top"
+                    />
+                )}
+                 {(timerExpired || timerRunning || timerPaused) && (
+                    <ActionButton
+                        icon="bx bx-stop"
+                        text="Reset Timer"
+                        onClick={() => {
+                            setTimerRunning(false);
                             setTimerPaused(false);
                             setTimerExpired(false);
-                            enableSounds && startSound.play();
-                        }
-                    }}
-                    disabled={timerUnset}
-                    titlePosition="top"
-                />
-            )}
-            {timerRunning && !timerExpired && !timerPaused && (
-                <ActionButton
-                    icon="bx bx-pause"
-                    text="Pause Timer"
-                    onClick={() => {
-                        setTimerRunning(false);
-                        setTimerPaused(true);
-                        enableSounds && selectSound.play();
-                    }}
-                    titlePosition="top"
-                />
-            )}
-             {(timerExpired || timerRunning || timerPaused) && (
-                <ActionButton
-                    icon="bx bx-stop"
-                    text="Reset Timer"
-                    onClick={() => {
-                        setTimerRunning(false);
-                        setTimerPaused(false);
-                        setTimerExpired(false);
-                        setHours(initialHours);
-                        setMinutes(initialMinutes);
-                        setSeconds(initialSeconds);
-                        setRemainingSeconds(initialHours * 3600 + initialMinutes * 60 + initialSeconds);
-                        enableSounds && endSound.play();
-                    }}
-                    titlePosition="top"
-                />
-            )}
+                            setHours(initialHours);
+                            setMinutes(initialMinutes);
+                            setSeconds(initialSeconds);
+                            setRemainingSeconds(initialHours * 3600 + initialMinutes * 60 + initialSeconds);
+                            enableSounds && endSound.play();
+                        }}
+                        titlePosition="top"
+                    />
+                )}
+            </div>
         </div>
     )
 }

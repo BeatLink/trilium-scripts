@@ -1,11 +1,11 @@
 {
     "id": "timer@beatlink",
     "name": "Timer",
-    "description": "A countdown timer in its own right-pane panel, shown on every note. Pick hours, minutes and seconds from three dropdowns, then start, pause and reset; the remaining time flashes in the accent colour while it runs and in red once it expires. Optional select/start/end sounds ship with the addon as customResourceProvider files and are toggled by the addon's single setting. Split out of agenda-myday@beatlink, which used to embed it in the My Day panel: it shares no code or config with the agenda addons and works on its own.",
+    "description": "A countdown timer in its own right-pane panel, shown on every note. Pick hours, minutes and seconds from three dropdowns, then start, pause and reset; the remaining time flashes in the accent colour while it runs and in red once it expires. An editable label above the controls names what is being timed. Optional select/start/end sounds ship with the addon as customResourceProvider files and are toggled by the addon's single setting. Split out of agenda-myday@beatlink, which used to embed it in the My Day panel: it shares no code or config with the agenda addons and works on its own.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/timer@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.1",
+    "latestVersion": "1.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/timer@beatlink/_tam_manifest_.json",
