@@ -1,0 +1,312 @@
+{
+    "id": "timer@beatlink",
+    "name": "Timer",
+    "description": "A countdown timer in its own right-pane panel, shown on every note. Pick hours, minutes and seconds from three dropdowns, then start, pause and reset; the remaining time flashes in the accent colour while it runs and in red once it expires. Optional select/start/end sounds ship with the addon as customResourceProvider files and are toggled by the addon's single setting. Split out of agenda-myday@beatlink, which used to embed it in the My Day panel: it shares no code or config with the agenda addons and works on its own.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/timer@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/timer@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "settingsNote": "timer-settings-page",
+        "notes": [
+            {
+                "id": "timer-widget",
+                "title": "Widget.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Widget.jsx"
+            },
+            {
+                "id": "timer",
+                "title": "Timer.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Timer.jsx"
+            },
+            {
+                "id": "timer-css",
+                "title": "style.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "ui/style.css"
+            },
+            {
+                "id": "timer-settings-page",
+                "title": "Timer Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "timer-settings",
+                "title": "Settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Settings.jsx"
+            },
+            {
+                "id": "timer-schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config/schema.json"
+            },
+            {
+                "id": "timer-defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config/defaults.json"
+            },
+            {
+                "id": "timer-config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "wav-select",
+                "title": "select.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "static/select.wav",
+                "binary": true
+            },
+            {
+                "id": "wav-start",
+                "title": "start.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "static/start.wav",
+                "binary": true
+            },
+            {
+                "id": "wav-end",
+                "title": "end.wav",
+                "type": "file",
+                "mime": "audio/wav",
+                "sourceUrl": "static/end.wav",
+                "binary": true
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "timer-widget"
+            },
+            {
+                "parent": "root",
+                "child": "timer-css"
+            },
+            {
+                "parent": "root",
+                "child": "timer-settings-page"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "persistence",
+                "child": "timer-config"
+            },
+            {
+                "parent": "timer-widget",
+                "child": "timer"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-select"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-start"
+            },
+            {
+                "parent": "timer",
+                "child": "wav-end"
+            },
+            {
+                "parent": "timer-settings-page",
+                "child": "timer-settings"
+            },
+            {
+                "parent": "timer-settings-page",
+                "child": "timer-schema"
+            },
+            {
+                "parent": "timer-settings-page",
+                "child": "timer-defaults"
+            },
+            {
+                "parent": "timer-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            },
+            {
+                "parent": "timer-widget",
+                "child": "timer-settings"
+            }
+        ],
+        "relations": [
+            {
+                "from": "timer-settings-page",
+                "type": "renderNote",
+                "to": "timer-settings"
+            },
+            {
+                "from": "timer-settings-page",
+                "type": "configNote",
+                "to": "timer-config"
+            },
+            {
+                "from": "timer-settings-page",
+                "type": "schemaNote",
+                "to": "timer-schema"
+            },
+            {
+                "from": "timer-config",
+                "type": "sourceConfig",
+                "to": "timer-defaults"
+            }
+        ],
+        "labels": [
+            {
+                "note": "timer-settings-page",
+                "name": "timerConfig",
+                "value": ""
+            },
+            {
+                "note": "timer-widget",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "timer-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "wav-select",
+                "name": "customResourceProvider",
+                "value": "libtimerSelect.wav"
+            },
+            {
+                "note": "wav-start",
+                "name": "customResourceProvider",
+                "value": "libtimerStart.wav"
+            },
+            {
+                "note": "wav-end",
+                "name": "customResourceProvider",
+                "value": "libtimerEnd.wav"
+            },
+            {
+                "note": "timer-widget",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer-css",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer-settings-page",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer-settings",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer-schema",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "timer-config",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "wav-select",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "wav-start",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "wav-end",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-timer"
+            }
+        ],
+        "readmeNote": "readme",
+        "settings": {
+            "schema": "timer-schema",
+            "defaults": "timer-defaults",
+            "config": "timer-config"
+        }
+    }
+}

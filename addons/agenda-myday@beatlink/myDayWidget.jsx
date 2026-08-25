@@ -8,7 +8,6 @@ import {
     Button,
 } from "trilium:preact";
 
-import { Timer } from "Timer.jsx"
 import { MyDayNote } from "myDayNote.jsx"
 
 const {
@@ -113,9 +112,6 @@ function MyDay() {
             {myDayNoteId
                 ? <MyDayNote noteId={myDayNoteId} />
                 : <div className="myDayEmpty">Set the My Day Note in settings.</div>}
-            <div className="myDayControls">
-                <Timer initialEnableSounds={ids.myDay.enableSounds} />
-            </div>
             <Collapsible title="Suggestions" className="myDaySuggestionsSection">
                 <div className="myDaySuggestions">
                     {buckets.length === 0 && (

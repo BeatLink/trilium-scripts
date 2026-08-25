@@ -12,7 +12,6 @@ const notifications = require("libNotification.js")
 
 const DEFAULTS = {
     myDayNoteId: "",
-    enableSounds: true,
     addTasksWhenDue: false,
     sendDueNotifications: true,
     addToTop: false,
@@ -60,7 +59,6 @@ async function getMyDaySettings() {
     const values = await loadSettings(ids.schemaNoteId, ids.configNoteId)
     return {
         myDayNoteId: values.myDayNoteId || "",
-        enableSounds: values.enableSounds ?? DEFAULTS.enableSounds,
         addTasksWhenDue: values.addTasksWhenDue ?? DEFAULTS.addTasksWhenDue,
         sendDueNotifications: values.sendDueNotifications ?? DEFAULTS.sendDueNotifications,
         addToTop: values.addToTop ?? DEFAULTS.addToTop,

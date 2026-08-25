@@ -1,0 +1,9 @@
+{
+    "enableSounds": {
+        "type": "boolean",
+        "label": "Enable Timer Sounds",
+        "description": "Play the select, start and end sounds shipped with the addon.",
+        "category": "Timer",
+        "tab": "Timer"
+    }
+}

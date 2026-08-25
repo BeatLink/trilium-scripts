@@ -6,12 +6,6 @@
         "category": "Execute",
         "tab": "My Day"
     },
-    "enableSounds": {
-        "type": "boolean",
-        "label": "Enable Timer Sounds",
-        "category": "Execute",
-        "tab": "My Day"
-    },
     "addTasksWhenDue": {
         "type": "boolean",
         "label": "Add Tasks When Due",

@@ -9,7 +9,6 @@ The main panel carries, top to bottom:
 
 - your **My Day note itself, edited in place as rich text**. The note is the panel, so today's list is
   always on screen and is never navigated to;
-- a **countdown timer** with selectable durations and start / select / end sounds;
 - a collapsible **Suggestions** section listing tasks to add to your day, grouped into **Earlier**
   (overdue), **Today**, and **Next 7 Days**. Each row has a `+` that appends the task to your My Day
   note as a todo item and clones it under that note;
@@ -124,7 +123,6 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 | Setting | Effect |
 |---------|--------|
 | **My Day Note** | The text note that collects today's tasks, edited in place in the panel. **Required** — the panel prompts for it until this is set. |
-| **Enable Timer Sounds** | Whether the timer plays its start / select / end sounds. |
 | **Add Tasks When Due** | Append each task to the My Day note as its start time arrives. |
 | **Send Due Notifications** | Send a desktop notification as each task's start time arrives. |
 | **Add Tasks To Top** | Insert new tasks at the top of the My Day note instead of the bottom. Applies to both the `+` button and the auto-file loop. |
@@ -132,6 +130,11 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 | **Start Datetime Label** | Note label holding a task's start datetime, without the `#`. Default `startDateTime`. |
 | **Due Datetime Label** | Note label holding a task's due datetime, without the `#`. Default `dueDateTime`. |
 | **Task Label** | Note label marking a note as a task, without the `#`. Any note carrying it gets the per-task Add / Remove button. Default `agendaTaskWidget`. |
+
+## Relationship to timer@beatlink
+
+The countdown timer that used to sit in this panel is now [`timer@beatlink`](../timer@beatlink/README.md),
+its own right-pane panel with its own `#timerConfig` settings note. Nothing here references it.
 
 ## Relationship to agenda@beatlink
 
