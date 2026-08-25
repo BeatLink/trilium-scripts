@@ -192,5 +192,6 @@ module.exports = {
     // module (e.g. the Task widget) reach the recurrence helpers through a
     // single require path instead of bundling libRecurrence a second time.
     RRuleToObj: libRecurrence.RRuleToObj,
-    ObjToRRule: libRecurrence.ObjToRRule
+    ObjToRRule: libRecurrence.ObjToRRule,
+    humanizeRecurrence: libRecurrence.humanize
 }

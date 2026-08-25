@@ -184,3 +184,37 @@
         }
     }
 }
+
+/* The Task pane's recurrence editor: a button reading the rule back in plain
+   English, opening the picker in a popover anchored under it. */
+.recurrence-summary {
+    anchor-name: --x-recurrence-anchor;
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: start;
+}
+
+.recurrence-popover {
+    position: fixed;
+    position-anchor: --x-recurrence-anchor;
+    position-area: bottom span-left;
+    position-try-fallbacks: flip-block;
+    width: 20rem !important;
+    max-width: 90vw !important;
+    max-height: 80vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.75rem !important;
+    border: 1px solid var(--main-border-color);
+    border-radius: 0.5rem;
+    background: var(--menu-background-color, var(--main-background-color));
+    color: var(--main-text-color);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+}
+
+/* The widget's generic `div { display: flex }` rules outrank the user agent's
+   own `:not(:popover-open) { display: none }`, so the closed state is restated. */
+.recurrence-popover:not(:popover-open) {
+    display: none !important;
+}

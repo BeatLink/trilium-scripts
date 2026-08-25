@@ -5,8 +5,9 @@ Complete Task and a row of reschedule buttons. Split out from `agenda@beatlink` 
 Overview and Note Actions) so Task can be installed, updated, and configured independently — the two
 addons no longer share any code or settings.
 
-Each of the three sections — Dates and Duration, Recurrence, Actions — is a collapsible disclosure,
-open by default.
+Dates and Duration and Actions are collapsible disclosures, open by default. Recurrence is a single
+button reading the current rule back in plain English ("Every 2 weeks on Monday", or "Does not
+repeat"); clicking it opens the recurrence picker in a popover.
 
 ## How it works
 

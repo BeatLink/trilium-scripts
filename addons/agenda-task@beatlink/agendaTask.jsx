@@ -8,7 +8,8 @@ import {
     useState,
     FormDropdownList,
     FormTextBox,
-    Button
+    Button,
+    useId
 } from "trilium:preact";
 
 import { RecurrencePicker } from "recurrencePicker.jsx"
@@ -17,7 +18,8 @@ const {
     complete,
     rescheduleByOption,
     updateDependentAttributes,
-    clearMyDayFlagIfNotToday
+    clearMyDayFlagIfNotToday,
+    humanizeRecurrence
 } = require("libAgendaTask.js")
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
 
@@ -99,19 +101,36 @@ function DatesDurationPicker({ constants, onAfterChange }) {
 }
 
 // Adapter binding RecurrencePicker to a note's own recurrence label, for the
-// Task pane's own "Recurrence" section.
+// Task pane's own "Recurrence" section. The editor lives in a popover behind a
+// button that reads the rule back in plain English.
 function NoteRecurrencePicker({ constants, onAfterChange }){
     const { note } = useActiveNoteContext();
     const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
+    const popoverId = useId()
 
     return (
-        <RecurrencePicker
-            recurrence={recurrence}
-            onChange={value => {
-                setRecurrence(value)
-                onAfterChange()
-            }}
-        />
+        <div className="recurrence-section">
+            <label>Recurrence</label>
+            <div>
+                <button
+                    type="button"
+                    className="btn btn-secondary recurrence-summary"
+                    popovertarget={popoverId}
+                >
+                    <span className="bx bx-repeat" />
+                    {humanizeRecurrence(recurrence) || "Does not repeat"}
+                </button>
+            </div>
+            <div id={popoverId} popover="auto" className="recurrence-popover">
+                <RecurrencePicker
+                    recurrence={recurrence}
+                    onChange={value => {
+                        setRecurrence(value)
+                        onAfterChange()
+                    }}
+                />
+            </div>
+        </div>
     )
 }
 
@@ -156,10 +175,7 @@ function MainWidget(){
                     <summary>Dates and Duration</summary>
                     <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
                 </details>
-                <details open>
-                    <summary>Recurrence</summary>
-                    <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
-                </details>
+                <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
                 <details open>
                     <summary>Actions</summary>
                     <div>
