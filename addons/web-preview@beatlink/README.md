@@ -16,16 +16,18 @@ navigate anywhere: it hides the content of the note you are reading and puts one
 in that split only. Pressing it again — or **Close**, or `Esc` — puts the note back.
 
 Under the box is one list, the way an address bar's is, with the row Enter would run highlighted
-at the top and the arrow keys walking the rest:
+at the top and the arrow keys walking the rest. It is grouped under a header apiece:
 
-- **Visit** — what you typed read as an address (`example.com`, `https://example.com/path`,
-  `localhost:8080`), which leads the list whenever it parses as one.
-- **Bookmarks** whose name or target contains what you typed.
-- **Web View notes you already have** whose title or URL contains what you typed, so you go to the
-  note rather than opening the page a second time. Title matches come before URL ones.
-- **Search with …** — one row per configured provider. The default provider's row leads the list
-  when what you typed isn't an address; the others stay a couple of keystrokes away, so picking a
-  different engine for one search needs no setting changed.
+- **Address** — what you typed read as an address (`example.com`, `https://example.com/path`,
+  `localhost:8080`). This group leads the list whenever it parses as one, so Enter goes straight
+  there.
+- **Search** — one row per configured provider, the default one first. With nothing that parses as
+  an address typed, this group leads instead, which makes a search Enter's default; the other
+  providers stay a couple of keystrokes away, so picking a different engine for one search needs no
+  setting changed.
+- **Bookmarks** — the bookmarks whose name or target contains what you typed.
+- **Notes** — Web View notes you already have whose title or URL contains what you typed, so you go
+  to the note rather than opening the page a second time. Title matches come before URL ones.
 
 With nothing typed yet, the list offers your bookmarks, then the Web View notes you changed
 most recently.

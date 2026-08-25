@@ -4,7 +4,7 @@
     with one address bar: what is typed is offered as a page to visit or a search to run,
     alongside the Web View notes already in the tree whose title or URL matches it.
 */
-import { defineWidget, useNoteContext, useState, useEffect, useRef, Button } from "trilium:preact"
+import { defineWidget, useNoteContext, useState, useEffect, useRef, Button, Fragment } from "trilium:preact"
 import { currentNote } from "trilium:api"
 import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
@@ -31,25 +31,26 @@ async function buildBookmarkRows(settings) {
             const note = bookmark.noteId ? await api.getNote(bookmark.noteId) : null
             if (!note) return null
             const title = bookmark.name || note.title
-            return { key, icon: "bx-bookmark", title, hint: title === note.title ? "Bookmark" : note.title, noteId: bookmark.noteId, match: `${title} ${note.title}` }
+            return { key, group: "Bookmarks", icon: "bx-bookmark", title, hint: title === note.title ? "Bookmark" : note.title, noteId: bookmark.noteId, match: `${title} ${note.title}` }
         }
 
         const url = (bookmark.url || "").trim()
         if (!url || url === "https://") return null
         const title = bookmark.name || url
-        return { key, icon: "bx-bookmark", title, hint: url, target: { url, title }, match: `${title} ${url}` }
+        return { key, group: "Bookmarks", icon: "bx-bookmark", title, hint: url, target: { url, title }, match: `${title} ${url}` }
     }))
 
     return rows.filter(Boolean)
 }
 
-// The list under the box, in the order an address bar offers things: what Enter would do
-// first, then the bookmarks and notes matching what is typed, then the other engines it could
-// be searched with. With nothing typed yet, the bookmarks and the Web View notes last used.
+// The list under the box, grouped under a header apiece and ordered so that Enter's default
+// lands on the first row: what was typed as an address, then the bookmarks and Web View notes
+// matching it, then the engines it could be searched with. Nothing typed yet lists the
+// bookmarks and the notes last changed. Every group stays contiguous, so no header repeats.
 function buildRows(query, settings, notes, bookmarks) {
     const lib = require("libWebPreview.js")
     const trimmed = query.trim()
-    const noteRow = (note) => ({ key: `note:${note.noteId}`, icon: "bx-window-alt", title: note.title, hint: note.url, noteId: note.noteId })
+    const noteRow = (note) => ({ key: `note:${note.noteId}`, group: "Notes", icon: "bx-window-alt", title: note.title, hint: note.url, noteId: note.noteId })
 
     if (!trimmed) return [...bookmarks, ...notes.slice(0, ROW_LIMIT).map(noteRow)]
 
@@ -58,6 +59,7 @@ function buildRows(query, settings, notes, bookmarks) {
         .sort(([a], [b]) => (isDefault(b) ? 1 : 0) - (isDefault(a) ? 1 : 0))
         .map(([id, provider]) => ({
             key: `search:${id}`,
+            group: "Search",
             icon: "bx-search",
             title: trimmed,
             hint: `Search with ${provider.name}`,
@@ -65,17 +67,17 @@ function buildRows(query, settings, notes, bookmarks) {
         }))
         .filter((row) => row.target)
 
-    // An address is what Enter takes; otherwise the default engine's search leads and the
-    // rest of the engines stay available further down.
     const address = lib.parseAddress(trimmed)
-    const first = address
-        ? { key: "visit", icon: "bx-globe", title: address.url, hint: "Visit", target: address }
-        : searches.shift()
+    const visit = address && { key: "visit", group: "Address", icon: "bx-globe", title: address.url, hint: "Visit", target: address }
 
     const needle = trimmed.toLowerCase()
     const marked = bookmarks.filter((row) => row.match.toLowerCase().includes(needle)).slice(0, ROW_LIMIT)
+    const matched = lib.matchWebViewNotes(notes, trimmed, ROW_LIMIT).map(noteRow)
 
-    return [first, ...marked, ...lib.matchWebViewNotes(notes, trimmed, ROW_LIMIT).map(noteRow), ...searches].filter(Boolean)
+    // Without an address to visit, searching is the default, so that group leads instead.
+    return visit
+        ? [visit, ...marked, ...matched, ...searches]
+        : [...searches, ...marked, ...matched]
 }
 
 function NewTabBox({ noteId, onClose }) {
@@ -175,8 +177,11 @@ function NewTabBox({ noteId, onClose }) {
             </form>
             <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexDirection: "column", gap: "2px" }}>
                 {rows.map((row, index) => (
+                    <Fragment key={row.key}>
+                    {row.group !== rows[index - 1]?.group && (
+                        <div style={{ fontSize: "11px", color: "#888", padding: index === 0 ? "0 10px 2px" : "8px 10px 2px" }}>{row.group}</div>
+                    )}
                     <button
-                        key={row.key}
                         type="button"
                         disabled={busy}
                         onClick={() => run(row)}
@@ -191,6 +196,7 @@ function NewTabBox({ noteId, onClose }) {
                         <span style={{ fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</span>
                         <span style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.hint}</span>
                     </button>
+                    </Fragment>
                 ))}
             </div>
             {error && <div style={{ color: "#a33", fontSize: "12px", maxWidth: "640px" }}>{error}</div>}
