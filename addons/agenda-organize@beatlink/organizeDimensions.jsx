@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 
 const { getAgendaConfigIds } = require("organizeSettings.js")
@@ -25,7 +25,7 @@ export function DimensionsPanel() {
         })()
     }, [])
 
-    if (ids === undefined) return <div>Loading...</div>
+    if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) {
         return (
             <div className="organize-dimensions">

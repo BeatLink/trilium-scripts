@@ -1,4 +1,4 @@
-import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { SettingsPage, resolveConfigNotes, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 // The icon stamped on the note wired to render the widget.
@@ -108,7 +108,7 @@ function RenderNotePicker() {
         await wire(newNoteId, previous)
     }
 
-    if (!noteIds) return <div>Loading...</div>
+    if (!noteIds) return <div><LoadingSpinner /> Loading...</div>
 
     return (
         <div>

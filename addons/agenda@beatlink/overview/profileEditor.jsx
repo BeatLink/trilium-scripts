@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
@@ -52,7 +52,7 @@ export default function ProfileEditor() {
         })()
     }, [])
 
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+    if (!schemaNoteId || !configNoteId) return <div><LoadingSpinner /> Loading...</div>
 
     // Every tab here comes from the schema's own `category`/`tab` keys. The
     // Organize-note picker moved out to agenda-organize@beatlink's own editor

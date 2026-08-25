@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Button } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { findDuplicates, mergeDuplicates } from "duplicateRegistry.jsx"
@@ -93,11 +93,14 @@ function DuplicateGroup({ group, onMerged }) {
             )}
 
             <div className="duplicate-finder-group-actions">
-                <button className="duplicate-finder-merge" disabled={busy || mergeable.length === 0} onClick={merge}>
-                    {busy
+                <Button
+                    className="duplicate-finder-merge"
+                    disabled={busy || mergeable.length === 0}
+                    text={busy
                         ? "Converting..."
                         : "Convert " + mergeable.length + " to clone" + (mergeable.length === 1 ? "" : "s")}
-                </button>
+                    onClick={merge}
+                />
                 {status && <span className="duplicate-finder-group-status">{status}</span>}
             </div>
         </div>
@@ -162,9 +165,13 @@ export default function DuplicateFinderPage() {
             </p>
 
             <div className="duplicate-finder-toolbar">
-                <button className="duplicate-finder-scan" disabled={busy} onClick={scan}>
-                    {busy ? "Scanning..." : "Scan for duplicates"}
-                </button>
+                <Button
+                    kind="primary"
+                    className="duplicate-finder-scan"
+                    disabled={busy}
+                    text={busy ? "Scanning..." : "Scan for duplicates"}
+                    onClick={scan}
+                />
                 {result && !busy && (
                     <span className="duplicate-finder-summary">
                         {result.groups.length === 0

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "trilium:preact"
+import { useState, useEffect, useCallback, Button } from "trilium:preact"
 import { loadSettings } from "libSettingsUI.jsx"
 
 const ENDPOINT = "custom/emailToTrilium"
@@ -106,12 +106,10 @@ export default function EmailToTriliumView() {
                     ))}
                 </select>
                 {account && !connected && (
-                    <button class="etr-btn etr-btn-primary" onClick={connect}>Connect</button>
+                    <Button kind="primary" text="Connect" onClick={connect} />
                 )}
                 {connected && (
-                    <button class="etr-btn" onClick={refresh} disabled={loading}>
-                        {loading ? "Loading..." : "Refresh"}
-                    </button>
+                    <Button text={loading ? "Loading..." : "Refresh"} disabled={loading} onClick={refresh} />
                 )}
             </div>
 
@@ -153,8 +151,8 @@ export default function EmailToTriliumView() {
                             {msg.snippet && <div class="etr-msg-snippet">{msg.snippet}</div>}
                         </div>
                         <div class="etr-msg-actions">
-                            <button class="etr-btn etr-btn-primary" onClick={() => createNote(msg)}>Create Note</button>
-                            <button class="etr-btn etr-btn-danger" onClick={() => deleteEmail(msg)}>Delete</button>
+                            <Button kind="primary" text="Create Note" onClick={() => createNote(msg)} />
+                            <Button className="etr-btn-danger" text="Delete" onClick={() => deleteEmail(msg)} />
                         </div>
                     </li>
                 ))}

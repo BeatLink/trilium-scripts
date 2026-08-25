@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { resolveColumns, moveColumn } = require("libBudget.js")
@@ -90,7 +90,7 @@ export default function BudgetSettings() {
         })()
     }, [])
 
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+    if (!schemaNoteId || !configNoteId) return <div><LoadingSpinner /> Loading...</div>
 
     return (
         <SettingsForm

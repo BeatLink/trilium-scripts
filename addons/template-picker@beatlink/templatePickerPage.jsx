@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Button, LinkButton, LoadingSpinner } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { getTemplates, getMissingTemplateNotes, assignTemplate } from "templateRegistry.jsx"
@@ -37,7 +37,7 @@ function MissingTemplatesQueue({ templates, notes, onAssigned }) {
             ) : !current ? (
                 <div className="template-picker-page-done">
                     Done — worked through all {notes.length} note{notes.length === 1 ? "" : "s"}.
-                    <button className="template-picker-page-restart" onClick={() => setIndex(0)}>Start over</button>
+                    <LinkButton className="template-picker-page-restart" text="Start over" onClick={() => setIndex(0)} />
                 </div>
             ) : (
                 <>
@@ -55,21 +55,20 @@ function MissingTemplatesQueue({ templates, notes, onAssigned }) {
                                     No templates configured — add some in the Templates tab.
                                 </span>
                             ) : templates.map(t => (
-                                <button
+                                <Button
                                     key={t.noteId}
                                     className="template-picker-page-option-btn"
                                     style={t.color ? { borderLeft: `4px solid ${t.color}` } : undefined}
                                     disabled={busy}
+                                    text={t.name}
                                     onClick={() => assign(t.noteId)}
-                                >
-                                    {t.name}
-                                </button>
+                                />
                             ))}
                         </div>
 
                         <div className="template-picker-page-actions">
-                            <button className="template-picker-page-nav" disabled={busy || index === 0} onClick={back}>‹ Back</button>
-                            <button className="template-picker-page-nav" disabled={busy} onClick={forward}>Forward ›</button>
+                            <Button text="‹ Back" disabled={busy || index === 0} onClick={back} />
+                            <Button text="Forward ›" disabled={busy} onClick={forward} />
                         </div>
                     </div>
                 </>
@@ -95,7 +94,7 @@ export default function TemplatePickerMissingPage() {
         })()
     }, [])
 
-    if (notes === null) return <div>Loading...</div>
+    if (notes === null) return <div><LoadingSpinner /> Loading...</div>
 
     function onAssigned(noteId) {
         setNotes(list => list.filter(n => n.noteId !== noteId))

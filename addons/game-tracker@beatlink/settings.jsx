@@ -1,4 +1,4 @@
-import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
@@ -678,7 +678,7 @@ export default function GameTrackerSettings() {
         })()
     }, [])
 
-    if (!ready) return <div>Loading...</div>
+    if (!ready) return <div><LoadingSpinner /> Loading...</div>
 
     if (loadError) {
         return (

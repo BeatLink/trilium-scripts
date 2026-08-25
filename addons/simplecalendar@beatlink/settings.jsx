@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 
 export default function SimpleCalendarSettings() {
@@ -13,7 +13,7 @@ export default function SimpleCalendarSettings() {
         })()
     }, [])
 
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+    if (!schemaNoteId || !configNoteId) return <div><LoadingSpinner /> Loading...</div>
 
     return <SettingsForm schemaNoteId={schemaNoteId} configNoteId={configNoteId} />
 }

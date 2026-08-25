@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Button, LinkButton, LoadingSpinner } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { getAreas, getMissingAreaNotes, assignArea } from "areaRegistry.jsx"
@@ -36,7 +36,7 @@ function MissingAreasQueue({ areas, notes, onAssigned }) {
             ) : !current ? (
                 <div className="area-picker-page-done">
                     Done — worked through all {notes.length} note{notes.length === 1 ? "" : "s"}.
-                    <button className="area-picker-page-restart" onClick={() => setIndex(0)}>Start over</button>
+                    <LinkButton className="area-picker-page-restart" text="Start over" onClick={() => setIndex(0)} />
                 </div>
             ) : (
                 <>
@@ -54,21 +54,20 @@ function MissingAreasQueue({ areas, notes, onAssigned }) {
                                     No areas configured — add some in the Areas tab.
                                 </span>
                             ) : areas.map(a => (
-                                <button
+                                <Button
                                     key={a.key}
                                     className="area-picker-page-option-btn"
                                     style={a.color ? { borderLeft: `4px solid ${a.color}` } : undefined}
                                     disabled={busy}
+                                    text={a.title}
                                     onClick={() => assign(a.key)}
-                                >
-                                    {a.title}
-                                </button>
+                                />
                             ))}
                         </div>
 
                         <div className="area-picker-page-actions">
-                            <button className="area-picker-page-nav" disabled={busy || index === 0} onClick={back}>‹ Back</button>
-                            <button className="area-picker-page-nav" disabled={busy} onClick={forward}>Forward ›</button>
+                            <Button text="‹ Back" disabled={busy || index === 0} onClick={back} />
+                            <Button text="Forward ›" disabled={busy} onClick={forward} />
                         </div>
                     </div>
                 </>
@@ -94,7 +93,7 @@ export default function AreaPickerMissingPage() {
         })()
     }, [])
 
-    if (notes === null) return <div>Loading...</div>
+    if (notes === null) return <div><LoadingSpinner /> Loading...</div>
 
     function onAssigned(noteId) {
         setNotes(list => list.filter(n => n.noteId !== noteId))

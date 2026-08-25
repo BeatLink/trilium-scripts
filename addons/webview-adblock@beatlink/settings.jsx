@@ -1,5 +1,5 @@
 import { SettingsPage, resolveConfigNotes, loadSettings } from "libSettingsUI.jsx"
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Admonition, Button } from "trilium:preact"
 
 function describe(synced) {
     if (!synced) return "Never synced — the built-in EasyList/EasyPrivacy defaults are in use."
@@ -50,12 +50,9 @@ function SyncPanel() {
                 taken from it; uBO's dynamic filtering rules, hostname switches and scriptlets are not
                 supported by this addon and are ignored.
             </p>
-            <p style={{ margin: 0, color: "#666" }}>{describe(synced)}</p>
+            <Admonition type={synced ? "note" : "warning"}>{describe(synced)}</Admonition>
             <div>
-                <button
-                    style={{ border: "none", borderRadius: "6px", padding: "8px 16px", cursor: "pointer", background: "#4b6fff", color: "white" }}
-                    onClick={handleSync}
-                >Sync Now</button>
+                <Button kind="primary" icon="bx-sync" text="Sync Now" onClick={handleSync} />
             </div>
             {status && <p style={{ margin: 0 }}>{status}</p>}
         </div>

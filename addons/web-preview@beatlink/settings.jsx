@@ -1,8 +1,6 @@
 import { SettingsPage } from "libSettingsUI.jsx"
-import { useState } from "trilium:preact"
+import { useState, Button } from "trilium:preact"
 
-const BUTTON = { border: "none", borderRadius: "6px", padding: "6px 14px", cursor: "pointer", background: "#4b6fff", color: "white" }
-const PLAIN_BUTTON = { ...BUTTON, background: "#eee", color: "#333" }
 
 // One duplicate set: pick which note survives, then fold the rest into it.
 function DuplicateGroup({ group, onDone }) {
@@ -45,8 +43,8 @@ function DuplicateGroup({ group, onDone }) {
                 </label>
             ))}
             <div style={{ display: "flex", gap: "6px" }}>
-                <button style={BUTTON} disabled={busy} onClick={handleMerge}>Keep This One</button>
-                <button style={PLAIN_BUTTON} disabled={busy} onClick={onDone}>Skip</button>
+                <Button kind="primary" text="Keep This One" disabled={busy} onClick={handleMerge} />
+                <Button text="Skip" disabled={busy} onClick={onDone} />
             </div>
             {status && <div style={{ fontSize: "12px" }}>{status}</div>}
         </div>
@@ -81,7 +79,7 @@ function DuplicatesPanel() {
                 the others hand over their children and attributes, are cloned into wherever they sat, and
                 are then deleted.
             </p>
-            <div><button style={BUTTON} onClick={handleScan}>Find Duplicates</button></div>
+            <div><Button kind="primary" icon="bx-search-alt" text="Find Duplicates" onClick={handleScan} /></div>
             {status && <p style={{ margin: 0 }}>{status}</p>}
             {groups?.map((group) => (
                 <DuplicateGroup key={group.url} group={group} onDone={() => dismiss(group.url)} />

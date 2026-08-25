@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm, resolveConfigNotes } from "libSettingsUI.jsx"
 import { scanTemplates } from "templateRegistry.jsx"
 
@@ -65,7 +65,7 @@ export default function TemplatePickerSettings() {
         (async () => setNotes(await resolveConfigNotes(api.currentNote)))()
     }, [])
 
-    if (!notes?.schemaNoteId || !notes?.configNoteId) return <div>Loading...</div>
+    if (!notes?.schemaNoteId || !notes?.configNoteId) return <div><LoadingSpinner /> Loading...</div>
 
     return <TemplatesPanel schemaNoteId={notes.schemaNoteId} configNoteId={notes.configNoteId} />
 }

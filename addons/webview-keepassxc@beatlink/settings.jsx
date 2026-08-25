@@ -1,14 +1,13 @@
 import { SettingsPage, resolveConfigNotes, loadSettings } from "libSettingsUI.jsx"
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Admonition, Button, LoadingSpinner } from "trilium:preact"
 
-const BUTTON = { border: "none", borderRadius: "6px", padding: "8px 16px", cursor: "pointer", background: "#4b6fff", color: "white" }
-
+// The connection state as a sentence plus the admonition tone that fits it —
+// only a live, unlocked, associated database is not something to act on.
 function describe(state) {
-    if (!state) return "Checking…"
-    if (!state.available) return `KeePassXC is not answering: ${state.error}`
-    if (state.locked) return `KeePassXC ${state.version} is running, but its database is locked.`
-    if (state.associated) return `Connected to KeePassXC ${state.version}, database ${state.hash.slice(0, 12)}…`
-    return `KeePassXC ${state.version} is running with a database open, but this Trilium is not associated with it yet.`
+    if (!state.available) return ["warning", `KeePassXC is not answering: ${state.error}`]
+    if (state.locked) return ["warning", `KeePassXC ${state.version} is running, but its database is locked.`]
+    if (state.associated) return ["note", `Connected to KeePassXC ${state.version}, database ${state.hash.slice(0, 12)}…`]
+    return ["warning", `KeePassXC ${state.version} is running with a database open, but this Trilium is not associated with it yet.`]
 }
 
 function ConnectionPanel() {
@@ -46,6 +45,8 @@ function ConnectionPanel() {
         await refresh()
     }
 
+    const [tone, message] = state ? describe(state) : []
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "640px" }}>
             <p style={{ margin: 0 }}>
@@ -54,17 +55,22 @@ function ConnectionPanel() {
                 <b> Database → Database Settings → Browser Integration</b> list. Do it once per database; unlock
                 the database first.
             </p>
-            <p style={{ margin: 0, color: "#666" }}>{describe(state)}</p>
+            {state
+                ? <Admonition type={tone}>{message}</Admonition>
+                : <p style={{ margin: 0 }}><LoadingSpinner /> Checking…</p>}
             <div style={{ display: "flex", gap: "8px" }}>
-                <button style={BUTTON} onClick={() => run("Connecting…", (lib, noteId, socketPath) => lib.associate(noteId, socketPath))}>
-                    Connect
-                </button>
-                <button style={{ ...BUTTON, background: "#888" }} onClick={() => run("Checking…", () => {})}>
-                    Refresh
-                </button>
-                <button style={{ ...BUTTON, background: "#b00" }} onClick={() => run("Forgetting…", (lib, noteId) => lib.forget(noteId))}>
-                    Forget associations
-                </button>
+                <Button
+                    kind="primary" icon="bx-link" text="Connect"
+                    onClick={() => run("Connecting…", (lib, noteId, socketPath) => lib.associate(noteId, socketPath))}
+                />
+                <Button
+                    icon="bx-refresh" text="Refresh"
+                    onClick={() => run("Checking…", () => {})}
+                />
+                <Button
+                    icon="bx-trash" text="Forget associations"
+                    onClick={() => run("Forgetting…", (lib, noteId) => lib.forget(noteId))}
+                />
             </div>
             {status && <p style={{ margin: 0 }}>{status}</p>}
         </div>

@@ -21,22 +21,6 @@
     color: var(--main-text-color);
 }
 
-.etr-btn {
-    padding: 6px 12px;
-    border: 1px solid var(--main-border-color);
-    border-radius: 6px;
-    background: var(--button-background-color, transparent);
-    color: var(--main-text-color);
-    cursor: pointer;
-    white-space: nowrap;
-}
-.etr-btn:hover { filter: brightness(1.08); }
-.etr-btn:disabled { opacity: 0.5; cursor: default; }
-.etr-btn-primary {
-    background: var(--button-primary-background-color, #3a87ad);
-    color: var(--button-primary-color, #fff);
-    border-color: transparent;
-}
 .etr-btn-danger {
     background: transparent;
     color: #c0392b;

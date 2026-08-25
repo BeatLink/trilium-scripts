@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/webview-adblock@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.1.1",
+    "latestVersion": "2.2.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/webview-adblock@beatlink/_tam_manifest_.json",

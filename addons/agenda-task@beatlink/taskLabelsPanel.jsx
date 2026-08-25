@@ -1,4 +1,4 @@
-import { useState, useEffect, FormTextBox, Button } from "trilium:preact"
+import { useState, useEffect, FormTextBox, Button, LoadingSpinner } from "trilium:preact"
 import { loadSettings, saveSettings } from "libSettingsUI.jsx"
 
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
@@ -32,7 +32,7 @@ export function TaskLabelsPanel() {
         })()
     }, [])
 
-    if (ids === undefined) return <div>Loading...</div>
+    if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) {
         return (
             <div className="task-labels-panel">

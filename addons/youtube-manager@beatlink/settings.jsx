@@ -1,4 +1,4 @@
-import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 import { activateNote } from "trilium:api"
 
@@ -146,7 +146,7 @@ export default function YouTubeManagerSettings() {
         })()
     }, [])
 
-    if (!ready) return <div>Loading...</div>
+    if (!ready) return <div><LoadingSpinner /> Loading...</div>
 
     // The Display Note field is `hidden` in the schema so the form doesn't render
     // it twice -- this panel owns it, because picking a note has side effects

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { loadSettings } from "libSettingsUI.jsx"
 import { CalendarWidget } from "CalendarWidget.jsx"
 
@@ -14,7 +14,7 @@ export default function SimpleCalendarView() {
         })()
     }, [])
 
-    if (!settings) return <div>Loading...</div>
+    if (!settings) return <div><LoadingSpinner /> Loading...</div>
 
     const eventsUrl = settings.mode === "url" ? settings.feedUrl : "custom/simpleCalendarFeed"
 

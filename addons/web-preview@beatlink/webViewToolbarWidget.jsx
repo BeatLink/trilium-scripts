@@ -4,7 +4,7 @@
     element that Trilium's built-in Web View note type already renders —
     no separate popup window needed.
 */
-import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect, useRef } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect, useRef, ActionButton, Button } from "trilium:preact"
 import { currentNote } from "trilium:api"
 import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
@@ -202,39 +202,28 @@ function WebViewToolbar({ noteId }) {
             className="web-view-toolbar"
             style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderBottom: "1px solid #ddd", contain: "none" }}
         >
-            <button
-                title="Back"
-                disabled={!state.canGoBack}
-                style={{ border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", background: "#eee" }}
-                onClick={handleBack}
-            >◀</button>
-            <button
-                title="Forward"
-                disabled={!state.canGoForward}
-                style={{ border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", background: "#eee" }}
-                onClick={handleForward}
-            >▶</button>
+            <ActionButton icon="bx bx-chevron-left" text="Back" disabled={!state.canGoBack} onClick={handleBack} />
+            <ActionButton icon="bx bx-chevron-right" text="Forward" disabled={!state.canGoForward} onClick={handleForward} />
             <div style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {state.url}
             </div>
             {settings?.showSaveButton && (
-                <button
+                <Button
+                    size="small" kind="primary" icon="bx-save"
                     title="Save this page as a note"
+                    text={saving ? "Saving…" : "Save"}
                     disabled={saving}
-                    style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#4b6fff", color: "white", fontSize: "12px" }}
                     onClick={handleSave}
-                >{saving ? "Saving…" : "Save"}</button>
+                />
             )}
-            <button
-                style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#eee", fontSize: "12px" }}
-                onClick={handleExternal}
-            >Open in Browser</button>
-            <button
+            <Button size="small" icon="bx-link-external" text="Open in Browser" onClick={handleExternal} />
+            <Button
+                size="small" icon="bx-trash"
                 title="Delete this Web View note"
+                text={deleting ? "Deleting…" : "Delete Note"}
                 disabled={deleting}
-                style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: "#eee", color: "#a33", fontSize: "12px" }}
                 onClick={handleDelete}
-            >{deleting ? "Deleting…" : "Delete Note"}</button>
+            />
             {toolbar.extras.map((Extra, index) => <Extra key={index} noteId={noteId} />)}
         </div>
     )

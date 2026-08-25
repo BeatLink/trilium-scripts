@@ -3,7 +3,7 @@
     to an address or searches it with one of the configured providers, then opens the
     result as a Web View note under whichever note the button was pressed from.
 */
-import { useState, useEffect, useRef } from "trilium:preact"
+import { useState, useEffect, useRef, Button } from "trilium:preact"
 import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
 
 // The note a new tab is filed under, defaulting to the one `newTabLauncher.js` recorded.
@@ -93,11 +93,7 @@ export default function NewTabPage() {
                     onInput={(event) => setQuery(event.target.value)}
                     style={{ flex: 1, minWidth: 0, border: "1px solid #ddd", borderRadius: "6px", padding: "8px 12px", fontSize: "14px" }}
                 />
-                <button
-                    type="submit"
-                    disabled={busy}
-                    style={{ border: "none", borderRadius: "6px", padding: "8px 16px", cursor: "pointer", background: "#4b6fff", color: "white", fontSize: "13px" }}
-                >{busy ? "Opening…" : "Go"}</button>
+                <Button kind="primary" icon="bx-right-arrow-alt" text={busy ? "Opening…" : "Go"} disabled={busy} />
             </form>
             {error && <div style={{ color: "#a33", fontSize: "12px", maxWidth: "640px" }}>{error}</div>}
         </div>

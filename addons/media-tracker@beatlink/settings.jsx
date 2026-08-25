@@ -1,4 +1,4 @@
-import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 
@@ -467,7 +467,7 @@ export default function MediaTrackerSettings() {
         })()
     }, [])
 
-    if (!ready) return <div>Loading...</div>
+    if (!ready) return <div><LoadingSpinner /> Loading...</div>
 
     // The Library Root field is `hidden` in the schema so the form doesn't render
     // it twice — this panel owns it, because picking a note has side effects

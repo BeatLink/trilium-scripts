@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.8.1",
+    "latestVersion": "1.9.0",
     "type": "script",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-agenda@beatlink/_tam_manifest_.json",

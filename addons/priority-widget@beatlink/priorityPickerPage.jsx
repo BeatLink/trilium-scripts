@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, Button, LinkButton, LoadingSpinner } from "trilium:preact"
 import { activateNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { getActiveProfile, getMissingPriorityNotes, assignPriority } from "priorityRegistry.jsx"
@@ -36,7 +36,7 @@ function MissingPrioritiesQueue({ label, priorities, notes, onAssigned }) {
             ) : !current ? (
                 <div className="priority-picker-page-done">
                     Done — worked through all {notes.length} note{notes.length === 1 ? "" : "s"}.
-                    <button className="priority-picker-page-restart" onClick={() => setIndex(0)}>Start over</button>
+                    <LinkButton className="priority-picker-page-restart" text="Start over" onClick={() => setIndex(0)} />
                 </div>
             ) : (
                 <>
@@ -54,21 +54,20 @@ function MissingPrioritiesQueue({ label, priorities, notes, onAssigned }) {
                                     No priority levels configured — add some in the Profiles tab.
                                 </span>
                             ) : priorities.map(p => (
-                                <button
+                                <Button
                                     key={p.key}
                                     className="priority-picker-page-option-btn"
                                     style={p.color ? { borderLeft: `4px solid ${p.color}` } : undefined}
                                     disabled={busy}
+                                    text={p.title}
                                     onClick={() => assign(p.key)}
-                                >
-                                    {p.title}
-                                </button>
+                                />
                             ))}
                         </div>
 
                         <div className="priority-picker-page-actions">
-                            <button className="priority-picker-page-nav" disabled={busy || index === 0} onClick={back}>‹ Back</button>
-                            <button className="priority-picker-page-nav" disabled={busy} onClick={forward}>Forward ›</button>
+                            <Button text="‹ Back" disabled={busy || index === 0} onClick={back} />
+                            <Button text="Forward ›" disabled={busy} onClick={forward} />
                         </div>
                     </div>
                 </>
@@ -96,7 +95,7 @@ export default function PriorityPickerMissingPage() {
         })()
     }, [])
 
-    if (notes === null) return <div>Loading...</div>
+    if (notes === null) return <div><LoadingSpinner /> Loading...</div>
 
     function onAssigned(noteId) {
         setNotes(list => list.filter(n => n.noteId !== noteId))

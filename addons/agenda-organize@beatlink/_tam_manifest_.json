@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.3.1",
+    "latestVersion": "3.5.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",

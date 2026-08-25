@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 import { activateNote } from "trilium:api"
 
@@ -16,7 +16,7 @@ export default function RssReaderSettings() {
         })()
     }, [])
 
-    if (!schemaNoteId || !configNoteId) return <div>Loading...</div>
+    if (!schemaNoteId || !configNoteId) return <div><LoadingSpinner /> Loading...</div>
 
     return (
         <div>

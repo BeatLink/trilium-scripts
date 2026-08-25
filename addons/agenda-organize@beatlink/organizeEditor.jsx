@@ -1,4 +1,4 @@
-import { useState, useEffect, NoteAutocomplete } from "trilium:preact"
+import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
 import { DimensionsPanel } from "organizeDimensions.jsx"
 
@@ -93,7 +93,7 @@ export default function OrganizeEditor() {
         })()
     }, [])
 
-    if (ids === undefined) return <div>Loading...</div>
+    if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) return <div>Organize's configuration isn't discoverable.</div>
 
     // Panels the schema can't express on its own, injected into SettingsForm's

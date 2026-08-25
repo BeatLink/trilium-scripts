@@ -1,4 +1,4 @@
-import { useState, useEffect } from "trilium:preact"
+import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 
 const { getMyDayConfigIds } = require("myDaySettings.js")
@@ -10,7 +10,7 @@ export default function MyDayEditor() {
         (async () => setIds(await getMyDayConfigIds()))()
     }, [])
 
-    if (ids === undefined) return <div>Loading...</div>
+    if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) return <div>My Day's configuration isn't discoverable.</div>
 
     return (

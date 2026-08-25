@@ -8,7 +8,7 @@
     rather than adding a second row of its own; without it, this widget renders
     a minimal row to hold the button.
 */
-import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect } from "trilium:preact"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useState, useEffect, Button } from "trilium:preact"
 import { currentNote } from "trilium:api"
 
 // Shared with web-preview@beatlink: whichever widget's module loads first creates the object, the
@@ -106,12 +106,16 @@ function BlockUrlControl({ noteId, standalone }) {
 
     const label = busy ? "Working…" : blocked ? "Unblock This Page" : "Block This Page"
 
+    // Blocking is the emphasised action; once blocked, unblocking is the ordinary one.
     const button = (
-        <button
+        <Button
+            size="small"
+            kind={blocked ? "secondary" : "primary"}
+            icon={blocked ? "bx-check-shield" : "bx-block"}
+            text={label}
             disabled={busy || blocked === null}
-            style={{ border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", background: blocked ? "#eee" : "#d64545", color: blocked ? "#222" : "white", fontSize: "12px" }}
             onClick={handleToggle}
-        >{label}</button>
+        />
     )
 
     if (!standalone) return button

@@ -1,4 +1,4 @@
-import { useState, useEffect, Button, FormTextBox, FormDropdownList } from "trilium:preact"
+import { useState, useEffect, Button, FormTextBox, FormDropdownList, LoadingSpinner } from "trilium:preact"
 import { loadSettings, saveSettings } from "libSettingsUI.jsx"
 import { RecurrencePicker } from "recurrencePicker.jsx"
 
@@ -29,7 +29,7 @@ export function RescheduleOptionsPanel() {
         })()
     }, [])
 
-    if (ids === undefined) return <div>Loading...</div>
+    if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) {
         return (
             <div className="reschedule-options-panel">

@@ -8,30 +8,30 @@
         "tab": "Organize Note"
     },
     "morningTime": {
-        "type": "string",
+        "type": "time",
         "label": "Morning",
-        "description": "Time (HH:mm) the Organize \"Morning\" button sets on a task's start date.",
+        "description": "The time the Organize \"Morning\" button sets on a task's start date.",
         "category": "Organize",
         "tab": "Times"
     },
     "noonTime": {
-        "type": "string",
+        "type": "time",
         "label": "Noon",
-        "description": "Time (HH:mm) the Organize \"Noon\" button sets.",
+        "description": "The time the Organize \"Noon\" button sets.",
         "category": "Organize",
         "tab": "Times"
     },
     "eveningTime": {
-        "type": "string",
+        "type": "time",
         "label": "Evening",
-        "description": "Time (HH:mm) the Organize \"Evening\" button sets.",
+        "description": "The time the Organize \"Evening\" button sets.",
         "category": "Organize",
         "tab": "Times"
     },
     "nightTime": {
-        "type": "string",
+        "type": "time",
         "label": "Night",
-        "description": "Time (HH:mm) the Organize \"Night\" button sets.",
+        "description": "The time the Organize \"Night\" button sets.",
         "category": "Organize",
         "tab": "Times"
     }
