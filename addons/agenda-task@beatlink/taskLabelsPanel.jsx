@@ -15,7 +15,7 @@ const FIELDS = [
 ]
 
 // The label-name overrides for Task's own settings note (#agendaTaskConfig),
-// injected into the Agenda Editor as its own tab since these fields live in
+// injected into the Agenda Settings as its own tab since these fields live in
 // taskSchema.json/taskConfig.json, not agenda's shared schema/config note.
 export function TaskLabelsPanel() {
     const [ids, setIds] = useState(undefined)

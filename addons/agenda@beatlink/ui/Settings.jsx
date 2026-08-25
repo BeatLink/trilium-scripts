@@ -1,9 +1,9 @@
 import { useState, useEffect, LoadingSpinner } from "trilium:preact"
-import { getAgendaSettings } from "agendaSettings.jsx"
 import { SettingsForm } from "libSettingsUI.jsx"
 
+const { getAgendaSettings } = require("settings.js")
 
-export default function ProfileEditor() {
+export default function AgendaSettings() {
     const [schemaNoteId, setSchemaNoteId] = useState(null)
     const [configNoteId, setConfigNoteId] = useState(null)
 
@@ -25,7 +25,7 @@ export default function ProfileEditor() {
     // agenda-task@beatlink's own Task Settings page along with #agendaTaskConfig.
     return (
         <div className="profile-editor">
-            <h2>Agenda Editor</h2>
+            <h2>Agenda Settings</h2>
             <p>
                 Override the label-name vocabulary (Settings). Under Review, pick the shared overview
                 note and active profile, build out your profiles, and choose their searches and filters.

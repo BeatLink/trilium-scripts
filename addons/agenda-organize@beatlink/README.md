@@ -213,7 +213,7 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
 `reconcileOrganizeNote` in [`organizeEditor.jsx`](organizeEditor.jsx).)
 
-`organizePage.jsx` imports `getAgendaSettings` (`agendaSettings.jsx`) and `DimensionsPanel`
+`organizePage.jsx` imports `getAgendaSettings` (agenda's `ui/Settings.jsx`) and `DimensionsPanel`
 (`organizeDimensions.jsx`), and requires `organize.js` + `dimensions.js`. `organize.js` requires
 `templateRegistry.jsx` directly — this addon's manifest declares its own `registry` note (same
 `sourceUrl` as template-picker@beatlink's `templateRegistry.jsx`, so TAM's sourceUrl dedup clones

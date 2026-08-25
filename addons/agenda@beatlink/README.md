@@ -1,6 +1,12 @@
 # Agenda
 
-A schema-driven, multi-profile task/agenda system for TriliumNext, built around the Overview widget.
+The shared configuration behind the agenda addons: one settings note holding the **dimensions**
+registry, the profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules those
+profiles reference, plus the **Agenda Settings** page that edits all of it. It ships no widget of its
+own — the Overview widget that used to live here is
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md), which reads this addon's config
+and requires it.
+
 The Task widget (start/due dates, duration, recurrence,
 Complete/Reschedule actions) is a separate addon, [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)
 — install it alongside this one for the full Task pane. The two are fully independent: this addon ships
@@ -9,12 +15,13 @@ note-label conventions and the `agenda:tasksChanged` event. The My Day focus pan
 [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md), and the GTD Organize workflow is
 [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md).
 
-## Widget
+## Widgets elsewhere
 
-- **Overview** — a right-pane widget whose per-profile search/filter/sort/prefix/color rules re-file
-  the active profile's matching notes under a single shared overview note, shown as a built-in
-  Trilium collection view (list/table/board). Exports the active profile's tasks as an iCal feed.
-  Ships the **Agenda Editor** page that edits the whole configuration.
+- **Overview** — the right-pane widget that re-files the active profile's matching notes under a
+  shared overview note and exports them as an iCal feed is
+  [`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md). It discovers this addon's
+  `#agendaConfig` note at runtime and ships its own copy of `lib/settings.js` and `lib/dimensions.js`,
+  because Trilium resolves an import only inside the importing note's own subtree.
 
 The **Note Actions** widget (Zen Mode / Hoist Note quick actions) moved to
 [`hoist-note@beatlink`](../hoist-note@beatlink/README.md), which already owned the hoist toggle.
@@ -30,10 +37,10 @@ separate addon, [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.
 alongside this one for the full GTD flow.
 
 It owns its own settings note (`#agendaOrganizeConfig`: the Organize-note picker and the quick-times)
-and its own **Organize Editor** page, so those tabs are no longer in the Agenda Editor. It reads the
+and its own **Organize Editor** page, so those tabs are no longer in the Agenda Settings. It reads the
 **`dimensions`** registry back out of this addon's `#agendaConfig`, because Overview's derived
 prefix/color/grouping/filter variants come from the same list Organize's triage queues write to — one
-registry, no drift. Editing that vocabulary still happens here, in the Agenda Editor's **Dimensions**
+registry, no drift. Editing that vocabulary still happens here, in the Agenda Settings's **Dimensions**
 tab (and is mirrored on Organize's own Dimensions tab).
 
 ## Templates
@@ -68,9 +75,9 @@ chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-or
 
 The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set (the
 **dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
-those profiles reference). That note is tagged **`#agendaConfig`**; every widget in this addon finds it
-at runtime via `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all of them at
-once. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
+those profiles reference). That note is tagged **`#agendaConfig`**; every agenda addon finds it
+at runtime via `getAgendaSettings()` in [`lib/settings.js`](lib/settings.js), so a change made in the
+Agenda Settings page is seen by all of them at once. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
 read time, so adding a dimension yields all four with no extra setup and they can never drift from the
 vocabulary.
 
@@ -81,7 +88,7 @@ declares its own copy of that vocabulary in its own `#agendaTaskConfig` note, an
 renaming it in each installed addon that reads it; in exchange none of them reads another's config note
 or ships another's code.
 
-The Agenda Editor groups its tabs under four workflow categories — **Review**,
+The Agenda Settings groups its tabs under four workflow categories — **Review**,
 **Display Elements**, **Dimensions**, **Settings** — using
 [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
 per-field `category`):
@@ -105,7 +112,7 @@ per-field `category`):
 Adding a new default dimension/sort/colour/etc. reaches existing installs for free — a registry's
 entries in `defaults.json` are its *shipped* entry set, reconciled into every install on read/write,
 so no migration is needed for additive changes. Reshaping data the user already owns (renaming a stored
-key, moving a value between fields, dropping a field) is what [`common/migrate.js`](common/migrate.js)
+key, moving a value between fields, dropping a field) is what [`lib/migrate.js`](lib/migrate.js)
 handles: an ordered list of one-time transforms of the raw persisted config, gated by a
 `#agendaConfigVersion` label on the `#agendaConfig` note so each step runs exactly once per install.
 `getAgendaSettings()` runs any pending steps before the first read, so every widget sees migrated
@@ -113,15 +120,16 @@ config. The shipped list is empty (nothing to reshape yet); adding a step is pus
 bump the version.
 
 Task edits (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) is installed) broadcast an
-`agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`; the Overview widget
-subscribes and re-files the overview note live.
+`agenda:tasksChanged` event via Trilium's `api.triggerEvent`/`useTriliumEvent`;
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) subscribes and re-files the
+overview note live.
 
 ## Upgrading from 7.x
 
 Version 8.0.0 finishes the split started in 4.0.0: this addon no longer references
 [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) in any way. Three things change.
 
-- The Agenda Editor's **Settings** category now holds this addon's own three label fields (start
+- The Agenda Settings's **Settings** category now holds this addon's own three label fields (start
   datetime, due datetime, recurrence) instead of agenda-task's panels. If you had renamed any label,
   re-enter the new names here once — this addon previously read them out of a config key that no longer
   existed, so it was matching on `undefined` and the Start/Due columns, iCal feed and due notifications
@@ -154,3 +162,22 @@ once, manually, before updating**, or TAM's next sync will delete your existing 
 template notes and recreate blank ones under template-picker instead. See that script's own header
 comment for exact steps. Notes that only ever carried `#type` (never `~template`) aren't automatically
 migrated — they'll surface in template-picker's **Missing Templates** page for manual re-triage.
+
+## Layout
+
+Sources are grouped by kind, and note titles match the file names:
+
+| Folder | Holds |
+| ------ | ----- |
+| `ui/` | `Settings.jsx` (the Agenda Settings page), `settings.css` |
+| `lib/` | `settings.js` — `getAgendaSettings()`, the reader every agenda addon uses; `dimensions.js`; `migrate.js` |
+| `config/` | `schema.json`, `defaults.json` |
+| `static/` | `calendar.ical` — the seed body of the iCal feed note the Overview widget writes |
+
+`lib/settings.js` and `lib/dimensions.js` are also pulled by
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) and
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) through relative `sourceUrl`s, so
+each install carries its own copy of the reader while the data stays in this addon's one config note.
+
+Trilium resolves an `import` / `require` by note title within the importer's subtree, not by path, so
+the folders are a repo-side convention only.

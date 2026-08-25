@@ -1,0 +1,363 @@
+{
+    "id": "agenda-overview@beatlink",
+    "name": "Agenda Overview",
+    "description": "The Overview widget from agenda@beatlink, split out as its own addon: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed. Every value it reads - profiles, searches, filters, the display-element library and the dimensions registry - lives in agenda@beatlink's #agendaConfig settings note, which this addon discovers at runtime and never writes to; agenda@beatlink is therefore required. It ships its own copy of that addon's settings.js and dimensions.js readers, the way agenda-organize@beatlink already does, because Trilium resolves an import only within the importing note's own subtree.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "widget",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "grp-ui",
+                "title": "ui",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-lib",
+                "title": "lib",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "overview",
+                "title": "Overview.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Overview.jsx"
+            },
+            {
+                "id": "collapsible",
+                "title": "Collapsible.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Collapsible.jsx"
+            },
+            {
+                "id": "overview-css",
+                "title": "overview.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "ui/overview.css"
+            },
+            {
+                "id": "lib-overview",
+                "title": "overview.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib/overview.js"
+            },
+            {
+                "id": "lib-query",
+                "title": "query.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib/query.js"
+            },
+            {
+                "id": "lib-config",
+                "title": "config.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "lib/config.js"
+            },
+            {
+                "id": "agenda-settings",
+                "title": "settings.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../agenda@beatlink/lib/settings.js"
+            },
+            {
+                "id": "dimensions",
+                "title": "dimensions.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../agenda@beatlink/lib/dimensions.js"
+            },
+            {
+                "id": "migrate",
+                "title": "migrate.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../agenda@beatlink/lib/migrate.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            },
+            {
+                "id": "libsettings-core",
+                "title": "libSettingsCore.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libsettings/libsettings-core.js"
+            },
+            {
+                "id": "libsettings-ui",
+                "title": "libSettingsUI.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.jsx"
+            },
+            {
+                "id": "libsettings-style",
+                "title": "libSettingsUI.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
+            },
+            {
+                "id": "libmultisort-lib",
+                "title": "libMultisort.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libmultisort/libmultisort.js"
+            },
+            {
+                "id": "libnotification-lib",
+                "title": "libNotification.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libnotification/libnotification.js"
+            },
+            {
+                "id": "libcalendar-lib",
+                "title": "libCalendar.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libcalendar/libCalendar.js"
+            },
+            {
+                "id": "ical-lib",
+                "title": "ical.min.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libical/ical.min.js"
+            },
+            {
+                "id": "ical-resource",
+                "title": "ical.min.js (resource)",
+                "type": "code",
+                "mime": "application/javascript",
+                "sourceUrl": "../../libs/libical/ical.min.js"
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "grp-ui"
+            },
+            {
+                "parent": "root",
+                "child": "grp-lib"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "overview"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "collapsible"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "overview-css"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "lib-overview"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "lib-query"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "lib-config"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "dimensions"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "migrate"
+            },
+            {
+                "parent": "overview",
+                "child": "collapsible"
+            },
+            {
+                "parent": "overview",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "overview",
+                "child": "lib-overview"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "dimensions"
+            },
+            {
+                "parent": "agenda-settings",
+                "child": "migrate"
+            },
+            {
+                "parent": "dimensions",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-config",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "lib-config",
+                "child": "dimensions"
+            },
+            {
+                "parent": "lib-query",
+                "child": "lib-config"
+            },
+            {
+                "parent": "lib-query",
+                "child": "libmultisort-lib"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "lib-query"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libnotification-lib"
+            },
+            {
+                "parent": "lib-overview",
+                "child": "libcalendar-lib"
+            },
+            {
+                "parent": "libcalendar-lib",
+                "child": "ical-lib"
+            },
+            {
+                "parent": "ical-lib",
+                "child": "ical-resource"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-core"
+            },
+            {
+                "parent": "libsettings-ui",
+                "child": "libsettings-style"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "overview",
+                "name": "widget",
+                "value": ""
+            },
+            {
+                "note": "overview-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "libsettings-style",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "ical-resource",
+                "name": "customResourceProvider",
+                "value": "libIcal.js"
+            },
+            {
+                "note": "grp-ui",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-lib",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "collapsible",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "overview-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-overview",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-query",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "lib-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "agenda-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "dimensions",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "migrate",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}

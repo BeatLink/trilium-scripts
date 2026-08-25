@@ -11,9 +11,9 @@ import {
 } from "trilium:preact"
 
 import { Collapsible } from "Collapsible.jsx"
-import { getAgendaSettings } from "agendaSettings.jsx"
 
-const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, getSectionState, saveSectionState } = require("libAgendaOverview.js")
+const { getAgendaSettings } = require("settings.js")
+const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, getSectionState, saveSectionState } = require("overview.js")
 
 const VIEW_TYPES = [
     { key: "list", title: "List" },

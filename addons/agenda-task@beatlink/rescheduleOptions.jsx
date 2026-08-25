@@ -10,7 +10,7 @@ const modeOptions = [
 ]
 
 // A hand-rolled editor for the `rescheduleOptions` registry, injected into the
-// Agenda Editor in place of the generic SettingsForm rendering of that field —
+// Agenda Settings in place of the generic SettingsForm rendering of that field —
 // the generic form only knows how to render a recurrence rule as a raw rrule
 // string, whereas this reuses the same rich RecurrencePicker the Task pane
 // itself uses for a note's own recurrence.

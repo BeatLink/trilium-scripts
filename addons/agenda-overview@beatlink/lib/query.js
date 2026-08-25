@@ -1,5 +1,5 @@
 const multisort = require("libMultisort.js")
-const config = require("libAgendaConfig.js")
+const config = require("config.js")
 const { loadData, getActiveProfile, getAllProfiles } = config
 
 const NO_VALUE_KEY = "__novalue__"

@@ -1,9 +1,16 @@
-import { loadSettings } from "libSettingsUI.jsx"
+// The values every agenda widget reads. The #agendaConfig label and the
+// schemaNote/configNote/icalNote relations sit on the Settings note, which is
+// the anchor this resolves through at runtime.
+//
+// CommonJS, and separate from the page that edits these values, because
+// agenda-overview@beatlink ships its own copy of this file and has no use for
+// the page.
 
+const { loadSettings } = require("libSettingsUI.jsx")
 const { normalizeDimensions } = require("dimensions.js")
 const { runMigrations } = require("migrate.js")
 
-export async function getAgendaSettings() {
+async function getAgendaSettings() {
     const anchors = await api.searchForNotes("#agendaConfig")
     if (!anchors.length) return null
     const anchor = anchors[0]
@@ -45,3 +52,5 @@ export async function getAgendaSettings() {
 
     return { constants, profileContext, dimensions, schemaNoteId, configNoteId, icalNoteId }
 }
+
+module.exports = { getAgendaSettings }

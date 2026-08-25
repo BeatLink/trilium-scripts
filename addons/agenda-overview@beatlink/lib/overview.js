@@ -1,6 +1,6 @@
 const notifications = require("libNotification.js")
 const { generateCalendar } = require("libCalendar.js")
-const query = require("libAgendaQuery.js")
+const query = require("query.js")
 
 // Everything from the config layer is reached through libAgendaQuery, which
 // re-exports it. libAgendaOverview requires only libAgendaQuery (plus the

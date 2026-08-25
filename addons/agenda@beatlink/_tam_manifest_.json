@@ -1,72 +1,72 @@
 {
     "id": "agenda@beatlink",
     "name": "Agenda",
-    "description": "A schema-driven, multi-profile agenda system for TriliumNext, built around the Overview widget: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, exporting an iCal feed, plus the Agenda Editor page that edits the config. Everything is driven by one open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own; each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Agenda's config, including the dimensions registry, lives in one settings note (schema.json/config.json) tagged #agendaConfig; every widget discovers and reads it at runtime. Three sibling addons split out of this one and each own their own settings note: agenda-task@beatlink (the Task pane; #agendaTaskConfig), which this addon no longer references at all - it shares only a label vocabulary, declared independently on both sides, agenda-myday@beatlink (the My Day focus panel and timer; #agendaMyDayConfig) which clones this addon's query engine to find due tasks, and agenda-organize@beatlink (the GTD notebook provisioner and triage page; #agendaOrganizeConfig) which reads the dimensions registry back out of #agendaConfig so the two never drift.",
+    "description": "The shared configuration behind the agenda addons: one settings note (schema.json/defaults.json/config.json, tagged #agendaConfig) holding an open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own - the profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference, plus the Agenda Settings page that edits all of it. Each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant, derived at read time so they can never drift from the vocabulary. This addon ships no widget: the Overview widget split out as agenda-overview@beatlink, which discovers this addon's config note at runtime and ships its own copy of lib/settings.js and lib/dimensions.js, because Trilium resolves an import only inside the importing note's own subtree. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). The other siblings each own their own settings note and read nothing from this one except the dimensions registry: agenda-task@beatlink (the Task pane; #agendaTaskConfig), agenda-myday@beatlink (the My Day focus panel; #agendaMyDayConfig), and agenda-organize@beatlink (the GTD triage page; #agendaOrganizeConfig).",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "9.5.0",
+    "latestVersion": "10.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
-        "settingsNote": "profile-editor-page",
+        "settingsNote": "settings-page",
         "notes": [
             {
-                "id": "grp-common",
-                "title": "Common",
+                "id": "grp-static",
+                "title": "static",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
-                "id": "grp-overview",
-                "title": "Overview",
+                "id": "grp-config",
+                "title": "config",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
-                "id": "agenda-settings",
-                "title": "agendaSettings.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "common/agendaSettings.jsx"
+                "id": "grp-lib",
+                "title": "lib",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-ui",
+                "title": "ui",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
             },
             {
                 "id": "dimensions",
                 "title": "dimensions.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "common/dimensions.js"
+                "sourceUrl": "lib/dimensions.js"
             },
             {
                 "id": "migrate",
                 "title": "migrate.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "common/migrate.js"
-            },
-            {
-                "id": "common-css",
-                "title": "agendaCommon.css",
-                "type": "code",
-                "mime": "text/css",
-                "sourceUrl": "common/agendaCommon.css"
+                "sourceUrl": "lib/migrate.js"
             },
             {
                 "id": "schema",
                 "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "common/schema.json"
+                "sourceUrl": "config/schema.json"
             },
             {
                 "id": "defaults",
                 "title": "defaults.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "common/defaults.json"
+                "sourceUrl": "config/defaults.json"
             },
             {
                 "id": "config",
@@ -84,66 +84,31 @@
             },
             {
                 "id": "ical",
-                "title": "calendarEvents.ical",
+                "title": "calendar.ical",
                 "type": "code",
                 "mime": "text/plain",
-                "sourceUrl": "common/calendarEvents.ical"
+                "sourceUrl": "static/calendar.ical"
             },
             {
-                "id": "lib-overview",
-                "title": "libAgendaOverview.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "overview/libAgendaOverview.js"
-            },
-            {
-                "id": "lib-config",
-                "title": "libAgendaConfig.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "overview/libAgendaConfig.js"
-            },
-            {
-                "id": "lib-query",
-                "title": "libAgendaQuery.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "overview/libAgendaQuery.js"
-            },
-            {
-                "id": "overview",
-                "title": "agendaOverview.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "overview/agendaOverview.jsx"
-            },
-            {
-                "id": "collapsible",
-                "title": "Collapsible.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "overview/Collapsible.jsx"
-            },
-            {
-                "id": "profile-editor-page",
-                "title": "Agenda Editor",
+                "id": "settings-page",
+                "title": "Agenda Settings",
                 "type": "render",
                 "mime": "text/html",
                 "sourceUrl": null
             },
             {
-                "id": "profile-editor",
-                "title": "profileEditor.jsx",
+                "id": "settings-ui",
+                "title": "Settings.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "overview/profileEditor.jsx"
+                "sourceUrl": "ui/Settings.jsx"
             },
             {
-                "id": "profile-editor-css",
-                "title": "profileEditor.css",
+                "id": "settings-css",
+                "title": "settings.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "overview/profileEditor.css"
+                "sourceUrl": "ui/settings.css"
             },
             {
                 "id": "readme",
@@ -175,49 +140,21 @@
                 "sourceUrl": "../../libs/libsettings/libsettings-ui.css"
             },
             {
-                "id": "libmultisort-lib",
-                "title": "libMultisort.js",
+                "id": "agenda-settings",
+                "title": "settings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../../libs/libmultisort/libmultisort.js"
-            },
-            {
-                "id": "libnotification-lib",
-                "title": "libNotification.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../../libs/libnotification/libnotification.js"
-            },
-            {
-                "id": "libcalendar-lib",
-                "title": "libCalendar.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../../libs/libcalendar/libCalendar.js"
-            },
-            {
-                "id": "ical-lib",
-                "title": "ical.min.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../../libs/libical/ical.min.js"
-            },
-            {
-                "id": "ical-resource",
-                "title": "ical.min.js (resource)",
-                "type": "code",
-                "mime": "application/javascript",
-                "sourceUrl": "../../libs/libical/ical.min.js"
+                "sourceUrl": "lib/settings.js"
             }
         ],
         "children": [
             {
                 "parent": "root",
-                "child": "grp-common"
+                "child": "grp-lib"
             },
             {
                 "parent": "root",
-                "child": "grp-overview"
+                "child": "grp-ui"
             },
             {
                 "parent": "root",
@@ -228,50 +165,6 @@
                 "child": "config"
             },
             {
-                "parent": "grp-common",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "grp-common",
-                "child": "dimensions"
-            },
-            {
-                "parent": "grp-common",
-                "child": "migrate"
-            },
-            {
-                "parent": "grp-common",
-                "child": "common-css"
-            },
-            {
-                "parent": "grp-common",
-                "child": "schema"
-            },
-            {
-                "parent": "grp-common",
-                "child": "defaults"
-            },
-            {
-                "parent": "grp-common",
-                "child": "settings"
-            },
-            {
-                "parent": "grp-common",
-                "child": "ical"
-            },
-            {
-                "parent": "grp-overview",
-                "child": "overview"
-            },
-            {
-                "parent": "grp-overview",
-                "child": "profile-editor-page"
-            },
-            {
-                "parent": "grp-overview",
-                "child": "profile-editor-css"
-            },
-            {
                 "parent": "libsettings-ui",
                 "child": "libsettings-core"
             },
@@ -280,12 +173,76 @@
                 "child": "libsettings-style"
             },
             {
-                "parent": "libcalendar-lib",
-                "child": "ical-lib"
+                "parent": "dimensions",
+                "child": "libsettings-ui"
             },
             {
-                "parent": "ical-lib",
-                "child": "ical-resource"
+                "parent": "settings-page",
+                "child": "settings-ui"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "dimensions"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-page"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-ui"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-css"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "dimensions"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "migrate"
+            },
+            {
+                "parent": "grp-config",
+                "child": "schema"
+            },
+            {
+                "parent": "grp-config",
+                "child": "defaults"
+            },
+            {
+                "parent": "grp-config",
+                "child": "settings"
+            },
+            {
+                "parent": "grp-static",
+                "child": "ical"
+            },
+            {
+                "parent": "root",
+                "child": "grp-config"
+            },
+            {
+                "parent": "root",
+                "child": "grp-static"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "migrate"
+            },
+            {
+                "parent": "grp-lib",
+                "child": "agenda-settings"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "agenda-settings"
             },
             {
                 "parent": "agenda-settings",
@@ -298,66 +255,6 @@
             {
                 "parent": "agenda-settings",
                 "child": "migrate"
-            },
-            {
-                "parent": "dimensions",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "lib-config",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "lib-config",
-                "child": "dimensions"
-            },
-            {
-                "parent": "lib-query",
-                "child": "lib-config"
-            },
-            {
-                "parent": "lib-query",
-                "child": "libmultisort-lib"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "lib-query"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "libnotification-lib"
-            },
-            {
-                "parent": "lib-overview",
-                "child": "libcalendar-lib"
-            },
-            {
-                "parent": "overview",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "overview",
-                "child": "lib-overview"
-            },
-            {
-                "parent": "overview",
-                "child": "collapsible"
-            },
-            {
-                "parent": "profile-editor-page",
-                "child": "profile-editor"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "agenda-settings"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "dimensions"
-            },
-            {
-                "parent": "profile-editor",
-                "child": "libsettings-ui"
             }
         ],
         "relations": [
@@ -377,14 +274,9 @@
                 "to": "ical"
             },
             {
-                "from": "profile-editor-page",
+                "from": "settings-page",
                 "type": "renderNote",
-                "to": "profile-editor"
-            },
-            {
-                "from": "overview",
-                "type": "profileEditorNote",
-                "to": "profile-editor-page"
+                "to": "settings-ui"
             },
             {
                 "from": "config",
@@ -399,18 +291,8 @@
                 "value": "agendaCalendar.ical"
             },
             {
-                "note": "common-css",
+                "note": "settings-css",
                 "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "profile-editor-css",
-                "name": "appCss",
-                "value": ""
-            },
-            {
-                "note": "overview",
-                "name": "widget",
                 "value": ""
             },
             {
@@ -424,22 +306,12 @@
                 "value": ""
             },
             {
-                "note": "ical-resource",
-                "name": "customResourceProvider",
-                "value": "libIcal.js"
-            },
-            {
-                "note": "grp-common",
+                "note": "grp-lib",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
             {
-                "note": "grp-overview",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "agenda-settings",
+                "note": "grp-ui",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
@@ -450,11 +322,6 @@
             },
             {
                 "note": "migrate",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "common-css",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
@@ -479,42 +346,37 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "lib-overview",
+                "note": "settings-page",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
             {
-                "note": "lib-config",
+                "note": "settings-ui",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
             {
-                "note": "lib-query",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "overview",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "profile-editor-page",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "profile-editor",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "profile-editor-css",
+                "note": "settings-css",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
             {
                 "note": "readme",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-static",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "agenda-settings",
                 "name": "iconClass",
                 "value": "bx bx-task"
             }
