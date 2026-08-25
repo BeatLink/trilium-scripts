@@ -1,12 +1,15 @@
 /*
     The New Tab box, as a widget over the note being read rather than a page of its own.
     It stays hidden until the New Tab launcher toggles it, then covers the note's content
-    with one box that either goes straight to an address or searches it with one of the
-    configured providers. The result opens as a child of the note it was toggled over.
+    with one address bar: what is typed is offered as a page to visit or a search to run,
+    alongside the Web View notes already in the tree whose title or URL matches it.
 */
 import { defineWidget, useNoteContext, useState, useEffect, useRef, Button } from "trilium:preact"
 import { currentNote } from "trilium:api"
 import { loadSettings, resolveConfigNotes } from "libSettingsUI.jsx"
+
+// How many notes the list offers, so a common word can't fill the whole pane with them.
+const ROW_LIMIT = 6
 
 // The note a new tab is filed under: the one the box was toggled over, or the #inbox note
 // when the split holds no note at all.
@@ -16,16 +19,75 @@ async function resolveParentNoteId(settings, noteId) {
     return require("libWebPreview.js").resolveSaveParentNoteId("")
 }
 
+// The bookmarks from the settings as rows, each either a page to open or a note to go to.
+// A bookmarked note's own title is read so the row can show it, since the settings hold only
+// its id. Bookmarks pointing nowhere yet are dropped rather than offered.
+async function buildBookmarkRows(settings) {
+    const entries = Object.entries(settings?.bookmarks || {})
+
+    const rows = await Promise.all(entries.map(async ([id, bookmark]) => {
+        const key = `bookmark:${id}`
+        if (bookmark.target === "note") {
+            const note = bookmark.noteId ? await api.getNote(bookmark.noteId) : null
+            if (!note) return null
+            const title = bookmark.name || note.title
+            return { key, icon: "bx-bookmark", title, hint: title === note.title ? "Bookmark" : note.title, noteId: bookmark.noteId, match: `${title} ${note.title}` }
+        }
+
+        const url = (bookmark.url || "").trim()
+        if (!url || url === "https://") return null
+        const title = bookmark.name || url
+        return { key, icon: "bx-bookmark", title, hint: url, target: { url, title }, match: `${title} ${url}` }
+    }))
+
+    return rows.filter(Boolean)
+}
+
+// The list under the box, in the order an address bar offers things: what Enter would do
+// first, then the bookmarks and notes matching what is typed, then the other engines it could
+// be searched with. With nothing typed yet, the bookmarks and the Web View notes last used.
+function buildRows(query, settings, notes, bookmarks) {
+    const lib = require("libWebPreview.js")
+    const trimmed = query.trim()
+    const noteRow = (note) => ({ key: `note:${note.noteId}`, icon: "bx-window-alt", title: note.title, hint: note.url, noteId: note.noteId })
+
+    if (!trimmed) return [...bookmarks, ...notes.slice(0, ROW_LIMIT).map(noteRow)]
+
+    const isDefault = (id) => id === settings?.defaultProvider
+    const searches = Object.entries(settings?.searchProviders || {})
+        .sort(([a], [b]) => (isDefault(b) ? 1 : 0) - (isDefault(a) ? 1 : 0))
+        .map(([id, provider]) => ({
+            key: `search:${id}`,
+            icon: "bx-search",
+            title: trimmed,
+            hint: `Search with ${provider.name}`,
+            target: lib.buildSearchTarget(trimmed, provider.urlTemplate)
+        }))
+        .filter((row) => row.target)
+
+    // An address is what Enter takes; otherwise the default engine's search leads and the
+    // rest of the engines stay available further down.
+    const address = lib.parseAddress(trimmed)
+    const first = address
+        ? { key: "visit", icon: "bx-globe", title: address.url, hint: "Visit", target: address }
+        : searches.shift()
+
+    const needle = trimmed.toLowerCase()
+    const marked = bookmarks.filter((row) => row.match.toLowerCase().includes(needle)).slice(0, ROW_LIMIT)
+
+    return [first, ...marked, ...lib.matchWebViewNotes(notes, trimmed, ROW_LIMIT).map(noteRow), ...searches].filter(Boolean)
+}
+
 function NewTabBox({ noteId, onClose }) {
     const [settings, setSettings] = useState(null)
-    const [providerId, setProviderId] = useState("")
     const [query, setQuery] = useState("")
     const [error, setError] = useState(null)
     const [busy, setBusy] = useState(false)
-    // Web View notes already in the tree, and which of them the typed text is currently
-    // matched against. `selected` is -1 while the box is set to open something new instead.
+    // Web View notes already in the tree, and which row of the list below the box is armed:
+    // Enter runs that one, and it starts on the first, as an address bar's does.
     const [notes, setNotes] = useState([])
-    const [selected, setSelected] = useState(-1)
+    const [bookmarks, setBookmarks] = useState([])
+    const [selected, setSelected] = useState(0)
     const inputRef = useRef(null)
 
     useEffect(() => {
@@ -33,11 +95,16 @@ function NewTabBox({ noteId, onClose }) {
             // `currentNote` must be read here — inside libsettings it resolves to the library's note.
             const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
             if (!schemaNoteId || !configNoteId) return
-            const values = await loadSettings(schemaNoteId, configNoteId)
-            setSettings(values)
-            setProviderId(values.defaultProvider || Object.keys(values.searchProviders || {})[0] || "")
+            setSettings(await loadSettings(schemaNoteId, configNoteId))
         })()
     }, [])
+
+    useEffect(() => {
+        if (!settings) return
+        buildBookmarkRows(settings)
+            .then(setBookmarks)
+            .catch((err) => console.error("web-preview: could not read the bookmarks", err))
+    }, [settings])
 
     useEffect(() => { inputRef.current?.focus() }, [])
 
@@ -47,49 +114,24 @@ function NewTabBox({ noteId, onClose }) {
             .catch((err) => console.error("web-preview: could not list the existing Web View notes", err))
     }, [])
 
-    const matches = require("libWebPreview.js").matchWebViewNotes(notes, query)
+    const rows = buildRows(query, settings, notes, bookmarks)
+    // The list shrinks as the query narrows it, so an index from a longer list is pulled back in.
+    const armed = Math.min(selected, Math.max(0, rows.length - 1))
 
-    async function openExisting(targetNoteId) {
-        try {
-            await api.activateNote(targetNoteId)
-            onClose()
-        } catch (err) {
-            setError(`Could not open that note: ${err.message}`)
-            console.error("web-preview: could not open an existing Web View note", err)
-        }
-    }
-
-    // Enter opens whichever match the arrow keys are on; with none picked it falls through to
-    // the form, which opens what was typed as a new page.
-    function handleKeyDown(event) {
-        if (event.key === "Escape") return onClose()
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault()
-            const step = event.key === "ArrowDown" ? 1 : -1
-            setSelected((previous) => Math.min(matches.length - 1, Math.max(-1, previous + step)))
-        }
-    }
-
-    async function handleSubmit(event) {
-        event.preventDefault()
-        if (busy || !query.trim()) return
-
-        if (selected >= 0 && matches[selected]) return openExisting(matches[selected].noteId)
-
-        const lib = require("libWebPreview.js")
-        const providers = settings?.searchProviders || {}
-        const target = lib.buildNewTabTarget(query, providers[providerId]?.urlTemplate)
-        if (!target) {
-            setError("That isn't an address and no search provider is configured — add one in this addon's settings.")
-            return
-        }
+    async function run(row) {
+        if (!row || busy) return
 
         setBusy(true)
         setError(null)
         try {
-            const parentNoteId = await resolveParentNoteId(settings, noteId)
-            const created = await lib.createWebViewNote(parentNoteId, target.url, target.title, settings?.reuseExistingNotes)
-            await api.activateNote(created)
+            if (row.noteId) {
+                await api.activateNote(row.noteId)
+            } else {
+                const lib = require("libWebPreview.js")
+                const parentNoteId = await resolveParentNoteId(settings, noteId)
+                const created = await lib.createWebViewNote(parentNoteId, row.target.url, row.target.title, settings?.reuseExistingNotes)
+                await api.activateNote(created)
+            }
             onClose()
         } catch (err) {
             setBusy(false)
@@ -98,55 +140,59 @@ function NewTabBox({ noteId, onClose }) {
         }
     }
 
-    const providers = settings?.searchProviders || {}
+    function handleKeyDown(event) {
+        if (event.key === "Escape") return onClose()
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
+
+        // Wrapping, so holding one arrow key walks the whole list either way.
+        event.preventDefault()
+        const step = event.key === "ArrowDown" ? 1 : -1
+        setSelected((rows.length + armed + step) % Math.max(1, rows.length))
+    }
+
+    function handleSubmit(event) {
+        event.preventDefault()
+        if (rows.length === 0) {
+            setError("That isn't an address and no search provider is configured — add one in this addon's settings.")
+            return
+        }
+        run(rows[armed])
+    }
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "48px 16px" }}>
-            <div style={{ fontSize: "13px", color: "#888" }}>Type an address, or search the web</div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "48px 16px" }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", gap: "6px", width: "100%", maxWidth: "640px" }}>
-                <select
-                    title="Search provider"
-                    value={providerId}
-                    onChange={(event) => setProviderId(event.target.value)}
-                    style={{ border: "1px solid #ddd", borderRadius: "6px", padding: "8px", background: "#eee", fontSize: "13px" }}
-                >
-                    {Object.entries(providers).map(([id, provider]) => (
-                        <option key={id} value={id}>{provider.name}</option>
-                    ))}
-                </select>
                 <input
                     ref={inputRef}
                     type="text"
                     placeholder="Search or enter address"
                     value={query}
-                    onInput={(event) => { setQuery(event.target.value); setSelected(-1) }}
+                    onInput={(event) => { setQuery(event.target.value); setSelected(0) }}
                     onKeyDown={handleKeyDown}
                     style={{ flex: 1, minWidth: 0, border: "1px solid #ddd", borderRadius: "6px", padding: "8px 12px", fontSize: "14px" }}
                 />
-                <Button kind="primary" icon="bx-right-arrow-alt" text={busy ? "Opening…" : "Go"} disabled={busy} />
                 <Button icon="bx-x" text="Close" onClick={onClose} />
             </form>
-            {matches.length > 0 && (
-                <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <div style={{ fontSize: "11px", color: "#888" }}>Web View notes you already have</div>
-                    {matches.map((match, index) => (
-                        <button
-                            key={match.noteId}
-                            type="button"
-                            onClick={() => openExisting(match.noteId)}
-                            onMouseEnter={() => setSelected(index)}
-                            style={{
-                                display: "flex", gap: "8px", alignItems: "baseline", width: "100%", textAlign: "left",
-                                border: "1px solid transparent", borderRadius: "6px", padding: "6px 10px", cursor: "pointer",
-                                background: index === selected ? "#0000000f" : "transparent"
-                            }}
-                        >
-                            <span style={{ fontSize: "13px" }}>{match.title}</span>
-                            <span style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{match.url}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
+            <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                {rows.map((row, index) => (
+                    <button
+                        key={row.key}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => run(row)}
+                        onMouseEnter={() => setSelected(index)}
+                        style={{
+                            display: "flex", gap: "8px", alignItems: "baseline", width: "100%", textAlign: "left",
+                            border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer",
+                            background: index === armed ? "#0000000f" : "transparent"
+                        }}
+                    >
+                        <span className={`bx ${row.icon}`} style={{ color: "#888" }} />
+                        <span style={{ fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.hint}</span>
+                    </button>
+                ))}
+            </div>
             {error && <div style={{ color: "#a33", fontSize: "12px", maxWidth: "640px" }}>{error}</div>}
         </div>
     )

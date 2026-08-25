@@ -18,6 +18,7 @@
         }
     },
     "defaultProvider": "duckduckgo",
+    "bookmarks": {},
     "newTabParent": "current",
     "newTabParentNoteId": "",
     "showSaveButton": false,

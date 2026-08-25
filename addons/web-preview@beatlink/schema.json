@@ -20,8 +20,52 @@
     "defaultProvider": {
         "type": "reference",
         "label": "Default Search Provider",
-        "description": "The provider the New Tab box starts on. Pick another one per search from its dropdown.",
+        "description": "The provider whose row leads the New Tab list. The other providers keep a row of their own further down it, so any of them can be picked per search.",
         "registry": "searchProviders"
+    },
+    "bookmarks": {
+        "type": "registry",
+        "label": "Bookmarks",
+        "description": "Places the New Tab list offers before anything is typed, and matches what you type against. A bookmark opens either a web address, as a Web View note like any other new tab, or a note you already have.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Bookmark"
+            },
+            "target": {
+                "type": "select",
+                "label": "Opens",
+                "options": [
+                    {
+                        "value": "url",
+                        "label": "A web address"
+                    },
+                    {
+                        "value": "note",
+                        "label": "A note in the tree"
+                    }
+                ],
+                "default": "url"
+            },
+            "url": {
+                "type": "string",
+                "label": "Address",
+                "description": "The page the bookmark opens.",
+                "default": "https://",
+                "showWhen": {
+                    "target": "url"
+                }
+            },
+            "noteId": {
+                "type": "note",
+                "label": "Note",
+                "description": "The note the bookmark goes to. Any note, not just a Web View one.",
+                "showWhen": {
+                    "target": "note"
+                }
+            }
+        }
     },
     "newTabParent": {
         "type": "select",

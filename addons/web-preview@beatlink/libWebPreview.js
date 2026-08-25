@@ -37,14 +37,16 @@ async function createWebViewNote(parentNoteId, url, title, reuseExisting) {
 }
 
 // ---------------------------------------------------------------------------
-// Every Web View note in the tree, which the New Tab box matches what is typed
-// against. Read once when the box opens rather than per keystroke, since the box
-// is only interested in titles and there is no live search to keep up with.
+// Every Web View note in the tree, most recently changed first, which the New Tab
+// box matches what is typed against and offers as-is while nothing is typed. Read
+// once when the box opens rather than per keystroke, since there is no live search
+// to keep up with.
 // ---------------------------------------------------------------------------
 async function listWebViewNotes() {
     return api.runOnBackend(() => api.searchForNotes("#webViewSrc")
         .filter((note) => note.type === "webView" && !note.isDeleted)
-        .map((note) => ({ noteId: note.noteId, title: note.title, url: note.getLabelValue("webViewSrc") || "" })), []);
+        .map((note) => ({ noteId: note.noteId, title: note.title, url: note.getLabelValue("webViewSrc") || "", dateModified: note.dateModified }))
+        .sort((a, b) => String(b.dateModified || "").localeCompare(String(a.dateModified || ""))), []);
 }
 
 // The notes from listWebViewNotes() whose title or URL contains `query`, the closest
@@ -316,16 +318,15 @@ function parseLinkMessage(message) {
 }
 
 // ---------------------------------------------------------------------------
-// Turns what was typed into the New Tab box into the URL to open and a note title.
-// A full URL or a bare host goes straight there; anything else is a query for
-// `urlTemplate`, whose `%s` placeholder receives it URL-encoded. Returns null for
-// a query when no template was given, so the caller can say no provider is set up.
+// What was typed as an address to go straight to, or null when it is a search
+// term rather than one. A full URL is taken as it stands; a bare host gets a
+// scheme put on it.
 // ---------------------------------------------------------------------------
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 const LOCAL_HOST_RE = /^(?:localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?(?:[/?#]|$)/i;
 const BARE_HOST_RE = /^[^\s/?#]+\.[a-z]{2,}(?:[:/?#]|$)/i;
 
-function buildNewTabTarget(text, urlTemplate) {
+function parseAddress(text) {
     const trimmed = text.trim();
     let url = null;
     if (SCHEME_RE.test(trimmed)) url = trimmed;
@@ -333,11 +334,21 @@ function buildNewTabTarget(text, urlTemplate) {
     else if (LOCAL_HOST_RE.test(trimmed)) url = `http://${trimmed}`;
     else if (BARE_HOST_RE.test(trimmed)) url = `https://${trimmed}`;
 
-    if (url) return { url, title: hostnameOf(url) };
+    return url ? { url, title: hostnameOf(url) } : null;
+}
+
+// ---------------------------------------------------------------------------
+// What was typed as a search on `urlTemplate`, whose `%s` placeholder receives it
+// URL-encoded. Returns null when no template was given, so the caller can say no
+// provider is set up.
+// ---------------------------------------------------------------------------
+function buildSearchTarget(text, urlTemplate) {
+    const trimmed = text.trim();
     if (!urlTemplate) return null;
     return { url: urlTemplate.replace(/%s/g, encodeURIComponent(trimmed)), title: trimmed };
 }
 
+// ---------------------------------------------------------------------------
 // Hostname of a URL, falling back to the URL itself when it can't be parsed.
 function hostnameOf(url) {
     try {
@@ -417,4 +428,4 @@ function sponsorBlockApplyScript(payload) {
     return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
 }
 
-module.exports = { createWebViewNote, listWebViewNotes, matchWebViewNotes, resolveUserAgent, applyUserAgent, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
+module.exports = { createWebViewNote, listWebViewNotes, matchWebViewNotes, resolveUserAgent, applyUserAgent, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, parseAddress, buildSearchTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };

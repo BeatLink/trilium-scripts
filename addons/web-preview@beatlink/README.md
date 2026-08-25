@@ -15,15 +15,23 @@ The addon registers a **New Tab** launcher in the launchbar on every start. Pres
 navigate anywhere: it hides the content of the note you are reading and puts one box in its place,
 in that split only. Pressing it again — or **Close**, or `Esc` — puts the note back.
 
-- Type an address (`example.com`, `https://example.com/path`, `localhost:8080`) and it goes straight
-  there.
-- Type anything else and it becomes a search on the provider selected in the dropdown beside the
-  box.
-- Either way, Web View notes you already have whose **title or URL** contains what you typed are
-  listed under the box as you type, title matches first. Click one, or pick it with the arrow keys
-  and press Enter, to go to that note instead of opening anything new.
-- Either way the result opens as a new **Web View** note, so the toolbar and its link-interception
-  browsing tree work from there exactly as they do for a manually created bookmark note.
+Under the box is one list, the way an address bar's is, with the row Enter would run highlighted
+at the top and the arrow keys walking the rest:
+
+- **Visit** — what you typed read as an address (`example.com`, `https://example.com/path`,
+  `localhost:8080`), which leads the list whenever it parses as one.
+- **Bookmarks** whose name or target contains what you typed.
+- **Web View notes you already have** whose title or URL contains what you typed, so you go to the
+  note rather than opening the page a second time. Title matches come before URL ones.
+- **Search with …** — one row per configured provider. The default provider's row leads the list
+  when what you typed isn't an address; the others stay a couple of keystrokes away, so picking a
+  different engine for one search needs no setting changed.
+
+With nothing typed yet, the list offers your bookmarks, then the Web View notes you changed
+most recently.
+
+Whatever it opens becomes a new **Web View** note, so the toolbar and its link-interception
+browsing tree work from there exactly as they do for a manually created bookmark note.
 
 The note is filed as a **child of the note the box was opened over**, so a new tab continues the
 tree you were already browsing, from anywhere in Trilium. A split with no note open in it has
@@ -59,8 +67,12 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   YouTube ship by default; add your own with a URL template where `%s` marks the query, e.g.
   `https://searx.example/search?q=%s`. Removing a shipped provider sticks — updates won't bring it
   back.
-- **Default Search Provider** — which one the box starts on. The dropdown still lets you pick
-  another per search.
+- **Bookmarks** — the places the list offers before anything is typed. Each one opens either a web
+  address, which becomes a Web View note like any other new tab, or a note you already have — of
+  any type, not just a Web View one. A bookmark with nothing filled in yet is left out of the list.
+- **Default Search Provider** — whose **Search with …** row leads the list when what you typed
+  isn't an address. Every other provider keeps a row further down, so any of them can be picked for
+  a single search.
 - **New Tab Location** / **Specific Note** — where a new tab's Web View note is created: under
   the note the box was opened over (the default, falling back to `#inbox`), or under one note you
   name.
