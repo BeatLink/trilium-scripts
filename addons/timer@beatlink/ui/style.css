@@ -1,3 +1,11 @@
+/* The duration dropdowns open upward out of the panel, so the right-pane card
+   around them must not clip or contain them. */
+#right-pane .body-wrapper:has(.timerControls),
+#right-pane .card-body:has(.timerControls) {
+    contain: none !important;
+    overflow: visible !important;
+}
+
 body .timerControls {
     display: flex;
     flex-direction: row;
