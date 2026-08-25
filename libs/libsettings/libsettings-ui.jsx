@@ -122,6 +122,15 @@ export async function saveSettings(schemaNoteId, configNoteId, values) {
     await persistValues(sources, schema, configNoteId, values)
 }
 
+// The three date-ish field types and the native input each maps to; their
+// stored values are whatever that input produces, so "YYYY-MM-DD", "HH:mm" and
+// "YYYY-MM-DDTHH:mm" respectively.
+const DATE_INPUT_TYPES = {
+    date: "date",
+    time: "time",
+    datetime: "datetime-local"
+}
+
 // The sixteen swatches the picker has always offered, as hex because Trilium's
 // ColorPicker compares a preset against the normalized (hex) form of the value.
 const COLOR_PRESETS = [
@@ -166,6 +175,10 @@ function Field({ def, value, onChange, registries, itemKey, onRegistriesChange }
                     onChange={e => onChange(Number(e))}
                 />
             )
+        case "date":
+        case "time":
+        case "datetime":
+            return <FormTextBox type={DATE_INPUT_TYPES[def.type]} currentValue={value} onChange={onChange} />
         case "list":
             return (
                 <ListItems

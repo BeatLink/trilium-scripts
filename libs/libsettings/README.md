@@ -61,7 +61,7 @@ values live beside it in `defaults.json`, keyed the same way:
 
 | Field         | Required | Description                                              |
 |---------------|----------|------------------------------------------------------------|
-| `type`        | yes      | `string`, `number`, `boolean`, `select`, `note`, `color`, `list`, `registry`, or `reference` |
+| `type`        | yes      | `string`, `number`, `boolean`, `date`, `time`, `datetime`, `select`, `note`, `color`, `list`, `registry`, or `reference` |
 | `label`       | yes      | Field heading shown in the generated form                  |
 | `description` | no       | Help text shown under the heading                           |
 | `default`     | `itemSchema` fields only | Seeds this field on an item created at runtime, and fills it on an item that predates the field. Top-level fields have none — their value belongs in `defaults.json`, and a field no source holds falls back to its type's empty value (`""`, `0`, `false`, `[]`, `{}`) |
@@ -458,11 +458,16 @@ Frontend only — backend scripts should keep using the `libSettings.js` require
 ### `<SettingsForm schemaNoteId configNoteId />`
 
 Fully self-contained: resolves the config note's whole [source chain](#sources) itself, renders one
-field per merged-schema entry (`string`/`number` → text box, `boolean` → checkbox, `select` → dropdown, `note` → note
+field per merged-schema entry (`string`/`number` → text box, `boolean` → checkbox, `date`/`time`/`datetime` →
+native date picker, `select` → dropdown, `note` → note
 picker, `color` → swatch picker, `reference` → dropdown of another registry's entries, `list` →
 repeatable stack of forms of the above, `registry` → id-keyed stack of forms of the above), and owns
 its own Save button and save-status flash. Place it anywhere in your own widget — it doesn't dictate
 page layout, only the fields.
+
+`date`, `time` and `datetime` render the browser's native picker and store exactly what it produces
+— `"YYYY-MM-DD"`, `"HH:mm"` and `"YYYY-MM-DDTHH:mm"`. A field that already holds strings in one of
+those shapes can switch to the matching type with no migration.
 
 `color` fields are rendered by Trilium's built-in `ColorPicker` (`trilium:preact`, 0.105+), so they
 carry no dependency of their own. Picks are stored as lowercase hex; values stored as CSS colour
