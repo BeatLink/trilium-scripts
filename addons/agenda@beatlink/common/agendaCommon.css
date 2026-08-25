@@ -82,21 +82,22 @@
                 width: 100% !important;
             }
         }
-        @container ( inline-size < 15rem ) {
+        @container ( inline-size < 10rem ) {
             > div {
                 flex-direction: column;
             }
         }
     }
     .weekdays-picker {
-        container-type: inline-size;
         > div {
             display: flex;
             flex-direction: row;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             width: 100%;
-            justify-content: space-between;
             gap: 0.25rem !important;
+            .togglebutton {
+                flex: 1 1 1.5rem;
+            }
             .togglebutton, .togglebutton > * {
                 min-width: 1.5rem !important;
                 min-height: 1.5rem !important;
@@ -106,34 +107,17 @@
                 line-height: 2rem !important;
             }
         }
-        @container ( inline-size < 15rem ) {
-            > div {
-                flex-direction: column;
-                .togglebutton, .togglebutton > * {
-                    width: 100% !important;
-                }
-            }
-        }
     }
     .month-picker {
-        container-type: inline-size;
         > div {
             display: flex;
             flex-direction: row;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             width: 100%;
-            justify-content: space-between;
             gap: 0.25rem !important;
             > * {
+                flex: 1 1 5.5rem;
                 width: 100% !important;
-            }
-        }
-        @container ( inline-size < 12rem ) {
-            > div {
-                flex-direction: column;
-                .togglebutton, .togglebutton > * {
-                    width: 100% !important;
-                }
             }
         }
     }
@@ -160,26 +144,16 @@
         }
     }
     .stop-picker {
-        container-type: inline-size;
         > div {
             display: flex;
             flex-direction: row;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             width: 100%;
-            justify-content: space-between;
             gap: 0.25rem !important;
             > * {
+                flex: 1 1 7rem;
                 width: 1rem !important;
-                flex: 1 1 auto !important;
                 max-width: 100% !important;
-            }
-        }
-        @container ( inline-size < 15rem ) {
-            > div {
-                flex-direction: column;
-                > * {
-                    width: 100% !important;
-                }
             }
         }
     }
@@ -198,9 +172,9 @@
 .recurrence-popover {
     position: fixed;
     position-anchor: --x-recurrence-anchor;
-    position-area: bottom span-left;
+    position-area: bottom;
     position-try-fallbacks: flip-block;
-    width: 20rem !important;
+    width: 14rem !important;
     max-width: 90vw !important;
     max-height: 80vh;
     overflow-y: auto;
