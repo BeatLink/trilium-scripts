@@ -24,6 +24,8 @@
     "saveParentNoteId": "",
     "syncNoteTitle": true,
     "reuseExistingNotes": true,
+    "userAgentMode": "default",
+    "userAgent": "",
     "sponsorBlockEnabled": true,
     "sponsorBlockNotify": true,
     "skipSponsor": true,

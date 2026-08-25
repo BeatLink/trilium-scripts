@@ -37,6 +37,82 @@ async function createWebViewNote(parentNoteId, url, title, reuseExisting) {
 }
 
 // ---------------------------------------------------------------------------
+// Every Web View note in the tree, which the New Tab box matches what is typed
+// against. Read once when the box opens rather than per keystroke, since the box
+// is only interested in titles and there is no live search to keep up with.
+// ---------------------------------------------------------------------------
+async function listWebViewNotes() {
+    return api.runOnBackend(() => api.searchForNotes("#webViewSrc")
+        .filter((note) => note.type === "webView" && !note.isDeleted)
+        .map((note) => ({ noteId: note.noteId, title: note.title, url: note.getLabelValue("webViewSrc") || "" })), []);
+}
+
+// The notes from listWebViewNotes() whose title or URL contains `query`, the closest
+// match first.
+function matchWebViewNotes(notes, query, limit = 6) {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+
+    return notes
+        .map((note) => ({ note, rank: matchRank(note, needle) }))
+        .filter((scored) => scored.rank < Infinity)
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, limit)
+        .map((scored) => scored.note);
+}
+
+// How early `needle` appears in a note's title, else in its URL, else Infinity for no
+// match at all. A title match always outranks a URL one, however late it comes.
+function matchRank(note, needle) {
+    const inTitle = note.title.toLowerCase().indexOf(needle);
+    if (inTitle >= 0) return inTitle;
+
+    const inUrl = note.url.toLowerCase().indexOf(needle);
+    return inUrl >= 0 ? 1000 + inUrl : Infinity;
+}
+
+// ---------------------------------------------------------------------------
+// User agent. Some sites - WhatsApp Web among them - read the Trilium and
+// Electron tokens in Trilium's own user agent as an unsupported browser, so the
+// <webview> can be told to report something else.
+// ---------------------------------------------------------------------------
+
+// Tokens a plain Chrome user agent is made of. Anything else carrying a version -
+// Trilium/0.9x, Electron/3x - is what gives the embedder away, so it is dropped.
+const CHROME_TOKENS = ["Mozilla", "AppleWebKit", "Chrome", "Safari"];
+
+function chromeUserAgent() {
+    return navigator.userAgent
+        .split(" ")
+        .filter((token) => !token.includes("/") || CHROME_TOKENS.includes(token.split("/")[0]))
+        .join(" ");
+}
+
+// The user agent the settings ask for, or "" to leave Trilium's own alone.
+function resolveUserAgent(settings) {
+    if (settings?.userAgentMode === "chrome") return chromeUserAgent();
+    if (settings?.userAgentMode === "custom") return (settings.userAgent || "").trim();
+    return "";
+}
+
+const userAgentReloaded = new WeakSet();
+
+// ---------------------------------------------------------------------------
+// Points the <webview> at `userAgent`. setUserAgent() only reaches the guest from
+// its next load onwards, so the page already on screen is reloaded once per
+// element; every later page in it already reports the override.
+// ---------------------------------------------------------------------------
+async function applyUserAgent(webview, userAgent) {
+    const actual = await webview.executeJavaScript("navigator.userAgent");
+    if (actual === userAgent) return;
+
+    webview.setUserAgent(userAgent);
+    if (userAgentReloaded.has(webview)) return;
+    userAgentReloaded.add(webview);
+    webview.reload();
+}
+
+// ---------------------------------------------------------------------------
 // Every set of two or more Web View notes pointing at the same URL, so the
 // settings page can offer to fold each set into one note. Oldest first within a
 // group, since that is the one worth keeping by default.
@@ -341,4 +417,4 @@ function sponsorBlockApplyScript(payload) {
     return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
 }
 
-module.exports = { createWebViewNote, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
+module.exports = { createWebViewNote, listWebViewNotes, matchWebViewNotes, resolveUserAgent, applyUserAgent, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, buildNewTabTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };

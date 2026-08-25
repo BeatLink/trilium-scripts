@@ -26,11 +26,11 @@
     "newTabParent": {
         "type": "select",
         "label": "New Tab Location",
-        "description": "Where a New Tab files the Web View note it creates.",
+        "description": "Where a New Tab files the Web View note it creates. With no note open in the split, it falls back to the note labelled #inbox.",
         "options": [
             {
                 "value": "current",
-                "label": "Under the note the button was pressed from"
+                "label": "Under the note the box was opened over"
             },
             {
                 "value": "specific",
@@ -62,6 +62,30 @@
         "type": "boolean",
         "label": "Reuse Existing Notes",
         "description": "Before making a Web View note, looks for one anywhere in the tree already pointing at the same URL and clones that one instead, so the same page is a single note in several places."
+    },
+    "userAgentMode": {
+        "type": "select",
+        "label": "User Agent",
+        "description": "What a page loaded in a Web View note is told the browser is. Some sites - WhatsApp Web among them - turn away Trilium's own user agent because of the Trilium and Electron tokens it carries.",
+        "options": [
+            {
+                "value": "default",
+                "label": "Trilium's own user agent"
+            },
+            {
+                "value": "chrome",
+                "label": "Trilium's user agent with its Trilium and Electron tokens stripped"
+            },
+            {
+                "value": "custom",
+                "label": "A user agent you set yourself"
+            }
+        ]
+    },
+    "userAgent": {
+        "type": "string",
+        "label": "Custom User Agent",
+        "description": "Used when User Agent is set to \"A user agent you set yourself\"."
     },
     "sponsorBlockEnabled": {
         "type": "boolean",

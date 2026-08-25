@@ -104,6 +104,22 @@ function WebViewToolbar({ noteId }) {
         }
     }, [noteId])
 
+    // User agent. Applied per navigation and again once settings arrive, since the first
+    // dom-ready usually beats them.
+    useEffect(() => {
+        if (!state.found) return
+
+        const lib = require("libWebPreview.js")
+        const userAgent = lib.resolveUserAgent(settings)
+        if (!userAgent) return
+
+        const wv = getWebviewEl()
+        if (!wv) return
+
+        lib.applyUserAgent(wv, userAgent).catch((err) =>
+            console.error("web-preview: could not set the user agent", err))
+    }, [state.found, state.nav, settings])
+
     // SponsorBlock. Re-runs on every navigation and reload: injecting the skipper is
     // idempotent, but a reload gives the guest a new document that has lost it, and a
     // single-page navigation to another video needs the new video's segments pushed in.

@@ -3,28 +3,32 @@
 Browsing toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
 separate popup window, this adds a small toolbar (Back / Forward / Save / Open in Browser /
 Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
-element Trilium already renders for that note type. A **New Tab** button in the launchbar starts
-a browsing session from an address or a web search.
+element Trilium already renders for that note type. A **New Tab** button in the launchbar puts a
+search box over whatever note you are on, so a browsing session starts from anywhere.
 
 YouTube videos watched in a Web View note have their sponsor segments skipped, using
 [SponsorBlock](https://sponsor.ajay.app)'s crowd-sourced segment database.
 
 ## New Tab
 
-The addon registers a **New Tab** launcher in the launchbar on every start. Pressing it opens the
-addon's New Tab page, which is one box:
+The addon registers a **New Tab** launcher in the launchbar on every start. Pressing it doesn't
+navigate anywhere: it hides the content of the note you are reading and puts one box in its place,
+in that split only. Pressing it again — or **Close**, or `Esc` — puts the note back.
 
 - Type an address (`example.com`, `https://example.com/path`, `localhost:8080`) and it goes straight
   there.
 - Type anything else and it becomes a search on the provider selected in the dropdown beside the
   box.
+- Either way, Web View notes you already have whose **title or URL** contains what you typed are
+  listed under the box as you type, title matches first. Click one, or pick it with the arrow keys
+  and press Enter, to go to that note instead of opening anything new.
 - Either way the result opens as a new **Web View** note, so the toolbar and its link-interception
   browsing tree work from there exactly as they do for a manually created bookmark note.
 
-Where that note is filed is a setting, defaulting to **the note you were on when you pressed the
-button** — so a new tab continues the tree you were already browsing. Set it to a specific note
-instead to collect every new tab in one place. Opening the New Tab page from the tree rather than
-from the launchbar leaves no note to file under, so those land at the tree root.
+The note is filed as a **child of the note the box was opened over**, so a new tab continues the
+tree you were already browsing, from anywhere in Trilium. A split with no note open in it has
+nothing to file under, so those go to the note labelled `#inbox`. Setting **New Tab Location** to a
+specific note instead collects every new tab in one place.
 
 ## SponsorBlock
 
@@ -57,7 +61,9 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   back.
 - **Default Search Provider** — which one the box starts on. The dropdown still lets you pick
   another per search.
-- **New Tab Location** / **Specific Note** — where a new tab's Web View note is created.
+- **New Tab Location** / **Specific Note** — where a new tab's Web View note is created: under
+  the note the box was opened over (the default, falling back to `#inbox`), or under one note you
+  name.
 - **Save Button** — off by default; turning it on adds the Save button to the toolbar.
 - **Save Location** — the note Save files pages under. Left empty it uses whichever note carries an
   `#inbox` label, and Save reports an error if there is none.
@@ -66,6 +72,11 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Reuse Existing Notes** — on by default; before making a Web View note, looks for one anywhere
   in the tree already pointing at the same URL and clones that one into the new place instead, so a
   page you've already got is a single note rather than a fresh copy.
+- **User Agent** / **Custom User Agent** — what a page loaded in a Web View note is told the
+  browser is. Trilium's own is sent by default. Some sites — WhatsApp Web among them — read the
+  Trilium and Electron tokens it carries as an unsupported browser; the stripped option sends the
+  plain Chrome string of the Chromium build Trilium already runs on, with no version numbers
+  invented.
 - **Skip Sponsor Segments** — on by default; the SponsorBlock skipping described above. Off, no
   request is ever made to SponsorBlock.
 - **Show A Notice On Skip** — on by default; the brief notice shown in the page's corner on a skip.
@@ -78,6 +89,14 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - The widget finds that page's `<webview>` DOM element and calls its built-in `goBack()` /
   `goForward()` / `getURL()` / `getTitle()` methods directly — no IPC needed for navigation, since
   those methods are exposed on the element itself.
+- **New Tab** is a `note-detail-pane` widget, so one copy of it is mounted in every split and it is
+  the launcher's only job to announce itself on the window. Only the widget whose note context is
+  the active one opens, and it hides the split's `.scrolling-container` for as long as it is up —
+  Trilium gives a note-detail-pane widget no layer of its own to draw over the note with.
+- **Matching existing notes** is done in the box: every Web View note in the tree is read once
+  when the box opens, and their titles and URLs are filtered as you type, so no search runs per
+  keystroke. A
+  note created while the box is up won't be among them until it is next opened.
 - **Open in Browser** uses the renderer's `window.electronApi.shell` bridge.
 - **SponsorBlock** runs in two halves. Trilium's frontend does the lookup, because the `<webview>`
   has no preload script and the page itself is not asked to talk to SponsorBlock. The segments are
@@ -93,6 +112,12 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   you set yourself is left alone: the addon remembers the title it last applied in a
   `#webViewAutoTitle` label, and stops renaming the note once its title no longer matches. Renaming
   the note back to that label's value (or deleting the label) hands it back to automatic naming.
+- **User agent** overriding sets it on the `<webview>` once its page is up. Electron's
+  `setUserAgent()` only reaches the guest from its next load onwards, so the page on screen is
+  reloaded once per Web View — the site's unsupported-browser page can flash before the reload
+  lands. Client hints (`navigator.userAgentData`, the `Sec-CH-UA` headers) still describe Trilium's
+  Chromium, which is accurate — same major version — but a site cross-checking the two would notice
+  the missing Electron token.
 - **Save** files the page you are currently reading as a Web View note under the Save Location,
   taking the page's own title. It is the way to keep a page you found while browsing, since the
   child notes link interception creates live inside the browsing tree and get pruned with it.
@@ -144,3 +169,6 @@ Block / Unblock button.
 - The New Tab launcher is re-registered on every start, so moving it to *Available Launchers* is
   undone the next time Trilium loads. Disable the addon in TAM to be rid of the button. Uninstalling
   leaves the button behind as a dead entry — delete it from the launchbar yourself.
+- The New Tab box hides the note's content by styling it, so a note whose editor is mid-save is
+  merely out of sight rather than closed. Anything the note itself renders outside that container —
+  the title row, the ribbon — stays visible behind the box.

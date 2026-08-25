@@ -5,20 +5,8 @@
 // Must not be a child of a #run=frontendStartup note: children are bundled with it and run at startup.
 
 // ---------------------------------------------------------------------------
-// Records the note the button was pressed from before navigating away from it,
-// since that is where the New Tab page files the Web View note it creates.
+// Toggles the New Tab box over the note being read. The box is a widget in every
+// split, so the button only has to announce itself — the active split's widget
+// takes it from there, and knows on its own which note to file a new tab under.
 // ---------------------------------------------------------------------------
-async function openNewTab() {
-    const pageNoteId = await api.currentNote.getRelationValue("newTabPageNote");
-    if (!pageNoteId) return;
-
-    const active = api.getActiveContextNote();
-    if (active && active.noteId !== pageNoteId) {
-        window.webPreviewNewTab = { fromNoteId: active.noteId };
-    }
-
-    await api.activateNote(pageNoteId);
-    window.dispatchEvent(new CustomEvent("web-preview:new-tab"));
-}
-
-openNewTab();
+window.dispatchEvent(new CustomEvent("web-preview:new-tab"));
