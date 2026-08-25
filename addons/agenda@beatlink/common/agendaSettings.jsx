@@ -38,14 +38,10 @@ export async function getAgendaSettings() {
         activeProfileId: settings.activeProfileId || ""
     }
 
-    const collect = {
-        inboxNoteId: settings.inboxNoteId || ""
-    }
-
     // The classification axes (area/type/priority and any the user adds). Handed
     // out here so callers that already load settings don't round-trip a second
     // time; dimensions.js owns the shape.
     const dimensions = normalizeDimensions(settings)
 
-    return { constants, profileContext, collect, dimensions, schemaNoteId, configNoteId, icalNoteId }
+    return { constants, profileContext, dimensions, schemaNoteId, configNoteId, icalNoteId }
 }

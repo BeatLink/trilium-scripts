@@ -66,7 +66,7 @@ chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-or
 
 ## Shared configuration
 
-The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set (the inbox note, the
+The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set (the
 **dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
 those profiles reference). That note is tagged **`#agendaConfig`**; every widget in this addon finds it
 at runtime via `agendaSettings.jsx`, so a change made in the Agenda Editor is seen by all of them at
@@ -81,13 +81,11 @@ declares its own copy of that vocabulary in its own `#agendaTaskConfig` note, an
 renaming it in each installed addon that reads it; in exchange none of them reads another's config note
 or ships another's code.
 
-The Agenda Editor groups its tabs under five workflow categories — **Collect**, **Review**,
+The Agenda Editor groups its tabs under four workflow categories — **Review**,
 **Display Elements**, **Dimensions**, **Settings** — using
 [`libsettings@beatlink`](../libsettings@beatlink/README.md)'s category level (`_categories` +
 per-field `category`):
 
-- **Collect** — the Inbox Note captures land in (preselected to Trilium's `#inbox` note; shared via
-  `#agendaConfig` so collection addons can file into the same place).
 - **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
   shows).
 - **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a

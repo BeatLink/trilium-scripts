@@ -2,7 +2,6 @@
     "startDatetimeLabel": "startDateTime",
     "dueDatetimeLabel": "dueDateTime",
     "recurrenceLabel": "recurrence",
-    "inboxNoteId": "",
     "overviewNoteId": "",
     "activeProfileId": "default",
     "sectionState": {},

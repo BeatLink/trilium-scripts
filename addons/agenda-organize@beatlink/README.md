@@ -43,10 +43,7 @@ tree for no benefit.
 An opinionated system that guides a **Collect → Organize → Review → Execute** workflow.
 
 - **Collect** — process your inboxes (email, bookmarks, files, notes, photos, browser tabs, …) into
-  the Inbox note. Capture the raw item here; attributes are set later, in Organize. The **Inbox Note**
-  is a setting (Agenda Editor → **Collect › Inbox**, `inboxNoteId` in the shared config), preselected
-  to Trilium's own inbox (a `#inbox`-tagged note) on first open and exposed via `getAgendaSettings()`
-  so collection addons can file into the same place.
+  the Inbox note. Capture the raw item here; attributes are set later, in Organize.
 - **Organize** — set each item's dimension values (**`#area`**, **`#priority`**, or any you add), its
   **`~template`** (item type, via template-picker's own widget or the Missing Templates page), and
   **start date**, and fix misfiled notes. This is the fully-built page (`organizePage.jsx`).

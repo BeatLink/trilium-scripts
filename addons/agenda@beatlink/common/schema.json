@@ -1,10 +1,7 @@
 {
     "_categories": [
-        "Collect",
-        "Organize",
         "Review",
         "Display Elements",
-        "Execute",
         "Dimensions",
         "Settings"
     ],
@@ -28,13 +25,6 @@
         "description": "The note label holding a task's recurrence rule. Read for the iCal feed and for grouping/filtering by recurrence frequency.",
         "category": "Settings",
         "tab": "Settings"
-    },
-    "inboxNoteId": {
-        "type": "note",
-        "label": "Inbox Note",
-        "description": "The note new captures land in. Defaults to Trilium's own inbox (a note tagged #inbox). Shared via #agendaConfig so collection addons can file into the same place.",
-        "category": "Collect",
-        "tab": "Inbox"
     },
     "overviewNoteId": {
         "type": "note",
