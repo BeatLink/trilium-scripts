@@ -9,9 +9,10 @@
 body .timerControls {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center !important;
     padding: 0.5rem;
+    min-width: 0;
     overflow: visible !important;
 
     button.icon-action:before {
@@ -23,6 +24,8 @@ body .timerControls {
         flex: 1 1 auto;
         flex-direction: column;
         align-items: center;
+        min-width: 0;
+        max-width: 100%;
         overflow: visible !important;
         gap: 0.25rem;
     }
@@ -36,6 +39,7 @@ body .timerControls {
         font-weight: bold;
         text-align: center;
         width: 100%;
+        min-width: 0;
         padding: 0.125rem 0.25rem;
 
         &:hover,
@@ -45,14 +49,16 @@ body .timerControls {
         }
     }
 
+    /* Wraps rather than overflowing once the right pane gets too narrow for one row. */
     .timer {
         display: flex;
         flex: 0 0 auto;
         flex-direction: row;
+        flex-wrap: wrap;
         justify-content: center;
         align-items: center !important;
         overflow: visible !important;
-        width: fit-content;
+        max-width: 100%;
         margin: 0 auto;
         gap: 0.5rem;
 
@@ -60,6 +66,7 @@ body .timerControls {
             background-color: var(--card-background-color);
             border-radius: 8px;
             padding: 0.5rem;
+            white-space: nowrap;
 
             &.running {
                 color: white;
@@ -68,7 +75,7 @@ body .timerControls {
 
         > * {
             width: fit-content !important;
-            max-width: fit-content !important;
+            max-width: 100% !important;
         }
 
         .dropdown ul {
