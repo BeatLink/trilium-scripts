@@ -1,0 +1,9 @@
+/* The right-pane card is unclipped so the dropdowns and the recurrence popover
+   can escape it, which also leaves the Task pane free to grow past the viewport.
+   Scrolling the widget itself keeps it inside the pane; the dropdowns and the
+   popover are positioned fixed, so they still escape this scroll container. */
+#right-pane .agenda-widget.agenda-task-widget {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+}

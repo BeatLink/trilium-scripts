@@ -170,7 +170,7 @@ function MainWidget(){
 
     return (
         <RightPanelWidget title="Task">
-            <div className="agenda-widget">
+            <div className="agenda-widget agenda-task-widget">
                 <details open>
                     <summary>Dates and Duration</summary>
                     <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>

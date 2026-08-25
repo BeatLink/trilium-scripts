@@ -7,7 +7,8 @@ addons no longer share any code or settings.
 
 Dates and Duration and Actions are collapsible disclosures, open by default. Recurrence is a single
 button reading the current rule back in plain English ("Every 2 weeks on Monday", or "Does not
-repeat"); clicking it opens the recurrence picker in a popover.
+repeat"); clicking it opens the recurrence picker in a popover. The pane scrolls vertically when
+its sections outgrow the window.
 
 ## How it works
 

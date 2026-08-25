@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.4.0",
+    "latestVersion": "3.4.1",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",
@@ -18,6 +18,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "agendaTask.jsx"
+            },
+            {
+                "id": "task-css",
+                "title": "task.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "task.css"
             },
             {
                 "id": "recurrence-picker",
@@ -144,6 +151,10 @@
             {
                 "parent": "root",
                 "child": "task"
+            },
+            {
+                "parent": "root",
+                "child": "task-css"
             },
             {
                 "parent": "root",
@@ -285,7 +296,17 @@
                 "value": ""
             },
             {
+                "note": "task-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
                 "note": "task",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "task-css",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
