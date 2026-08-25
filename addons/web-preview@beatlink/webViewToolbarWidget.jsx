@@ -58,7 +58,16 @@ function WebViewToolbar({ noteId }) {
             }
             clearInterval(poll)
             wv = found
-            onRefresh = () => setState((prev) => ({ found: true, canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL(), nav: prev.nav + 1 }))
+            // canGoBack() and the rest throw until the guest has attached and its first
+            // dom-ready has fired, which the pass below this one is deliberately ahead of. The
+            // toolbar still shows itself, with its buttons idle until the event arrives.
+            onRefresh = () => {
+                let page = { canGoBack: false, canGoForward: false, url: "" }
+                try {
+                    page = { canGoBack: wv.canGoBack(), canGoForward: wv.canGoForward(), url: wv.getURL() }
+                } catch {}
+                setState((prev) => ({ found: true, ...page, nav: prev.nav + 1 }))
+            }
             // Injection only works once the guest document exists, so the first pass
             // (before dom-ready has fired) is expected to fail and is left to the event.
             onDomReady = () => {
@@ -103,22 +112,6 @@ function WebViewToolbar({ noteId }) {
             setState({ found: false, canGoBack: false, canGoForward: false, url: "", nav: 0 })
         }
     }, [noteId])
-
-    // User agent. Applied per navigation and again once settings arrive, since the first
-    // dom-ready usually beats them.
-    useEffect(() => {
-        if (!state.found) return
-
-        const lib = require("libWebPreview.js")
-        const userAgent = lib.resolveUserAgent(settings)
-        if (!userAgent) return
-
-        const wv = getWebviewEl()
-        if (!wv) return
-
-        lib.applyUserAgent(wv, userAgent).catch((err) =>
-            console.error("web-preview: could not set the user agent", err))
-    }, [state.found, state.nav, settings])
 
     // SponsorBlock. Re-runs on every navigation and reload: injecting the skipper is
     // idempotent, but a reload gives the guest a new document that has lost it, and a

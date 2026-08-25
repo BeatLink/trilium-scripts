@@ -67,6 +67,22 @@
             }
         }
     },
+    "bookmarkLayout": {
+        "type": "select",
+        "label": "Bookmark Layout",
+        "description": "How the bookmarks are laid out in the New Tab box while nothing has been typed.",
+        "options": [
+            {
+                "value": "grid",
+                "label": "A grid of tiles"
+            },
+            {
+                "value": "list",
+                "label": "A list of rows"
+            }
+        ],
+        "tab": "Bookmarks"
+    },
     "newTabParent": {
         "type": "select",
         "label": "New Tab Location",
@@ -110,7 +126,7 @@
     "userAgentMode": {
         "type": "select",
         "label": "User Agent",
-        "description": "What a page loaded in a Web View note is told the browser is. Some sites - WhatsApp Web among them - turn away Trilium's own user agent because of the Trilium and Electron tokens it carries.",
+        "description": "What a page loaded in a Web View note is told the browser is. Some sites - WhatsApp Web among them - turn away Trilium's own user agent because of the Trilium and Electron tokens it carries. Reload Trilium after changing this.",
         "options": [
             {
                 "value": "default",

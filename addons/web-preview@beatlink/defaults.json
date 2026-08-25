@@ -19,6 +19,7 @@
     },
     "defaultProvider": "duckduckgo",
     "bookmarks": {},
+    "bookmarkLayout": "grid",
     "newTabParent": "current",
     "newTabParentNoteId": "",
     "showSaveButton": false,

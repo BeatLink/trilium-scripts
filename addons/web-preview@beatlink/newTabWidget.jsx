@@ -45,14 +45,15 @@ async function buildBookmarkRows(settings) {
 
 // The list under the box, grouped under a header apiece and ordered so that Enter's default
 // lands on the first row: what was typed as an address, then the bookmarks and Web View notes
-// matching it, then the engines it could be searched with. Nothing typed yet lists the
-// bookmarks and the notes last changed. Every group stays contiguous, so no header repeats.
+// matching it, then the engines it could be searched with. Nothing typed yet is nothing to
+// look anything up by, so only the bookmarks are offered. Every group stays contiguous, so no
+// header repeats.
 function buildRows(query, settings, notes, bookmarks) {
     const lib = require("libWebPreview.js")
     const trimmed = query.trim()
     const noteRow = (note) => ({ key: `note:${note.noteId}`, group: "Notes", icon: "bx-window-alt", title: note.title, hint: note.url, noteId: note.noteId })
 
-    if (!trimmed) return [...bookmarks, ...notes.slice(0, ROW_LIMIT).map(noteRow)]
+    if (!trimmed) return bookmarks
 
     const isDefault = (id) => id === settings?.defaultProvider
     const searches = Object.entries(settings?.searchProviders || {})
@@ -117,8 +118,11 @@ function NewTabBox({ noteId, onClose }) {
     }, [])
 
     const rows = buildRows(query, settings, notes, bookmarks)
-    // The list shrinks as the query narrows it, so an index from a longer list is pulled back in.
-    const armed = Math.min(selected, Math.max(0, rows.length - 1))
+    // Typing arms the first row, since it is what Enter would do. With nothing typed there is no
+    // such default, so nothing is armed until an arrow key picks a bookmark. Either way the list
+    // shrinks as the query narrows it, pulling an index from a longer list back in.
+    const armed = Math.min(Math.max(selected, query.trim() ? 0 : -1), rows.length - 1)
+    const asGrid = !query.trim() && settings?.bookmarkLayout !== "list"
 
     async function run(row) {
         if (!row || busy) return
@@ -146,10 +150,12 @@ function NewTabBox({ noteId, onClose }) {
         if (event.key === "Escape") return onClose()
         if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
 
-        // Wrapping, so holding one arrow key walks the whole list either way.
+        // Wrapping, so holding one arrow key walks the whole list either way. In the grid the
+        // rows are laid out across as well as down, but an arrow key still steps one at a time.
         event.preventDefault()
+        if (rows.length === 0) return
         const step = event.key === "ArrowDown" ? 1 : -1
-        setSelected((rows.length + armed + step) % Math.max(1, rows.length))
+        setSelected(armed < 0 ? (step === 1 ? 0 : rows.length - 1) : (rows.length + armed + step) % rows.length)
     }
 
     function handleSubmit(event) {
@@ -158,6 +164,7 @@ function NewTabBox({ noteId, onClose }) {
             setError("That isn't an address and no search provider is configured — add one in this addon's settings.")
             return
         }
+        if (armed < 0) return
         run(rows[armed])
     }
 
@@ -175,30 +182,54 @@ function NewTabBox({ noteId, onClose }) {
                 />
                 <Button icon="bx-x" text="Close" onClick={onClose} />
             </form>
-            <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexDirection: "column", gap: "2px" }}>
-                {rows.map((row, index) => (
-                    <Fragment key={row.key}>
-                    {row.group !== rows[index - 1]?.group && (
-                        <div style={{ fontSize: "11px", color: "#888", padding: index === 0 ? "0 10px 2px" : "8px 10px 2px" }}>{row.group}</div>
-                    )}
-                    <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => run(row)}
-                        onMouseEnter={() => setSelected(index)}
-                        style={{
-                            display: "flex", gap: "8px", alignItems: "baseline", width: "100%", textAlign: "left",
-                            border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer",
-                            background: index === armed ? "#0000000f" : "transparent"
-                        }}
-                    >
-                        <span className={`bx ${row.icon}`} style={{ color: "#888" }} />
-                        <span style={{ fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.hint}</span>
-                    </button>
-                    </Fragment>
-                ))}
-            </div>
+            {asGrid ? (
+                <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+                    {rows.map((row, index) => (
+                        <button
+                            key={row.key}
+                            type="button"
+                            title={row.hint}
+                            disabled={busy}
+                            onClick={() => run(row)}
+                            onMouseEnter={() => setSelected(index)}
+                            style={{
+                                display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+                                width: "104px", padding: "12px 8px", cursor: "pointer",
+                                border: "1px solid #ddd", borderRadius: "8px",
+                                background: index === armed ? "#0000000f" : "transparent"
+                            }}
+                        >
+                            <span className={`bx ${row.icon}`} style={{ fontSize: "22px", color: "#888" }} />
+                            <span style={{ fontSize: "12px", width: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "center" }}>{row.title}</span>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div style={{ width: "100%", maxWidth: "640px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                    {rows.map((row, index) => (
+                        <Fragment key={row.key}>
+                        {row.group !== rows[index - 1]?.group && (
+                            <div style={{ fontSize: "11px", color: "#888", padding: index === 0 ? "0 10px 2px" : "8px 10px 2px" }}>{row.group}</div>
+                        )}
+                        <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => run(row)}
+                            onMouseEnter={() => setSelected(index)}
+                            style={{
+                                display: "flex", gap: "8px", alignItems: "baseline", width: "100%", textAlign: "left",
+                                border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer",
+                                background: index === armed ? "#0000000f" : "transparent"
+                            }}
+                        >
+                            <span className={`bx ${row.icon}`} style={{ color: "#888" }} />
+                            <span style={{ fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.title}</span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: "11px", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.hint}</span>
+                        </button>
+                        </Fragment>
+                    ))}
+                </div>
+            )}
             {error && <div style={{ color: "#a33", fontSize: "12px", maxWidth: "640px" }}>{error}</div>}
         </div>
     )

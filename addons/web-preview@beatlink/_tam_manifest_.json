@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.4.0",
+    "latestVersion": "2.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",
@@ -61,6 +61,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "newTabStartup.js"
+            },
+            {
+                "id": "useragent-startup",
+                "title": "userAgentStartup.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "userAgentStartup.js"
             },
             {
                 "id": "settings-launcher",
@@ -151,6 +158,18 @@
             {
                 "parent": "root",
                 "child": "newtab-startup"
+            },
+            {
+                "parent": "root",
+                "child": "useragent-startup"
+            },
+            {
+                "parent": "useragent-startup",
+                "child": "lib"
+            },
+            {
+                "parent": "useragent-startup",
+                "child": "libsettings-ui"
             },
             {
                 "parent": "root",
@@ -246,6 +265,16 @@
                 "from": "config",
                 "type": "sourceConfig",
                 "to": "defaults"
+            },
+            {
+                "from": "useragent-startup",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "useragent-startup",
+                "type": "configNote",
+                "to": "config"
             }
         ],
         "labels": [
@@ -273,6 +302,11 @@
                 "note": "newtab-widget",
                 "name": "widget",
                 "value": ""
+            },
+            {
+                "note": "useragent-startup",
+                "name": "run",
+                "value": "frontendStartup"
             }
         ],
         "readmeNote": "readme",

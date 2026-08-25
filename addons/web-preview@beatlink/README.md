@@ -29,8 +29,9 @@ at the top and the arrow keys walking the rest. It is grouped under a header api
 - **Notes** — Web View notes you already have whose title or URL contains what you typed, so you go
   to the note rather than opening the page a second time. Title matches come before URL ones.
 
-With nothing typed yet, the list offers your bookmarks, then the Web View notes you changed
-most recently.
+Nothing is listed until you type, apart from your bookmarks, which the box shows straight away —
+as a grid of tiles or as a list of rows, whichever **Bookmark Layout** is set to. No row is
+highlighted then, since there is nothing for Enter to do; an arrow key picks a bookmark out.
 
 Whatever it opens becomes a new **Web View** note, so the toolbar and its link-interception
 browsing tree work from there exactly as they do for a manually created bookmark note.
@@ -72,6 +73,8 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Bookmarks** — the places the list offers before anything is typed. Each one opens either a web
   address, which becomes a Web View note like any other new tab, or a note you already have — of
   any type, not just a Web View one. A bookmark with nothing filled in yet is left out of the list.
+- **Bookmark Layout** — whether the bookmarks are a grid of tiles (the default) or a list of rows
+  while nothing has been typed. Once you type, everything is a list either way.
 - **Default Search Provider** — whose **Search with …** row leads the list when what you typed
   isn't an address. Every other provider keeps a row further down, so any of them can be picked for
   a single search.
@@ -126,12 +129,15 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   you set yourself is left alone: the addon remembers the title it last applied in a
   `#webViewAutoTitle` label, and stops renaming the note once its title no longer matches. Renaming
   the note back to that label's value (or deleting the label) hands it back to automatic naming.
-- **User agent** overriding sets it on the `<webview>` once its page is up. Electron's
-  `setUserAgent()` only reaches the guest from its next load onwards, so the page on screen is
-  reloaded once per Web View — the site's unsupported-browser page can flash before the reload
-  lands. Client hints (`navigator.userAgentData`, the `Sec-CH-UA` headers) still describe Trilium's
-  Chromium, which is accurate — same major version — but a site cross-checking the two would notice
-  the missing Electron token.
+- **User agent** overriding is a startup script rather than part of the toolbar, because the
+  element's `useragent` attribute is only read while the guest attaches — which happens as Trilium
+  inserts it, before a widget alongside it could reach it. The script watches the DOM for Web View
+  elements and sets the attribute as each appears. An element that had already attached is caught
+  on its `dom-ready` instead, where `setUserAgent()` plus one reload is the only way in, since that
+  call reaches the guest from its next load onwards; the site's unsupported-browser page can flash
+  before the reload lands. Client hints (`navigator.userAgentData`, the `Sec-CH-UA` headers) still
+  describe Trilium's Chromium, which is accurate — same major version — but a site cross-checking
+  the two would notice the missing Electron token.
 - **Save** files the page you are currently reading as a Web View note under the Save Location,
   taking the page's own title. It is the way to keep a page you found while browsing, since the
   child notes link interception creates live inside the browsing tree and get pruned with it.
@@ -172,6 +178,7 @@ Block / Unblock button.
 
 - **Desktop only.** Browser Trilium renders a sandboxed `<iframe>` rather than an Electron
   `<webview>`, so the toolbar hides itself there.
+- **A changed user agent needs a Trilium reload.** The startup script reads its setting once.
 - `getWebviewEl()` matches `webview.note-detail-web-view-content`, preferring the visible one. With
   split panes open on two Web View notes it can pick the wrong split.
 - Link interception is a script injected into the page on every load, which reports clicks back
