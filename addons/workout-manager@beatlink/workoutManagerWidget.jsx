@@ -1001,6 +1001,11 @@ function WorkoutManagerWidget() {
     // through a stale closure -- what gets written must be the object itself.
     const databaseRef = useRef(null)
 
+    const units = useMemo(
+        () => ({ weight: settings?.weightUnit || "kg", distance: settings?.distanceUnit || "km" }),
+        [settings]
+    )
+
     useEffect(() => {
         (async () => {
             const dbNoteId = await currentNote.getRelationValue("database")
@@ -1189,10 +1194,6 @@ function WorkoutManagerWidget() {
     }, [importFile, units.weight])
 
     const categories = useMemo(() => database ? allCategories(database) : [], [database])
-    const units = useMemo(
-        () => ({ weight: settings?.weightUnit || "kg", distance: settings?.distanceUnit || "km" }),
-        [settings]
-    )
 
     if (!database || !settings) return <div className="workout-manager-widget">Loading...</div>
 
