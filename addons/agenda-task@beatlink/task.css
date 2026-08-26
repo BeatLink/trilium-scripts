@@ -80,7 +80,7 @@
    popover are positioned fixed, so they still escape this scroll container. */
 #right-pane .agenda-widget.agenda-task-widget {
     /* Without this the bounded height wraps the column into extra columns instead of scrolling. */
-    flex-wrap: nowrap;
+    flex-wrap: nowrap !important;
     max-height: calc(100vh - 12rem);
     overflow-y: auto;
     overflow-x: hidden;
