@@ -124,6 +124,8 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
   Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
   browsing builds a tree of the pages you visited. The link's text becomes the note title.
+  **Ctrl-clicking** (Cmd on macOS) or **right-clicking** a link creates that same child note but
+  stays on the page you are reading, the way a browser's "open in new tab" does.
 - **Follow Page Title** (a setting, on by default) renames the Web View note whenever the loaded
   page reports a new title — on navigation, or when a single-page app swaps its `<title>`. A title
   you set yourself is left alone: the addon remembers the title it last applied in a

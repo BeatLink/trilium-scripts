@@ -288,25 +288,38 @@ async function deleteWebViewNote(noteId) {
 // reports them to the toolbar. Trilium's <webview> has no preload script, so the
 // guest's console is the only channel back to the host; the host's `will-navigate`
 // can't be cancelled, hence intercepting the click instead of the navigation.
+// A plain click opens the link's note; ctrl/cmd-click and right-click report
+// `background`, which files the note without leaving the page.
 // ---------------------------------------------------------------------------
 const LINK_MESSAGE_PREFIX = "web-preview:link:";
 
 const LINK_INTERCEPT_SCRIPT = `(() => {
     if (window.__webPreviewLinkIntercept) return;
     window.__webPreviewLinkIntercept = true;
-    document.addEventListener("click", (event) => {
-        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const anchorOf = (event) => {
         const anchor = event.target && event.target.closest && event.target.closest("a[href]");
-        if (!anchor || !/^https?:/i.test(anchor.href)) return;
+        return anchor && /^https?:/i.test(anchor.href) ? anchor : null;
+    };
+    const report = (event, anchor, background) => {
         event.preventDefault();
         event.stopPropagation();
-        console.log(${JSON.stringify(LINK_MESSAGE_PREFIX)} + JSON.stringify({ url: anchor.href, title: (anchor.textContent || "").trim() }));
+        console.log(${JSON.stringify(LINK_MESSAGE_PREFIX)} + JSON.stringify({ url: anchor.href, title: (anchor.textContent || "").trim(), background }));
+    };
+    document.addEventListener("click", (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.shiftKey || event.altKey) return;
+        const anchor = anchorOf(event);
+        if (anchor) report(event, anchor, event.ctrlKey || event.metaKey);
+    }, true);
+    document.addEventListener("contextmenu", (event) => {
+        if (event.defaultPrevented) return;
+        const anchor = anchorOf(event);
+        if (anchor) report(event, anchor, true);
     }, true);
 })()`;
 
 // ---------------------------------------------------------------------------
-// Reads one console message from the guest page, returning {url, title} for a
-// clicked link and null for the page's own console output.
+// Reads one console message from the guest page, returning {url, title, background}
+// for a clicked link and null for the page's own console output.
 // ---------------------------------------------------------------------------
 function parseLinkMessage(message) {
     if (typeof message !== "string" || !message.startsWith(LINK_MESSAGE_PREFIX)) return null;

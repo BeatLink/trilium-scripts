@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.6.0",
+    "latestVersion": "2.7.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",

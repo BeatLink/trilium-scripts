@@ -80,7 +80,10 @@ function WebViewToolbar({ noteId }) {
                 const link = lib.parseLinkMessage(event.message)
                 if (!link) return
                 try {
-                    await api.activateNote(await lib.createWebViewNote(noteId, link.url, link.title, settingsRef.current?.reuseExistingNotes))
+                    const linkNoteId = await lib.createWebViewNote(noteId, link.url, link.title, settingsRef.current?.reuseExistingNotes)
+                    // A ctrl-click or right-click files the note without leaving this page.
+                    if (link.background) api.showMessage(`Opened in new note: ${link.title || link.url}`)
+                    else await api.activateNote(linkNoteId)
                 } catch (err) {
                     console.error("web-preview: could not open the clicked link as a note", err)
                 }
