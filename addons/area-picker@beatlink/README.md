@@ -5,8 +5,8 @@ Missing Areas page that finds every note that still doesn't have one.
 
 ## Configuring the area list
 
-Open the addon's settings note and use the **Areas** tab to add, remove, reorder, rename, or recolor
-areas:
+Open the addon's settings note — from the launcher, or with the cog button in the picker widget's
+header — and use the **Areas** tab to add, remove, reorder, rename, or recolor areas:
 
 - **Enabled** controls whether an area appears in the dropdown and in the Missing Areas page.
 - **Row order** is the dropdown order. Use each row's move-up/move-down controls to rearrange.
@@ -29,12 +29,22 @@ version change that same area, TAM's **Update Review** shows your version agains
 area at a time, and asks which you want rather than deciding for you. Areas you added are never
 touched, and an area you deleted stays deleted.
 
+## Recolor
+
+Changing an area's color only affects notes tagged with it from then on; notes already tagged keep
+the `#color` they were given at assignment time. The **Recolor** tab has a button that re-stamps
+`#color` on every note whose own `#area` names a listed area, using that area's current color (an
+area with no color has `#color` removed instead). It reads the saved config, so save your color
+changes first. Notes that only inherit `#area` are left alone, since they inherit `#color` too, and
+notes whose `#area` names no listed area are reported as skipped rather than changed.
+
 ## Missing Areas
 
-A separate page (its own launcher note, "Missing Areas") lists every non-hidden note that has no
-`#area` label, one at a time — title, tree path, a content preview, and a button per enabled area to
-assign it on the spot. Assigning an area drops the note from the list; "Start over" replays it from
-the top.
+The **Missing Areas** tab lists every non-hidden note that has no `#area` label, one at a time —
+title, tree path, a content preview, and a button per enabled area to assign it on the spot.
+Assigning an area drops the note from the list; "Start over" replays it from the top. The same
+triage queue is also its own page, on its own launcher note, for reaching it without the rest of the
+settings.
 
 ## Exclude Filters
 

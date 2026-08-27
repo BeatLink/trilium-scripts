@@ -3,9 +3,10 @@ import { activateNote } from "trilium:api"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
 import { getAreas, getMissingAreaNotes, assignArea } from "areaRegistry.jsx"
 
-// One-at-a-time triage: heading, a card per note lacking #area (title, path,
-// preview), a button per enabled area, Back/Forward nav. Assigning an area
-// drops the note from the list — same shell shape as template-picker's
+// One-at-a-time triage: a card per note lacking #area (title, path, preview),
+// a button per enabled area, Back/Forward nav. No heading of its own: it is
+// named by the note title on its own page and by the tab in settings.
+// Assigning an area drops the note from the list — same shell shape as template-picker's
 // Missing Templates page.
 function MissingAreasQueue({ areas, notes, onAssigned }) {
     const [index, setIndex] = useState(0)
@@ -30,7 +31,6 @@ function MissingAreasQueue({ areas, notes, onAssigned }) {
 
     return (
         <section className="area-picker-page-section">
-            <h4 className="area-picker-page-heading">Missing Areas</h4>
             {notes.length === 0 ? (
                 <div className="area-picker-page-done">No notes are missing an area.</div>
             ) : !current ? (
@@ -76,14 +76,14 @@ function MissingAreasQueue({ areas, notes, onAssigned }) {
     )
 }
 
-export default function AreaPickerMissingPage() {
+// The triage queue for an already-resolved config, so the settings page can
+// show it as a tab without resolving the relations a second time.
+export function MissingAreasPanel({ schemaNoteId, configNoteId }) {
     const [notes, setNotes] = useState(null)
     const [areas, setAreas] = useState([])
 
     useEffect(() => {
         (async () => {
-            const { schemaNoteId, configNoteId } = await resolveConfigNotes(api.currentNote)
-            if (!schemaNoteId || !configNoteId) return
             const [allAreas, missing] = await Promise.all([
                 getAreas(schemaNoteId, configNoteId),
                 getMissingAreaNotes(schemaNoteId, configNoteId)
@@ -91,7 +91,7 @@ export default function AreaPickerMissingPage() {
             setAreas(allAreas.filter(a => a.enabled))
             setNotes(missing)
         })()
-    }, [])
+    }, [schemaNoteId, configNoteId])
 
     if (notes === null) return <div><LoadingSpinner /> Loading...</div>
 
@@ -103,5 +103,25 @@ export default function AreaPickerMissingPage() {
         <div className="area-picker-page">
             <MissingAreasQueue areas={areas} notes={notes} onAssigned={onAssigned} />
         </div>
+    )
+}
+
+export default function AreaPickerMissingPage() {
+    const [configNotes, setConfigNotes] = useState(null)
+
+    useEffect(() => {
+        // `api.currentNote` must be read here, in this addon's own module.
+        (async () => setConfigNotes(await resolveConfigNotes(api.currentNote)))()
+    }, [])
+
+    if (!configNotes?.schemaNoteId || !configNotes?.configNoteId) {
+        return <div><LoadingSpinner /> Loading...</div>
+    }
+
+    return (
+        <MissingAreasPanel
+            schemaNoteId={configNotes.schemaNoteId}
+            configNoteId={configNotes.configNoteId}
+        />
     )
 }

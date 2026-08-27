@@ -47,3 +47,27 @@ export async function assignArea(noteId, key, color) {
 export async function getMissingAreaNotes(schemaNoteId, configNoteId) {
     return getMissingAssignmentNotes(schemaNoteId, configNoteId, "#!area", "label", "area")
 }
+
+// Re-apply every area's registry color to the notes already tagged with it, so
+// a color changed in settings reaches notes assigned before the change. Only
+// own #area labels count — a note inheriting one also inherits its #color, so
+// stamping it here would shadow the inherited value. Notes whose #area matches
+// no registry key are left alone and reported as `unknown`.
+export async function recolorAreaNotes(schemaNoteId, configNoteId) {
+    const areas = await getAreas(schemaNoteId, configNoteId)
+    const colorsByKey = Object.fromEntries(areas.map(a => [a.key, a.color]))
+    return api.runOnBackend((colorsByKey) => {
+        let updated = 0, unchanged = 0, unknown = 0
+        for (const note of api.searchForNotes("#area", { includeArchivedNotes: true })) {
+            const key = note.getOwnedLabelValue("area")
+            if (!key) continue
+            if (!(key in colorsByKey)) { unknown++; continue }
+            const color = colorsByKey[key] || ""
+            if ((note.getOwnedLabelValue("color") || "") === color) { unchanged++; continue }
+            if (color) note.setLabel("color", color)
+            else note.removeLabel("color")
+            updated++
+        }
+        return { updated, unchanged, unknown }
+    }, [colorsByKey])
+}

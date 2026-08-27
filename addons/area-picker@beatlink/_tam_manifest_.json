@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.5.0",
+    "latestVersion": "3.6.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/area-picker@beatlink/_tam_manifest_.json",
@@ -88,7 +88,7 @@
             },
             {
                 "id": "missing-page",
-                "title": "areaPickerPage",
+                "title": "areaPickerPage.jsx",
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "areaPickerPage.jsx"
@@ -165,6 +165,10 @@
             {
                 "parent": "settings",
                 "child": "registry"
+            },
+            {
+                "parent": "settings",
+                "child": "missing-page"
             },
             {
                 "parent": "launcher",
@@ -251,6 +255,11 @@
                 "from": "script",
                 "type": "settingsNote",
                 "to": "settings"
+            },
+            {
+                "from": "script",
+                "type": "settingsPageNote",
+                "to": "launcher"
             },
             {
                 "from": "launcher",

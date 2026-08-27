@@ -32,3 +32,16 @@
         transform: translate(-50%, 0) !important;*/
     }
 }
+
+.area-picker-blurb {
+    margin-bottom: 1rem;
+}
+
+.area-picker-recolor {
+    margin-bottom: 0.5rem;
+}
+
+.area-picker-status {
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}

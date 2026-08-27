@@ -1,5 +1,5 @@
-import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
-import { searchForNotes, getActiveContextNote, currentNote } from "trilium:api"
+import { defineWidget, useActiveNoteContext, useNoteProperty, useTriliumEvent, RightPanelWidget, ActionButton, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { searchForNotes, getActiveContextNote, currentNote, activateNote } from "trilium:api"
 import { getAreas, assignArea } from "areaRegistry.jsx"
 import { isExcludedFromPicker } from "pickerRegistry.jsx"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
@@ -16,6 +16,9 @@ export default defineWidget({
         const [dropdownValue, setDropdownValue] = useState("none")
         const [excluded, setExcluded] = useState(false)
         const [reload, setReload] = useState(0)
+        // The settings page is a render note; activating the settings code note
+        // itself would open its source instead of the rendered form.
+        const settingsPageNoteId = currentNote.getRelationValue("settingsPageNote")
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         // #label:area and #area can be owned by the note, by its template, or by an
@@ -74,7 +77,17 @@ export default defineWidget({
             <>
                 {
                     visible &&
-                    <RightPanelWidget id="x-area-picker" title="Area">
+                    <RightPanelWidget
+                        id="x-area-picker"
+                        title="Area"
+                        buttons={settingsPageNoteId && (
+                            <ActionButton
+                                icon="bx bx-cog"
+                                text="Area Picker settings"
+                                onClick={() => activateNote(settingsPageNoteId)}
+                            />
+                        )}
+                    >
                         <div id="x-area-picker-widget">
                             <FormDropdownList
                                 class="dropdown-component form-control"
