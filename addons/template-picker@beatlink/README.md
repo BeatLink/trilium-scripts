@@ -28,7 +28,8 @@ This needs the note tree, so it does nothing on mobile.
 
 ## Configuring templates
 
-Open the addon's settings note and use the **Templates** tab:
+Open the addon's settings note — the gear button in the picker's right-pane header goes straight
+there — and use the **Templates** tab:
 
 - **Scan for templates** (its own tab) searches the tree for every `#template` note and adds a row for
   any not already listed, enabled, at the end of the list. Existing rows keep their name, enabled

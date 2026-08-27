@@ -1,5 +1,5 @@
-import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
-import { searchForNotes, getNotes, currentNote } from "trilium:api"
+import { defineWidget, useActiveNoteContext, useNoteProperty, RightPanelWidget, ActionButton, FormGroup, FormDropdownList, useEffect, useState } from "trilium:preact"
+import { searchForNotes, getNotes, currentNote, activateNote } from "trilium:api"
 import { getTemplates, assignTemplate } from "templateRegistry.jsx"
 import { getExcludeFilters, getExcludedNoteIds } from "pickerRegistry.jsx"
 import { resolveConfigNotes } from "libSettingsUI.jsx"
@@ -43,6 +43,9 @@ export default defineWidget({
         const { note } = useActiveNoteContext()
         const noteId = useNoteProperty(note, "noteId")
         const selectedNoteIds = useSelectedNoteIds()
+        // The settings page is a render note; activating the settings code note
+        // itself would open its source instead of the rendered form.
+        const settingsPageNoteId = currentNote.getRelationValue("settingsPageNote")
         useEffect(() => {
             (async () => {
                 const { schemaNoteId, configNoteId } = await resolveConfigNotes(currentNote)
@@ -106,7 +109,17 @@ export default defineWidget({
             ? `Template (${targets.length} note${targets.length === 1 ? "" : "s"})`
             : "Template"
         return (
-            <RightPanelWidget id="x-template-picker" title={title}>
+            <RightPanelWidget
+                id="x-template-picker"
+                title={title}
+                buttons={settingsPageNoteId && (
+                    <ActionButton
+                        icon="bx bx-cog"
+                        text="Template Picker settings"
+                        onClick={() => activateNote(settingsPageNoteId)}
+                    />
+                )}
+            >
                 <div id="x-template-picker-widget">
                     <FormDropdownList
                         class="dropdown-component form-control"
