@@ -4,9 +4,15 @@ import { loadSettings } from "libSettingsUI.jsx"
 
 const {
     MEASUREMENTS,
+    PROGRESSIONS,
+    PROGRESSION_FIELDS,
+    PROGRESSION_DEFAULTS,
     newId,
     measurementOf,
     measurementFields,
+    progressionOf,
+    normalizeProgression,
+    progressable,
     normalizeTags,
     categoryDepth,
     categoryLeaf,
@@ -33,6 +39,7 @@ const {
     exerciseHistory,
     exerciseStats,
     workoutFromSession,
+    finishWorkout,
     todayKey,
     shiftDateKey,
     weeklySummary,
@@ -405,6 +412,59 @@ function ExercisesTab({ database, categories, onSave, onDelete }) {
 // ---------------------------------------------------------------------------
 // Programs tab
 // ---------------------------------------------------------------------------
+/*
+ * The progression for one session entry: a type, then the parameters that type
+ * reads, driven off the model's field descriptors so the form follows whatever
+ * a progression declares. All three progressions move weight, so an exercise
+ * measured any other way is told so instead of being offered one.
+ */
+function ProgressionEditor({ progression, exercise, units, onChange }) {
+    if (!exercise) return <span className="workout-manager-hint">—</span>
+    if (!progressable(exercise)) return <span className="workout-manager-hint">Weight &amp; Reps only</span>
+
+    // Defaults fill only what is still zero, so re-picking a type never
+    // overwrites numbers already typed for it.
+    const pickType = type => {
+        const seeded = Object.fromEntries(
+            Object.entries(PROGRESSION_DEFAULTS[type] || {}).filter(([key]) => !progression[key])
+        )
+        onChange(normalizeProgression({ ...progression, ...seeded, type }))
+    }
+
+    return (
+        <div className="workout-manager-progression">
+            <select value={progression.type} onChange={e => pickType(e.target.value)}>
+                {PROGRESSIONS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+            </select>
+            {progressionOf(progression).fields.map(key => {
+                const field = PROGRESSION_FIELDS[key]
+                return (
+                    <label key={key}>
+                        <span>{field.label}</span>
+                        <NumberInput
+                            value={progression[key]}
+                            step={field.step}
+                            onChange={value => onChange(normalizeProgression({ ...progression, [key]: value }))}
+                        />
+                        {field.percentKey && (
+                            <select
+                                value={progression[field.percentKey] ? "percent" : "absolute"}
+                                onChange={e => onChange(normalizeProgression({
+                                    ...progression,
+                                    [field.percentKey]: e.target.value === "percent"
+                                }))}
+                            >
+                                <option value="absolute">{units.weight}</option>
+                                <option value="percent">%</option>
+                            </select>
+                        )}
+                    </label>
+                )
+            })}
+        </div>
+    )
+}
+
 function SessionForm({ initial, exercises, categories, units, defaultRest, onSave, onCancel }) {
     const [session, setSession] = useState(() => normalizeSession(initial))
     const [tagDraft, setTagDraft] = useState("")
@@ -471,6 +531,7 @@ function SessionForm({ initial, exercises, categories, units, defaultRest, onSav
                         <th>Exercise</th>
                         <th>Sets</th>
                         <th>Targets</th>
+                        <th>Progression</th>
                         <th>Rest (s)</th>
                         <th>Notes</th>
                         <th />
@@ -505,6 +566,14 @@ function SessionForm({ initial, exercises, categories, units, defaultRest, onSav
                                         ))
                                         : <span className="workout-manager-hint">—</span>}
                                 </td>
+                                <td>
+                                    <ProgressionEditor
+                                        progression={entry.progression}
+                                        exercise={exercise}
+                                        units={units}
+                                        onChange={progression => setEntry(entry.id, { progression })}
+                                    />
+                                </td>
                                 <td><NumberInput value={entry.rest} step="15" onChange={rest => setEntry(entry.id, { rest })} /></td>
                                 <td>
                                     <input type="text" value={entry.comment} onInput={e => setEntry(entry.id, { comment: e.target.value })} />
@@ -522,7 +591,7 @@ function SessionForm({ initial, exercises, categories, units, defaultRest, onSav
                         )
                     })}
                     {session.entries.length === 0 && (
-                        <tr><td colSpan="6" className="workout-manager-hint">No exercises in this session yet.</td></tr>
+                        <tr><td colSpan="7" className="workout-manager-hint">No exercises in this session yet.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -751,9 +820,33 @@ function WorkoutEntry({ entry, exercises, units, onChange, onRemove }) {
     )
 }
 
-function Workout({ workout, exercises, categories, units, onChange, onRemove }) {
+// One line of the finish report: what an exercise's progression did to the plan.
+function progressionLine(report, exercises, units) {
+    const name = exercises[report.exerciseId]?.name || "Deleted exercise"
+    if (report.outcome === "hold") {
+        return `${name}: unchanged${report.counter ? ` (${report.counter})` : ""}`
+    }
+    const moves = []
+    if (report.to.weight !== report.from.weight) {
+        moves.push(`${formatNumber(report.from.weight)} → ${formatNumber(report.to.weight)} ${units.weight}`)
+    }
+    if (report.to.reps !== report.from.reps) {
+        moves.push(`${formatNumber(report.from.reps)} → ${formatNumber(report.to.reps)} reps`)
+    }
+    return `${name}: ${moves.join(", ") || "unchanged"}`
+}
+
+function Workout({ workout, exercises, categories, units, onChange, onFinish, onRemove }) {
     const [adding, setAdding] = useState("")
+    // Held until the card is re-rendered from scratch: the report is a
+    // confirmation of what finishing just did, not part of the log.
+    const [report, setReport] = useState(null)
     const totals = useMemo(() => workoutTotals(workout, exercises), [workout, exercises])
+
+    const finish = useCallback(() => {
+        if (!confirm(`Finish "${workout.name}"? Its progressions move the session's targets, which is not undone by deleting the workout.`)) return
+        setReport(onFinish())
+    }, [workout.name, onFinish])
 
     const addExercise = useCallback(exerciseId => {
         setAdding("")
@@ -784,6 +877,8 @@ function Workout({ workout, exercises, categories, units, onChange, onRemove }) 
                     {totals.distance > 0 && ` · ${formatNumber(totals.distance)} ${units.distance}`}
                 </span>
                 <span className="workout-manager-spacer" />
+                {workout.finishedAt && <span className="workout-manager-finished">Finished</span>}
+                {onFinish && !workout.finishedAt && <Button icon="bx-check-circle" text="Finish" onClick={finish} />}
                 <Button icon="bx-trash" title="Delete workout" onClick={onRemove} />
             </div>
             <input
@@ -793,6 +888,13 @@ function Workout({ workout, exercises, categories, units, onChange, onRemove }) 
                 value={workout.comment}
                 onInput={e => onChange({ ...workout, comment: e.target.value })}
             />
+            {report && (report.length > 0
+                ? (
+                    <ul className="workout-manager-report">
+                        {report.map(item => <li key={item.entryId}>{progressionLine(item, exercises, units)}</li>)}
+                    </ul>
+                )
+                : <p className="workout-manager-hint">Nothing in this session has a progression.</p>)}
             {workout.entries.map(entry => (
                 <WorkoutEntry
                     key={entry.id}
@@ -816,7 +918,7 @@ function Workout({ workout, exercises, categories, units, onChange, onRemove }) 
     )
 }
 
-function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onRemoveWorkout }) {
+function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onFinishWorkout, onRemoveWorkout }) {
     const [date, setDate] = useState(() => todayKey())
     const [sessionId, setSessionId] = useState("")
 
@@ -867,6 +969,7 @@ function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onRe
                     categories={categories}
                     units={units}
                     onChange={updated => onSaveWorkout(date, updated)}
+                    onFinish={findSession(database, workout.sessionId) ? () => onFinishWorkout(date, workout) : null}
                     onRemove={() => onRemoveWorkout(date, workout)}
                 />
             ))}
@@ -1202,6 +1305,22 @@ function WorkoutManagerWidget() {
         }))
     }, [persist])
 
+    /*
+     * Finishing runs every progression in the session this workout came from and
+     * writes the new targets back into it, returning what changed for the card
+     * to show. `persist` applies its updater synchronously, so the reports are
+     * ready by the time this returns.
+     */
+    const onFinishWorkout = useCallback((date, workout) => {
+        let reports = []
+        persist(current => {
+            const result = finishWorkout(current, date, workout.id)
+            reports = result.reports
+            return result.database
+        })
+        return reports
+    }, [persist])
+
     // The day's key is dropped once its last workout goes, so an empty day
     // leaves nothing behind in the document.
     const onRemoveWorkout = useCallback((date, workout) => {
@@ -1373,6 +1492,7 @@ function WorkoutManagerWidget() {
                     units={units}
                     onAddWorkout={onAddWorkout}
                     onSaveWorkout={onSaveWorkout}
+                    onFinishWorkout={onFinishWorkout}
                     onRemoveWorkout={onRemoveWorkout}
                 />
             )}

@@ -4,13 +4,15 @@
  *   {
  *     categories: [ "Push", "Push/Chest", ... ],
  *     exercises: { [id]: { id, name, measurement, equipment, muscles: [...], comment, tags: [...] } },
- *     programs: { [id]: { id, name, comment, sessions: [ { id, name, comment, tags: [...], entries: [{ id, exerciseId, sets, reps, weight, duration, distance, rest, comment }] } ] } },
- *     log: { [date]: [ { id, name, sessionId, startedAt, comment, entries: [ { id, exerciseId, comment, sets: [ { id, reps, weight, duration, distance, rpe } ] } ] } ] }
+ *     programs: { [id]: { id, name, comment, sessions: [ { id, name, comment, tags: [...], entries: [{ id, exerciseId, sets, reps, weight, duration, distance, rest, comment, progression }] } ] } },
+ *     log: { [date]: [ { id, name, sessionId, startedAt, finishedAt, comment, entries: [ { id, exerciseId, sessionEntryId, target, comment, sets: [ { id, reps, weight, duration, distance, rpe } ] } ] } ] }
  *   }
  * A program is an ordered group of sessions -- Program -> Session -> Exercise.
  * A session is a plan; a log entry is one workout actually performed, pointing
  * back at the session it was started from via `sessionId` (empty when ad-hoc).
  * Session ids are unique across every program, so a workout needs no program id.
+ * Finishing a workout is what feeds its result back into the plan: each entry's
+ * progression rewrites the session entry's own targets for next time.
  * `date` is an ISO "YYYY-MM-DD" string. Weights and distances are plain numbers
  * in whatever unit settings names (kg/lb, km/mi) -- the unit is a display label,
  * never a conversion, so changing it never rewrites recorded numbers. Durations
@@ -49,6 +51,80 @@ function measurementOf(exercise) {
 function measurementFields(exercise) {
     const fields = measurementOf(exercise).fields
     return SET_FIELDS.filter(field => fields.includes(field.key))
+}
+
+/*
+ * Progressive overload, following the three progressions Liftosaur builds in
+ * (https://www.liftosaur.com/doc/liftoscript): linear adds weight after N
+ * successful workouts and optionally takes it back off after N failed ones,
+ * double walks the reps up a range before adding weight and resetting them, and
+ * sum adds weight once the reps across all sets clear a threshold. A progression
+ * belongs to one session entry, keeps its own attempt counters between
+ * workouts, and rewrites that entry's targets when a workout is finished.
+ * All three move weight, so they only apply to Weight & Reps exercises.
+ */
+const PROGRESSIONS = [
+    { key: "none", label: "None", fields: [] },
+    { key: "linear", label: "Linear", fields: ["increment", "successes", "decrement", "failures"] },
+    { key: "double", label: "Double", fields: ["increment", "minReps", "maxReps"] },
+    { key: "sum", label: "Sum of Reps", fields: ["repsThreshold", "increment"] }
+]
+
+// How each progression parameter is labelled and edited; `percentKey` names the
+// companion flag that switches a weight step from absolute to a percentage.
+const PROGRESSION_FIELDS = {
+    increment: { label: "Increase by", step: 0.5, percentKey: "incrementPercent" },
+    successes: { label: "After successes", step: 1 },
+    decrement: { label: "Decrease by", step: 0.5, percentKey: "decrementPercent" },
+    failures: { label: "After failures", step: 1 },
+    minReps: { label: "Min reps", step: 1 },
+    maxReps: { label: "Max reps", step: 1 },
+    repsThreshold: { label: "Total reps", step: 1 }
+}
+
+// Seeded into fields still left at zero when a type is picked, so the form opens
+// on numbers that describe a workable progression rather than on nothing.
+const PROGRESSION_DEFAULTS = {
+    linear: { increment: 2.5 },
+    double: { increment: 2.5, minReps: 6, maxReps: 10 },
+    sum: { repsThreshold: 30, increment: 2.5 }
+}
+
+function progressionOf(progression) {
+    const key = progression?.type
+    return PROGRESSIONS.find(item => item.key === key) || PROGRESSIONS[0]
+}
+
+/*
+ * Every field is kept whatever the type, exactly as a set record keeps every
+ * measurement field: the ones this type does not read simply stay at their
+ * default, so switching type and back does not lose what was typed.
+ */
+function normalizeProgression(progression) {
+    return {
+        type: progressionOf(progression).key,
+        increment: nonNegativeNumber(progression?.increment),
+        incrementPercent: progression?.incrementPercent === true,
+        successes: positiveNumber(progression?.successes, 1),
+        successCounter: nonNegativeNumber(progression?.successCounter),
+        decrement: nonNegativeNumber(progression?.decrement),
+        decrementPercent: progression?.decrementPercent === true,
+        failures: positiveNumber(progression?.failures, 1),
+        failureCounter: nonNegativeNumber(progression?.failureCounter),
+        minReps: nonNegativeNumber(progression?.minReps),
+        maxReps: nonNegativeNumber(progression?.maxReps),
+        repsThreshold: nonNegativeNumber(progression?.repsThreshold)
+    }
+}
+
+// All three progressions move weight, so none of them means anything for an
+// exercise measured any other way.
+function progressable(exercise) {
+    return !!exercise && measurementOf(exercise).key === "weight"
+}
+
+function progressionApplies(entry, exercise) {
+    return entry.progression.type !== "none" && progressable(exercise)
 }
 
 /*
@@ -150,7 +226,19 @@ function normalizeSessionEntry(entry) {
         duration: nonNegativeNumber(entry?.duration),
         distance: nonNegativeNumber(entry?.distance),
         rest: nonNegativeNumber(entry?.rest),
-        comment: trimmedString(entry?.comment)
+        comment: trimmedString(entry?.comment),
+        progression: normalizeProgression(entry?.progression)
+    }
+}
+
+// The numbers a session entry prescribes, in the shape a workout snapshots.
+function entryTarget(entry) {
+    return {
+        sets: entry.sets,
+        reps: entry.reps,
+        weight: entry.weight,
+        duration: entry.duration,
+        distance: entry.distance
     }
 }
 
@@ -185,10 +273,29 @@ function normalizeSet(set) {
     }
 }
 
+/*
+ * What a workout entry was prescribed. Snapshotted when the workout is started
+ * so progression judges it against the plan as it stood then, not against a
+ * plan a previous workout has since moved. Empty for an ad-hoc entry.
+ */
+function normalizeTarget(target) {
+    return {
+        sets: nonNegativeNumber(target?.sets),
+        reps: nonNegativeNumber(target?.reps),
+        weight: nonNegativeNumber(target?.weight),
+        duration: nonNegativeNumber(target?.duration),
+        distance: nonNegativeNumber(target?.distance)
+    }
+}
+
 function normalizeWorkoutEntry(entry) {
     return {
         id: typeof entry?.id === "string" && entry.id ? entry.id : newId(),
         exerciseId: typeof entry?.exerciseId === "string" ? entry.exerciseId : "",
+        // The session entry this came from, so progression still finds it after
+        // the session has been reordered or has gained the same exercise twice.
+        sessionEntryId: typeof entry?.sessionEntryId === "string" ? entry.sessionEntryId : "",
+        target: normalizeTarget(entry?.target),
         comment: trimmedString(entry?.comment),
         sets: Array.isArray(entry?.sets) ? entry.sets.map(normalizeSet) : []
     }
@@ -204,6 +311,8 @@ function normalizeWorkout(workout) {
         sessionId: typeof workout?.sessionId === "string" ? workout.sessionId
             : typeof workout?.routineId === "string" ? workout.routineId : "",
         startedAt: typeof workout?.startedAt === "string" ? workout.startedAt : new Date().toISOString(),
+        // Set once progression has been applied; empty means still open.
+        finishedAt: typeof workout?.finishedAt === "string" ? workout.finishedAt : "",
         comment: trimmedString(workout?.comment),
         entries: Array.isArray(workout?.entries) ? workout.entries.map(normalizeWorkoutEntry) : []
     }
@@ -431,6 +540,8 @@ function workoutFromSession(session, startedAt = new Date().toISOString(), progr
         startedAt,
         entries: session.entries.map(entry => ({
             exerciseId: entry.exerciseId,
+            sessionEntryId: entry.id,
+            target: entryTarget(entry),
             comment: entry.comment,
             sets: Array.from({ length: Math.round(entry.sets) }, () => ({
                 reps: entry.reps,
@@ -440,6 +551,163 @@ function workoutFromSession(session, startedAt = new Date().toISOString(), progr
             }))
         }))
     })
+}
+
+/*
+ * What one session entry's logged sets achieved, reduced to the numbers a
+ * progression asks about. A plan prescribes one target for all of its sets, so
+ * the weakest set decides whether the target was met, and the weight is the
+ * last one actually lifted -- falling back to the planned weight when none was
+ * recorded, as Liftosaur does for an unfilled weight.
+ */
+function setsPerformance(target, sets) {
+    const reps = sets.map(set => set.reps)
+    const lifted = sets.map(set => set.weight).filter(weight => weight > 0).at(-1)
+    return {
+        sets: sets.length,
+        minReps: reps.length > 0 ? Math.min(...reps) : 0,
+        totalReps: reps.reduce((total, value) => total + value, 0),
+        weight: lifted || target.weight
+    }
+}
+
+// The plan was met when every prescribed set was performed at or above its target reps.
+function targetMet(target, performance) {
+    return target.sets > 0 && target.reps > 0
+        && performance.sets >= target.sets
+        && performance.minReps >= target.reps
+}
+
+// Two decimals, so a percentage step cannot leave float noise in the plan.
+function stepWeight(weight, step, isPercent, direction) {
+    if (step <= 0) return weight
+    const next = isPercent ? weight * (1 + direction * step / 100) : weight + direction * step
+    return Math.max(0, Math.round(next * 100) / 100)
+}
+
+/*
+ * Runs one progression over what a workout recorded against the target it was
+ * given, returning the entry's next targets, the progression's next counters,
+ * and what happened. Nothing is mutated; the caller writes the result back.
+ * The branches follow Liftosaur's own generated scripts, including that an
+ * increase is applied to the weight actually lifted while a decrease comes off
+ * the weight that was planned, and that a missed attempt leaves the success
+ * counter standing rather than resetting it.
+ */
+function evaluateProgression(progression, target, sets) {
+    const performance = setsPerformance(target, sets)
+    const met = targetMet(target, performance)
+    const hold = { progression, changes: {}, outcome: "hold", counter: "" }
+    const increase = () => stepWeight(performance.weight, progression.increment, progression.incrementPercent, 1)
+
+    if (progression.type === "linear") {
+        if (met) {
+            const successCounter = progression.successCounter + 1
+            if (successCounter < progression.successes) {
+                return {
+                    ...hold,
+                    progression: { ...progression, successCounter },
+                    counter: `${successCounter}/${progression.successes} successes`
+                }
+            }
+            return {
+                progression: { ...progression, successCounter: 0, failureCounter: 0 },
+                changes: { weight: increase() },
+                outcome: "increase",
+                counter: ""
+            }
+        }
+        if (progression.decrement <= 0) return hold
+        const failureCounter = progression.failureCounter + 1
+        if (failureCounter < progression.failures) {
+            return {
+                ...hold,
+                progression: { ...progression, failureCounter },
+                counter: `${failureCounter}/${progression.failures} failures`
+            }
+        }
+        return {
+            progression: { ...progression, successCounter: 0, failureCounter: 0 },
+            changes: { weight: stepWeight(target.weight, progression.decrement, progression.decrementPercent, -1) },
+            outcome: "decrease",
+            counter: ""
+        }
+    }
+
+    if (progression.type === "double") {
+        const maxReps = Math.max(progression.minReps, progression.maxReps)
+        if (!met || maxReps <= 0) return hold
+        // The top of the range is where reps reset and the weight moves instead.
+        if (performance.minReps >= maxReps) {
+            return {
+                progression,
+                changes: { reps: progression.minReps, weight: increase() },
+                outcome: "increase",
+                counter: ""
+            }
+        }
+        return { progression, changes: { reps: Math.min(performance.minReps + 1, maxReps) }, outcome: "reps", counter: "" }
+    }
+
+    // Sum asks only about the total reps, never about whether each set met its target.
+    if (progression.type === "sum") {
+        if (progression.repsThreshold <= 0) return hold
+        if (performance.totalReps < progression.repsThreshold) {
+            return { ...hold, counter: `${performance.totalReps}/${progression.repsThreshold} reps` }
+        }
+        return { progression, changes: { weight: increase() }, outcome: "increase", counter: "" }
+    }
+
+    return hold
+}
+
+/*
+ * Finishing a workout is what applies progression. Every entry that came from a
+ * session entry carrying one is judged against the targets snapshotted when the
+ * workout started, and that entry's targets and counters are rewritten in the
+ * session. The workout is stamped finished, which is what stops a second press
+ * progressing the same session twice. Finishing does not undo: a workout
+ * finished by mistake leaves the session's new targets to be corrected by hand.
+ */
+function finishWorkout(database, date, workoutId, finishedAt = new Date().toISOString()) {
+    const workouts = database.log[date] || []
+    const workout = workouts.find(item => item.id === workoutId)
+    if (!workout || workout.finishedAt) return { database, reports: [] }
+
+    const log = { ...database.log, [date]: workouts.map(item => item.id === workoutId ? { ...item, finishedAt } : item) }
+    const found = findSession(database, workout.sessionId)
+    if (!found) return { database: { ...database, log }, reports: [] }
+
+    const reports = []
+    const entries = found.session.entries.map(entry => {
+        const logged = workout.entries.find(item => item.sessionEntryId
+            ? item.sessionEntryId === entry.id
+            : item.exerciseId === entry.exerciseId)
+        const exercise = database.exercises[entry.exerciseId]
+        if (!logged || !progressionApplies(entry, exercise)) return entry
+        // A workout logged before targets were snapshotted has none, so it is
+        // judged against the entry's targets as they stand now.
+        const target = logged.target.sets > 0 ? logged.target : entryTarget(entry)
+        const result = evaluateProgression(entry.progression, target, logged.sets)
+        reports.push({
+            // Two entries of a session can share an exercise, so the entry is
+            // what identifies a line of the report.
+            entryId: entry.id,
+            exerciseId: entry.exerciseId,
+            outcome: result.outcome,
+            counter: result.counter,
+            from: { reps: target.reps, weight: target.weight },
+            to: { reps: result.changes.reps ?? target.reps, weight: result.changes.weight ?? target.weight }
+        })
+        return { ...entry, ...result.changes, progression: result.progression }
+    })
+
+    const session = { ...found.session, entries }
+    const program = { ...found.program, sessions: found.program.sessions.map(item => item.id === session.id ? session : item) }
+    return {
+        database: { ...database, programs: { ...database.programs, [program.id]: program }, log },
+        reports
+    }
 }
 
 function todayKey(date = new Date()) {
@@ -506,9 +774,16 @@ function importDatabase(text) {
 module.exports = {
     MEASUREMENTS,
     SET_FIELDS,
+    PROGRESSIONS,
+    PROGRESSION_FIELDS,
+    PROGRESSION_DEFAULTS,
     newId,
     measurementOf,
     measurementFields,
+    progressionOf,
+    normalizeProgression,
+    progressable,
+    progressionApplies,
     CATEGORY_SEPARATOR,
     normalizeCategoryName,
     normalizeTags,
@@ -541,6 +816,9 @@ module.exports = {
     exerciseHistory,
     exerciseStats,
     workoutFromSession,
+    entryTarget,
+    evaluateProgression,
+    finishWorkout,
     todayKey,
     shiftDateKey,
     weekStartKey,

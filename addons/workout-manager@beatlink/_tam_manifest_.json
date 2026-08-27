@@ -1,11 +1,11 @@
 {
     "id": "workout-manager@beatlink",
     "name": "Workout Manager",
-    "description": "An exercise library, reusable training programs, and a workout log. Plans are organised as Program - Session - Exercise: a program groups the sessions of a training block, and each session lists the exercises it works through. Exercises are entered by hand or looked up in the public wger database, and each one is measured the way it is actually trained: weight and reps, bodyweight reps, duration, or cardio duration and distance. Sessions plan sets and targets per exercise and start a pre-filled workout in one click, the log records what was really done set by set, and the stats tab tracks weekly volume against a target plus personal bests and full history per exercise. Exercises and sessions sort and filter by nestable categories, and an existing training history imports from either of Liftosaur's exports. All data is a single persisted JSON note.",
+    "description": "An exercise library, reusable training programs, and a workout log. Plans are organised as Program - Session - Exercise: a program groups the sessions of a training block, and each session lists the exercises it works through. Exercises are entered by hand or looked up in the public wger database, and each one is measured the way it is actually trained: weight and reps, bodyweight reps, duration, or cardio duration and distance. Sessions plan sets and targets per exercise and start a pre-filled workout in one click, the log records what was really done set by set, and finishing a workout feeds the result back into the plan through Liftosaur's three progressions -- linear, double and sum of reps -- which move a session exercise's own weight and reps for next time. The stats tab tracks weekly volume against a target plus personal bests and full history per exercise. Exercises and sessions sort and filter by nestable categories, and an existing training history imports from either of Liftosaur's exports. All data is a single persisted JSON note.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/workout-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/workout-manager@beatlink/_tam_manifest_.json",

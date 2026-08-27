@@ -114,6 +114,48 @@
     margin-bottom: 6px;
 }
 
+/* A progression stacks its type above the parameters that type reads. */
+.workout-manager-progression {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+}
+
+.workout-manager-progression label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9em;
+    color: var(--muted-text-color);
+}
+
+.workout-manager-progression label span {
+    flex: 1;
+}
+
+.workout-manager-progression input {
+    width: 60px;
+}
+
+/* What finishing a workout did to the plan, shown once under the header. */
+.workout-manager-report {
+    list-style: none;
+    margin: 4px 0;
+    padding: 6px 10px;
+    border-left: 3px solid var(--main-border-color);
+    font-size: 0.9em;
+    color: var(--muted-text-color);
+}
+
+.workout-manager-finished {
+    font-size: 0.85em;
+    padding: 1px 6px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 10px;
+    color: var(--muted-text-color);
+}
+
 .workout-manager-card {
     border: 1px solid var(--main-border-color);
     border-radius: 6px;

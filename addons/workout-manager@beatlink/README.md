@@ -64,7 +64,52 @@ exercise, with that entry's sets already created at its target numbers. Logging 
 correcting what actually happened. The logged workout is named after both, as `Program - Session`.
 
 Programs and sessions are plans only. Editing or deleting either never changes a workout already
-logged from it.
+logged from it, and a plan only moves on its own if the exercise has a **progression**.
+
+## Progression
+
+A session exercise can carry a progression: a rule that reads what you actually did and moves that
+exercise's own targets for next time. The three rules are the ones
+[Liftosaur](https://www.liftosaur.com/doc/liftoscript) builds in, and they behave the way its own
+scripts do.
+
+| Progression | Parameters | What it does |
+|-------------|------------|--------------|
+| **Linear** | increase, after N successes, decrease, after N failures | Adds weight once you hit every set at its target reps N workouts running. Optionally takes weight back off after N missed workouts. |
+| **Double** | increase, min reps, max reps | Walks the reps up one per workout inside the range. On reaching the top, adds weight instead and drops the reps back to the minimum. |
+| **Sum of Reps** | total reps, increase | Adds weight whenever the reps across all sets clear the threshold, however they were split up. |
+
+Both weight steps can be an absolute amount or a percentage — the dropdown beside the number
+switches between `kg`/`lb` and `%`.
+
+All three move weight, so a progression is only offered on a **Weight & Reps** exercise. Progression
+belongs to one exercise in one session: the same exercise in two sessions of a program progresses
+separately, each with its own targets and its own counters.
+
+### How it decides
+
+- A workout **meets** the target when at least the prescribed number of sets were logged and every
+  logged set reached the target reps. The weakest set is what counts.
+- An **increase** is applied to the weight you actually lifted, so a set logged heavier than planned
+  carries that into the next target. A **decrease** comes off the weight that was planned.
+- **Sum of Reps** ignores whether individual sets met their target — only the total matters.
+- Linear counts attempts across workouts, and a missed workout leaves the success count standing
+  rather than resetting it. The Finish report shows where the count stands (`2/3 successes`).
+
+### Finishing a workout
+
+Progression runs when you press **Finish** on a logged workout, which appears on any workout started
+from a session. Finishing:
+
+1. Compares each exercise against the targets recorded **when the workout was started**, so a plan
+   that has moved since does not change the verdict.
+2. Rewrites the session's targets and counters.
+3. Marks the workout finished, so pressing it again does nothing.
+
+A report under the workout header says what moved (`Bench Press: 60 → 62.5 kg`) and what did not
+(`Squat: unchanged (1/3 successes)`). Finishing is one-way: deleting the workout afterwards does not
+put the session's targets back, so correct them by hand if you finish one by mistake. Editing a
+finished workout is still allowed; it just will not progress the plan a second time.
 
 ## Log
 
@@ -72,8 +117,9 @@ The **Log** tab is one day at a time — arrows step a day, the date field jumps
 comes back. A day holds any number of workouts, each of which can be started from a session (the
 picker groups sessions under their program) or created empty and filled in as you go.
 
-Everything in a logged workout is edited in place and saved as you type: its name and note, the
-exercises in it, and each set's numbers. **Add Set** copies the previous set of the same exercise,
+Workouts started from a session get a **Finish** button, which applies that session's progressions —
+see [Progression](#progression). Everything else in a logged workout is edited in place and saved as
+you type: its name and note, the exercises in it, and each set's numbers. **Add Set** copies the previous set of the same exercise,
 since sets usually repeat the previous load. The workout header totals its sets, its volume
 (weight × reps, for weight-based exercises), and any duration and distance in it.
 
@@ -137,8 +183,11 @@ JSON is the complete backup.
 What is not imported:
 
 - **Warmup sets** and sets that were never performed — both are counted in the summary message.
-- **Programs.** A Liftosaur program is Liftoscript, which computes sets and weights per workout; it
-  has no equivalent as a plain set/rep plan, so programs and sessions are left to you to write.
+- **Programs.** A Liftosaur program is Liftoscript, which computes sets and weights per workout, so
+  programs and sessions are left to you to write. Its three built-in progressions are available
+  natively though — see [Progression](#progression) — so `progress: lp(5lb)` on a Liftosaur exercise
+  becomes a Linear progression on the matching session exercise. `progress: custom()` scripts have
+  no equivalent.
 - Everything Liftosaur logs is reps and weight, so imported exercises come in as Weight & Reps, or
   as Bodyweight Reps when no set ever carried weight. Change an exercise's measurement afterwards if
   it should be Duration or Cardio.
