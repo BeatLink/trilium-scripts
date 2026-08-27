@@ -58,22 +58,28 @@ export async function scanTemplates(schemaNoteId, configNoteId) {
     return { added, total: Object.keys(registry).length }
 }
 
-// Set (or clear, when `templateId` is falsy/"none") a note's ~template
-// relation, mirroring the chosen template's color onto #color the same way
-// agenda's assignDimension does. Shared by the picker widget and the Missing
-// Templates triage page so both write through one path.
-export async function assignTemplate(noteId, templateId, color) {
-    return api.runOnBackend((noteId, templateId, color) => {
-        const note = api.getNote(noteId)
-        if (!note) return false
-        if (templateId && templateId !== "none") {
-            note.setRelation("template", templateId)
-            if (color) note.setLabel("color", color)
-        } else {
-            note.removeRelation("template")
+// Set (or clear, when `templateId` is falsy/"none") the ~template relation of
+// one note or a batch of them, mirroring the chosen template's color onto
+// #color the same way agenda's assignDimension does. `noteIds` takes a single
+// id or an array, so a tree multi-selection is one backend round-trip. Shared
+// by the picker widget and the Missing Templates triage page so both write
+// through one path.
+export async function assignTemplate(noteIds, templateId, color) {
+    const ids = Array.isArray(noteIds) ? noteIds : [noteIds]
+
+    return api.runOnBackend((ids, templateId, color) => {
+        for (const noteId of ids) {
+            const note = api.getNote(noteId)
+            if (!note) continue
+            if (templateId && templateId !== "none") {
+                note.setRelation("template", templateId)
+                if (color) note.setLabel("color", color)
+            } else {
+                note.removeRelation("template")
+            }
         }
         return true
-    }, [noteId, templateId, color || ""])
+    }, [ids, templateId, color || ""])
 }
 
 // Every non-hidden note lacking a ~template relation, minus #template notes

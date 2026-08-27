@@ -1,7 +1,8 @@
 # Template Picker
 
-A right-pane widget that lets you assign or change the template of the currently active note, plus a
-Missing Templates page that finds every note that still doesn't have one.
+A right-pane widget that lets you assign or change the template of the currently active note (or of
+several notes at once), plus a Missing Templates page that finds every note that still doesn't have
+one.
 
 ## How it works
 
@@ -11,6 +12,19 @@ configured, mirrors it onto `#color`). Selecting "None" removes the relation.
 
 Which templates appear, and in what order, is configured in the addon's settings note rather than
 derived from the tree on every note switch.
+
+## Assigning to several notes at once
+
+Ctrl-click (or shift-click) notes in the tree to select them and the picker retargets at the whole
+selection, the same way Trilium's own bulk actions do. Its header reads "Template (3 notes)" so you
+can see the scope before picking, and choosing a template writes it to all of them in one go.
+Clicking a note normally clears the selection and the picker goes back to that single note.
+
+When the selected notes don't all share one template, the dropdown shows "— Mixed —"; picking a real
+template replaces it everywhere. Notes matching an [exclude filter](#exclude-filters) are dropped
+from the selection, so the count in the header is what will actually be written.
+
+This needs the note tree, so it does nothing on mobile.
 
 ## Configuring templates
 
@@ -95,7 +109,8 @@ drops the note from the list; "Start over" replays it from the top.
 ## Exclude Filters
 
 The **Exclude Filters** tab holds a registry of named Trilium search queries. A note matching any
-**enabled** filter's query is hidden from both the picker widget and the Missing Templates list — use
+**enabled** filter's query is dropped from the picker widget (which hides entirely when every note it
+would target is excluded) and from the Missing Templates list — use
 this for notes that intentionally never get a template (e.g. `note.type = code` or a specific subtree).
 A filter with a blank query is ignored; an unparseable query is skipped rather than breaking the rest.
 
