@@ -121,6 +121,23 @@
     margin-bottom: 12px;
 }
 
+/* A program frames its sessions, which sit indented inside it. */
+.workout-manager-program {
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+}
+
+.workout-manager-program > .workout-manager-session {
+    margin-left: 16px;
+    border-left: 3px solid var(--main-border-color);
+}
+
+.workout-manager-program > .workout-manager-session:last-child {
+    margin-bottom: 0;
+}
+
 .workout-manager-card-header {
     display: flex;
     flex-wrap: wrap;
@@ -129,7 +146,7 @@
     margin-bottom: 6px;
 }
 
-.workout-manager-session-name {
+.workout-manager-workout-name {
     font-weight: 600;
     padding: 4px 6px;
     border: 1px solid transparent;
@@ -138,14 +155,14 @@
     color: inherit;
 }
 
-.workout-manager-session-name:focus,
-.workout-manager-session-comment:focus,
+.workout-manager-workout-name:focus,
+.workout-manager-workout-comment:focus,
 .workout-manager-entry-comment:focus {
     border-color: var(--main-border-color);
     background: var(--input-background-color, transparent);
 }
 
-.workout-manager-session-comment {
+.workout-manager-workout-comment {
     width: 100%;
     margin-bottom: 8px;
     padding: 4px 6px;

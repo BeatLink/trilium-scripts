@@ -12,8 +12,8 @@
  * their internal camelCase id and only names custom ones -- so a JSON import
  * titles built-in exercises from that id ("benchPress" -> "Bench Press") and has
  * muscles only for custom exercises. Either way the result is exercises plus a
- * workout log; Liftosaur programs are Liftoscript, not plain set/rep plans, so
- * they are not converted into routines.
+ * workout log; a Liftosaur program is Liftoscript rather than a plain set/rep
+ * plan, so none is converted and the import adds no programs of its own.
  *
  * Ids are derived from the source data rather than generated, so importing the
  * same file twice matches what is already there instead of duplicating it.
@@ -24,7 +24,7 @@ const KG_PER_LB = 0.45359237
 // Only sets that were actually performed are imported; warmups and untouched
 // sets are counted so the caller can say what was left out.
 function emptySummary() {
-    return { exercises: 0, sessions: 0, sets: 0, warmupSets: 0, incompleteSets: 0, unit: "kg" }
+    return { exercises: 0, workouts: 0, sets: 0, warmupSets: 0, incompleteSets: 0, unit: "kg" }
 }
 
 function slug(value) {
@@ -120,7 +120,7 @@ function convertStorage(storage) {
         const session = {
             id: `lft-${record.id ?? slug(record.date)}`,
             name: record.dayName || record.programName || "Workout",
-            routineId: "",
+            sessionId: "",
             startedAt: new Date(record.startTime || Date.parse(record.date) || Date.now()).toISOString(),
             comment: "",
             entries: []
@@ -165,12 +165,12 @@ function convertStorage(storage) {
 
         if (session.entries.length === 0) continue
         log[date] = [...(log[date] || []), session]
-        summary.sessions += 1
+        summary.workouts += 1
     }
 
     const finalExercises = finalizeExercises(exercises)
     summary.exercises = Object.keys(finalExercises).length
-    return { database: { categories: [], exercises: finalExercises, routines: {}, log }, summary }
+    return { database: { categories: [], exercises: finalExercises, programs: {}, log }, summary }
 }
 
 // =========================================================================
@@ -282,7 +282,7 @@ function convertCsv(text) {
             sessions.set(key, {
                 id: `lft-${slug(dateTime)}`,
                 name: cell(row, "Day Name") || cell(row, "Program") || "Workout",
-                routineId: "",
+                sessionId: "",
                 startedAt: new Date(dateTime).toISOString(),
                 comment: "",
                 entries: []
@@ -304,12 +304,12 @@ function convertCsv(text) {
         const { date, ...rest } = session
         if (!date || rest.entries.length === 0) continue
         log[date] = [...(log[date] || []), rest]
-        summary.sessions += 1
+        summary.workouts += 1
     }
 
     const finalExercises = finalizeExercises(exercises)
     summary.exercises = Object.keys(finalExercises).length
-    return { database: { categories: [], exercises: finalExercises, routines: {}, log }, summary }
+    return { database: { categories: [], exercises: finalExercises, programs: {}, log }, summary }
 }
 
 /*

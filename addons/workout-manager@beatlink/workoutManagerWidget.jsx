@@ -12,11 +12,12 @@ const {
     categoryLeaf,
     isInCategory,
     normalizeExercise,
-    normalizeRoutine,
-    normalizeRoutineEntry,
-    normalizeSet,
-    normalizeSessionEntry,
     normalizeSession,
+    normalizeSessionEntry,
+    normalizeProgram,
+    normalizeSet,
+    normalizeWorkoutEntry,
+    normalizeWorkout,
     allCategories,
     categoryUsage,
     addCategory,
@@ -26,10 +27,12 @@ const {
     allMuscles,
     parseDatabase,
     serializeDatabase,
-    sessionTotals,
+    workoutTotals,
+    allSessions,
+    findSession,
     exerciseHistory,
     exerciseStats,
-    sessionFromRoutine,
+    workoutFromSession,
     todayKey,
     shiftDateKey,
     weeklySummary,
@@ -144,7 +147,7 @@ function ChipEditor({ label, placeholder, values, draft, suggestions, onChange, 
 }
 
 // ---------------------------------------------------------------------------
-// Exercise picker, shared by routine entries and the log: one <optgroup> per
+// Exercise picker, shared by session entries and the log: one <optgroup> per
 // category (an exercise in several categories is offered under each),
 // uncategorised exercises last.
 // ---------------------------------------------------------------------------
@@ -400,29 +403,29 @@ function ExercisesTab({ database, categories, onSave, onDelete }) {
 }
 
 // ---------------------------------------------------------------------------
-// Routines tab
+// Programs tab
 // ---------------------------------------------------------------------------
-function RoutineForm({ initial, exercises, categories, units, defaultRest, onSave, onCancel }) {
-    const [routine, setRoutine] = useState(() => normalizeRoutine(initial))
+function SessionForm({ initial, exercises, categories, units, defaultRest, onSave, onCancel }) {
+    const [session, setSession] = useState(() => normalizeSession(initial))
     const [tagDraft, setTagDraft] = useState("")
 
     const setEntry = useCallback((id, changes) => {
-        setRoutine(current => ({
+        setSession(current => ({
             ...current,
             entries: current.entries.map(entry => entry.id === id ? { ...entry, ...changes } : entry)
         }))
     }, [])
 
     const addEntry = useCallback(() => {
-        setRoutine(current => ({
+        setSession(current => ({
             ...current,
-            entries: [...current.entries, normalizeRoutineEntry({ id: newId(), rest: defaultRest })]
+            entries: [...current.entries, normalizeSessionEntry({ id: newId(), rest: defaultRest })]
         }))
     }, [defaultRest])
 
     // Order is the plan's order, so entries move rather than sort.
     const moveEntry = useCallback((index, delta) => {
-        setRoutine(current => {
+        setSession(current => {
             const target = index + delta
             if (target < 0 || target >= current.entries.length) return current
             const entries = [...current.entries]
@@ -433,33 +436,33 @@ function RoutineForm({ initial, exercises, categories, units, defaultRest, onSav
     }, [])
 
     const save = useCallback(() => {
-        const withDraft = { ...routine, tags: tagDraft.trim() ? [...routine.tags, tagDraft.trim()] : routine.tags }
-        const normalized = normalizeRoutine(withDraft)
+        const withDraft = { ...session, tags: tagDraft.trim() ? [...session.tags, tagDraft.trim()] : session.tags }
+        const normalized = normalizeSession(withDraft)
         if (!normalized.name.trim()) {
-            api.showError("A routine needs a name.")
+            api.showError("A session needs a name.")
             return
         }
         onSave({ ...normalized, entries: normalized.entries.filter(entry => entry.exerciseId) })
-    }, [routine, tagDraft, onSave])
+    }, [session, tagDraft, onSave])
 
     return (
         <div className="workout-manager-form">
             <label className="workout-manager-field">
                 <span>Name</span>
-                <input type="text" value={routine.name} onInput={e => setRoutine({ ...routine, name: e.target.value })} />
+                <input type="text" value={session.name} onInput={e => setSession({ ...session, name: e.target.value })} />
             </label>
             <ChipEditor
                 label="Categories"
                 placeholder="Add a category..."
-                values={routine.tags}
+                values={session.tags}
                 draft={tagDraft}
                 suggestions={categories}
-                onChange={tags => setRoutine({ ...routine, tags })}
+                onChange={tags => setSession({ ...session, tags })}
                 onDraftChange={setTagDraft}
             />
             <label className="workout-manager-field">
                 <span>Notes</span>
-                <textarea rows="2" value={routine.comment} onInput={e => setRoutine({ ...routine, comment: e.target.value })} />
+                <textarea rows="2" value={session.comment} onInput={e => setSession({ ...session, comment: e.target.value })} />
             </label>
 
             <table className="workout-manager-table">
@@ -474,7 +477,7 @@ function RoutineForm({ initial, exercises, categories, units, defaultRest, onSav
                     </tr>
                 </thead>
                 <tbody>
-                    {routine.entries.map((entry, index) => {
+                    {session.entries.map((entry, index) => {
                         const exercise = exercises[entry.exerciseId]
                         return (
                             <tr key={entry.id}>
@@ -512,14 +515,14 @@ function RoutineForm({ initial, exercises, categories, units, defaultRest, onSav
                                     <Button
                                         icon="bx-trash"
                                         title="Remove"
-                                        onClick={() => setRoutine(current => ({ ...current, entries: current.entries.filter(e => e.id !== entry.id) }))}
+                                        onClick={() => setSession(current => ({ ...current, entries: current.entries.filter(e => e.id !== entry.id) }))}
                                     />
                                 </td>
                             </tr>
                         )
                     })}
-                    {routine.entries.length === 0 && (
-                        <tr><td colSpan="6" className="workout-manager-hint">No exercises in this routine yet.</td></tr>
+                    {session.entries.length === 0 && (
+                        <tr><td colSpan="6" className="workout-manager-hint">No exercises in this session yet.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -532,23 +535,37 @@ function RoutineForm({ initial, exercises, categories, units, defaultRest, onSav
     )
 }
 
-function RoutinesTab({ database, categories, units, defaultRest, onSave, onDelete, onStart }) {
+function ProgramsTab({
+    database, categories, units, defaultRest,
+    onSaveProgram, onDeleteProgram, onSaveSession, onDeleteSession, onMoveSession, onStart
+}) {
     const [editing, setEditing] = useState(null)
+    const [draft, setDraft] = useState("")
+    const [renaming, setRenaming] = useState(null)
+    const [renameDraft, setRenameDraft] = useState("")
 
-    const routines = useMemo(
-        () => Object.values(database.routines).sort((a, b) => a.name.localeCompare(b.name)),
-        [database.routines]
+    const programs = useMemo(
+        () => Object.values(database.programs).sort((a, b) => a.name.localeCompare(b.name)),
+        [database.programs]
     )
 
+    const create = useCallback(() => {
+        if (!draft.trim()) return
+        onSaveProgram(normalizeProgram({ name: draft.trim() }))
+        setDraft("")
+    }, [draft, onSaveProgram])
+
+    // Editing a session needs its program too, since a session is only ever
+    // reached through the program that owns it.
     if (editing) {
         return (
-            <RoutineForm
-                initial={editing}
+            <SessionForm
+                initial={editing.session}
                 exercises={database.exercises}
                 categories={categories}
                 units={units}
                 defaultRest={defaultRest}
-                onSave={routine => { onSave(routine); setEditing(null) }}
+                onSave={session => { onSaveSession(editing.programId, session); setEditing(null) }}
                 onCancel={() => setEditing(null)}
             />
         )
@@ -557,40 +574,106 @@ function RoutinesTab({ database, categories, units, defaultRest, onSave, onDelet
     return (
         <div>
             <div className="workout-manager-toolbar">
-                <Button icon="bx-plus" text="Add Routine" onClick={() => setEditing({})} />
+                <input
+                    type="text"
+                    placeholder="New program..."
+                    value={draft}
+                    onInput={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") create() }}
+                />
+                <Button icon="bx-plus" text="Add Program" onClick={create} disabled={!draft.trim()} />
             </div>
-            {routines.length === 0 && <p className="workout-manager-hint">No routines yet.</p>}
-            {routines.map(routine => (
-                <div className="workout-manager-card" key={routine.id}>
+            {programs.length === 0 && <p className="workout-manager-hint">No programs yet.</p>}
+            {programs.map(program => (
+                <div className="workout-manager-program" key={program.id}>
                     <div className="workout-manager-card-header">
-                        <strong>{routine.name}</strong>
-                        <span className="workout-manager-hint">
-                            {routine.entries.length} exercise(s){routine.tags.length > 0 ? ` · ${routine.tags.join(", ")}` : ""}
-                        </span>
+                        {renaming === program.id ? (
+                            <input
+                                type="text"
+                                value={renameDraft}
+                                autoFocus
+                                onInput={e => setRenameDraft(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter") {
+                                        onSaveProgram({ ...program, name: renameDraft.trim() || program.name })
+                                        setRenaming(null)
+                                    }
+                                    if (e.key === "Escape") setRenaming(null)
+                                }}
+                            />
+                        ) : <strong>{program.name}</strong>}
+                        <span className="workout-manager-hint">{program.sessions.length} session(s)</span>
                         <span className="workout-manager-spacer" />
-                        <Button icon="bx-play" text="Start Today" onClick={() => onStart(routine)} />
-                        <Button icon="bx-edit" title="Edit" onClick={() => setEditing(routine)} />
-                        <Button icon="bx-trash" title="Delete" onClick={() => onDelete(routine)} />
+                        <Button
+                            icon="bx-plus"
+                            text="Add Session"
+                            onClick={() => setEditing({ programId: program.id, session: {} })}
+                        />
+                        <Button
+                            icon="bx-edit"
+                            title="Rename program"
+                            onClick={() => { setRenaming(program.id); setRenameDraft(program.name) }}
+                        />
+                        <Button icon="bx-trash" title="Delete program" onClick={() => onDeleteProgram(program)} />
                     </div>
-                    {routine.comment && <p className="workout-manager-hint">{routine.comment}</p>}
-                    <ul className="workout-manager-plan">
-                        {routine.entries.map(entry => {
-                            const exercise = database.exercises[entry.exerciseId]
-                            if (!exercise) return null
-                            const targets = measurementFields(exercise)
-                                .filter(field => entry[field.key] > 0)
-                                .map(field => `${formatNumber(entry[field.key])} ${field.unit ? units[field.unit] : field.label.toLowerCase()}`)
-                                .join(" × ")
-                            return (
-                                <li key={entry.id}>
-                                    {`${formatNumber(entry.sets)} × ${exercise.name}`}
-                                    {targets && ` — ${targets}`}
-                                    {entry.rest > 0 && ` · ${formatNumber(entry.rest)}s rest`}
-                                    {entry.comment && ` · ${entry.comment}`}
-                                </li>
-                            )
-                        })}
-                    </ul>
+                    {program.comment && <p className="workout-manager-hint">{program.comment}</p>}
+                    {program.sessions.length === 0 && (
+                        <p className="workout-manager-hint">No sessions in this program yet.</p>
+                    )}
+                    {program.sessions.map((session, index) => (
+                        <div className="workout-manager-card workout-manager-session" key={session.id}>
+                            <div className="workout-manager-card-header">
+                                <strong>{session.name}</strong>
+                                <span className="workout-manager-hint">
+                                    {session.entries.length} exercise(s)
+                                    {session.tags.length > 0 ? ` · ${session.tags.join(", ")}` : ""}
+                                </span>
+                                <span className="workout-manager-spacer" />
+                                <Button
+                                    icon="bx-chevron-up"
+                                    title="Move up"
+                                    disabled={index === 0}
+                                    onClick={() => onMoveSession(program.id, session.id, -1)}
+                                />
+                                <Button
+                                    icon="bx-chevron-down"
+                                    title="Move down"
+                                    disabled={index === program.sessions.length - 1}
+                                    onClick={() => onMoveSession(program.id, session.id, 1)}
+                                />
+                                <Button icon="bx-play" text="Start Today" onClick={() => onStart(program, session)} />
+                                <Button
+                                    icon="bx-edit"
+                                    title="Edit"
+                                    onClick={() => setEditing({ programId: program.id, session })}
+                                />
+                                <Button
+                                    icon="bx-trash"
+                                    title="Delete"
+                                    onClick={() => onDeleteSession(program.id, session)}
+                                />
+                            </div>
+                            {session.comment && <p className="workout-manager-hint">{session.comment}</p>}
+                            <ul className="workout-manager-plan">
+                                {session.entries.map(entry => {
+                                    const exercise = database.exercises[entry.exerciseId]
+                                    if (!exercise) return null
+                                    const targets = measurementFields(exercise)
+                                        .filter(field => entry[field.key] > 0)
+                                        .map(field => `${formatNumber(entry[field.key])} ${field.unit ? units[field.unit] : field.label.toLowerCase()}`)
+                                        .join(" × ")
+                                    return (
+                                        <li key={entry.id}>
+                                            {`${formatNumber(entry.sets)} × ${exercise.name}`}
+                                            {targets && ` — ${targets}`}
+                                            {entry.rest > 0 && ` · ${formatNumber(entry.rest)}s rest`}
+                                            {entry.comment && ` · ${entry.comment}`}
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+                        </div>
+                    ))}
                 </div>
             ))}
         </div>
@@ -600,7 +683,7 @@ function RoutinesTab({ database, categories, units, defaultRest, onSave, onDelet
 // ---------------------------------------------------------------------------
 // Log tab
 // ---------------------------------------------------------------------------
-function SessionEntry({ entry, exercises, units, onChange, onRemove }) {
+function WorkoutEntry({ entry, exercises, units, onChange, onRemove }) {
     const exercise = exercises[entry.exerciseId]
     const fields = exercise ? measurementFields(exercise) : []
 
@@ -668,31 +751,31 @@ function SessionEntry({ entry, exercises, units, onChange, onRemove }) {
     )
 }
 
-function Session({ session, exercises, categories, units, onChange, onRemove }) {
+function Workout({ workout, exercises, categories, units, onChange, onRemove }) {
     const [adding, setAdding] = useState("")
-    const totals = useMemo(() => sessionTotals(session, exercises), [session, exercises])
+    const totals = useMemo(() => workoutTotals(workout, exercises), [workout, exercises])
 
     const addExercise = useCallback(exerciseId => {
         setAdding("")
         if (!exerciseId) return
         onChange({
-            ...session,
-            entries: [...session.entries, normalizeSessionEntry({ id: newId(), exerciseId, sets: [{}] })]
+            ...workout,
+            entries: [...workout.entries, normalizeWorkoutEntry({ id: newId(), exerciseId, sets: [{}] })]
         })
-    }, [session, onChange])
+    }, [workout, onChange])
 
     const setEntry = useCallback(updated => {
-        onChange({ ...session, entries: session.entries.map(entry => entry.id === updated.id ? updated : entry) })
-    }, [session, onChange])
+        onChange({ ...workout, entries: workout.entries.map(entry => entry.id === updated.id ? updated : entry) })
+    }, [workout, onChange])
 
     return (
         <div className="workout-manager-card">
             <div className="workout-manager-card-header">
                 <input
                     type="text"
-                    className="workout-manager-session-name"
-                    value={session.name}
-                    onInput={e => onChange({ ...session, name: e.target.value })}
+                    className="workout-manager-workout-name"
+                    value={workout.name}
+                    onInput={e => onChange({ ...workout, name: e.target.value })}
                 />
                 <span className="workout-manager-hint">
                     {`${totals.sets} set(s)`}
@@ -705,19 +788,19 @@ function Session({ session, exercises, categories, units, onChange, onRemove }) 
             </div>
             <input
                 type="text"
-                className="workout-manager-session-comment"
+                className="workout-manager-workout-comment"
                 placeholder="How did it go?"
-                value={session.comment}
-                onInput={e => onChange({ ...session, comment: e.target.value })}
+                value={workout.comment}
+                onInput={e => onChange({ ...workout, comment: e.target.value })}
             />
-            {session.entries.map(entry => (
-                <SessionEntry
+            {workout.entries.map(entry => (
+                <WorkoutEntry
                     key={entry.id}
                     entry={entry}
                     exercises={exercises}
                     units={units}
                     onChange={setEntry}
-                    onRemove={() => onChange({ ...session, entries: session.entries.filter(e => e.id !== entry.id) })}
+                    onRemove={() => onChange({ ...workout, entries: workout.entries.filter(e => e.id !== entry.id) })}
                 />
             ))}
             <div className="workout-manager-toolbar">
@@ -733,22 +816,26 @@ function Session({ session, exercises, categories, units, onChange, onRemove }) 
     )
 }
 
-function LogTab({ database, categories, units, onAddSession, onSaveSession, onRemoveSession }) {
+function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onRemoveWorkout }) {
     const [date, setDate] = useState(() => todayKey())
-    const [routineId, setRoutineId] = useState("")
+    const [sessionId, setSessionId] = useState("")
 
-    const sessions = database.log[date] || []
-    const routines = useMemo(
-        () => Object.values(database.routines).sort((a, b) => a.name.localeCompare(b.name)),
-        [database.routines]
+    const workouts = database.log[date] || []
+    // Grouped by program so the picker reads the way the plans are organised.
+    const programs = useMemo(
+        () => Object.values(database.programs)
+            .filter(program => program.sessions.length > 0)
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        [database.programs]
     )
+    const sessionCount = programs.reduce((total, program) => total + program.sessions.length, 0)
 
-    const startRoutine = useCallback(() => {
-        const routine = database.routines[routineId]
-        if (!routine) return
-        onAddSession(date, sessionFromRoutine(routine))
-        setRoutineId("")
-    }, [database.routines, routineId, date, onAddSession])
+    const startSession = useCallback(() => {
+        const found = findSession(database, sessionId)
+        if (!found) return
+        onAddWorkout(date, workoutFromSession(found.session, new Date().toISOString(), found.program))
+        setSessionId("")
+    }, [database, sessionId, date, onAddWorkout])
 
     return (
         <div>
@@ -758,23 +845,29 @@ function LogTab({ database, categories, units, onAddSession, onSaveSession, onRe
                 <Button icon="bx-chevron-right" title="Next day" onClick={() => setDate(shiftDateKey(date, 1))} />
                 <Button icon="bx-calendar" text="Today" onClick={() => setDate(todayKey())} />
                 <span className="workout-manager-spacer" />
-                <select value={routineId} onChange={e => setRoutineId(e.target.value)}>
-                    <option value="">{routines.length === 0 ? "No routines yet" : "Start from a routine..."}</option>
-                    {routines.map(routine => <option value={routine.id} key={routine.id}>{routine.name}</option>)}
+                <select value={sessionId} onChange={e => setSessionId(e.target.value)}>
+                    <option value="">{sessionCount === 0 ? "No sessions yet" : "Start from a session..."}</option>
+                    {programs.map(program => (
+                        <optgroup label={program.name} key={program.id}>
+                            {program.sessions.map(session => (
+                                <option value={session.id} key={session.id}>{session.name}</option>
+                            ))}
+                        </optgroup>
+                    ))}
                 </select>
-                <Button icon="bx-play" text="Start" onClick={startRoutine} disabled={!routineId} />
-                <Button icon="bx-plus" text="Empty Workout" onClick={() => onAddSession(date, normalizeSession({ name: "Workout" }))} />
+                <Button icon="bx-play" text="Start" onClick={startSession} disabled={!sessionId} />
+                <Button icon="bx-plus" text="Empty Workout" onClick={() => onAddWorkout(date, normalizeWorkout({ name: "Workout" }))} />
             </div>
-            {sessions.length === 0 && <p className="workout-manager-hint">Nothing logged on this day.</p>}
-            {sessions.map(session => (
-                <Session
-                    key={session.id}
-                    session={session}
+            {workouts.length === 0 && <p className="workout-manager-hint">Nothing logged on this day.</p>}
+            {workouts.map(workout => (
+                <Workout
+                    key={workout.id}
+                    workout={workout}
                     exercises={database.exercises}
                     categories={categories}
                     units={units}
-                    onChange={updated => onSaveSession(date, updated)}
-                    onRemove={() => onRemoveSession(date, session)}
+                    onChange={updated => onSaveWorkout(date, updated)}
+                    onRemove={() => onRemoveWorkout(date, workout)}
                 />
             ))}
         </div>
@@ -820,7 +913,7 @@ function StatsTab({ database, units, weeklyTarget }) {
     const exercises = useMemo(
         () => Object.values(database.exercises)
             .map(exercise => ({ exercise, stats: exerciseStats(database, exercise.id) }))
-            .filter(({ stats }) => stats.sessions > 0)
+            .filter(({ stats }) => stats.workouts > 0)
             .sort((a, b) => (b.stats.lastPerformed || "").localeCompare(a.stats.lastPerformed || "")),
         [database]
     )
@@ -845,8 +938,8 @@ function StatsTab({ database, units, weeklyTarget }) {
                     {weeks.map(week => (
                         <tr key={week.weekStart}>
                             <td>{week.weekStart}</td>
-                            <td className={week.sessions >= weeklyTarget ? "workout-manager-ok" : ""}>
-                                {`${week.sessions} / ${weeklyTarget}`}
+                            <td className={week.workouts >= weeklyTarget ? "workout-manager-ok" : ""}>
+                                {`${week.workouts} / ${weeklyTarget}`}
                             </td>
                             <td>{week.sets}</td>
                             <td>{formatNumber(week.volume)}</td>
@@ -899,7 +992,7 @@ function StatsTab({ database, units, weeklyTarget }) {
                     </div>
                     <ul className="workout-manager-plan">
                         {history.map(record => (
-                            <li key={`${record.sessionId}-${record.date}`}>
+                            <li key={`${record.workoutId}-${record.date}`}>
                                 <strong>{record.date}</strong>
                                 {` — ${record.sets.map(set => setLabel(set, database.exercises[expanded], units)).join(", ") || "no sets"}`}
                                 {record.comment && ` · ${record.comment}`}
@@ -943,7 +1036,7 @@ function CategoriesTab({ database, categories, onCreate, onRename, onDelete }) {
                     <tr>
                         <th>Category</th>
                         <th>Exercises</th>
-                        <th>Routines</th>
+                        <th>Sessions</th>
                         <th />
                     </tr>
                 </thead>
@@ -968,7 +1061,7 @@ function CategoriesTab({ database, categories, onCreate, onRename, onDelete }) {
                                     ) : categoryLeaf(name)}
                                 </td>
                                 <td>{direct.exercises === subtree.exercises ? direct.exercises : `${direct.exercises} (${subtree.exercises})`}</td>
-                                <td>{direct.routines === subtree.routines ? direct.routines : `${direct.routines} (${subtree.routines})`}</td>
+                                <td>{direct.sessions === subtree.sessions ? direct.sessions : `${direct.sessions} (${subtree.sessions})`}</td>
                                 <td className="workout-manager-row-actions">
                                     <Button
                                         icon="bx-edit"
@@ -1033,7 +1126,7 @@ function WorkoutManagerWidget() {
     }, [persist])
 
     /*
-     * Deleting an exercise leaves whatever referenced it: routine entries and
+     * Deleting an exercise leaves whatever referenced it: session entries and
      * logged sets keep the dangling id, which the UI shows as "Deleted
      * exercise". Rewriting history to erase it would silently change what the
      * log says happened.
@@ -1047,36 +1140,74 @@ function WorkoutManagerWidget() {
         })
     }, [persist])
 
-    const onSaveRoutine = useCallback(routine => {
-        persist(current => ({ ...current, routines: { ...current.routines, [routine.id]: routine } }))
+    const onSaveProgram = useCallback(program => {
+        persist(current => ({ ...current, programs: { ...current.programs, [program.id]: program } }))
     }, [persist])
 
-    const onDeleteRoutine = useCallback(routine => {
-        if (!confirm(`Delete routine "${routine.name}"? Workouts logged from it are kept.`)) return
+    const onDeleteProgram = useCallback(program => {
+        const count = program.sessions.length
+        const detail = count > 0 ? ` Its ${count} session(s) go with it.` : ""
+        if (!confirm(`Delete program "${program.name}"?${detail} Workouts already logged are kept.`)) return
         persist(current => {
-            const routines = { ...current.routines }
-            delete routines[routine.id]
-            return { ...current, routines }
+            const programs = { ...current.programs }
+            delete programs[program.id]
+            return { ...current, programs }
         })
     }, [persist])
 
-    const onAddSession = useCallback((date, session) => {
-        persist(current => ({ ...current, log: { ...current.log, [date]: [...(current.log[date] || []), session] } }))
+    // A session lives in its program's array, so every write rebuilds that array.
+    const updateSessions = useCallback((programId, change) => {
+        persist(current => {
+            const program = current.programs[programId]
+            if (!program) return current
+            return {
+                ...current,
+                programs: { ...current.programs, [programId]: { ...program, sessions: change(program.sessions) } }
+            }
+        })
     }, [persist])
 
-    const onSaveSession = useCallback((date, session) => {
+    const onSaveSession = useCallback((programId, session) => {
+        updateSessions(programId, sessions => sessions.some(existing => existing.id === session.id)
+            ? sessions.map(existing => existing.id === session.id ? session : existing)
+            : [...sessions, session])
+    }, [updateSessions])
+
+    const onDeleteSession = useCallback((programId, session) => {
+        if (!confirm(`Delete session "${session.name}"? Workouts logged from it are kept.`)) return
+        updateSessions(programId, sessions => sessions.filter(existing => existing.id !== session.id))
+    }, [updateSessions])
+
+    // Reordering swaps with the neighbour, which is what the up/down arrows mean.
+    const onMoveSession = useCallback((programId, sessionId, delta) => {
+        updateSessions(programId, sessions => {
+            const index = sessions.findIndex(session => session.id === sessionId)
+            const target = index + delta
+            if (index < 0 || target < 0 || target >= sessions.length) return sessions
+            const next = [...sessions]
+            next[index] = sessions[target]
+            next[target] = sessions[index]
+            return next
+        })
+    }, [updateSessions])
+
+    const onAddWorkout = useCallback((date, workout) => {
+        persist(current => ({ ...current, log: { ...current.log, [date]: [...(current.log[date] || []), workout] } }))
+    }, [persist])
+
+    const onSaveWorkout = useCallback((date, workout) => {
         persist(current => ({
             ...current,
-            log: { ...current.log, [date]: (current.log[date] || []).map(s => s.id === session.id ? session : s) }
+            log: { ...current.log, [date]: (current.log[date] || []).map(s => s.id === workout.id ? workout : s) }
         }))
     }, [persist])
 
     // The day's key is dropped once its last workout goes, so an empty day
     // leaves nothing behind in the document.
-    const onRemoveSession = useCallback((date, session) => {
-        if (!confirm(`Delete "${session.name}" logged on ${date}?`)) return
+    const onRemoveWorkout = useCallback((date, workout) => {
+        if (!confirm(`Delete "${workout.name}" logged on ${date}?`)) return
         persist(current => {
-            const remaining = (current.log[date] || []).filter(s => s.id !== session.id)
+            const remaining = (current.log[date] || []).filter(s => s.id !== workout.id)
             const log = { ...current.log }
             if (remaining.length > 0) log[date] = remaining
             else delete log[date]
@@ -1094,19 +1225,19 @@ function WorkoutManagerWidget() {
 
     // `usage` counts the whole subtree, since deleting takes subcategories with it.
     const onDeleteCategory = useCallback((name, usage) => {
-        const affected = usage.exercises + usage.routines > 0
-            ? ` It is removed from ${usage.exercises} exercise(s) and ${usage.routines} routine(s), including any subcategories.`
+        const affected = usage.exercises + usage.sessions > 0
+            ? ` It is removed from ${usage.exercises} exercise(s) and ${usage.sessions} session(s), including any subcategories.`
             : " Any subcategories go with it."
-        if (!confirm(`Delete category "${name}"?${affected} The exercises and routines themselves are kept.`)) return
+        if (!confirm(`Delete category "${name}"?${affected} The exercises and sessions themselves are kept.`)) return
         persist(current => deleteCategory(current, name))
     }, [persist])
 
-    const onStartRoutine = useCallback(routine => {
-        onAddSession(todayKey(), sessionFromRoutine(routine))
+    const onStartSession = useCallback((program, session) => {
+        onAddWorkout(todayKey(), workoutFromSession(session, new Date().toISOString(), program))
         setTab("log")
-    }, [onAddSession])
+    }, [onAddWorkout])
 
-    // Exports the whole database (exercises + routines + log) as one JSON file.
+    // Exports the whole database (exercises + sessions + log) as one JSON file.
     const onExport = useCallback(() => {
         const blob = new Blob([exportDatabase(database)], { type: "application/json" })
         const url = URL.createObjectURL(blob)
@@ -1119,21 +1250,36 @@ function WorkoutManagerWidget() {
 
     /*
      * Merges an imported database into the current one: imported exercises,
-     * routines and workouts are added by id alongside whatever already exists,
+     * sessions and workouts are added by id alongside whatever already exists,
      * so importing the same file twice is a no-op rather than duplicating
      * workouts, and existing data is never wiped.
      */
     const mergeImported = useCallback(imported => {
         persist(current => {
             const log = { ...current.log }
-            for (const [date, sessions] of Object.entries(imported.log)) {
-                const existingIds = new Set((log[date] || []).map(session => session.id))
-                log[date] = [...(log[date] || []), ...sessions.filter(session => !existingIds.has(session.id))]
+            for (const [date, workouts] of Object.entries(imported.log)) {
+                const existingIds = new Set((log[date] || []).map(workout => workout.id))
+                log[date] = [...(log[date] || []), ...workouts.filter(workout => !existingIds.has(workout.id))]
+            }
+            // A program already present keeps its own sessions and gains any
+            // imported one whose id it does not already hold.
+            const programs = { ...current.programs }
+            for (const [id, program] of Object.entries(imported.programs)) {
+                const existing = programs[id]
+                if (!existing) {
+                    programs[id] = program
+                    continue
+                }
+                const existingIds = new Set(existing.sessions.map(session => session.id))
+                programs[id] = {
+                    ...existing,
+                    sessions: [...existing.sessions, ...program.sessions.filter(session => !existingIds.has(session.id))]
+                }
             }
             return {
                 categories: normalizeTags([...current.categories, ...imported.categories]),
                 exercises: { ...current.exercises, ...imported.exercises },
-                routines: { ...current.routines, ...imported.routines },
+                programs,
                 log
             }
         })
@@ -1167,7 +1313,8 @@ function WorkoutManagerWidget() {
             return {
                 database,
                 message: `Imported ${Object.keys(database.exercises).length} exercise(s) and `
-                    + `${Object.keys(database.routines).length} routine(s).`
+                    + `${allSessions(database).length} session(s) in `
+                    + `${Object.keys(database.programs).length} program(s).`
             }
         })
     }, [importFile])
@@ -1186,7 +1333,7 @@ function WorkoutManagerWidget() {
                 : ` Weights are in ${summary.unit} — set Weight Unit to ${summary.unit} in settings to match.`
             return {
                 database,
-                message: `Imported ${summary.sessions} workout(s), ${summary.sets} set(s) and `
+                message: `Imported ${summary.workouts} workout(s), ${summary.sets} set(s) and `
                     + `${summary.exercises} exercise(s) from Liftosaur `
                     + `(skipped ${summary.warmupSets} warmup and ${summary.incompleteSets} unperformed set(s)).${unitNote}`
             }
@@ -1210,7 +1357,7 @@ function WorkoutManagerWidget() {
         <div className="workout-manager-widget">
             <div className="workout-manager-tabs">
                 {tabButton("log", "Log")}
-                {tabButton("routines", "Routines")}
+                {tabButton("programs", "Programs")}
                 {tabButton("exercises", "Exercises")}
                 {tabButton("stats", "Stats")}
                 {tabButton("categories", "Categories")}
@@ -1224,20 +1371,23 @@ function WorkoutManagerWidget() {
                     database={database}
                     categories={categories}
                     units={units}
-                    onAddSession={onAddSession}
-                    onSaveSession={onSaveSession}
-                    onRemoveSession={onRemoveSession}
+                    onAddWorkout={onAddWorkout}
+                    onSaveWorkout={onSaveWorkout}
+                    onRemoveWorkout={onRemoveWorkout}
                 />
             )}
-            {tab === "routines" && (
-                <RoutinesTab
+            {tab === "programs" && (
+                <ProgramsTab
                     database={database}
                     categories={categories}
                     units={units}
                     defaultRest={settings.defaultRest}
-                    onSave={onSaveRoutine}
-                    onDelete={onDeleteRoutine}
-                    onStart={onStartRoutine}
+                    onSaveProgram={onSaveProgram}
+                    onDeleteProgram={onDeleteProgram}
+                    onSaveSession={onSaveSession}
+                    onDeleteSession={onDeleteSession}
+                    onMoveSession={onMoveSession}
+                    onStart={onStartSession}
                 />
             )}
             {tab === "exercises" && (

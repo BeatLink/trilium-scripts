@@ -4,9 +4,13 @@
  *   {
  *     categories: [ "Push", "Push/Chest", ... ],
  *     exercises: { [id]: { id, name, measurement, equipment, muscles: [...], comment, tags: [...] } },
- *     routines: { [id]: { id, name, comment, tags: [...], entries: [{ id, exerciseId, sets, reps, weight, duration, distance, rest, comment }] } },
- *     log: { [date]: [ { id, name, routineId, startedAt, comment, entries: [ { id, exerciseId, comment, sets: [ { id, reps, weight, duration, distance, rpe } ] } ] } ] }
+ *     programs: { [id]: { id, name, comment, sessions: [ { id, name, comment, tags: [...], entries: [{ id, exerciseId, sets, reps, weight, duration, distance, rest, comment }] } ] } },
+ *     log: { [date]: [ { id, name, sessionId, startedAt, comment, entries: [ { id, exerciseId, comment, sets: [ { id, reps, weight, duration, distance, rpe } ] } ] } ] }
  *   }
+ * A program is an ordered group of sessions -- Program -> Session -> Exercise.
+ * A session is a plan; a log entry is one workout actually performed, pointing
+ * back at the session it was started from via `sessionId` (empty when ad-hoc).
+ * Session ids are unique across every program, so a workout needs no program id.
  * `date` is an ISO "YYYY-MM-DD" string. Weights and distances are plain numbers
  * in whatever unit settings names (kg/lb, km/mi) -- the unit is a display label,
  * never a conversion, so changing it never rewrites recorded numbers. Durations
@@ -132,11 +136,11 @@ function normalizeExercise(exercise) {
 }
 
 /*
- * A routine entry is the plan for one exercise: how many sets, and the targets
+ * A session entry is the plan for one exercise: how many sets, and the targets
  * each of them aims at. Which targets are meaningful follows the exercise's
  * measurement, exactly as it does for a logged set.
  */
-function normalizeRoutineEntry(entry) {
+function normalizeSessionEntry(entry) {
     return {
         id: typeof entry?.id === "string" && entry.id ? entry.id : newId(),
         exerciseId: typeof entry?.exerciseId === "string" ? entry.exerciseId : "",
@@ -150,13 +154,23 @@ function normalizeRoutineEntry(entry) {
     }
 }
 
-function normalizeRoutine(routine) {
+function normalizeSession(session) {
     return {
-        id: typeof routine?.id === "string" && routine.id ? routine.id : newId(),
-        name: typeof routine?.name === "string" ? routine.name : "",
-        comment: trimmedString(routine?.comment),
-        tags: normalizeTags(routine?.tags),
-        entries: Array.isArray(routine?.entries) ? routine.entries.map(normalizeRoutineEntry) : []
+        id: typeof session?.id === "string" && session.id ? session.id : newId(),
+        name: typeof session?.name === "string" ? session.name : "",
+        comment: trimmedString(session?.comment),
+        tags: normalizeTags(session?.tags),
+        entries: Array.isArray(session?.entries) ? session.entries.map(normalizeSessionEntry) : []
+    }
+}
+
+// A program is an ordered group of sessions; the array order is the running order.
+function normalizeProgram(program) {
+    return {
+        id: typeof program?.id === "string" && program.id ? program.id : newId(),
+        name: typeof program?.name === "string" ? program.name : "",
+        comment: trimmedString(program?.comment),
+        sessions: Array.isArray(program?.sessions) ? program.sessions.map(normalizeSession) : []
     }
 }
 
@@ -171,7 +185,7 @@ function normalizeSet(set) {
     }
 }
 
-function normalizeSessionEntry(entry) {
+function normalizeWorkoutEntry(entry) {
     return {
         id: typeof entry?.id === "string" && entry.id ? entry.id : newId(),
         exerciseId: typeof entry?.exerciseId === "string" ? entry.exerciseId : "",
@@ -181,21 +195,33 @@ function normalizeSessionEntry(entry) {
 }
 
 // One workout: a named list of exercises with the sets actually performed.
-function normalizeSession(session) {
+function normalizeWorkout(workout) {
     return {
-        id: typeof session?.id === "string" && session.id ? session.id : newId(),
-        name: typeof session?.name === "string" ? session.name : "Workout",
-        // Empty means an ad-hoc session that came from no routine.
-        routineId: typeof session?.routineId === "string" ? session.routineId : "",
-        startedAt: typeof session?.startedAt === "string" ? session.startedAt : new Date().toISOString(),
-        comment: trimmedString(session?.comment),
-        entries: Array.isArray(session?.entries) ? session.entries.map(normalizeSessionEntry) : []
+        id: typeof workout?.id === "string" && workout.id ? workout.id : newId(),
+        name: typeof workout?.name === "string" ? workout.name : "Workout",
+        // Empty means an ad-hoc workout that came from no session.
+        // Pre-programs documents named this `routineId`; ids survive migration.
+        sessionId: typeof workout?.sessionId === "string" ? workout.sessionId
+            : typeof workout?.routineId === "string" ? workout.routineId : "",
+        startedAt: typeof workout?.startedAt === "string" ? workout.startedAt : new Date().toISOString(),
+        comment: trimmedString(workout?.comment),
+        entries: Array.isArray(workout?.entries) ? workout.entries.map(normalizeWorkoutEntry) : []
     }
 }
 
-// Exercises and routines are both taggable and are treated alike wherever categories are concerned.
+// Every session in the document, each paired with the program that owns it.
+function allSessions(database) {
+    return Object.values(database.programs).flatMap(program => program.sessions.map(session => ({ program, session })))
+}
+
+// The session with this id, and its program, or null when nothing matches.
+function findSession(database, sessionId) {
+    return allSessions(database).find(({ session }) => session.id === sessionId) || null
+}
+
+// Exercises and sessions are both taggable and are treated alike wherever categories are concerned.
 function taggedItems(database) {
-    return [...Object.values(database.exercises), ...Object.values(database.routines)]
+    return [...Object.values(database.exercises), ...allSessions(database).map(({ session }) => session)]
 }
 
 /*
@@ -214,7 +240,7 @@ function categoryUsage(database, name, includeDescendants = false) {
     const matches = tags => includeDescendants ? tags.some(tag => isInCategory(tag, name)) : tags.includes(name)
     return {
         exercises: Object.values(database.exercises).filter(exercise => matches(exercise.tags)).length,
-        routines: Object.values(database.routines).filter(routine => matches(routine.tags)).length
+        sessions: allSessions(database).filter(({ session }) => matches(session.tags)).length
     }
 }
 
@@ -222,14 +248,16 @@ function addCategory(database, name) {
     return { ...database, categories: normalizeTags([...database.categories, name]) }
 }
 
-// Maps every tag of every exercise and routine, then rebuilds both collections.
+// Maps every tag of every exercise and of every session inside every program.
 function mapItemTags(database, mapTags) {
-    const remap = collection => {
-        const next = {}
-        for (const [id, item] of Object.entries(collection)) next[id] = { ...item, tags: normalizeTags(mapTags(item.tags)) }
-        return next
+    const retag = item => ({ ...item, tags: normalizeTags(mapTags(item.tags)) })
+    const exercises = {}
+    for (const [id, exercise] of Object.entries(database.exercises)) exercises[id] = retag(exercise)
+    const programs = {}
+    for (const [id, program] of Object.entries(database.programs)) {
+        programs[id] = { ...program, sessions: program.sessions.map(retag) }
     }
-    return { ...database, exercises: remap(database.exercises), routines: remap(database.routines) }
+    return { ...database, exercises, programs }
 }
 
 /*
@@ -263,6 +291,20 @@ function allMuscles(database) {
 }
 
 /*
+ * Documents written before programs existed carry a flat `routines` map. Each
+ * routine becomes a session of the same id -- so log entries that referenced it
+ * still resolve -- gathered under one program, which the user then splits up.
+ */
+const IMPORTED_PROGRAM_ID = "imported"
+
+function migrateRoutines(parsed) {
+    if (!parsed?.routines || typeof parsed.routines !== "object") return null
+    const sessions = Object.entries(parsed.routines).map(([id, routine]) => ({ ...normalizeSession(routine), id }))
+    if (sessions.length === 0) return null
+    return normalizeProgram({ id: IMPORTED_PROGRAM_ID, name: "Imported", sessions })
+}
+
+/*
  * The Database note is a JSON code note (never touched by the text editor), so
  * its content is raw JSON. Unparseable content becomes an empty database rather
  * than throwing in the widget's render path.
@@ -278,17 +320,24 @@ function parseDatabase(content) {
     if (parsed?.exercises && typeof parsed.exercises === "object") {
         for (const [id, exercise] of Object.entries(parsed.exercises)) exercises[id] = { ...normalizeExercise(exercise), id }
     }
-    const routines = {}
-    if (parsed?.routines && typeof parsed.routines === "object") {
-        for (const [id, routine] of Object.entries(parsed.routines)) routines[id] = { ...normalizeRoutine(routine), id }
+    const programs = {}
+    if (parsed?.programs && typeof parsed.programs === "object") {
+        for (const [id, program] of Object.entries(parsed.programs)) programs[id] = { ...normalizeProgram(program), id }
+    }
+    const migrated = migrateRoutines(parsed)
+    if (migrated) {
+        const existing = programs[migrated.id]
+        programs[migrated.id] = existing
+            ? { ...existing, sessions: [...existing.sessions, ...migrated.sessions] }
+            : migrated
     }
     const log = {}
     if (parsed?.log && typeof parsed.log === "object") {
-        for (const [date, sessions] of Object.entries(parsed.log)) {
-            if (Array.isArray(sessions)) log[date] = sessions.map(normalizeSession)
+        for (const [date, workouts] of Object.entries(parsed.log)) {
+            if (Array.isArray(workouts)) log[date] = workouts.map(normalizeWorkout)
         }
     }
-    return { categories: normalizeTags(parsed?.categories), exercises, routines, log }
+    return { categories: normalizeTags(parsed?.categories), exercises, programs, log }
 }
 
 function serializeDatabase(database) {
@@ -306,10 +355,10 @@ function estimatedOneRepMax(set) {
     return set.weight * (1 + set.reps / 30)
 }
 
-// What one session adds up to, across whichever measurements it happens to mix.
-function sessionTotals(session, exercises) {
+// What one workout adds up to, across whichever measurements it happens to mix.
+function workoutTotals(workout, exercises) {
     const totals = { sets: 0, volume: 0, reps: 0, duration: 0, distance: 0 }
-    for (const entry of session.entries) {
+    for (const entry of workout.entries) {
         const exercise = exercises[entry.exerciseId]
         for (const set of entry.sets) {
             totals.sets += 1
@@ -322,16 +371,16 @@ function sessionTotals(session, exercises) {
     return totals
 }
 
-function allSessions(database) {
-    return Object.entries(database.log).flatMap(([date, sessions]) => sessions.map(session => ({ date, session })))
+function allWorkouts(database) {
+    return Object.entries(database.log).flatMap(([date, workouts]) => workouts.map(workout => ({ date, workout })))
 }
 
 // Every set ever recorded for one exercise, newest date first.
 function exerciseHistory(database, exerciseId) {
-    return allSessions(database)
-        .flatMap(({ date, session }) => session.entries
+    return allWorkouts(database)
+        .flatMap(({ date, workout }) => workout.entries
             .filter(entry => entry.exerciseId === exerciseId)
-            .map(entry => ({ date, sessionId: session.id, sessionName: session.name, sets: entry.sets, comment: entry.comment })))
+            .map(entry => ({ date, workoutId: workout.id, workoutName: workout.name, sets: entry.sets, comment: entry.comment })))
         .sort((a, b) => b.date.localeCompare(a.date))
 }
 
@@ -345,7 +394,7 @@ function exerciseStats(database, exerciseId) {
     const history = exerciseHistory(database, exerciseId)
     const exercise = database.exercises[exerciseId]
     const stats = {
-        sessions: history.length,
+        workouts: history.length,
         lastPerformed: history[0]?.date || null,
         sets: 0,
         totalVolume: 0,
@@ -370,16 +419,17 @@ function exerciseStats(database, exerciseId) {
 }
 
 /*
- * A fresh session laid out from a routine: one entry per routine entry, with
+ * A fresh workout laid out from a session: one entry per session entry, with
  * that entry's target sets pre-created and pre-filled with its targets, so
- * logging is a matter of correcting what actually happened.
+ * logging is a matter of correcting what actually happened. The program's name
+ * prefixes the workout's when there is one, so the log reads "Push/Pull - Legs".
  */
-function sessionFromRoutine(routine, startedAt = new Date().toISOString()) {
-    return normalizeSession({
-        name: routine.name,
-        routineId: routine.id,
+function workoutFromSession(session, startedAt = new Date().toISOString(), program = null) {
+    return normalizeWorkout({
+        name: program?.name ? `${program.name} - ${session.name}` : session.name,
+        sessionId: session.id,
         startedAt,
-        entries: routine.entries.map(entry => ({
+        entries: session.entries.map(entry => ({
             exerciseId: entry.exerciseId,
             comment: entry.comment,
             sets: Array.from({ length: Math.round(entry.sets) }, () => ({
@@ -415,14 +465,14 @@ function weeklySummary(database, exercises, weeks, today = todayKey()) {
     return Array.from({ length: weeks }, (_, index) => {
         const weekStart = shiftDateKey(start, -7 * index)
         const weekEnd = shiftDateKey(weekStart, 6)
-        const sessions = allSessions(database).filter(({ date }) => date >= weekStart && date <= weekEnd)
-        const totals = { sessions: sessions.length, sets: 0, volume: 0, duration: 0, distance: 0 }
-        for (const { session } of sessions) {
-            const sessionTotal = sessionTotals(session, exercises)
-            totals.sets += sessionTotal.sets
-            totals.volume += sessionTotal.volume
-            totals.duration += sessionTotal.duration
-            totals.distance += sessionTotal.distance
+        const workouts = allWorkouts(database).filter(({ date }) => date >= weekStart && date <= weekEnd)
+        const totals = { workouts: workouts.length, sets: 0, volume: 0, duration: 0, distance: 0 }
+        for (const { workout } of workouts) {
+            const workoutTotal = workoutTotals(workout, exercises)
+            totals.sets += workoutTotal.sets
+            totals.volume += workoutTotal.volume
+            totals.duration += workoutTotal.duration
+            totals.distance += workoutTotal.distance
         }
         return { weekStart, weekEnd, ...totals }
     })
@@ -433,8 +483,9 @@ function exportDatabase(database) {
 }
 
 /*
- * Import accepts the same document shape serializeDatabase writes. Ids are
- * preserved rather than regenerated, since routines and logged sessions
+ * Import accepts the same document shape serializeDatabase writes, including
+ * the pre-programs shape, which parseDatabase migrates on the way in. Ids are
+ * preserved rather than regenerated, since sessions and logged workouts
  * reference exercises by id within the same document. Throws on anything that
  * isn't recognisably a database so the caller can report it rather than
  * silently wiping existing data.
@@ -447,7 +498,7 @@ function importDatabase(text) {
         throw new Error("Not valid JSON.")
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("Expected a JSON object with exercises/routines/log.")
+        throw new Error("Expected a JSON object with exercises/programs/log.")
     }
     return parseDatabase(JSON.stringify(parsed))
 }
@@ -466,11 +517,12 @@ module.exports = {
     categoryAncestors,
     isInCategory,
     normalizeExercise,
-    normalizeRoutine,
-    normalizeRoutineEntry,
-    normalizeSet,
-    normalizeSessionEntry,
     normalizeSession,
+    normalizeSessionEntry,
+    normalizeProgram,
+    normalizeSet,
+    normalizeWorkoutEntry,
+    normalizeWorkout,
     allCategories,
     categoryUsage,
     addCategory,
@@ -482,11 +534,13 @@ module.exports = {
     serializeDatabase,
     setVolume,
     estimatedOneRepMax,
-    sessionTotals,
+    workoutTotals,
+    allWorkouts,
     allSessions,
+    findSession,
     exerciseHistory,
     exerciseStats,
-    sessionFromRoutine,
+    workoutFromSession,
     todayKey,
     shiftDateKey,
     weekStartKey,

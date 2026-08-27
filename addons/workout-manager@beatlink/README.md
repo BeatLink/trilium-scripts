@@ -1,8 +1,10 @@
 # Workout Manager
 
-An exercise library, reusable routines, and a workout log, in one widget. All data — categories,
-exercises, routines and every logged workout — lives in one persisted JSON note, so it's a single
-note you can back up, inspect, or migrate.
+An exercise library, reusable training programs, and a workout log, in one widget. Plans are
+organised as **Program -> Session -> Exercise**: a program is a training block such as Push/Pull/Legs,
+a session is one day of it, and each session lists the exercises it works through. All data —
+categories, exercises, programs and every logged workout — lives in one persisted JSON note, so it's
+a single note you can back up, inspect, or migrate.
 
 ## Setup
 
@@ -42,25 +44,33 @@ wger's API has no substring search endpoint, so the whole English exercise index
 page load (a few seconds on the first search, instant afterwards) and searched locally. If wger is
 unreachable, the form says so and manual entry carries on working.
 
-## Routines
+## Programs and sessions
 
-A routine is a plan: an ordered list of exercises, each with a number of sets, the targets those
-sets aim at, a rest time, and an optional note. Which targets a routine entry offers follows the
-exercise's own measurement — a Weight & Reps exercise asks for reps and weight, a Cardio one for
-duration and distance.
+The **Programs** tab holds the plans, two levels deep. A **program** is a named training block that
+groups the sessions belonging to it. A **session** is one day of that program: an ordered list of
+exercises, each with a number of sets, the targets those sets aim at, a rest time, and an optional
+note. Which targets a session entry offers follows the exercise's own measurement — a Weight & Reps
+exercise asks for reps and weight, a Cardio one for duration and distance.
 
-**Start Today** on a routine creates a workout in today's log, pre-filled: one entry per routine
+Type a name and **Add Program** to create a program; **Add Session** inside one adds a session to it.
+The arrows on a session move it up and down, and that order is the order the program runs in. A
+session belongs to exactly one program, so putting the same day in two programs means copying it.
+
+Categories are tagged on sessions rather than on programs, so a session can be filed under Push or
+Upper without the whole program having to be.
+
+**Start Today** on a session creates a workout in today's log, pre-filled: one entry per session
 exercise, with that entry's sets already created at its target numbers. Logging is then a matter of
-correcting what actually happened.
+correcting what actually happened. The logged workout is named after both, as `Program - Session`.
 
-Routines are plans only. Editing or deleting a routine never changes a workout already logged from
-it.
+Programs and sessions are plans only. Editing or deleting either never changes a workout already
+logged from it.
 
 ## Log
 
 The **Log** tab is one day at a time — arrows step a day, the date field jumps anywhere, **Today**
-comes back. A day holds any number of workouts, each of which can be started from a routine or
-created empty and filled in as you go.
+comes back. A day holds any number of workouts, each of which can be started from a session (the
+picker groups sessions under their program) or created empty and filled in as you go.
 
 Everything in a logged workout is edited in place and saved as you type: its name and note, the
 exercises in it, and each set's numbers. **Add Set** copies the previous set of the same exercise,
@@ -84,11 +94,11 @@ Two tables:
 
 ## Categories
 
-Exercises and routines share one set of categories, which nest with `/`: `Push/Chest` is Chest
+Exercises and sessions share one set of categories, which nest with `/`: `Push/Chest` is Chest
 inside Push. The category list is the union of the categories you create here and any typed straight
-into an exercise or routine form, so nothing is ever hidden. Renaming a category takes its subtree
+into an exercise or session form, so nothing is ever hidden. Renaming a category takes its subtree
 with it, and renaming onto an existing name merges the two. Deleting a category removes it (and its
-subcategories) from everything tagged with it; the exercises and routines themselves are kept.
+subcategories) from everything tagged with it; the exercises and sessions themselves are kept.
 
 ## Units
 
@@ -98,8 +108,13 @@ Switching a unit relabels what is displayed — it never converts or rewrites re
 ## Import and export
 
 **Export JSON** downloads the whole database as one file. **Import JSON** merges such a file back in
-by id: exercises and routines are added alongside what's already there, and workouts already present
-are skipped, so importing the same file twice changes nothing and nothing is ever wiped.
+by id: exercises and programs are added alongside what's already there, sessions are merged into a
+program already present rather than replacing it, and workouts already present are skipped, so
+importing the same file twice changes nothing and nothing is ever wiped.
+
+A file exported before programs existed is upgraded on the way in: each routine it holds becomes a
+session, and all of them are gathered into one program named **Imported**, which you can then split
+up. Workouts logged from those routines keep pointing at the right session.
 
 ### Importing from Liftosaur
 
@@ -122,8 +137,8 @@ JSON is the complete backup.
 What is not imported:
 
 - **Warmup sets** and sets that were never performed — both are counted in the summary message.
-- **Programs.** Liftosaur programs are Liftoscript, which computes sets and weights per workout;
-  they have no equivalent as a plain set/rep routine, so routines are left to you to write.
+- **Programs.** A Liftosaur program is Liftoscript, which computes sets and weights per workout; it
+  has no equivalent as a plain set/rep plan, so programs and sessions are left to you to write.
 - Everything Liftosaur logs is reps and weight, so imported exercises come in as Weight & Reps, or
   as Bodyweight Reps when no set ever carried weight. Change an exercise's measurement afterwards if
   it should be Duration or Cardio.
@@ -138,7 +153,7 @@ this addon labels weights rather than converting them.
 |---------|-------------|
 | Weight Unit | Label shown beside every weight (kg or lb). |
 | Distance Unit | Label shown beside every cardio distance (km or mi). |
-| Default Rest | Rest seeded into a new routine entry. |
+| Default Rest | Rest seeded into a new session entry. |
 | Workouts Per Week | The target each week in the Stats tab is measured against. |
 | Render Note | An existing note to turn into a second view of the widget. Selecting it converts that note into a render note; clearing it reverts the previous one to a text note. |
 

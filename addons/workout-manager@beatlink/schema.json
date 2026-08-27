@@ -29,13 +29,13 @@
     "defaultRest": {
         "type": "number",
         "label": "Default Rest (seconds)",
-        "description": "Rest seeded into a new routine entry. Each entry can still be given its own.",
+        "description": "Rest seeded into a new session entry. Each entry can still be given its own.",
         "tab": "Targets"
     },
     "weeklyTarget": {
         "type": "number",
         "label": "Workouts Per Week",
-        "description": "How many sessions a week the Stats tab measures each week against.",
+        "description": "How many workouts a week the Stats tab measures each week against.",
         "tab": "Targets"
     }
 }
