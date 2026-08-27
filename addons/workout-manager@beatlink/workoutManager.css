@@ -424,3 +424,168 @@
 .workout-manager-ok {
     color: #27ae60;
 }
+
+/* Rest timer: pinned to the bottom of the card it is counting for, so it stays
+   in view while the sets above it scroll. The fill is a progress bar behind the
+   controls rather than beside them. */
+.workout-manager-rest-timer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background: var(--main-background-color);
+    overflow: hidden;
+}
+
+.workout-manager-rest-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accented-background-color, rgba(127, 127, 127, 0.15));
+    transition: width 0.2s linear;
+}
+
+.workout-manager-rest-timer > * {
+    position: relative;
+}
+
+.workout-manager-rest-clock {
+    font-size: 1.4em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 64px;
+}
+
+/* Reports: charts are inline SVG, so they take their colours from the theme
+   rather than from a library's palette. */
+.workout-manager-chart {
+    width: 100%;
+    height: auto;
+    margin-bottom: 8px;
+}
+
+.workout-manager-chart-axis {
+    stroke: var(--main-border-color);
+    stroke-width: 1;
+}
+
+.workout-manager-chart-label {
+    fill: var(--muted-text-color);
+    font-size: 11px;
+}
+
+.workout-manager-chart-line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+
+.workout-manager-chart-dot {
+    fill: currentColor;
+}
+
+.workout-manager-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 130px;
+    margin-bottom: 10px;
+}
+
+.workout-manager-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+}
+
+.workout-manager-bar-fill {
+    width: 100%;
+    min-height: 1px;
+    border-radius: 3px 3px 0 0;
+    background: currentColor;
+    opacity: 0.55;
+}
+
+.workout-manager-bar-label {
+    font-size: 0.75em;
+    color: var(--muted-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.workout-manager-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.workout-manager-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 110px;
+    padding: 8px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.workout-manager-metric-value {
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.workout-manager-metric-label {
+    font-size: 0.8em;
+    color: var(--muted-text-color);
+}
+
+.workout-manager-boards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.workout-manager-board {
+    flex: 1 1 200px;
+    padding: 8px 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+}
+
+.workout-manager-board ol {
+    margin: 6px 0 0 0;
+    padding-left: 20px;
+}
+
+.workout-manager-board li {
+    display: list-item;
+    margin-bottom: 2px;
+}
+
+.workout-manager-board button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.workout-manager-board button:hover {
+    text-decoration: underline;
+}
+
+.workout-manager-toolbar .workout-manager-heading {
+    margin: 0;
+}

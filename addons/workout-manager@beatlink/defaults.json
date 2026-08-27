@@ -3,5 +3,6 @@
     "weightUnit": "kg",
     "distanceUnit": "km",
     "defaultRest": 90,
+    "restSound": true,
     "weeklyTarget": 3
 }

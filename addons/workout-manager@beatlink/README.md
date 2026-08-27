@@ -11,7 +11,7 @@ a single note you can back up, inspect, or migrate.
 1. Install the addon and enable it.
 2. Open its launcher note (`workout-manager@beatlink`) to use the widget.
 3. Optionally, open the addon's settings screen to pick weight/distance units, a default rest time,
-   and how many workouts a week you're aiming for.
+   whether the rest timer chimes, and how many workouts a week you're aiming for.
 
 ## Exercises
 
@@ -126,17 +126,45 @@ since sets usually repeat the previous load. The workout header totals its sets,
 Deleting an exercise from the library leaves workouts that used it alone — those sets stay in the
 log and show as *Deleted exercise* rather than silently disappearing.
 
-## Stats
+### Rest timer
 
-Two tables:
+Every set row in an unfinished workout has a timer button. Pressing it starts a countdown for that
+exercise's rest — the rest its session entry planned, snapshotted when the workout started, or the
+**Default Rest** from settings for an exercise added mid-workout. The countdown sits at the bottom of
+the workout card and can be paused, resumed, extended by 30 seconds, or stopped.
 
-- **Last 8 weeks** — workouts (against the weekly target from settings), sets, volume, duration and
-  distance per training week, weeks starting Monday.
-- **Personal bests** — per exercise, the best result that means something for its measurement:
-  heaviest weight plus estimated 1RM (Epley: `weight × (1 + reps / 30)`) for weight training, most
-  reps for bodyweight, longest duration, or furthest distance. Also total sets, total volume, and
-  when it was last done. The history button expands every set ever recorded for that exercise, newest
-  first.
+It runs off a wall-clock deadline rather than counting ticks, so a phone that sleeps between sets
+comes back showing the time that actually remains. When it reaches zero it says so on screen and
+plays a short chime, which the **Rest Timer Chime** setting turns off. A finished workout gets no
+timer.
+
+## Reports
+
+Everything the log adds up to, in four parts.
+
+**Weekly totals** — volume, sets, workouts, duration or distance per training week (weeks start
+Monday), as a bar chart over the last 8, 12, 26 or 52 weeks, with the same numbers in a table
+underneath and each week's workout count marked against the weekly target from settings.
+
+**Leaders** — the top five exercises by total volume, heaviest set, best estimated 1RM, most sets and
+most sessions. Exercises that never scored on a board are left off it rather than filling it with
+zeroes, so a cardio exercise does not appear under volume. Any name on a board opens that exercise's
+report.
+
+**Per exercise** — pick an exercise for its records as cards (best weight, best estimated 1RM, best
+set volume, most reps in a set, total volume, sessions, total sets, last done — whichever of those
+its measurement means), a line chart of one metric per session, and the full history, newest first.
+Which metrics are plottable follows the measurement: top set, estimated 1RM, session volume, reps and
+sets for weight training; best set and reps for bodyweight; duration for timed work; distance and
+duration for cardio. Several workouts on the same day fold into one point on the chart.
+
+**Personal bests** — every exercise ever logged, newest first, with the best result that means
+something for its measurement: heaviest weight plus estimated 1RM (Epley: `weight × (1 + reps / 30)`)
+for weight training, most reps for bodyweight, longest duration, or furthest distance. Also total
+sets, total volume, and when it was last done. Its chart button opens that exercise above.
+
+Charts are drawn as inline SVG and plain elements — a render note runs under a content policy that
+will not fetch a charting library, so there is none to load.
 
 ## Categories
 
@@ -202,8 +230,9 @@ this addon labels weights rather than converting them.
 |---------|-------------|
 | Weight Unit | Label shown beside every weight (kg or lb). |
 | Distance Unit | Label shown beside every cardio distance (km or mi). |
-| Default Rest | Rest seeded into a new session entry. |
-| Workouts Per Week | The target each week in the Stats tab is measured against. |
+| Default Rest | Rest seeded into a new session entry, and used by the rest timer for an exercise added mid-workout. |
+| Rest Timer Chime | Whether a finished rest timer plays a chime. The on-screen message is shown either way. |
+| Workouts Per Week | The target each week in the Reports tab is measured against. |
 | Render Note | An existing note to turn into a second view of the widget. Selecting it converts that note into a render note; clearing it reverts the previous one to a text note. |
 
 ## Credits

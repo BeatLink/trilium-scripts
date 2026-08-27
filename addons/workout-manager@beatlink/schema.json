@@ -32,6 +32,12 @@
         "description": "Rest seeded into a new session entry. Each entry can still be given its own.",
         "tab": "Targets"
     },
+    "restSound": {
+        "type": "boolean",
+        "label": "Rest Timer Chime",
+        "description": "Play a short chime when a rest timer runs out. The on-screen message is shown either way.",
+        "tab": "Targets"
+    },
     "weeklyTarget": {
         "type": "number",
         "label": "Workouts Per Week",

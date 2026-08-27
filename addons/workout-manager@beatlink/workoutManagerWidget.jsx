@@ -38,6 +38,9 @@ const {
     findSession,
     exerciseHistory,
     exerciseStats,
+    exerciseTrend,
+    LEADERBOARDS,
+    leaderboard,
     workoutFromSession,
     finishWorkout,
     todayKey,
@@ -56,6 +59,32 @@ const UNTAGGED = "Uncategorised"
 function formatNumber(value) {
     if (!Number.isFinite(value)) return "0"
     return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+function formatClock(seconds) {
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
+}
+
+// A rising two-note chime, synthesised so the addon carries no audio file.
+function chime() {
+    try {
+        const context = new AudioContext()
+        for (const [index, frequency] of [880, 1320].entries()) {
+            const oscillator = context.createOscillator()
+            const gain = context.createGain()
+            const at = context.currentTime + index * 0.18
+            oscillator.frequency.value = frequency
+            oscillator.connect(gain).connect(context.destination)
+            gain.gain.setValueAtTime(0.0001, at)
+            gain.gain.exponentialRampToValueAtTime(0.25, at + 0.02)
+            gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.16)
+            oscillator.start(at)
+            oscillator.stop(at + 0.18)
+        }
+        setTimeout(() => context.close(), 800)
+    } catch {
+        // A browser that refuses to play still gets the on-screen message.
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -752,7 +781,70 @@ function ProgramsTab({
 // ---------------------------------------------------------------------------
 // Log tab
 // ---------------------------------------------------------------------------
-function WorkoutEntry({ entry, exercises, units, onChange, onRemove }) {
+/*
+ * The rest countdown for one workout card. It runs off a wall-clock deadline
+ * rather than a tick count, so a phone that sleeps mid-set comes back showing
+ * the time that actually remains. `endsAt` is null while paused, which is what
+ * `remaining` is counted from when it resumes.
+ */
+function useRestTimer(sound) {
+    const [rest, setRest] = useState(null)
+
+    useEffect(() => {
+        if (!rest?.endsAt) return
+        const id = setInterval(() => setRest(current => current?.endsAt
+            ? { ...current, remaining: Math.max(0, Math.ceil((current.endsAt - Date.now()) / 1000)) }
+            : current), 200)
+        return () => clearInterval(id)
+    }, [rest?.endsAt])
+
+    const finished = Boolean(rest?.endsAt) && rest.remaining === 0
+    useEffect(() => {
+        if (!finished) return
+        if (sound) chime()
+        api.showMessage("Rest over.")
+        setRest(null)
+    }, [finished, sound])
+
+    const controls = useMemo(() => ({
+        start: seconds => {
+            if (seconds > 0) setRest({ total: seconds, remaining: seconds, endsAt: Date.now() + seconds * 1000 })
+        },
+        stop: () => setRest(null),
+        pause: () => setRest(current => current?.endsAt ? { ...current, endsAt: null } : current),
+        resume: () => setRest(current => current && !current.endsAt
+            ? { ...current, endsAt: Date.now() + current.remaining * 1000 }
+            : current),
+        extend: seconds => setRest(current => current ? {
+            ...current,
+            total: current.total + seconds,
+            remaining: current.remaining + seconds,
+            endsAt: current.endsAt ? current.endsAt + seconds * 1000 : null
+        } : current)
+    }), [])
+
+    return { rest, ...controls }
+}
+
+// The countdown itself, pinned to the bottom of the card it belongs to.
+function RestTimerBar({ rest, onPause, onResume, onExtend, onStop }) {
+    const elapsed = rest.total > 0 ? (rest.total - rest.remaining) / rest.total : 1
+    return (
+        <div className="workout-manager-rest-timer">
+            <div className="workout-manager-rest-fill" style={{ width: `${elapsed * 100}%` }} />
+            <span className="workout-manager-rest-clock">{formatClock(rest.remaining)}</span>
+            <span className="workout-manager-hint">{rest.endsAt ? "resting" : "paused"}</span>
+            <span className="workout-manager-spacer" />
+            <Button icon="bx-plus" text="30s" title="Add 30 seconds" onClick={() => onExtend(30)} />
+            {rest.endsAt
+                ? <Button icon="bx-pause" title="Pause" onClick={onPause} />
+                : <Button icon="bx-play" title="Resume" onClick={onResume} />}
+            <Button icon="bx-x" title="Stop" onClick={onStop} />
+        </div>
+    )
+}
+
+function WorkoutEntry({ entry, exercises, units, restSeconds, onRest, onChange, onRemove }) {
     const exercise = exercises[entry.exerciseId]
     const fields = exercise ? measurementFields(exercise) : []
 
@@ -772,6 +864,9 @@ function WorkoutEntry({ entry, exercises, units, onChange, onRemove }) {
             <div className="workout-manager-entry-header">
                 <strong>{exercise ? exercise.name : "Deleted exercise"}</strong>
                 {exercise && <span className="workout-manager-hint">{measurementOf(exercise).label}</span>}
+                {onRest && restSeconds > 0 && (
+                    <span className="workout-manager-hint">{`${formatClock(restSeconds)} rest`}</span>
+                )}
                 <span className="workout-manager-spacer" />
                 <input
                     type="text"
@@ -802,6 +897,13 @@ function WorkoutEntry({ entry, exercises, units, onChange, onRemove }) {
                             ))}
                             <td><NumberInput value={set.rpe} step="0.5" onChange={rpe => setSet(set.id, { rpe })} /></td>
                             <td className="workout-manager-row-actions">
+                                {onRest && restSeconds > 0 && (
+                                    <Button
+                                        icon="bx-time-five"
+                                        title={`Rest ${formatClock(restSeconds)}`}
+                                        onClick={() => onRest(restSeconds)}
+                                    />
+                                )}
                                 <Button
                                     icon="bx-trash"
                                     title="Remove set"
@@ -836,8 +938,11 @@ function progressionLine(report, exercises, units) {
     return `${name}: ${moves.join(", ") || "unchanged"}`
 }
 
-function Workout({ workout, exercises, categories, units, onChange, onFinish, onRemove }) {
+function Workout({ workout, exercises, categories, units, defaultRest, restSound, onChange, onFinish, onRemove }) {
     const [adding, setAdding] = useState("")
+    // A finished workout is history, so it gets no timer to start.
+    const timer = useRestTimer(restSound)
+    const resting = workout.finishedAt ? null : timer
     // Held until the card is re-rendered from scratch: the report is a
     // confirmation of what finishing just did, not part of the log.
     const [report, setReport] = useState(null)
@@ -901,6 +1006,10 @@ function Workout({ workout, exercises, categories, units, onChange, onFinish, on
                     entry={entry}
                     exercises={exercises}
                     units={units}
+                    // An exercise added mid-workout was never planned, so it
+                    // rests for the default rather than for nothing.
+                    restSeconds={entry.target.rest || defaultRest}
+                    onRest={resting?.start}
                     onChange={setEntry}
                     onRemove={() => onChange({ ...workout, entries: workout.entries.filter(e => e.id !== entry.id) })}
                 />
@@ -914,11 +1023,20 @@ function Workout({ workout, exercises, categories, units, onChange, onFinish, on
                     onChange={addExercise}
                 />
             </div>
+            {resting?.rest && (
+                <RestTimerBar
+                    rest={resting.rest}
+                    onPause={resting.pause}
+                    onResume={resting.resume}
+                    onExtend={resting.extend}
+                    onStop={resting.stop}
+                />
+            )}
         </div>
     )
 }
 
-function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onFinishWorkout, onRemoveWorkout }) {
+function LogTab({ database, categories, units, defaultRest, restSound, onAddWorkout, onSaveWorkout, onFinishWorkout, onRemoveWorkout }) {
     const [date, setDate] = useState(() => todayKey())
     const [sessionId, setSessionId] = useState("")
 
@@ -968,6 +1086,8 @@ function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onFi
                     exercises={database.exercises}
                     categories={categories}
                     units={units}
+                    defaultRest={defaultRest}
+                    restSound={restSound}
                     onChange={updated => onSaveWorkout(date, updated)}
                     onFinish={findSession(database, workout.sessionId) ? () => onFinishWorkout(date, workout) : null}
                     onRemove={() => onRemoveWorkout(date, workout)}
@@ -978,7 +1098,7 @@ function LogTab({ database, categories, units, onAddWorkout, onSaveWorkout, onFi
 }
 
 // ---------------------------------------------------------------------------
-// Stats tab
+// Reports tab
 // ---------------------------------------------------------------------------
 
 // The personal best that means something for this exercise's measurement.
@@ -1009,23 +1129,221 @@ function setLabel(set, exercise, units) {
     return parts.join(" × ") || "—"
 }
 
-function StatsTab({ database, units, weeklyTarget }) {
-    const [expanded, setExpanded] = useState(null)
+const CHART = { width: 640, height: 170, left: 54, right: 12, top: 12, bottom: 26 }
+const RANGES = [8, 12, 26, 52]
 
-    const weeks = useMemo(() => weeklySummary(database, database.exercises, 8), [database])
-    const exercises = useMemo(
+/*
+ * A dated series drawn as inline SVG -- a render note runs under a CSP that
+ * will not fetch a charting library, so the chart is a polyline this file
+ * computes. The vertical scale is padded around the data rather than anchored
+ * at zero, so a slow climb still reads as a climb instead of a flat line.
+ */
+function LineChart({ points, format }) {
+    const geometry = useMemo(() => {
+        if (points.length === 0) return null
+        const values = points.map(point => point.value)
+        const max = Math.max(...values)
+        const min = Math.min(...values)
+        // A series that never moves has no span to scale by, so one is invented.
+        const pad = (max - min) * 0.15 || Math.max(max * 0.1, 1)
+        const low = Math.max(0, min - pad)
+        const high = max + pad
+        const innerWidth = CHART.width - CHART.left - CHART.right
+        const innerHeight = CHART.height - CHART.top - CHART.bottom
+        const at = index => CHART.left + (points.length === 1 ? innerWidth / 2 : (index / (points.length - 1)) * innerWidth)
+        const height = value => CHART.top + innerHeight - ((value - low) / (high - low)) * innerHeight
+        return { low, high, plotted: points.map((point, index) => ({ ...point, x: at(index), y: height(point.value) })) }
+    }, [points])
+
+    if (!geometry) return <p className="workout-manager-hint">Nothing to plot yet.</p>
+
+    return (
+        <svg className="workout-manager-chart" viewBox={`0 0 ${CHART.width} ${CHART.height}`}>
+            <line
+                className="workout-manager-chart-axis"
+                x1={CHART.left} y1={CHART.top} x2={CHART.left} y2={CHART.height - CHART.bottom}
+            />
+            <line
+                className="workout-manager-chart-axis"
+                x1={CHART.left} y1={CHART.height - CHART.bottom} x2={CHART.width - CHART.right} y2={CHART.height - CHART.bottom}
+            />
+            <text className="workout-manager-chart-label" x={CHART.left - 6} y={CHART.top + 4} textAnchor="end">
+                {format(geometry.high)}
+            </text>
+            <text className="workout-manager-chart-label" x={CHART.left - 6} y={CHART.height - CHART.bottom} textAnchor="end">
+                {format(geometry.low)}
+            </text>
+            <polyline className="workout-manager-chart-line" points={geometry.plotted.map(point => `${point.x},${point.y}`).join(" ")} />
+            {geometry.plotted.map(point => (
+                <circle className="workout-manager-chart-dot" key={point.label} cx={point.x} cy={point.y} r="3.5">
+                    <title>{`${point.label}: ${format(point.value)}`}</title>
+                </circle>
+            ))}
+            <text className="workout-manager-chart-label" x={CHART.left} y={CHART.height - 8}>
+                {geometry.plotted[0].label}
+            </text>
+            {geometry.plotted.length > 1 && (
+                <text className="workout-manager-chart-label" x={CHART.width - CHART.right} y={CHART.height - 8} textAnchor="end">
+                    {geometry.plotted.at(-1).label}
+                </text>
+            )}
+        </svg>
+    )
+}
+
+/*
+ * The same shape of series as bars, which is how week-by-week totals read best.
+ * `label` identifies the bar and titles it; `caption` is the shorter thing
+ * printed under it, since a year of week starts will not fit written in full.
+ */
+function BarChart({ bars, format }) {
+    const max = Math.max(...bars.map(bar => bar.value), 0)
+    if (max <= 0) return <p className="workout-manager-hint">Nothing to plot yet.</p>
+    return (
+        <div className="workout-manager-bars">
+            {bars.map(bar => (
+                <div className="workout-manager-bar" key={bar.label} title={`${bar.label}: ${format(bar.value)}`}>
+                    <div className="workout-manager-bar-fill" style={{ height: `${(bar.value / max) * 100}%` }} />
+                    <span className="workout-manager-bar-label">{bar.caption}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function MetricCard({ label, value }) {
+    return (
+        <div className="workout-manager-metric">
+            <span className="workout-manager-metric-value">{value}</span>
+            <span className="workout-manager-metric-label">{label}</span>
+        </div>
+    )
+}
+
+// Which curves are worth plotting for an exercise follows how it is measured.
+function trendMetrics(exercise, units) {
+    switch (measurementOf(exercise).key) {
+        case "weight":
+            return [
+                { key: "topWeight", label: "Top Set", unit: units.weight },
+                { key: "oneRepMax", label: "Est. 1RM", unit: units.weight },
+                { key: "volume", label: "Session Volume", unit: units.weight },
+                { key: "reps", label: "Total Reps", unit: "reps" },
+                { key: "sets", label: "Sets", unit: "sets" }
+            ]
+        case "bodyweight":
+            return [
+                { key: "topReps", label: "Best Set", unit: "reps" },
+                { key: "reps", label: "Total Reps", unit: "reps" },
+                { key: "sets", label: "Sets", unit: "sets" }
+            ]
+        case "duration":
+            return [
+                { key: "duration", label: "Total Duration", unit: "min" },
+                { key: "sets", label: "Sets", unit: "sets" }
+            ]
+        default:
+            return [
+                { key: "distance", label: "Distance", unit: units.distance },
+                { key: "duration", label: "Duration", unit: "min" },
+                { key: "sets", label: "Sets", unit: "sets" }
+            ]
+    }
+}
+
+// The records worth calling out for one exercise, again led by its measurement.
+function highlights(exercise, stats, units) {
+    const totals = [
+        { label: "Sessions", value: formatNumber(stats.workouts) },
+        { label: "Total Sets", value: formatNumber(stats.sets) },
+        { label: "Last Done", value: stats.lastPerformed || "—" }
+    ]
+    switch (measurementOf(exercise).key) {
+        case "weight":
+            return [
+                { label: "Best Weight", value: `${formatNumber(stats.bestWeight)} ${units.weight}` },
+                { label: "Best Est. 1RM", value: `${formatNumber(stats.bestOneRepMax)} ${units.weight}` },
+                { label: "Best Set Volume", value: `${formatNumber(stats.bestSetVolume)} ${units.weight}` },
+                { label: "Most Reps In A Set", value: formatNumber(stats.bestReps) },
+                { label: "Total Volume", value: `${formatNumber(stats.totalVolume)} ${units.weight}` },
+                ...totals
+            ]
+        case "bodyweight":
+            return [
+                { label: "Most Reps In A Set", value: formatNumber(stats.bestReps) },
+                { label: "Total Reps", value: formatNumber(stats.totalReps) },
+                ...totals
+            ]
+        case "duration":
+            return [
+                { label: "Longest Set", value: `${formatNumber(stats.bestDuration)} min` },
+                ...totals
+            ]
+        default:
+            return [
+                { label: "Furthest", value: `${formatNumber(stats.bestDistance)} ${units.distance}` },
+                { label: "Longest", value: `${formatNumber(stats.bestDuration)} min` },
+                ...totals
+            ]
+    }
+}
+
+function ReportsTab({ database, categories, units, weeklyTarget }) {
+    const [weeks, setWeeks] = useState(12)
+    const [weekMetric, setWeekMetric] = useState("volume")
+    const [exerciseId, setExerciseId] = useState("")
+    const [trendMetric, setTrendMetric] = useState("")
+
+    const weekMetrics = useMemo(() => [
+        { key: "volume", label: "Volume", unit: units.weight },
+        { key: "sets", label: "Sets", unit: "sets" },
+        { key: "workouts", label: "Workouts", unit: "workouts" },
+        { key: "duration", label: "Duration", unit: "min" },
+        { key: "distance", label: "Distance", unit: units.distance }
+    ], [units])
+
+    // weeklySummary counts back from this week, so it is reversed to read forwards.
+    const summary = useMemo(() => weeklySummary(database, database.exercises, weeks).reverse(), [database, weeks])
+    const ranked = useMemo(
         () => Object.values(database.exercises)
             .map(exercise => ({ exercise, stats: exerciseStats(database, exercise.id) }))
-            .filter(({ stats }) => stats.workouts > 0)
-            .sort((a, b) => (b.stats.lastPerformed || "").localeCompare(a.stats.lastPerformed || "")),
+            .filter(({ stats }) => stats.workouts > 0),
         [database]
     )
+    const byRecency = useMemo(
+        () => [...ranked].sort((a, b) => (b.stats.lastPerformed || "").localeCompare(a.stats.lastPerformed || "")),
+        [ranked]
+    )
 
-    const history = useMemo(() => expanded ? exerciseHistory(database, expanded) : [], [database, expanded])
+    const exercise = database.exercises[exerciseId]
+    const stats = useMemo(() => exercise ? exerciseStats(database, exerciseId) : null, [database, exerciseId, exercise])
+    const trend = useMemo(() => exercise ? exerciseTrend(database, exerciseId) : [], [database, exerciseId, exercise])
+    const history = useMemo(() => exercise ? exerciseHistory(database, exerciseId) : [], [database, exerciseId, exercise])
+    const metrics = exercise ? trendMetrics(exercise, units) : []
+    // The chosen curve resets to the exercise's first when its measurement no
+    // longer offers the one that was selected.
+    const metric = metrics.find(item => item.key === trendMetric) || metrics[0]
+
+    const weekUnit = weekMetrics.find(item => item.key === weekMetric)
+    const weekFormat = useCallback(value => `${formatNumber(value)} ${weekUnit.unit}`, [weekUnit])
+    const trendFormat = useCallback(value => `${formatNumber(value)} ${metric ? metric.unit : ""}`, [metric])
 
     return (
         <div>
-            <h4 className="workout-manager-heading">Last 8 Weeks</h4>
+            <div className="workout-manager-toolbar">
+                <h4 className="workout-manager-heading">Weekly Totals</h4>
+                <span className="workout-manager-spacer" />
+                <select value={weekMetric} onChange={e => setWeekMetric(e.target.value)}>
+                    {weekMetrics.map(item => <option value={item.key} key={item.key}>{item.label}</option>)}
+                </select>
+                <select value={weeks} onChange={e => setWeeks(Number(e.target.value))}>
+                    {RANGES.map(count => <option value={count} key={count}>{`${count} weeks`}</option>)}
+                </select>
+            </div>
+            <BarChart
+                bars={summary.map(week => ({ label: week.weekStart, caption: week.weekStart.slice(5), value: week[weekMetric] }))}
+                format={weekFormat}
+            />
             <table className="workout-manager-table">
                 <thead>
                     <tr>
@@ -1038,7 +1356,7 @@ function StatsTab({ database, units, weeklyTarget }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {weeks.map(week => (
+                    {[...summary].reverse().map(week => (
                         <tr key={week.weekStart}>
                             <td>{week.weekStart}</td>
                             <td className={week.workouts >= weeklyTarget ? "workout-manager-ok" : ""}>
@@ -1053,6 +1371,74 @@ function StatsTab({ database, units, weeklyTarget }) {
                 </tbody>
             </table>
 
+            <h4 className="workout-manager-heading">Leaders</h4>
+            <div className="workout-manager-boards">
+                {LEADERBOARDS.map(board => {
+                    const rows = leaderboard(ranked, board.key)
+                    return (
+                        <div className="workout-manager-board" key={board.key}>
+                            <strong>{board.label}</strong>
+                            <ol>
+                                {rows.map(row => (
+                                    <li key={row.exercise.id}>
+                                        <button onClick={() => setExerciseId(row.exercise.id)}>{row.exercise.name}</button>
+                                        <span className="workout-manager-hint">
+                                            {`${formatNumber(row.stats[board.key])} ${board.unit ? units[board.unit] : board.suffix}`}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                            {rows.length === 0 && <p className="workout-manager-hint">Nothing ranked yet.</p>}
+                        </div>
+                    )
+                })}
+            </div>
+
+            <h4 className="workout-manager-heading">Per Exercise</h4>
+            <div className="workout-manager-toolbar">
+                <ExerciseSelect
+                    exercises={database.exercises}
+                    categories={categories}
+                    value={exerciseId}
+                    placeholder="Pick an exercise..."
+                    onChange={setExerciseId}
+                />
+                {exercise && metrics.length > 1 && (
+                    <select value={metric.key} onChange={e => setTrendMetric(e.target.value)}>
+                        {metrics.map(item => <option value={item.key} key={item.key}>{item.label}</option>)}
+                    </select>
+                )}
+            </div>
+            {exercise ? (
+                <div className="workout-manager-card">
+                    <div className="workout-manager-card-header">
+                        <strong>{exercise.name}</strong>
+                        <span className="workout-manager-hint">{measurementOf(exercise).label}</span>
+                    </div>
+                    <div className="workout-manager-metrics">
+                        {highlights(exercise, stats, units).map(item => (
+                            <MetricCard key={item.label} label={item.label} value={item.value} />
+                        ))}
+                    </div>
+                    <p className="workout-manager-hint">{`${metric.label} per session`}</p>
+                    <LineChart
+                        points={trend.map(point => ({ label: point.date, value: point[metric.key] }))}
+                        format={trendFormat}
+                    />
+                    <ul className="workout-manager-plan">
+                        {history.map(record => (
+                            <li key={`${record.workoutId}-${record.date}`}>
+                                <strong>{record.date}</strong>
+                                {` — ${record.sets.map(set => setLabel(set, exercise, units)).join(", ") || "no sets"}`}
+                                {record.comment && ` · ${record.comment}`}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : (
+                <p className="workout-manager-hint">Pick an exercise to see its records and progress.</p>
+            )}
+
             <h4 className="workout-manager-heading">Personal Bests</h4>
             <table className="workout-manager-table">
                 <thead>
@@ -1066,44 +1452,23 @@ function StatsTab({ database, units, weeklyTarget }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {exercises.map(({ exercise, stats }) => (
-                        <tr key={exercise.id}>
-                            <td>{exercise.name}</td>
-                            <td>{bestLabel(exercise, stats, units)}</td>
-                            <td>{stats.sets}</td>
-                            <td>{stats.totalVolume > 0 ? formatNumber(stats.totalVolume) : "—"}</td>
-                            <td>{stats.lastPerformed}</td>
+                    {byRecency.map(({ exercise: item, stats: itemStats }) => (
+                        <tr key={item.id}>
+                            <td>{item.name}</td>
+                            <td>{bestLabel(item, itemStats, units)}</td>
+                            <td>{itemStats.sets}</td>
+                            <td>{itemStats.totalVolume > 0 ? formatNumber(itemStats.totalVolume) : "—"}</td>
+                            <td>{itemStats.lastPerformed}</td>
                             <td className="workout-manager-row-actions">
-                                <Button
-                                    icon={expanded === exercise.id ? "bx-chevron-up" : "bx-history"}
-                                    title="History"
-                                    onClick={() => setExpanded(expanded === exercise.id ? null : exercise.id)}
-                                />
+                                <Button icon="bx-line-chart" title="Report" onClick={() => setExerciseId(item.id)} />
                             </td>
                         </tr>
                     ))}
-                    {exercises.length === 0 && (
+                    {byRecency.length === 0 && (
                         <tr><td colSpan="6" className="workout-manager-hint">Nothing logged yet.</td></tr>
                     )}
                 </tbody>
             </table>
-
-            {expanded && database.exercises[expanded] && (
-                <div className="workout-manager-card">
-                    <div className="workout-manager-card-header">
-                        <strong>{database.exercises[expanded].name} history</strong>
-                    </div>
-                    <ul className="workout-manager-plan">
-                        {history.map(record => (
-                            <li key={`${record.workoutId}-${record.date}`}>
-                                <strong>{record.date}</strong>
-                                {` — ${record.sets.map(set => setLabel(set, database.exercises[expanded], units)).join(", ") || "no sets"}`}
-                                {record.comment && ` · ${record.comment}`}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
         </div>
     )
 }
@@ -1478,7 +1843,7 @@ function WorkoutManagerWidget() {
                 {tabButton("log", "Log")}
                 {tabButton("programs", "Programs")}
                 {tabButton("exercises", "Exercises")}
-                {tabButton("stats", "Stats")}
+                {tabButton("reports", "Reports")}
                 {tabButton("categories", "Categories")}
                 <span className="workout-manager-spacer" />
                 <Button icon="bx-import" text="Import JSON" onClick={onImport} />
@@ -1490,6 +1855,8 @@ function WorkoutManagerWidget() {
                     database={database}
                     categories={categories}
                     units={units}
+                    defaultRest={settings.defaultRest}
+                    restSound={settings.restSound}
                     onAddWorkout={onAddWorkout}
                     onSaveWorkout={onSaveWorkout}
                     onFinishWorkout={onFinishWorkout}
@@ -1518,8 +1885,13 @@ function WorkoutManagerWidget() {
                     onDelete={onDeleteExercise}
                 />
             )}
-            {tab === "stats" && (
-                <StatsTab database={database} units={units} weeklyTarget={settings.weeklyTarget} />
+            {tab === "reports" && (
+                <ReportsTab
+                    database={database}
+                    categories={categories}
+                    units={units}
+                    weeklyTarget={settings.weeklyTarget}
+                />
             )}
             {tab === "categories" && (
                 <CategoriesTab

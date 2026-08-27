@@ -238,7 +238,8 @@ function entryTarget(entry) {
         reps: entry.reps,
         weight: entry.weight,
         duration: entry.duration,
-        distance: entry.distance
+        distance: entry.distance,
+        rest: entry.rest
     }
 }
 
@@ -284,7 +285,10 @@ function normalizeTarget(target) {
         reps: nonNegativeNumber(target?.reps),
         weight: nonNegativeNumber(target?.weight),
         duration: nonNegativeNumber(target?.duration),
-        distance: nonNegativeNumber(target?.distance)
+        distance: nonNegativeNumber(target?.distance),
+        // Carried so the rest timer knows what the plan asked for even after
+        // the session it came from has been edited.
+        rest: nonNegativeNumber(target?.rest)
     }
 }
 
@@ -506,17 +510,22 @@ function exerciseStats(database, exerciseId) {
         workouts: history.length,
         lastPerformed: history[0]?.date || null,
         sets: 0,
+        totalReps: 0,
         totalVolume: 0,
         bestWeight: 0,
         bestReps: 0,
         bestOneRepMax: 0,
+        bestSetVolume: 0,
         bestDuration: 0,
         bestDistance: 0
     }
     for (const record of history) {
         for (const set of record.sets) {
+            const volume = exercise ? setVolume(set, exercise) : 0
             stats.sets += 1
-            if (exercise) stats.totalVolume += setVolume(set, exercise)
+            stats.totalReps += set.reps
+            stats.totalVolume += volume
+            stats.bestSetVolume = Math.max(stats.bestSetVolume, volume)
             stats.bestWeight = Math.max(stats.bestWeight, set.weight)
             stats.bestReps = Math.max(stats.bestReps, set.reps)
             stats.bestOneRepMax = Math.max(stats.bestOneRepMax, estimatedOneRepMax(set))
@@ -525,6 +534,55 @@ function exerciseStats(database, exerciseId) {
         }
     }
     return stats
+}
+
+/*
+ * One point per day an exercise was trained, oldest first, so a chart can read
+ * straight off it. Two workouts on the same date fold into a single point: what
+ * a day is worth is its top set and its totals, not which card they were on.
+ */
+function exerciseTrend(database, exerciseId) {
+    const exercise = database.exercises[exerciseId]
+    const byDate = new Map()
+    for (const record of exerciseHistory(database, exerciseId)) {
+        const point = byDate.get(record.date) || {
+            date: record.date, sets: 0, reps: 0, volume: 0,
+            topWeight: 0, topReps: 0, oneRepMax: 0, duration: 0, distance: 0
+        }
+        for (const set of record.sets) {
+            point.sets += 1
+            point.reps += set.reps
+            point.duration += set.duration
+            point.distance += set.distance
+            if (exercise) point.volume += setVolume(set, exercise)
+            point.topWeight = Math.max(point.topWeight, set.weight)
+            point.topReps = Math.max(point.topReps, set.reps)
+            point.oneRepMax = Math.max(point.oneRepMax, estimatedOneRepMax(set))
+        }
+        byDate.set(record.date, point)
+    }
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// The stats a leaderboard can rank exercises by, each with how it reads.
+const LEADERBOARDS = [
+    { key: "totalVolume", label: "Most Volume", unit: "weight" },
+    { key: "bestWeight", label: "Heaviest Set", unit: "weight" },
+    { key: "bestOneRepMax", label: "Best Est. 1RM", unit: "weight" },
+    { key: "sets", label: "Most Sets", suffix: "sets" },
+    { key: "workouts", label: "Most Sessions", suffix: "sessions" }
+]
+
+/*
+ * The exercises leading one stat, best first. Anything that never scored on it
+ * is left out rather than filling the board with zeroes -- a cardio exercise
+ * has no volume to rank.
+ */
+function leaderboard(ranked, key, limit = 5) {
+    return ranked
+        .filter(item => item.stats[key] > 0)
+        .sort((a, b) => b.stats[key] - a.stats[key])
+        .slice(0, limit)
 }
 
 /*
@@ -815,6 +873,9 @@ module.exports = {
     findSession,
     exerciseHistory,
     exerciseStats,
+    exerciseTrend,
+    LEADERBOARDS,
+    leaderboard,
     workoutFromSession,
     entryTarget,
     evaluateProgression,
