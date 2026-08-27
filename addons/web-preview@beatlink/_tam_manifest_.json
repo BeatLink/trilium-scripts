@@ -1,11 +1,11 @@
 {
     "id": "web-preview@beatlink",
     "name": "Web Preview",
-    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address bar over the note you are reading, offering what is typed as a page to visit or a search to run alongside the configured bookmarks and the Web View notes already in the tree that match it, and filing what it opens as a child of that note. Skips sponsor segments in YouTube videos played inside a Web View note, using SponsorBlock. The user agent Web View pages see is configurable, for sites that turn away Trilium's Electron one.",
+    "description": "Browsing toolbar for Trilium Desktop's built-in Web View note type. Adds a small toolbar (Back / Forward / Save / Open in Browser / Delete Note) above any Web View note, driving the actual Electron <webview> element Trilium already renders for that note type, plus a New Tab launchbar button that opens an address bar over the note you are reading, offering what is typed as a page to visit or a search to run alongside the configured bookmarks and the Web View notes already in the tree that match it, and filing what it opens as a child of that note. Links clicked inside a page can open as notes of their own, filed as a child of the note they were clicked in or as its sibling. A note follows the page you browse to and keeps its own back/forward history, so it reopens where you left it. Skips sponsor segments in YouTube videos played inside a Web View note, using SponsorBlock. The user agent Web View pages see is configurable, for sites that turn away Trilium's Electron one.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/web-preview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.7.0",
+    "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",

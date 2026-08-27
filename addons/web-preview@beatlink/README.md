@@ -1,7 +1,7 @@
 # Web Preview
 
 Browsing toolbar for Trilium Desktop's built-in **Web View** note type. Instead of a
-separate popup window, this adds a small toolbar (Back / Forward / Save / Open in Browser /
+separate popup window, this adds a small toolbar (Back / Forward / History / Save / Open in Browser /
 Delete Note) directly above any note of type "Web View" — driving the actual Electron `<webview>`
 element Trilium already renders for that note type. A **New Tab** button in the launchbar puts a
 search box over whatever note you are on, so a browsing session starts from anywhere.
@@ -81,6 +81,20 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
 - **New Tab Location** / **Specific Note** — where a new tab's Web View note is created: under
   the note the box was opened over (the default, falling back to `#inbox`), or under one note you
   name.
+- **Open Every Link In A New Note** — off by default; a link clicked in a page then only becomes a
+  note when the page's own `<a>` opens it in a new tab, and every other link moves the page you are
+  on, the way clicking a link normally does. On, every link clicked becomes a note of its own.
+  Ctrl-clicking and right-clicking make a note whichever way this is set.
+- **Clicked Link Location** — whether a link's note is filed as a child of the note you clicked
+  from (the default, so browsing builds a tree the way tree style tabs do) or as its sibling, the
+  way an ordinary browser opens the new tab beside the old one.
+- **Follow Page Address** — on by default; as you leave a note, its `#webViewSrc` is rewritten to
+  the page you ended up on, so the note reopens where you left off rather than back at the URL it
+  was created with. Off, the note keeps pointing at its original address.
+- **Remember Page History** — on by default; the pages visited in a note are kept on the note
+  itself, so **Back**, **Forward** and the **History** list still work after you leave the note and
+  come back. Off, nothing is written to the note and the History button is hidden, leaving back and
+  forward to reach as far as the current visit does.
 - **Save Button** — off by default; turning it on adds the Save button to the toolbar.
 - **Save Location** — the note Save files pages under. Left empty it uses whichever note carries an
   `#inbox` label, and Save reports an error if there is none.
@@ -121,11 +135,32 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   it past a segment it lands in. Segments are re-pushed on every navigation — including YouTube's
   own in-page ones — and the injected script checks the page's current video id before acting, so
   segments never bleed from one video to the next.
-- **Clicking a link in the page** doesn't navigate the current note away. Instead it creates a new
-  Web View note for the link's URL as a **child of the note you clicked from**, and opens it — so
-  browsing builds a tree of the pages you visited. The link's text becomes the note title.
-  **Ctrl-clicking** (Cmd on macOS) or **right-clicking** a link creates that same child note but
-  stays on the page you are reading, the way a browser's "open in new tab" does.
+- **Clicking a link in the page** creates a new Web View note for the link's URL and opens it,
+  rather than navigating the current note away. The link's text becomes the note title. Which links
+  this happens for is **Open Every Link In A New Note**: off (the default) it is only the links the
+  page itself opens in a new tab — `target="_blank"`, or a target naming a frame that doesn't
+  exist — and everything else navigates in place; on, it is every link. Where the note is filed is
+  **Clicked Link Location**: a child of the note you clicked from, so browsing builds a tree, or a
+  sibling of it. **Ctrl-clicking** (Cmd on macOS) or **right-clicking** a link always makes the
+  note, and stays on the page you are reading while doing it, the way a browser's "open in new tab"
+  does.
+- **Follow Page Address** waits for you to leave the note. Trilium renders the element as
+  `<webview src={src} key={src}>`, keyed on the `#webViewSrc` label, so writing that label unmounts
+  the element and mounts a new one: the page reloads, and Chromium's back/forward history, the
+  injected scripts and the scroll position all go with it. Writing it from the toolbar's unmount —
+  where the element is being torn down anyway — costs none of that.
+- **Page history** is the note's own stack, because the element's is not recoverable. A `<webview>`
+  exposes `goBack()`/`goForward()` but nothing that restores a history into a fresh element, and
+  Trilium's `electronApi.navigation` bridge reads the *renderer's* history, not the guest's — with
+  `require("electron")` and `@electron/remote` both unavailable behind context isolation. So each
+  page visited is recorded on the note, and once Chromium's own stack is empty (as it is on every
+  fresh mount) Back and Forward `loadURL()` the neighbouring entry instead. **History** lists the
+  stack, most recent first, and jumps straight to any of it.
+- **Where the history lives** is an attachment on the note, `webViewHistory.json`, under this
+  addon's own `webViewHistory` role. Not the note's content, which the New Tab list's ordering and
+  the search index both read; and not a `file` attachment, since Trilium schedules an unused
+  attachment for erasure when its role says it lives in note content — which `file` does and a
+  role of our own does not.
 - **Follow Page Title** (a setting, on by default) renames the Web View note whenever the loaded
   page reports a new title — on navigation, or when a single-page app swaps its `<title>`. A title
   you set yourself is left alone: the addon remembers the title it last applied in a
@@ -150,9 +185,10 @@ Open them from TAM's **Settings** button on this addon's row, or by clicking the
   placement is lost. Skip leaves a set alone.
 - **Delete Note** is the other end of that loop: it deletes the Web View note you are currently
   reading, for clearing saved links once you're done with them. It asks for confirmation first,
-  and Trilium's delete is soft, so the note stays recoverable from Recent Changes. The note's
-  parent is activated afterwards, since the tab would otherwise be left on a note that no longer
-  exists. This deletes the *note* — it has nothing to do with `blockurl@beatlink`'s Block button,
+  and Trilium's delete is soft, so the note stays recoverable from Recent Changes. Its children
+  move up under its own parent before it goes, so closing a page you branched from doesn't take
+  the pages you opened from it with it. The note's parent is activated afterwards, since the tab
+  would otherwise be left on a note that no longer exists. This deletes the *note* — it has nothing to do with `blockurl@beatlink`'s Block button,
   which acts on the page's URL instead.
 
 ## Creating a bookmark note manually
@@ -178,6 +214,11 @@ Block / Unblock button.
 
 ## Known caveats
 
+- **Going back through the note's stack reloads the page** rather than restoring it, so scroll
+  position, form state and anything the page held in memory are gone. Chromium's real history is
+  used whenever it has the entry, which is the whole of a single visit.
+- **A note open in two splits reloads in the other one** when **Follow Page Address** writes the
+  address on leaving, since both splits are keyed on the same label.
 - **Desktop only.** Browser Trilium renders a sandboxed `<iframe>` rather than an Electron
   `<webview>`, so the toolbar hides itself there.
 - **A changed user agent needs a Trilium reload.** The startup script reads its setting once.
@@ -187,8 +228,9 @@ Block / Unblock button.
   through the guest console (`<webview>` has no preload script, and its `will-navigate` event can't
   be cancelled). It only covers real `<a href="http(s):…">` links — pages that navigate from
   JavaScript still move the current note's page as before.
-- Every intercepted click creates a note, so a long browsing session leaves a long trail of child
-  notes. Use **Delete Note** to prune them.
+- With **Open Every Link In A New Note** on, a long browsing session leaves a long trail of notes.
+  Use **Delete Note** to prune them — one at a time, since it only deletes the note you are reading
+  and hands its children to its parent rather than taking the subtree with it.
 - The New Tab launcher is re-registered on every start, so moving it to *Available Launchers* is
   undone the next time Trilium loads. Disable the addon in TAM to be rid of the button. Uninstalling
   leaves the button behind as a dead entry — delete it from the launchbar yourself.

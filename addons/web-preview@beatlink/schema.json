@@ -103,6 +103,36 @@
         "label": "Specific Note",
         "description": "Used when New Tab Location is set to \"Under a specific note\"."
     },
+    "interceptAllLinks": {
+        "type": "boolean",
+        "label": "Open Every Link In A New Note",
+        "description": "Turns every link clicked inside a page into a Web View note of its own. Left off, only the links the page itself opens in a new tab become notes, and the rest move the page you are on, the way clicking a link normally does. Ctrl-click and right-click always make a note, whichever way this is set."
+    },
+    "linkPlacement": {
+        "type": "select",
+        "label": "Clicked Link Location",
+        "description": "Where a link clicked inside a page is filed. As a child keeps the browsing trail as a tree, the way tree style tabs nest a tab under the one it was opened from; as a sibling files it next to that note instead, the way an ordinary browser opens a tab.",
+        "options": [
+            {
+                "value": "child",
+                "label": "As a child of the note the link was clicked in"
+            },
+            {
+                "value": "sibling",
+                "label": "As a sibling of the note the link was clicked in"
+            }
+        ]
+    },
+    "followPageUrl": {
+        "type": "boolean",
+        "label": "Follow Page Address",
+        "description": "Points the note at the page you ended up on, written as you leave the note so it reopens there. Trilium reloads a Web View note whenever its address changes, so this deliberately never happens while you are still reading."
+    },
+    "rememberHistory": {
+        "type": "boolean",
+        "label": "Remember Page History",
+        "description": "Keeps the pages visited in a note in an attachment on it, so Back, Forward and the History list still work after you leave the note and come back. Off, nothing is written to the note and the History button is hidden."
+    },
     "showSaveButton": {
         "type": "boolean",
         "label": "Save Button",

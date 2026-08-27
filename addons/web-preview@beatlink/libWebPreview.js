@@ -268,19 +268,122 @@ function openExternal(url) {
 }
 
 // ---------------------------------------------------------------------------
+// Where a note for a clicked link is filed: under the note the link was clicked
+// in, the way tree style tabs nest a tab under its opener, or alongside it, the
+// way a browser puts the new tab next to the one it came from.
+// ---------------------------------------------------------------------------
+async function resolveLinkParentNoteId(noteId, linkPlacement) {
+    if (linkPlacement !== "sibling") return noteId;
+
+    const note = await api.getNote(noteId);
+    return note?.getParentNoteIds()[0] || noteId;
+}
+
+// ---------------------------------------------------------------------------
 // Deletes the Web View note itself, for clearing out saved links once you're
-// done with them. Trilium's delete is soft,
-// so the note stays recoverable from Recent Changes. The parent is read before
-// the delete and activated after, since the tab would otherwise be left sitting
-// on a note that no longer exists.
+// done with them. Its children move up under its own parent first, so closing a
+// page you branched from leaves the pages it opened where you can still reach
+// them. Trilium's delete is soft, so the note stays recoverable from Recent
+// Changes. The parent is activated afterwards, since the tab would otherwise be
+// left sitting on a note that no longer exists.
 // ---------------------------------------------------------------------------
 async function deleteWebViewNote(noteId) {
-    const note = await api.getNote(noteId);
-    const parentNoteId = note?.getParentNoteIds()[0];
+    const parentNoteId = await api.runOnBackend((noteId) => {
+        const note = api.getNote(noteId);
+        if (!note || note.isDeleted) return null;
 
-    await api.runOnBackend((noteId) => api.getNote(noteId).deleteNote(), [noteId]);
+        const parentNoteId = note.getParentNotes()[0]?.noteId;
+        if (parentNoteId) {
+            for (const child of note.getChildNotes()) {
+                if (child.noteId !== parentNoteId) api.ensureNoteIsPresentInParent(child.noteId, parentNoteId);
+                api.toggleNoteInParent(false, child.noteId, noteId, "");
+            }
+        }
+
+        note.deleteNote();
+        return parentNoteId;
+    }, [noteId]);
 
     if (parentNoteId) await api.activateNote(parentNoteId);
+}
+
+// ---------------------------------------------------------------------------
+// Points the note at the page you ended up on. Trilium keys the <webview> on this
+// label's value, so writing it tears the element down and loads the page again —
+// which is why this is only ever called as the note is being left, where the
+// element is going away regardless.
+// ---------------------------------------------------------------------------
+async function updateWebViewSrc(noteId, url) {
+    if (!/^https?:/i.test(url || "")) return;
+
+    return api.runOnBackend((noteId, url) => {
+        const note = api.getNote(noteId);
+        if (!note || note.isDeleted || note.getLabelValue("webViewSrc") === url) return;
+        note.setLabel("webViewSrc", url);
+    }, [noteId, url]);
+}
+
+// ---------------------------------------------------------------------------
+// The note's own back/forward stack, so it outlives the <webview> element, which
+// loses Chromium's history every time Trilium mounts a fresh one. It is kept in an
+// attachment rather than the note's content — which the New Tab list's ordering and
+// the search index both read — under a role of this addon's own, since Trilium only
+// erases unused attachments whose role says they live in a note's content.
+// ---------------------------------------------------------------------------
+const HISTORY_ATTACHMENT_TITLE = "webViewHistory.json";
+const HISTORY_ATTACHMENT_ROLE = "webViewHistory";
+const HISTORY_LIMIT = 50;
+
+async function loadWebViewHistory(noteId) {
+    return api.runOnBackend((noteId, title) => {
+        const attachment = api.getNote(noteId)?.getAttachmentByTitle(title);
+        if (!attachment) return null;
+
+        try {
+            const history = JSON.parse(String(attachment.getContent()));
+            return Array.isArray(history?.entries) ? history : null;
+        } catch {
+            return null;
+        }
+    }, [noteId, HISTORY_ATTACHMENT_TITLE]);
+}
+
+async function saveWebViewHistory(noteId, history) {
+    return api.runOnBackend((noteId, title, role, content) => {
+        const note = api.getNote(noteId);
+        if (!note || note.isDeleted) return;
+        note.saveAttachment({ title, role, mime: "application/json", content }, "title");
+    }, [noteId, HISTORY_ATTACHMENT_TITLE, HISTORY_ATTACHMENT_ROLE, JSON.stringify(history)]);
+}
+
+// ---------------------------------------------------------------------------
+// Where a page the guest just landed on sits in that stack: the one we are already
+// on, a step back or forward along it, or somewhere new, which drops whatever was
+// ahead the way a browser does. `settling` is for the first page after the element
+// mounts, where a URL anywhere in the stack is where we left off rather than a
+// visit. Returns null when nothing about the stack changed.
+// ---------------------------------------------------------------------------
+function recordHistoryVisit(history, url, title, settling) {
+    if (!/^https?:/i.test(url || "")) return null;
+
+    const entries = Array.isArray(history?.entries) ? history.entries : [];
+    const index = Number.isInteger(history?.index) ? history.index : entries.length - 1;
+    const current = entries[index];
+
+    if (current && current.url === url) {
+        if (!title || current.title === title) return null;
+        const renamed = entries.slice();
+        renamed[index] = { url, title };
+        return { entries: renamed, index };
+    }
+
+    const step = [index - 1, index + 1].find((candidate) => entries[candidate]?.url === url);
+    const known = step !== undefined ? step : (settling ? entries.findIndex((entry) => entry.url === url) : -1);
+    if (known >= 0) return { entries, index: known };
+
+    const grown = [...entries.slice(0, index + 1), { url, title: title || url }];
+    const overflow = Math.max(0, grown.length - HISTORY_LIMIT);
+    return { entries: grown.slice(overflow), index: grown.length - overflow - 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -289,16 +392,30 @@ async function deleteWebViewNote(noteId) {
 // guest's console is the only channel back to the host; the host's `will-navigate`
 // can't be cancelled, hence intercepting the click instead of the navigation.
 // A plain click opens the link's note; ctrl/cmd-click and right-click report
-// `background`, which files the note without leaving the page.
+// `background`, which files the note without leaving the page. With `everyLink`
+// off, a plain click is only taken when the page's own <a> asks for a new tab —
+// every other link is left to navigate the page it is on. Re-running the script
+// updates that flag; the listeners are only bound the first time.
 // ---------------------------------------------------------------------------
 const LINK_MESSAGE_PREFIX = "web-preview:link:";
 
-const LINK_INTERCEPT_SCRIPT = `(() => {
-    if (window.__webPreviewLinkIntercept) return;
-    window.__webPreviewLinkIntercept = true;
+function linkInterceptScript(everyLink) {
+    return `(() => {
+    const state = window.__webPreviewLinks || (window.__webPreviewLinks = {});
+    state.everyLink = ${everyLink ? "true" : "false"};
+    if (state.installed) return;
+    state.installed = true;
     const anchorOf = (event) => {
         const anchor = event.target && event.target.closest && event.target.closest("a[href]");
         return anchor && /^https?:/i.test(anchor.href) ? anchor : null;
+    };
+    // A page marks a link as its own new tab with target="_blank", or by naming a
+    // frame that doesn't exist, which the browser opens as a new tab as well.
+    const wantsNewTab = (anchor) => {
+        const target = (anchor.target || "").trim();
+        if (!target || target === "_self") return false;
+        if (target === "_blank") return true;
+        return !window.frames[target];
     };
     const report = (event, anchor, background) => {
         event.preventDefault();
@@ -308,7 +425,9 @@ const LINK_INTERCEPT_SCRIPT = `(() => {
     document.addEventListener("click", (event) => {
         if (event.defaultPrevented || event.button !== 0 || event.shiftKey || event.altKey) return;
         const anchor = anchorOf(event);
-        if (anchor) report(event, anchor, event.ctrlKey || event.metaKey);
+        if (!anchor) return;
+        const background = event.ctrlKey || event.metaKey;
+        if (background || state.everyLink || wantsNewTab(anchor)) report(event, anchor, background);
     }, true);
     document.addEventListener("contextmenu", (event) => {
         if (event.defaultPrevented) return;
@@ -316,6 +435,7 @@ const LINK_INTERCEPT_SCRIPT = `(() => {
         if (anchor) report(event, anchor, true);
     }, true);
 })()`;
+}
 
 // ---------------------------------------------------------------------------
 // Reads one console message from the guest page, returning {url, title, background}
@@ -441,4 +561,4 @@ function sponsorBlockApplyScript(payload) {
     return `window.__webPreviewSponsorBlock && window.__webPreviewSponsorBlock.apply(${JSON.stringify(payload)})`;
 }
 
-module.exports = { createWebViewNote, listWebViewNotes, matchWebViewNotes, resolveUserAgent, applyUserAgent, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, deleteWebViewNote, LINK_INTERCEPT_SCRIPT, parseLinkMessage, parseAddress, buildSearchTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
+module.exports = { createWebViewNote, listWebViewNotes, matchWebViewNotes, resolveUserAgent, applyUserAgent, findDuplicateWebViews, mergeWebViewDuplicates, renameNote, resolveSaveParentNoteId, openExternal, resolveLinkParentNoteId, deleteWebViewNote, updateWebViewSrc, loadWebViewHistory, saveWebViewHistory, recordHistoryVisit, linkInterceptScript, parseLinkMessage, parseAddress, buildSearchTarget, SPONSORBLOCK_SCRIPT, sponsorBlockApplyScript };
