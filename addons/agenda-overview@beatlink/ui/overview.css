@@ -71,3 +71,15 @@
         }
     }
 }
+
+/* The right-pane card is unclipped so the dropdowns can escape it, which also
+   leaves the Overview pane free to grow past the viewport. Scrolling the widget
+   itself keeps it inside the pane; the dropdowns are positioned fixed, so they
+   still escape this scroll container. */
+#right-pane .agenda-widget#x-agenda-overview-widget {
+    /* Without this the bounded height wraps the column into extra columns instead of scrolling. */
+    flex-wrap: nowrap !important;
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
