@@ -8,38 +8,61 @@ import { getMissingAssignmentNotes } from "pickerRegistry.jsx"
 // An entry: { key, title, color, enabled }. There is no order field — the
 // registry's own key order is the display order (the settings form's move
 // controls rewrite the key order, and libsettings preserves it through both
-// the defaults merge and the save), so ordering is never a number to
-// reconcile.
+// the defaults merge and the save).
+//
+// What lands on a note is not the bare key but `label`: the key behind the
+// area's 1-based registry position, zero-padded ("01-career"), so anything
+// sorting or grouping by the raw #area value follows the configured order.
+// The prefix is derived on read, never stored in the registry, so reordering
+// areas restates every label — which is what reapplyAreaOrder is for. Reads
+// go through areaKeyOf, which also accepts the bare keys written before
+// prefixes existed.
 
-// Read the registry. Returns [{ id, key, title, color, enabled }] in registry
-// order.
+// The #area value for an area at `index` in the registry.
+export function areaLabelValue(key, index) {
+    return `${String(index + 1).padStart(2, "0")}-${key}`
+}
+
+// The registry key inside a stored #area value, prefixed or bare.
+export function areaKeyOf(value) {
+    return (value || "").replace(/^\d+-/, "")
+}
+
+// Read the registry. Returns [{ id, key, label, title, color, enabled }] in
+// registry order.
 export async function getAreas(schemaNoteId, configNoteId) {
     const settings = await loadSettings(schemaNoteId, configNoteId)
     return Object.entries(settings.areas || {})
         .filter(([, a]) => a && a.key)
-        .map(([id, a]) => ({
-            id, key: a.key, title: a.title || a.key, color: a.color || "", enabled: !!a.enabled
+        .map(([id, a], index) => ({
+            id, key: a.key, label: areaLabelValue(a.key, index),
+            title: a.title || a.key, color: a.color || "", enabled: !!a.enabled
         }))
 }
 
-// Set (or clear, when `key` is falsy/"none") a note's #area label, mirroring
-// the chosen area's color onto #color the same way template-picker's
-// assignTemplate does. Shared by the picker widget and the Missing Areas
-// triage page so both write through one path.
-export async function assignArea(noteId, key, color) {
-    return api.runOnBackend((noteId, key, color) => {
-        const note = api.getNote(noteId)
-        if (!note) return false
-        if (key && key !== "none") {
-            note.setLabel("area", key)
-            if (color) note.setLabel("color", color)
-            else note.removeLabel("color")
-        } else {
-            note.removeLabel("area")
-            note.removeLabel("color")
+// Set (or clear, when `value` is falsy/"none") the #area label of one note or
+// of a whole selection, mirroring the chosen area's color onto #color the same
+// way template-picker's assignTemplate does. `value` is an area's `label`,
+// prefix included. Shared by the picker widget and the Missing Areas triage
+// page so both write through one path.
+export async function assignArea(noteIds, value, color) {
+    const ids = Array.isArray(noteIds) ? noteIds : [noteIds]
+
+    return api.runOnBackend((ids, value, color) => {
+        for (const noteId of ids) {
+            const note = api.getNote(noteId)
+            if (!note) continue
+            if (value && value !== "none") {
+                note.setLabel("area", value)
+                if (color) note.setLabel("color", color)
+                else note.removeLabel("color")
+            } else {
+                note.removeLabel("area")
+                note.removeLabel("color")
+            }
         }
         return true
-    }, [noteId, key || "", color || ""])
+    }, [ids, value || "", color || ""])
 }
 
 // Every non-hidden note lacking a #area label, minus anything matching an
@@ -59,7 +82,9 @@ export async function recolorAreaNotes(schemaNoteId, configNoteId) {
     return api.runOnBackend((colorsByKey) => {
         let updated = 0, unchanged = 0, unknown = 0
         for (const note of api.searchForNotes("#area", { includeArchivedNotes: true })) {
-            const key = note.getOwnedLabelValue("area")
+            // areaKeyOf's body, inlined: runOnBackend ships this function alone,
+            // so it can't reach anything else in this module.
+            const key = (note.getOwnedLabelValue("area") || "").replace(/^\d+-/, "")
             if (!key) continue
             if (!(key in colorsByKey)) { unknown++; continue }
             const color = colorsByKey[key] || ""
@@ -70,4 +95,26 @@ export async function recolorAreaNotes(schemaNoteId, configNoteId) {
         }
         return { updated, unchanged, unknown }
     }, [colorsByKey])
+}
+
+// Restate the order prefix on every note already carrying an #area, matching
+// on the key alone so both an outdated prefix and a bare key are brought to
+// the area's current position. Notes whose key names no area keep the value
+// they have and are reported as `unknown`.
+export async function reapplyAreaOrder(schemaNoteId, configNoteId) {
+    const areas = await getAreas(schemaNoteId, configNoteId)
+    const labelsByKey = Object.fromEntries(areas.map(a => [a.key, a.label]))
+    return api.runOnBackend((labelsByKey) => {
+        let updated = 0, unchanged = 0, unknown = 0
+        for (const note of api.searchForNotes("#area", { includeArchivedNotes: true })) {
+            const value = note.getOwnedLabelValue("area")
+            if (!value) continue
+            const wanted = labelsByKey[value.replace(/^\d+-/, "")]
+            if (!wanted) { unknown++; continue }
+            if (value === wanted) { unchanged++; continue }
+            note.setLabel("area", wanted)
+            updated++
+        }
+        return { updated, unchanged, unknown }
+    }, [labelsByKey])
 }

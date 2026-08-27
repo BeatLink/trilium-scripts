@@ -7,7 +7,7 @@
             "key": {
                 "type": "string",
                 "label": "Key",
-                "description": "Stable identifier stored on tagged notes as #area. Carries no ordering — display order is this registry's own key order — so reordering areas never rewrites a note. Changing a key after notes are tagged orphans their #area label.",
+                "description": "Stable identifier stored on tagged notes as #area, behind the area's position in this list (\"01-career\"). Moving an area restates that prefix for notes tagged afterwards; run Reapply order in the Maintenance tab to bring existing ones along. Changing a key after notes are tagged orphans their #area label.",
                 "default": ""
             },
             "title": {

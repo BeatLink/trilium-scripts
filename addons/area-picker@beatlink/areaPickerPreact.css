@@ -37,7 +37,10 @@
     margin-bottom: 1rem;
 }
 
-.area-picker-recolor {
+.area-picker-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-bottom: 0.5rem;
 }
 

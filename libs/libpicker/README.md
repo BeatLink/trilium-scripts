@@ -26,8 +26,9 @@ The enabled exclude filters from the consumer's own `config.json`, in registry o
 
 ### `isExcludedFromPicker(schemaNoteId, configNoteId, noteId)`
 
-Whether the given note matches any enabled exclude filter's search query — the check each picker
-widget uses to decide whether to render itself at all.
+Whether the given note matches any enabled exclude filter's search query — a one-note check for a
+widget that decides whether to render itself at all. `priority-widget@beatlink` keeps its own copy
+of this one.
 
 ### `getMissingAssignmentNotes(schemaNoteId, configNoteId, searchQuery, attrType, attrName)`
 
@@ -40,5 +41,5 @@ Returns `[{ noteId, title, path, preview }]` — the feed for a "Missing X" tria
 [`area-picker@beatlink`](../../addons/area-picker@beatlink/areaRegistry.jsx) and
 [`template-picker@beatlink`](../../addons/template-picker@beatlink/templateRegistry.jsx) both call
 `getMissingAssignmentNotes` from their own `getMissingAreaNotes`/`getMissingTemplateNotes`, and
-their widgets (`areaPickerPreact.jsx`/`templatePickerPreact.jsx`) call `isExcludedFromPicker`
-directly.
+their widgets (`areaPickerPreact.jsx`/`templatePickerPreact.jsx`) pair `getExcludeFilters` with
+`getExcludedNoteIds` to drop excluded notes from what they are about to write to.

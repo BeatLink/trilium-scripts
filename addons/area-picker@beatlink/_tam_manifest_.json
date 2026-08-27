@@ -1,11 +1,11 @@
 {
     "id": "area-picker@beatlink",
     "name": "Area Picker",
-    "description": "A right pane dropdown widget for setting a note to a specific area of life, plus a Missing Areas page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker.",
+    "description": "A right pane dropdown widget for setting a note, or a whole tree multi-selection at once, to a specific area of life. The stored #area value carries the area's position in the list (\"01-career\") so anything sorting or grouping by it follows the configured order, and the settings page's Maintenance tab restates that prefix and the mirrored #color across notes tagged earlier. Also holds a Missing Areas triage tab (and page) for every note still lacking an area, and configurable search-based filters to exclude specific notes from the picker.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.6.0",
+    "latestVersion": "4.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/area-picker@beatlink/_tam_manifest_.json",

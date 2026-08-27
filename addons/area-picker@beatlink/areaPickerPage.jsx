@@ -19,7 +19,7 @@ function MissingAreasQueue({ areas, notes, onAssigned }) {
         setBusy(true)
         try {
             const area = areas.find(a => a.key === key)
-            await assignArea(current.noteId, key, area?.color)
+            await assignArea(current.noteId, area ? area.label : key, area?.color)
             onAssigned(current.noteId)
         } finally {
             setBusy(false)
