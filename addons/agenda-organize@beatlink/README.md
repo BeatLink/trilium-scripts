@@ -10,15 +10,14 @@ It reuses agenda's mechanism (config, filters, colors, kanban, task widget) — 
 ## Configuration and cross-addon reads
 
 This addon owns its own settings note (`organizeSchema.json` / `organizeConfig.json`) tagged
-**`#agendaOrganizeConfig`**: the **Organize Note** picker and the four quick-times. Everything is
-edited from the **Organize Editor** page.
+**`#agendaOrganizeConfig`**: the **Organize Note** picker, the four quick-times and the **`dimensions`**
+registry. Everything is edited from the **Organize Editor** page.
 
-The **`dimensions`** registry deliberately stays in [`agenda@beatlink`](../agenda@beatlink/README.md)'s
-`#agendaConfig` and is read cross-addon (see `organizeSettings.js`). Agenda's Overview derives its
-prefix/color/grouping/filter variants from the same list these triage queues write to, so a local
-copy would silently drift out of sync — one registry, read from whoever owns it. The Dimensions tab
-renders an explanatory note when agenda isn't installed, and the start-date triage still works
-without it.
+The **`dimensions`** registry lives in that same note, so nothing here reads another addon's
+configuration. [`agenda@beatlink`](../agenda@beatlink/README.md) keeps its own separate registry of the
+same shape in `#agendaConfig`, for the Overview's derived prefix/color/grouping/filter variants and its
+sort ordinals. The two are edited independently and are free to diverge: a vocabulary you want in both
+places is entered in both places.
 
 The **Inbox** is not read from config: `organize.js` finds it by the `#agendaOrganizeSpecial=inbox`
 label, which you put on your own Inbox note.
@@ -53,13 +52,17 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
 
 ## 2. Dimensions
 
-Agenda owns one open-ended **`dimensions`** registry, declared in [`agenda@beatlink`'s `common/schema.json`](../agenda@beatlink/common/schema.json) and shipped in its [`common/defaults.json`](../agenda@beatlink/common/defaults.json),
-loaded by [`dimensions.js`](../agenda@beatlink/common/dimensions.js) → `getDimensions()`. A dimension is one
+This addon owns one open-ended **`dimensions`** registry, declared in
+[`organizeSchema.json`](organizeSchema.json) and shipped in [`organizeDefaults.json`](organizeDefaults.json),
+loaded by [`dimensions.js`](dimensions.js) → `getDimensions()`. A dimension is one
 note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
-priority ship as defaults, but the set is open-ended. Triage queues, sort ordinals, and the derived
-prefix/color/grouping/filter variants all enumerate the registered dimensions, so adding one needs no
-code change. `key` is the stored value (stable and order-free, so reordering never rewrites a tagged
-note); position IS the order.
+priority ship as defaults, but the set is open-ended. The triage queues enumerate the registered
+dimensions, so adding one needs no code change. `key` is the stored value (stable and order-free, so
+reordering never rewrites a tagged note); position IS the order.
+
+`agenda@beatlink` declares a registry of the same shape in its own `#agendaConfig`, minus the four
+Organize-only flags below, for the Overview's sort ordinals and derived display elements. Neither addon
+reads the other's config note.
 
 Item **type** is deliberately NOT one of these dimensions — it moved out entirely to
 [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry. A note's type is
@@ -71,7 +74,7 @@ Type root's identity from a current template and for the actionable-item set. Se
 [template-picker's README](../template-picker@beatlink/README.md) for its own registry fields
 (Name, Template Note, Enabled, Color, Actionable, Bucket Icon).
 
-`assignDimension(noteId, dim, value)` is the single write path for agenda's own dimensions (used by
+`assignDimension(noteId, dim, value)` is the single write path for these dimensions (used by
 the Organize triage queues). It writes `#<label>=<key>` and optionally mirrors `#color`
 (`writeColor`). Per-dimension flags:
 
@@ -83,7 +86,7 @@ the Organize triage queues). It writes `#<label>=<key>` and optionally mirrors `
 | `scaffoldsAreas`   | Marks the axis that gets one root note per value (the Area axis). |
 
 **Actionable** and the per-template **Bucket Icon** live on template-picker's own registry rows now,
-not on any agenda dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it gates
+not on any dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it gates
 whether the Task editor shows at all. It's set as an inheritable label on the template note.
 Classification (area, priority, item type) is assigned via each dimension's own dedicated picker
 addon, not the Task editor.
@@ -134,9 +137,8 @@ singleton — so "which kind of root is this?" is a single label read.
 ## 3. The Organize page (`organizePage.jsx`)
 
 Two tabs: **Triage** (the one-at-a-time queues) and **Dimensions** (`DimensionsPanel` from
-[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits
-`agenda@beatlink`'s `#agendaConfig` cross-addon (see the note at the top of this file) — a single-tab
-`SettingsForm` scoped `only="Dimensions"`. Editing a value's **Name** or
+[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits this addon's own
+`#agendaOrganizeConfig` — a single-tab `SettingsForm` scoped `only="Dimensions"`. Editing a value's **Name** or
 reordering the list is safe; editing its **Key** orphans every note carrying that value. Item type
 isn't here at all — it's edited on template-picker's own settings note.
 
@@ -213,17 +215,18 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
 `reconcileOrganizeNote` in [`organizeEditor.jsx`](organizeEditor.jsx).)
 
-`organizePage.jsx` imports `getAgendaSettings` (agenda's `ui/Settings.jsx`) and `DimensionsPanel`
-(`organizeDimensions.jsx`), and requires `organize.js` + `dimensions.js`. `organize.js` requires
+`organizePage.jsx` imports `DimensionsPanel` (`organizeDimensions.jsx`) and requires `organize.js`,
+`dimensions.js` and `organizeSettings.js`. `organize.js` requires
 `templateRegistry.jsx` directly — this addon's manifest declares its own `registry` note (same
 `sourceUrl` as template-picker@beatlink's `templateRegistry.jsx`, so TAM's sourceUrl dedup clones
 it in rather than re-fetching if template-picker is already installed). This is a one-directional
 read: the copy tracks template-picker's registry content, but template-picker knows nothing about
 Organize.
 
-The Organize Editor (`organizeEditor.jsx`) hosts two tabs — the **Organize Note** picker and
-**Dimensions**. There is no Workflow Setup tab: nothing on this side provisions structure.
+The Organize Editor (`organizeEditor.jsx`) hosts three tabs — **Times** and **Dimensions** straight
+from the schema, plus the **Organize Note** picker as an `extraPanels` entry. There is no Workflow
+Setup tab: nothing on this side provisions structure.
 
 Per TAM's direct-child require rule, `dimensions` is a child of every note that requires it
-(`organize-page-src`, `organize-dimensions`, `organize-editor`), and libsettings' `ui` is wired under
+(`organize-page-src`), and libsettings' `ui` is wired under
 every note that calls `loadSettings`/`SettingsForm`. Styling is `organize.css` (`appCss`).

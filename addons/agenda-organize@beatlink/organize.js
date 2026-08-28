@@ -13,9 +13,9 @@
 //   - getMisfiledNotes(): notes whose own area/template disagrees with the
 //     top-level root they're filed under, on that root's axis.
 //   - deleteNote / refileNote: the per-note mutations. Dimension writes live in
-//     dimensions.assignDimension, shared with the Task pane.
+//     dimensions.assignDimension.
 //
-// The classification vocabulary is agenda's own `dimensions` config
+// The classification vocabulary is this addon's own `dimensions` config
 // (dimensions.getDimensions) for everything except item TYPE. A note's type used
 // to be a #type label backed by agenda's own `type` dimension; it is now purely
 // its ~template relation, resolved against template-picker@beatlink's registry

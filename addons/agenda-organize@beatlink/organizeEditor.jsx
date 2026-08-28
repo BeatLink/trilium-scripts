@@ -1,6 +1,5 @@
 import { useState, useEffect, NoteAutocomplete, LoadingSpinner } from "trilium:preact"
 import { SettingsForm, loadSettings, saveSettings } from "libSettingsUI.jsx"
-import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const { getOrganizeConfigIds } = require("organizeSettings.js")
 
@@ -96,9 +95,7 @@ export default function OrganizeEditor() {
     if (ids === undefined) return <div><LoadingSpinner /> Loading...</div>
     if (ids === null) return <div>Organize's configuration isn't discoverable.</div>
 
-    // Panels the schema can't express on its own, injected into SettingsForm's
-    // category/tab nav. The Dimensions tab reads agenda@beatlink's registry
-    // rather than a copy of it — see organizeSettings.js for why.
+    // Panels the schema can't express on its own, injected into SettingsForm's tab nav.
     const extraPanels = [
         {
             category: "Organize",
@@ -110,11 +107,6 @@ export default function OrganizeEditor() {
                     initialNoteId={organizeNoteId}
                 />
             )
-        },
-        {
-            category: "Dimensions",
-            tab: "Dimensions",
-            render: () => <DimensionsPanel />
         }
     ]
 
@@ -122,8 +114,8 @@ export default function OrganizeEditor() {
         <div className="profile-editor">
             <h2>Organize Editor</h2>
             <p>
-                Pick the note that hosts the Organize triage UI and set the quick-times its start-date
-                buttons use. Edit the classification vocabulary under Dimensions. The notebook
+                Pick the note that hosts the Organize triage UI, set the quick-times its start-date
+                buttons use, and edit the classification vocabulary under Dimensions. The notebook
                 structure the triage queues walk is yours to create and tag; nothing provisions it.
             </p>
             <SettingsForm

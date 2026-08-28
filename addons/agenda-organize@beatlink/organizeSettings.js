@@ -1,14 +1,11 @@
 // Settings access for organize@beatlink.
 //
 // Organize owns its own settings note (organizeSchema.json / organizeConfig.json)
-// tagged #agendaOrganizeConfig: the Organize Note picker and the four quick-times.
-//
-// One key deliberately stays in agenda@beatlink's #agendaConfig rather than being
-// copied here: `dimensions`, the classification registry. agenda's Overview
-// derives its prefix/color/grouping/filter variants from the same list that
-// Organize's triage queues write to, so a second copy would silently drift out of
-// sync. getAgendaConfigIds() returns null when agenda isn't installed, so callers
-// degrade to "no dimensions" rather than throwing.
+// tagged #agendaOrganizeConfig: the Organize Note picker, the four quick-times and
+// the `dimensions` classification registry its triage queues assign from
+// (dimensions.js reads that one). No setting is read from another addon's config
+// note; agenda@beatlink keeps its own separate dimensions registry for the
+// Overview's derived display elements.
 //
 // The Inbox is NOT read from config — organize.js finds it by its
 // #agendaOrganizeSpecial=inbox label, which this addon provisions itself.
@@ -31,11 +28,6 @@ async function getConfigIds(anchorLabel) {
 // Organize's own settings note ids, for panels that hand them to a SettingsForm.
 async function getOrganizeConfigIds() {
     return getConfigIds("agendaOrganizeConfig")
-}
-
-// agenda@beatlink's settings note ids, or null when agenda isn't installed.
-async function getAgendaConfigIds() {
-    return getConfigIds("agendaConfig")
 }
 
 const TIME_DEFAULTS = {
@@ -78,7 +70,6 @@ async function getTimeSettings() {
 module.exports = {
     getConfigIds,
     getOrganizeConfigIds,
-    getAgendaConfigIds,
     getOrganizeSettings,
     getTimeSettings,
     TIME_DEFAULTS

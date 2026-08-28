@@ -1,29 +1,20 @@
 // === Trilium Code note ===
 // Title: dimensions.js
 // Type: Code -> JS Frontend
-// Library only (CommonJS, require()'d by the Organize page and the overview
-// libs).
+// Library only (CommonJS, require()'d by the overview libs).
 //
-// The single source of truth for agenda's classification axes. A "dimension" is
-// one note label plus its ordered vocabulary of values — area and priority ship
-// as defaults, but the set is open-ended: anything registered in agenda's
-// `dimensions` config gets an Organize triage queue, a sort ordinal, and a
-// derived prefix/color/grouping/filter variant, with no code change.
+// The classification axes the Overview renders by. A "dimension" is one note
+// label plus its ordered vocabulary of values — area and priority ship as
+// defaults, but the set is open-ended: anything registered in agenda's
+// `dimensions` config gets a sort ordinal and a derived prefix/color/grouping/
+// filter variant, with no code change.
 //
-// Agenda OWNS this vocabulary. It used to be discovered at runtime from three
-// other addons (area-picker's #areaConfig, template-picker's
-// #templatePickerConfig, priority-widget's #priorityConfig), with the same
-// ~9-line discovery block hand-copied six times and the vocabularies duplicated
-// again inside agenda's own prefixes/colors/groupings/filters. Those addons are
-// now fully independent; agenda no longer reads them at all.
-//
-// There used to be a `type` dimension here too, tagging notes #type and
-// separately setting ~template via each value's templateNoteId. Both are gone:
-// a note's classification is now its ~template relation alone, resolved against
-// template-picker@beatlink's own registry (see organize.js, which is the only
-// place agenda still reads that registry — bucket scaffolding and the
-// actionable-item set). Assigning a template is template-picker's own widget's
-// job, not agenda's.
+// This registry lives in agenda's own #agendaConfig note. agenda-organize@beatlink
+// keeps a separate registry of the same shape in #agendaOrganizeConfig, for its
+// triage queues and the flags only they need (triage, actionableOnly,
+// scaffoldsAreas, writeColor). The two are independent and free to diverge:
+// neither addon reads the other's config note, and assigning a value to a note is
+// Organize's own job.
 //
 // Value order is the registry's own key order, so a value's stored key carries
 // no ordinal and reordering the vocabulary never rewrites a tagged note.
@@ -32,8 +23,7 @@
 const { loadSettings } = require("libSettingsUI.jsx")
 
 // Normalize the `dimensions` registry into the array shape the callers use:
-// [{ id, name, label, writeColor, triage, actionableOnly,
-//    scaffoldsAreas, values: [{ key, name, color, actionable, icon }] }]
+// [{ id, name, label, values: [{ key, name, color }] }]
 //
 // Registry ids are libsettings-generated and meaningless — `key` is the stored
 // note value. Dimensions with no label, and values with no key, are dropped:
@@ -45,25 +35,19 @@ function normalizeDimensions(settings) {
             id,
             name: dim.name || dim.label,
             label: dim.label,
-            writeColor: !!dim.writeColor,
-            triage: dim.triage !== false,
-            actionableOnly: !!dim.actionableOnly,
-            scaffoldsAreas: !!dim.scaffoldsAreas,
             values: Object.values(dim.values || {})
                 .filter(v => v && v.key)
                 .map(v => ({
                     key: v.key,
                     name: v.name || v.key,
-                    color: v.color || "",
-                    actionable: !!v.actionable,
-                    icon: v.icon || ""
+                    color: v.color || ""
                 }))
         }))
 }
 
-// Resolve agenda's own settings note ids. Same #agendaConfig discovery
-// agendaSettings.jsx uses; duplicated here (rather than imported) to keep this
-// module free of a require() on the .jsx tree — it loads in every widget.
+// Resolve agenda's own settings note ids, the same #agendaConfig discovery
+// settings.js does; duplicated here to keep this module free of a require() on
+// the .jsx tree — it loads in every widget.
 async function getDimensionConfigIds() {
     const anchors = await api.searchForNotes("#agendaConfig")
     if (!anchors.length) return null
@@ -105,37 +89,8 @@ async function getSortValueMaps(dimensions) {
     return maps
 }
 
-// Assign (or clear, when `value` is null) one dimension's value on a note.
-//
-// One optional per-dimension behaviour: writeColor mirrors the value's colour
-// onto #color, tinting the tree.
-async function assignDimension(noteId, dimension, value) {
-    return api.runOnBackend((noteId, label, writeColor, key, color) => {
-        const note = api.getNote(noteId)
-        if (!note) return false
-        if (key) {
-            note.setLabel(label, key)
-            if (writeColor) {
-                if (color) note.setLabel("color", color)
-                else note.removeLabel("color")
-            }
-        } else {
-            note.removeLabel(label)
-            if (writeColor) note.removeLabel("color")
-        }
-        return true
-    }, [
-        noteId,
-        dimension.label,
-        dimension.writeColor,
-        (value && value.key) || "",
-        (value && value.color) || ""
-    ])
-}
-
 module.exports = {
     normalizeDimensions,
     getDimensions,
-    getSortValueMaps,
-    assignDimension
+    getSortValueMaps
 }

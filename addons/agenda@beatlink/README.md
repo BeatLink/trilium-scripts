@@ -36,12 +36,12 @@ The opinionated Collect → Organize workflow (the triage page) is now a
 separate addon, [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) — install it
 alongside this one for the full GTD flow.
 
-It owns its own settings note (`#agendaOrganizeConfig`: the Organize-note picker and the quick-times)
-and its own **Organize Editor** page, so those tabs are no longer in the Agenda Settings. It reads the
-**`dimensions`** registry back out of this addon's `#agendaConfig`, because Overview's derived
-prefix/color/grouping/filter variants come from the same list Organize's triage queues write to — one
-registry, no drift. Editing that vocabulary still happens here, in the Agenda Settings's **Dimensions**
-tab (and is mirrored on Organize's own Dimensions tab).
+It owns its own settings note (`#agendaOrganizeConfig`: the Organize-note picker, the quick-times and
+its own **`dimensions`** registry) and its own **Organize Editor** page, so those tabs are no longer in
+the Agenda Settings. Since agenda 11.0.0 it reads nothing out of this addon's `#agendaConfig`: the two
+dimensions registries are separate vocabularies, each edited on its own settings page, and a value you
+want in both places is entered in both places. This addon's copy carries only what the Overview needs
+(name, label, values); Organize's carries the triage flags on top of that.
 
 ## Templates
 
@@ -68,8 +68,9 @@ Whether a note's Task editor shows at all (if [`agenda-task@beatlink`](../agenda
 is installed) is the separate **`#agendaTaskWidget`** label, set as an inheritable label on the
 template note so notes created from it get it automatically.
 
-Priority is just another dimension, shipped by default. Any dimension can additionally mirror the
-chosen value's colour onto `#color`. See [agenda-organize@beatlink](../agenda-organize@beatlink/README.md#2-dimensions).
+Priority is just another dimension, shipped by default. Writing a value onto a note (and optionally
+mirroring its colour onto `#color`) is Organize's job, on its own registry — see
+[agenda-organize@beatlink](../agenda-organize@beatlink/README.md#2-dimensions).
 
 ## Shared configuration
 
@@ -77,7 +78,7 @@ The config lives in one settings note holding a `schema.json`/`defaults.json`/`c
 **dimensions** registry, profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules
 those profiles reference). That note is tagged **`#agendaConfig`**; every agenda addon finds it
 at runtime via `getAgendaSettings()` in [`lib/settings.js`](lib/settings.js), so a change made in the
-Agenda Settings page is seen by all of them at once. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
+Agenda Settings page is seen by every addon that reads this note. The prefix/color/grouping/filter variants for each dimension are **derived** from the registry at
 read time, so adding a dimension yields all four with no extra setup and they can never drift from the
 vocabulary.
 
@@ -98,10 +99,10 @@ per-field `category`):
 - **Display Elements** — Sorts, Prefixes, Colors, Groupings, Date Rules: the reusable building blocks a
   profile references by name. Split out of Review because they're a shared library, not per-profile
   config (Date Rules in particular is the primitive Prefixes/Colors/Groupings/Filters all reference).
-- **Dimensions** — the classification vocabulary registry (area, priority, any you add). This addon
-  owns it; [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) reads and mirrors the
-  same registry on its own **Dimensions** tab. Item type lives in template-picker@beatlink's own
-  settings instead, not here.
+- **Dimensions** — the classification vocabulary the Overview groups, colours, prefixes and filters by
+  (area, priority, any you add). [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)
+  keeps its own separate registry for its triage queues; neither reads the other. Item type lives in
+  template-picker@beatlink's own settings instead, not here.
 - **Settings** — the three task label names this addon reads: start datetime, due datetime and
   recurrence. The rest of the task vocabulary (the split date/time labels, duration) and the Task pane's
   Reschedule Options are edited on [`agenda-task@beatlink`](../agenda-task@beatlink/README.md)'s own
@@ -175,9 +176,10 @@ Sources are grouped by kind, and note titles match the file names:
 | `static/` | `calendar.ical` — the seed body of the iCal feed note the Overview widget writes |
 
 `lib/settings.js` and `lib/dimensions.js` are also pulled by
-[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) and
-[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) through relative `sourceUrl`s, so
-each install carries its own copy of the reader while the data stays in this addon's one config note.
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) through relative `sourceUrl`s, so
+that install carries its own copy of the reader while the data stays in this addon's one config note.
+`agenda-organize@beatlink` ships its own `dimensions.js` reading its own config note, not a copy of
+this one.
 
 Trilium resolves an `import` / `require` by note title within the importer's subtree, not by path, so
 the folders are a repo-side convention only.

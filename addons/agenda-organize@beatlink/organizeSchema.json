@@ -34,5 +34,83 @@
         "description": "The time the Organize \"Night\" button sets.",
         "category": "Organize",
         "tab": "Times"
+    },
+    "dimensions": {
+        "type": "registry",
+        "label": "Dimensions",
+        "description": "The classification axes notes are tagged with. Each dimension is one note label plus its ordered vocabulary of values. Adding a dimension here gives you a triage queue and a picker on the Organize page, with no code change. Value order is this list's order, so reordering never rewrites a tagged note. agenda@beatlink keeps its own separate registry for the Overview's derived display elements; the two never read each other.",
+        "category": "Dimensions",
+        "tab": "Dimensions",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Dimension"
+            },
+            "label": {
+                "type": "string",
+                "label": "Note Label",
+                "description": "The note label values are written to, without the leading #.",
+                "default": ""
+            },
+            "writeColor": {
+                "type": "boolean",
+                "label": "Also Write #color",
+                "description": "Mirror the chosen value's colour onto the note's #color label, tinting it in the tree.",
+                "default": false
+            },
+            "triage": {
+                "type": "boolean",
+                "label": "Triage Unassigned Notes",
+                "description": "Give this dimension a queue in Organize listing notes that lack a value.",
+                "default": true
+            },
+            "actionableOnly": {
+                "type": "boolean",
+                "label": "Triage Only Actionable Notes",
+                "description": "Restrict that queue to notes whose type is marked Actionable.",
+                "default": false
+            },
+            "scaffoldsAreas": {
+                "type": "boolean",
+                "label": "Scaffold A Root Note Per Value",
+                "description": "This dimension is the one whose values each get a notebook root note.",
+                "default": false
+            },
+            "values": {
+                "type": "registry",
+                "label": "Values",
+                "default": {},
+                "itemSchema": {
+                    "name": {
+                        "type": "string",
+                        "label": "Name",
+                        "default": ""
+                    },
+                    "key": {
+                        "type": "string",
+                        "label": "Label Value",
+                        "description": "The stored value. Changing it orphans every note already tagged with the old one.",
+                        "default": ""
+                    },
+                    "color": {
+                        "type": "color",
+                        "label": "Color",
+                        "default": "gray"
+                    },
+                    "actionable": {
+                        "type": "boolean",
+                        "label": "Actionable",
+                        "description": "Items of this value flow through the priority and start-date triage queues.",
+                        "default": false
+                    },
+                    "icon": {
+                        "type": "string",
+                        "label": "Bucket Icon",
+                        "default": ""
+                    }
+                }
+            }
+        }
     }
 }

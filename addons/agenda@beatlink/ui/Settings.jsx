@@ -20,7 +20,7 @@ export default function AgendaSettings() {
 
     // Every tab here comes from the schema's own `category`/`tab` keys. The
     // Organize-note picker moved out to agenda-organize@beatlink's own editor
-    // along with the Organize config keys;
+    // along with the Organize config keys and its own dimensions registry;
     // the Task label and Reschedule Options panels moved out to
     // agenda-task@beatlink's own Task Settings page along with #agendaTaskConfig.
     return (
@@ -32,9 +32,8 @@ export default function AgendaSettings() {
                 Under Display Elements, manage the reusable sort/prefix/color/grouping/date-rule building
                 blocks — each on its own tab; a profile only ever references an element by name, so
                 editing the element on its own tab changes it everywhere it's used. Edit the classification
-                vocabulary under Dimensions.
-                The Organize triage UI and its notebook provisioning live in
-                agenda-organize@beatlink's own editor.
+                vocabulary the Overview groups and colours by under Dimensions. The Organize triage UI
+                keeps its own separate dimensions registry, edited in agenda-organize@beatlink's own editor.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

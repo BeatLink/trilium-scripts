@@ -1,11 +1,11 @@
 {
     "id": "agenda-overview@beatlink",
     "name": "Agenda Overview",
-    "description": "The Overview widget from agenda@beatlink, split out as its own addon: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed. Every value it reads - profiles, searches, filters, the display-element library and the dimensions registry - lives in agenda@beatlink's #agendaConfig settings note, which this addon discovers at runtime and never writes to; agenda@beatlink is therefore required. It ships its own copy of that addon's settings.js and dimensions.js readers, the way agenda-organize@beatlink already does, because Trilium resolves an import only within the importing note's own subtree.",
+    "description": "The Overview widget from agenda@beatlink, split out as its own addon: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed. Every value it reads - profiles, searches, filters, the display-element library and the dimensions registry - lives in agenda@beatlink's #agendaConfig settings note, which this addon discovers at runtime and never writes to; agenda@beatlink is therefore required. agenda-organize@beatlink's own dimensions registry is a separate vocabulary and is never read here. It ships its own copy of agenda's settings.js and dimensions.js readers because Trilium resolves an import only within the importing note's own subtree.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.0.2",
+    "latestVersion": "1.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",

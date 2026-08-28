@@ -590,7 +590,7 @@ function TriagePanel() {
 
 // The Organize page: two tabs — Triage (the one-at-a-time triage queues) and
 // Dimensions (the vocabulary the notebook is scaffolded from and the pickers/
-// queues assign). Both read agenda's own #agendaConfig.
+// queues assign). Both read this addon's own #agendaOrganizeConfig.
 export default function OrganizePanel() {
     const [tab, setTab] = useState("triage")
 

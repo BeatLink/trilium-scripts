@@ -9,10 +9,6 @@
         "area": {
             "name": "Area",
             "label": "area",
-            "writeColor": true,
-            "triage": true,
-            "actionableOnly": false,
-            "scaffoldsAreas": true,
             "values": {
                 "career": {
                     "name": "Career",
@@ -84,10 +80,6 @@
         "priority": {
             "name": "Priority",
             "label": "priority",
-            "writeColor": true,
-            "triage": true,
-            "actionableOnly": true,
-            "scaffoldsAreas": false,
             "values": {
                 "4-critical": {
                     "name": "Must Do",
@@ -302,7 +294,7 @@
             ]
         },
         "typePriorityStartDate": {
-            "name": "Type → Priority → Start Date",
+            "name": "Type \u2192 Priority \u2192 Start Date",
             "criteria": [
                 {
                     "attribute": "type",
@@ -322,7 +314,7 @@
             ]
         },
         "typeStartDate": {
-            "name": "Type → Start Date",
+            "name": "Type \u2192 Start Date",
             "criteria": [
                 {
                     "attribute": "type",
@@ -337,7 +329,7 @@
             ]
         },
         "area": {
-            "name": "Area → Start Date",
+            "name": "Area \u2192 Start Date",
             "criteria": [
                 {
                     "attribute": "area",
@@ -352,7 +344,7 @@
             ]
         },
         "priorityStartDate": {
-            "name": "Priority → Start Date",
+            "name": "Priority \u2192 Start Date",
             "criteria": [
                 {
                     "attribute": "priority",
@@ -367,7 +359,7 @@
             ]
         },
         "priorityTypeStartDate": {
-            "name": "Priority → Type → Start Date",
+            "name": "Priority \u2192 Type \u2192 Start Date",
             "criteria": [
                 {
                     "attribute": "priority",

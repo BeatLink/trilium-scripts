@@ -42,8 +42,7 @@ Sources are grouped by kind, and note titles match the file names:
 | `lib/` | `overview.js` (re-filing and the iCal write), `query.js` (search + filter + sort), `config.js` (the derived display elements) |
 
 `lib/` additionally carries copies of `agenda@beatlink`'s `settings.js`, `dimensions.js` and
-`migrate.js`, pulled through relative `sourceUrl`s the same way
-[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md) pulls `dimensions.js`: Trilium
+`migrate.js`, pulled through relative `sourceUrl`s: Trilium
 resolves an `import` / `require` by note title within the importing note's own subtree, so a shared
 reader has to be shipped into each addon that uses it. Only the code is duplicated — the data stays in
 the one `#agendaConfig` note.
