@@ -56,8 +56,6 @@ re-fetches to check for a newer version, and what a catalog's `tam-addons[]` lis
     "children": [...],
     "relations": [...],
     "labels": [...],
-    "dependencies": [...],
-    "exports": {...},
     "settings": {...},
     "hooks": {...}
   }
@@ -305,29 +303,23 @@ worked example.
 
 #### `children`
 
-Defines the parent-child tree structure. There are two forms:
-
-**Local child** — the child note is in this manifest; the parent is either another local note or
-one of the reserved anchor keywords, `"root"`/`"persistence"` (see [`root`](#root-tam-only) and
-[`"persistence"` parent keyword](#persistence-parent-keyword)):
+Defines the parent-child tree structure. The child note is in this manifest; the parent is either
+another local note or one of the reserved anchor keywords, `"root"`/`"persistence"` (see
+[`root`](#root-tam-only) and [`"persistence"` parent keyword](#persistence-parent-keyword)):
 ```json
 {"parent": "root", "child": "script-note"}
 ```
 
-**Cross-addon child** — the child is a note exported by a dependency. This creates a clone branch so the dep note appears under the parent:
-```json
-{"parent": "script-note", "addon": "libmultisort@beatlink", "child": "lib"}
-```
-`child` is the export name from the dependency's `exports` map (see [Exports](#exports)). Resolved
-live: TAM looks up the dependency's *local id* for that export name (from the dependency's own
-fetched manifest), then finds the real note by `#TAMFILEID="{depAddonId}/{localId}"`.
+Two addons that ship the same file do not need any cross-addon wiring for it: each declares its own
+vendored copy, and TAM shares one live note between them automatically when the copies resolve to
+the same `sourceId` URL (see
+[`#TAMSOURCEURL`](ARCHITECTURE.md#tamsourceurl-one-note-per-url-shared-across-addons)).
 
 #### `relations`
 
-Defines Trilium relations (typed links between notes).
-
-**Local relation** — both notes are in this manifest (unlike `children[]`, `from`/`to` here must
-be real local ids — `"root"`/`"persistence"` are not valid targets):
+Defines Trilium relations (typed links between notes). Both notes are in this manifest (unlike
+`children[]`, `from`/`to` here must be real local ids — `"root"`/`"persistence"` are not valid
+targets):
 ```json
 {"from": "launcher", "type": "renderNote", "to": "settings"}
 ```
@@ -335,12 +327,6 @@ be real local ids — `"root"`/`"persistence"` are not valid targets):
 A relation may cross the persistence boundary in either direction: a persistent note can point at a
 structural one (`{"from": "template", "type": "renderNote", "to": "widget"}`) even though the
 persistence pass runs first, because such a relation is deferred until every note has been resolved.
-
-**Cross-addon relation** — the target is a note exported by a dependency:
-```json
-{"from": "script", "type": "scriptNote", "addon": "lib@author", "to": "main"}
-```
-`to` is the export name from the dependency's `exports` map.
 
 #### `labels`
 
@@ -350,33 +336,6 @@ Applies Trilium labels (key-value attributes) to notes after creation:
 ```
 
 Trilium activation labels (those that cause scripts to run or themes to apply) are managed by TAM's enable/disable system — see [Enabling and Disabling](ARCHITECTURE.md#enabling-and-disabling).
-
-#### `dependencies`
-
-An array of addons that must be installed before this addon. Each entry is either a bare id string:
-```json
-"dependencies": ["libmultisort@beatlink"]
-```
-resolved by matching against whatever's already installed, or against the catalog the consuming
-addon itself was installed from (this repo's own libraries all use this form — a monorepo catalog
-naturally lists every addon it depends on too, so a sibling lookup always succeeds); or an explicit
-object for a dependency that genuinely lives somewhere else entirely:
-```json
-"dependencies": [{"id": "lib-from-elsewhere@author", "manifestSourceUrl": "https://.../_tam_manifest_.json"}]
-```
-
-TAM recursively syncs all declared dependencies before syncing the addon itself. If a dependency is already installed but its `latestVersion` is newer than what's currently installed, TAM syncs it in place first — otherwise a dependency bump (e.g. a shared library's note getting renamed) would never reach an addon that already had the old version of that dependency installed, even via "Update All Addons" on the addon that actually changed. See [How Sync Works](ARCHITECTURE.md#how-sync-works).
-
-#### `exports`
-
-Maps export names to local note IDs. This is how other addons reference specific notes in this addon:
-```json
-"exports": {
-  "lib": "lib-note-local-id"
-}
-```
-
-When a dependent addon references `"addon": "this-addon@author", "child": "lib"`, TAM resolves `"lib"` through this map to get the *local id*, then finds the real note live by its `#TAMFILEID` (see [Note Identity](ARCHITECTURE.md#note-identity-tamfileid)). `exports{}` stays purely a manifest-level encapsulation boundary — it lets an addon restructure its own internal local ids across a version bump without breaking consumers, as long as the exported name keeps meaning the same thing — no note ids are cached from it.
 
 ---
 
@@ -431,14 +390,13 @@ The toolchain is a single Node.js CLI, `resources/scripts/tamhelper.js`, run fro
 
 Validates all `_tam_manifest_.json` files before publishing. Checks:
 
-- All required top-level fields are present (`id`, `name`, `description`, `author`, `homepage`, `license`, `latestVersion`, `type`).
+- The expected top-level fields are present (`id`, `name`, `description`, `author`, `homepage`, `license`, `latestVersion`, `type`) — a missing `id` is an error, any other absence is a warning.
 - `homepage` ends with `addons/{id}` when the path contains `/addons/` (auto-fixable with `--fix`).
 - `readme` file exists on disk if declared.
 - `manifestSourceUrl` matches where `publish` will serve this manifest (auto-fixable with `--fix`; only a warning when absent entirely).
 - If `manifest.root` is set (TAM's own self-bootstrap exception only), it exists in `manifest.notes`; otherwise `manifest.children` attaches at least one note to the reserved `"root"` parent keyword.
 - Every relative `sourceUrl` resolves to a real file on disk, and is read from there rather than fetched (an absolute one is still fetched, since it isn't in this repo).
 - All `children`, `relations`, and `labels` reference note IDs that exist in `manifest.notes` — except `children[].parent`, which also accepts the reserved `"root"`/`"persistence"` anchor keywords.
-- `manifest.dependencies` is a list where each entry is a bare id string or a well-formed `{id, manifestSourceUrl}` object.
 - `manifest.settings`, when present, names a `schema`, a `defaults` and a `config` that all exist in `manifest.notes`. The schema and defaults notes must not be attached under the reserved `"persistence"` parent (both ship anew every update), and the defaults note must ship content; the config must be persistent, and must ship no `sourceUrl`/`content` of its own (or it would still be offered for whole-file replacement). The config must carry a `sourceConfig` relation to the defaults note, or libsettings would read no defaults at all. A mime other than `application/json` on any of them is a warning.
 - Every attachment has a `title` (unique within its note) and a `mime`, ships content, and its relative `sourceUrl` resolves to a real file on disk. A `role` other than `file`/`image` is a warning.
 - Every note carrying an `#iconPack` label is a valid icon pack: a legal, non-`bx` prefix, `code`/`application/json`, a readable manifest with an `icons` object, and a `role: "file"` font attachment in a supported format.
@@ -452,13 +410,11 @@ node resources/scripts/tamhelper.js validate [--fix]
 
 ### `tam-to-zip`
 
-Converts a `_tam_manifest_.json` into a Trilium-importable ZIP export (the format Trilium's "Import" function accepts). Automatically discovers and bundles dependency addons from the sibling `addons/` directory.
+Converts a `_tam_manifest_.json` into a Trilium-importable ZIP export (the format Trilium's "Import" function accepts).
 
 - For each note in the manifest, fresh Trilium note IDs are generated. Content comes off disk for a relative `sourceUrl` (so a ZIP always matches the working copy, and builds offline); only an absolute one is fetched.
 - Each declared attachment is written as a sibling of its owner note's data file, named `{note base}_{attachment title}` with a generated `attachmentId`, exactly as Trilium's own exporter does — an entry with no `attachmentId` is skipped on import.
 - Every note gets a real `#TAMFILEID="{addonId}/{localId}"` label baked into the exported ZIP (see [Note Identity](ARCHITECTURE.md#note-identity-tamfileid)) — a manually-imported ZIP is fully self-identifying from the moment of import, with no separate bootstrap/tagging step needed for TAM to recognize its own notes on a later sync.
-- Dependency addons are read from `addons/{dep-id}/_tam_manifest_.json` in the same repo and bundled as additional root entries in the ZIP's `!!!meta.json` — this only works for a bare-id dependency (or an explicit one that happens to also have a local sibling folder); a dependency that only exists at a remote `manifestSourceUrl` can't be bundled into an offline ZIP and is skipped with a warning.
-- Cross-addon clone children and relations are wired using the generated UUIDs, resolved via each dependency's `exports` map.
 
 ```
 node resources/scripts/tamhelper.js tam-to-zip addons/{addon-id}/ [--out output.zip] [--addons-dir path/to/addons/]
@@ -478,7 +434,7 @@ Converts a Trilium export ZIP into a `_tam_manifest_.json` + flat source files. 
 
 - Reads `!!!meta.json` from the export ZIP.
 - Assigns stable local IDs to notes by slugifying their titles.
-- Copies source files flat into the output directory, resolving each note's data file by its exact path in the archive (so notes that share a basename, e.g. several bundled deps each with a `README.md`, don't collide).
+- Copies source files flat into the output directory, resolving each note's data file by its exact path in the archive (so notes that share a basename, e.g. several notes each named `README.md`, don't collide).
 - Handles clone entries (notes that appear under multiple parents) correctly — they become extra `children` entries referencing the same local ID rather than duplicate note entries.
 - Recovers each note's attachments, copying their data files out flat and declaring them under the note's `attachments`.
 - Filters out `noImport` scaffold entries.
@@ -489,7 +445,7 @@ Converts a Trilium export ZIP into a `_tam_manifest_.json` + flat source files. 
 node resources/scripts/tamhelper.js zip-to-tam path/to/export.zip [--out ./output-dir/]
 ```
 
-After running, fill in the `FILL_IN` fields in `_tam_manifest_.json`, review the auto-generated local IDs, add `dependencies`/`exports` if needed, and set `skipOnUpdate`/`promptOnUpdate` on appropriate notes.
+After running, fill in the `FILL_IN` fields in `_tam_manifest_.json`, review the auto-generated local IDs, and set `skipOnUpdate`/`promptOnUpdate` on appropriate notes.
 
 ### `publish`
 
@@ -511,8 +467,8 @@ node resources/scripts/tamhelper.js publish [--addons-dir addons/] [--out-dir re
 Generates the static GitHub Pages catalog site at `resources/docs/`. For each addon:
 
 - Renders a card on the index page with name, type badge, description, version, and author.
-- Renders a detail page (`resources/docs/{addon-id}/index.html`) with the README, metadata table, download buttons, and — when the addon has any dependency or dependent — a focused Mermaid dependency subgraph (see [Dependency graph](ARCHITECTURE.md#dependency-graph)).
-- The index page has a search bar, type filter buttons, and a collapsible whole-catalog Mermaid dependency graph.
+- Renders a detail page (`resources/docs/{addon-id}/index.html`) with the README, metadata table, and download buttons.
+- The index page has a search bar and type filter buttons.
 - Author names link to their GitHub profiles.
 - Download buttons: **Download ZIP** (Trilium import), **View Manifest** (the addon's published manifest), **Source** (GitHub homepage).
 

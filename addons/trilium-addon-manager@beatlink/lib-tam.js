@@ -5,6 +5,9 @@ const marked = require("marked.min.js")
 // review reads a schema, a config and a registry's shipped-vs-stored delta
 // exactly the way the settings form that wrote them does.
 const { isPlainObject, mergeSchemas, mergeSources, mergeDefaults, titleFor } = require("libSettingsCore.js")
+// The manifest-shape helpers shared with tamhelper.js, which requires the same
+// file from disk, so the runtime and the validator can't drift apart.
+const { buildParentMaps, topologicalSort, normalizeManifest, persistentLocalIds, sourceIdentityOf } = require("tam-manifest-model.js")
 
 const addonRootLabel = "addonRoot"
 
@@ -71,6 +74,33 @@ async function updateDatabase(mutate) {
     const database = await loadDatabase()
     await mutate(database)
     await saveDatabase(database)
+}
+
+// =========================================================================
+// Installed-record accessors: the only functions that spell out the layout
+// under database.installedAddons[addonId], so a record schema change stays a
+// one-section edit instead of a hunt through every reader.
+// =========================================================================
+
+function getRecord(database, addonId) {
+    return database.installedAddons[addonId]
+}
+
+// The record's TAM-side bookkeeping (prompts and review baselines); undefined until first written.
+function getPersistence(record) {
+    return record?.persistence
+}
+
+function ensurePersistence(record) {
+    record.persistence = record.persistence || {}
+    return record.persistence
+}
+
+// An empty list removes the key entirely, so a record with nothing pending stays clean.
+function setPendingPrompts(record, prompts) {
+    if (!record) return
+    if (prompts.length > 0) ensurePersistence(record).pendingPrompts = prompts
+    else if (getPersistence(record)) delete getPersistence(record).pendingPrompts
 }
 
 // =========================================================================
@@ -160,16 +190,6 @@ function clearLog() {
 function isOwnTamFileId(note, addonId) {
     const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
     return tamFileId && tamFileId.startsWith(`${addonId}/`)
-}
-
-// The identity #TAMSOURCEURL records, and what two addons vendoring the same
-// file are matched on. A published manifest supplies `sourceId` - the same file
-// on its branch - because the sourceUrl it fetches from is pinned to one commit
-// and so is a different string every publish. A renderAsHTML note has none: it
-// stores a rendering, not the file that was fetched.
-function sourceIdentityOf(noteDef) {
-    if (noteDef.renderAsHTML || !noteDef.sourceUrl) return null
-    return noteDef.sourceId || noteDef.sourceUrl
 }
 
 // Whether the sync leaves this note's content alone once it exists: a persistent
@@ -320,36 +340,8 @@ function recordedNoteHashes(m, noteMap, storedNoteHashes) {
 
 // =========================================================================
 // Manifest shape: pure helpers operating on a fetched/stored manifest object.
+// The structural ones live in tam-manifest-model.js, shared with tamhelper.js.
 // =========================================================================
-
-// Splits children[] into each note's first-declared parent vs. any later parents.
-function buildParentMaps(children) {
-    const primaryParent = {}
-    const extraParents = {}
-    for (const c of (children || [])) {
-        if (!(c.child in primaryParent)) {
-            primaryParent[c.child] = c.parent
-        } else {
-            extraParents[c.child] = extraParents[c.child] || []
-            extraParents[c.child].push(c.parent)
-        }
-    }
-    return { primaryParent, extraParents }
-}
-
-function topologicalSort(noteIds, parentMap) {
-    const result = []
-    const visited = new Set()
-    function visit(id) {
-        if (visited.has(id)) return
-        visited.add(id)
-        const parentId = parentMap[id]
-        if (parentId && noteIds.includes(parentId)) visit(parentId)
-        result.push(id)
-    }
-    for (const id of noteIds) visit(id)
-    return result
-}
 
 // Snapshots the manifest fields TAM still needs offline.
 function stripManifestForStorage(m) {
@@ -370,38 +362,6 @@ function stripManifestForStorage(m) {
 function parseInheritableName(name) {
     const match = name.match(/^(.*)\(inheritable\)$/)
     return match ? { name: match[1], isInheritable: true } : { name, isInheritable: false }
-}
-
-// Normalizes a fetched manifest into the `m` sub-object shape used throughout.
-function normalizeManifest(manifestFetched) {
-    return manifestFetched.manifest ?? {
-        notes: manifestFetched.notes ?? [],
-        children: [],
-        relations: manifestFetched.relations ?? [],
-        labels: manifestFetched.labels ?? [],
-        root: null,
-        settings: null
-    }
-}
-
-// Local ids whose children[] parent chain roots at the reserved "persistence" parent keyword.
-function persistentLocalIds(m) {
-    const persistent = new Set()
-    const childrenOf = {}
-    for (const c of (m.children || []).filter(c => c.child)) {
-        (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child)
-    }
-    const stack = [...(childrenOf["persistence"] || [])]
-    for (const id of stack) persistent.add(id)
-    while (stack.length) {
-        for (const child of childrenOf[stack.pop()] || []) {
-            if (!persistent.has(child)) {
-                persistent.add(child)
-                stack.push(child)
-            }
-        }
-    }
-    return persistent
 }
 
 // =========================================================================
@@ -465,13 +425,14 @@ async function readNoteResolution(addonId, noteDefs) {
     const identities = [...new Set(noteDefs.map(sourceIdentityOf).filter(Boolean))]
     const attachmentIds = noteDefs.filter(n => (n.attachments || []).length).map(n => n.id)
     return await api.runOnBackend((tamFileIdLabel, sourceUrlLabel, addonId, localIds, identities, attachmentIds) => {
+        const attachmentIdSet = new Set(attachmentIds)
         const existing = {}
         const attachmentTitles = {}
         for (const localId of localIds) {
             const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${localId}`)
             if (!note || note.isDeleted) continue
             existing[localId] = note.noteId
-            if (attachmentIds.includes(localId)) attachmentTitles[localId] = note.getAttachments().map(att => att.title)
+            if (attachmentIdSet.has(localId)) attachmentTitles[localId] = note.getAttachments().map(att => att.title)
         }
         const adoptable = {}
         for (const identity of identities) {
@@ -649,86 +610,90 @@ async function resolveNotes(m, addonId, anchors, options = {}) {
     // this addon, and adoption never takes one of those, so nothing the write
     // below does can change an answer here.
     const live = await readNoteResolution(addonId, m.notes)
-    const specs = []
-    const unchanged = {}
+    // Everything per note except the bytes themselves, so every fetch the pass
+    // needs is known up front and runs concurrently below.
+    const plans = []
     for (const localId of sortedIds) {
         const noteDef = byLocalId[localId]
         if (!noteDef) continue
         const isEntry = entryLocalId
             ? localId === entryLocalId
             : primaryParent[localId] === "root" || primaryParent[localId] === "persistence"
-        const noteType = noteDef.type ?? "text"
-        const mime = noteDef.mime ?? "text/html"
-        const isBinary = noteDef.binary ?? false
         // An unhashed manifest (or a note whose shipped content moved) always
         // refetches; matching hashes mean the bytes on the other end of that URL
         // are the ones already installed, so both the fetch and the write go.
         const contentUnchanged = !!(noteDef.sha && storedNoteHashes?.[localId] === noteDef.sha)
-        const absoluteSourceUrl = noteDef.sourceUrl || null
-        let effectiveType = noteType
-        let effectiveMime = mime
-        let explicitContent = noteDef.content ?? null
-        let sourceUrl = absoluteSourceUrl
-        if (noteDef.renderAsHTML) {
-            effectiveType = "text"
-            effectiveMime = "text/html"
-            let rawMarkdown = explicitContent
-            if (rawMarkdown === null && absoluteSourceUrl) {
-                try {
-                    rawMarkdown = await fetchContent(absoluteSourceUrl, false)
-                } catch (e) {
-                    log("error", `${addonId}: skipping note '${localId}' - couldn't fetch markdown source ${absoluteSourceUrl} (${e.message})`)
-                    continue
-                }
-            }
-            explicitContent = marked.parse(rawMarkdown ?? "")
-            sourceUrl = null
+        const plan = {
+            localId,
+            noteDef,
+            isEntry,
+            contentUnchanged,
+            isBinary: noteDef.binary ?? false,
+            noteType: noteDef.renderAsHTML ? "text" : (noteDef.type ?? "text"),
+            mime: noteDef.renderAsHTML ? "text/html" : (noteDef.mime ?? "text/html"),
+            sourceIdentity: sourceIdentityOf(noteDef),
+            frozen: contentIsFrozen(noteDef, persistentIds),
+            // Only the body the write will actually keep is fetched. `null` means
+            // "not fetched", which the write reads as "leave the content alone" —
+            // distinct from the empty string a note declaring no source installs.
+            content: null,
+            fetchUrl: null,
+            error: null,
+            ...attachmentPlan(noteDef, storedNoteHashes, live.attachmentTitles[localId] || [])
         }
-        const sourceIdentity = sourceIdentityOf(noteDef)
-        const frozen = contentIsFrozen(noteDef, persistentIds)
-        // Only the body the write will actually keep is fetched. `null` means
-        // "not fetched", which the write reads as "leave the content alone" —
-        // distinct from the empty string a note declaring no source installs.
-        let content = null
-        if (!live.existing[localId] || !(frozen || noteDef.promptOnUpdate || contentUnchanged)) {
-            if (explicitContent !== null) content = explicitContent
-            else if (!sourceUrl) content = ""
-            else {
-                try {
-                    content = await fetchContent(sourceUrl, isBinary)
-                } catch (e) {
-                    log("error", `${addonId}: skipping note '${localId}' - ${e.message}`)
-                    continue
-                }
-            }
+        if (!live.existing[localId] || !(plan.frozen || noteDef.promptOnUpdate || contentUnchanged)) {
+            const explicit = noteDef.content ?? null
+            if (explicit !== null) plan.content = explicit
+            else if (noteDef.sourceUrl) plan.fetchUrl = noteDef.sourceUrl
+            else plan.content = ""
         }
-        const { pending, stale } = attachmentPlan(noteDef, storedNoteHashes, live.attachmentTitles[localId] || [])
+        plans.push(plan)
+    }
+    // All bodies and attachments at once: fetch time dominates a sync, and
+    // order only matters for the writes below, never for the fetches.
+    await Promise.all(plans.map(async plan => {
         try {
-            for (const att of pending) {
+            if (plan.fetchUrl) plan.content = await fetchContent(plan.fetchUrl, plan.noteDef.renderAsHTML ? false : plan.isBinary)
+            if (plan.noteDef.renderAsHTML && plan.content !== null) plan.content = marked.parse(plan.content)
+        } catch (e) {
+            plan.error = e
+        }
+        try {
+            for (const att of plan.pending) {
                 if (att.content === null) att.content = att.sourceUrl ? await fetchContent(att.sourceUrl, att.binary) : ""
             }
         } catch (e) {
-            log("error", `${addonId}: note '${localId}' attachments failed to install - ${e.message}`)
-            pending.length = 0
+            log("error", `${addonId}: note '${plan.localId}' attachments failed to install - ${e.message}`)
+            plan.pending.length = 0
         }
-        unchanged[localId] = contentUnchanged
+    }))
+    const specs = []
+    const unchanged = {}
+    for (const plan of plans) {
+        if (plan.error) {
+            log("error", plan.noteDef.renderAsHTML
+                ? `${addonId}: skipping note '${plan.localId}' - couldn't fetch markdown source ${plan.fetchUrl} (${plan.error.message})`
+                : `${addonId}: skipping note '${plan.localId}' - ${plan.error.message}`)
+            continue
+        }
+        unchanged[plan.localId] = plan.contentUnchanged
         specs.push({
-            localId,
-            tamFileId: `${addonId}/${localId}`,
-            parentLocalId: isEntry ? null : primaryParent[localId],
-            anchorId: anchors[primaryParent[localId]] || anchors.root,
-            title: noteDef.title,
-            noteType: effectiveType,
-            mime: effectiveMime,
-            content,
-            isBinary,
-            frozen,
-            promptOnUpdate: !!noteDef.promptOnUpdate,
-            skipParenting: isEntry && rootExternallyParented,
-            sourceIdentity,
-            adoptableNoteId: (sourceIdentity && live.adoptable[sourceIdentity]) || null,
-            attachments: pending,
-            staleAttachments: stale
+            localId: plan.localId,
+            tamFileId: `${addonId}/${plan.localId}`,
+            parentLocalId: plan.isEntry ? null : primaryParent[plan.localId],
+            anchorId: anchors[primaryParent[plan.localId]] || anchors.root,
+            title: plan.noteDef.title,
+            noteType: plan.noteType,
+            mime: plan.mime,
+            content: plan.content,
+            isBinary: plan.isBinary,
+            frozen: plan.frozen,
+            promptOnUpdate: !!plan.noteDef.promptOnUpdate,
+            skipParenting: plan.isEntry && rootExternallyParented,
+            sourceIdentity: plan.sourceIdentity,
+            adoptableNoteId: (plan.sourceIdentity && live.adoptable[plan.sourceIdentity]) || null,
+            attachments: plan.pending,
+            staleAttachments: plan.stale
         })
     }
     const { noteMap, errors } = await writeNotes(specs)
@@ -859,7 +824,7 @@ async function collectPendingPrompts(addonId, m, storedNoteHashes = null) {
 
 async function getPendingPrompts(addonId) {
     const database = await loadDatabase()
-    return database.installedAddons?.[addonId]?.persistence?.pendingPrompts || []
+    return getPersistence(getRecord(database, addonId))?.pendingPrompts || []
 }
 
 // `decision` is a plain boolean for a built-in whole-content prompt, or a
@@ -869,8 +834,8 @@ async function getPendingPrompts(addonId) {
 async function resolvePrompt(addonId, noteLocalId, decision) {
     log("info", `${addonId}: applying your choices for '${noteLocalId}'`)
     const database = await loadDatabase()
-    const record = database.installedAddons?.[addonId]
-    const prompt = (record?.persistence?.pendingPrompts || [])
+    const record = getRecord(database, addonId)
+    const prompt = (getPersistence(record)?.pendingPrompts || [])
         .find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
     if (prompt.source === settingsPromptSource) {
@@ -896,10 +861,7 @@ async function resolvePrompt(addonId, noteLocalId, decision) {
 }
 
 async function clearPendingPrompts(addonId) {
-    await updateDatabase(database => {
-        const persistence = database.installedAddons?.[addonId]?.persistence
-        if (persistence) delete persistence.pendingPrompts
-    })
+    await updateDatabase(database => setPendingPrompts(getRecord(database, addonId), []))
 }
 
 // =========================================================================
@@ -1098,10 +1060,8 @@ async function loadSettingsState(addonId, m) {
 
 async function saveSettingsBaseline(addonId, shipped) {
     await updateDatabase(database => {
-        const record = database.installedAddons?.[addonId]
-        if (!record) return
-        record.persistence = record.persistence || {}
-        record.persistence.settingsBaseline = shipped
+        const record = getRecord(database, addonId)
+        if (record) ensurePersistence(record).settingsBaseline = shipped
     })
 }
 
@@ -1120,7 +1080,7 @@ async function collectSettingsPrompt(addonId, m, title) {
     const state = await loadSettingsState(addonId, m)
     if (!state) return null
     const database = await loadDatabase()
-    const baseline = database.installedAddons?.[addonId]?.persistence?.settingsBaseline
+    const baseline = getPersistence(getRecord(database, addonId))?.settingsBaseline
     // No baseline means this install predates the settings review: there is
     // genuinely no way to know which of its stored values were deliberate, so
     // record where things stand and review nothing this once.
@@ -1156,7 +1116,7 @@ async function applySettingsSelections(addonId, m, selections) {
     const state = await loadSettingsState(addonId, m)
     if (!state) return
     const database = await loadDatabase()
-    const baseline = database.installedAddons?.[addonId]?.persistence?.settingsBaseline
+    const baseline = getPersistence(getRecord(database, addonId))?.settingsBaseline
     if (isPlainObject(baseline)) {
         for (const item of settingsReviewItems(state.schema, state.stored, baseline, state.defaults)) {
             if (selections[item.key]) {
@@ -1293,7 +1253,7 @@ function metadataReviewItems(now, then, live) {
 // the pending prompts once the sync is done) or null when nothing moved.
 async function collectMetadataPrompt(addonId, m, title) {
     const database = await loadDatabase()
-    const baseline = database.installedAddons?.[addonId]?.persistence?.metadataBaseline
+    const baseline = getPersistence(getRecord(database, addonId))?.metadataBaseline
     // No baseline means this install predates the metadata review: there is no
     // way to tell a user's rename from a declaration that has always been this
     // way, so record where things stand and review nothing this once.
@@ -1421,13 +1381,60 @@ async function resolveManifest(m, addonId, anchors, options = {}) {
     return noteMap
 }
 
+// The note each reserved parent keyword stands for. Every declared note then
+// resolves in one pass, taking its anchor from its own chain's root, so a
+// relation between the two halves needs no deferral.
+async function resolveAnchors(addonId, addonName, isSelf, hasPersistence) {
+    const anchors = {
+        root: isSelf
+            ? await getAddonRootNoteId()
+            : await ensureAddonAnchor(addonId, addonName, addonAnchorRootLocalId, await getAddonRootNoteId()),
+        persistence: null
+    }
+    if (hasPersistence) {
+        anchors.persistence = isSelf
+            ? await getPersistenceNoteId()
+            : await ensureAddonAnchor(addonId, addonName, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
+    }
+    return anchors
+}
+
+// The update tail, after the notes are in place: the postUpdate hook, then the
+// review collectors, then one merge into the record's pending prompts.
+//
+// An addon shipping its own updateReview hook replaces the whole-content diffs
+// collected before the sync with its own item list. It runs here, after
+// postUpdate, so it reads its own updated code against already-migrated data.
+// Anything other than an array (a hook that threw, or returned junk) leaves the
+// built-in diffs in place as the fallback; an empty array is a real answer and
+// clears them. The settings and metadata entries are *additive* on top of
+// either outcome, so an addon that also ships persistent content notes keeps
+// its whole-file diffs alongside them.
+async function runPostSyncReviews(addonId, m, title, metadataPrompt, hookContext) {
+    await runHook(addonId, m.hooks?.postUpdate, { phase: "postUpdate", ...hookContext })
+    const hookItems = m.hooks?.updateReview
+        ? await runHook(addonId, m.hooks.updateReview, { phase: "collect", ...hookContext })
+        : null
+    // Settings review runs last, against notes the sync has already replaced.
+    const settingsPrompt = await collectSettingsPrompt(addonId, m, title)
+    const extraPrompts = [metadataPrompt, settingsPrompt].filter(Boolean)
+    if (!Array.isArray(hookItems) && extraPrompts.length === 0) return
+    await updateDatabase(database => {
+        const record = getRecord(database, addonId)
+        let prompts = Array.isArray(hookItems) ? hookItems : (getPersistence(record)?.pendingPrompts || [])
+        const replacedSources = new Set(extraPrompts.map(p => p.source))
+        prompts = [...prompts.filter(p => !replacedSources.has(p.source)), ...extraPrompts]
+        setPendingPrompts(record, prompts)
+    })
+}
+
 // The one entry point for getting an addon's notes to match its manifest — fresh install, update, and TAM's own self-sync are all the same call.
 async function syncAddon(addonId, options = {}) {
     const { manifestSourceUrl = null, manual = true } = options
     if (!addonId.trim()) return
     const isSelf = addonId === TAM_ID
     const database = await loadDatabase()
-    const existing = database.installedAddons[addonId]
+    const existing = getRecord(database, addonId)
     const wasInstalled = !!existing?.installedVersion
     const previousVersion = existing?.installedVersion ?? null
     const fetchUrl = manifestSourceUrl || existing?.manifestSourceUrl
@@ -1446,21 +1453,7 @@ async function syncAddon(addonId, options = {}) {
     log("info", `${addonId}: manifest v${manifest.latestVersion} declares ${(m.notes || []).length} note(s)`)
     const pendingPrompts = await collectPendingPrompts(addonId, m, storedNoteHashes)
     if (pendingPrompts.length > 0) log("warn", `${addonId}: ${pendingPrompts.length} persistent note(s) differ from the shipped default - queued for review`)
-    const persistentIds = persistentLocalIds(m)
-    // The note each reserved parent keyword stands for. Every declared note then
-    // resolves in one pass, taking its anchor from its own chain's root, so a
-    // relation between the two halves needs no deferral.
-    const anchors = {
-        root: isSelf
-            ? await getAddonRootNoteId()
-            : await ensureAddonAnchor(addonId, manifest.name, addonAnchorRootLocalId, await getAddonRootNoteId()),
-        persistence: null
-    }
-    if (persistentIds.size) {
-        anchors.persistence = isSelf
-            ? await getPersistenceNoteId()
-            : await ensureAddonAnchor(addonId, manifest.name, addonAnchorPersistenceLocalId, await getPersistenceNoteId())
-    }
+    const anchors = await resolveAnchors(addonId, manifest.name, isSelf, persistentLocalIds(m).size > 0)
     const noteMap = await resolveManifest(m, addonId, anchors, {
         entryLocalId: isSelf ? m.root : null,
         rootExternallyParented: isSelf,
@@ -1481,36 +1474,26 @@ async function syncAddon(addonId, options = {}) {
     }
     const contentHash = fullyResolved ? (manifest.contentHash ?? null) : null
     const noteHashes = recordedNoteHashes(m, noteMap, storedNoteHashes)
-    if (!wasInstalled) {
-        const priorPersistence = database.installedAddons[addonId]?.persistence
-        database.installedAddons[addonId] = {
-            installedVersion: manifest.latestVersion,
-            contentHash,
-            noteHashes,
-            manifestSourceUrl: fetchUrl,
-            manuallyInstalled: manual || isSelf,
-            enabled: isSelf,
-            meta,
-            manifest: storedManifest,
-            ...(priorPersistence ? { persistence: priorPersistence } : {})
-        }
-    } else {
-        const rec = database.installedAddons[addonId]
-        rec.installedVersion = manifest.latestVersion
-        rec.contentHash = contentHash
-        rec.noteHashes = noteHashes
-        rec.manifestSourceUrl = fetchUrl
-        rec.meta = meta
-        rec.manifest = storedManifest
-        rec.updateAvailable = false
-        if (manual && !rec.manuallyInstalled) rec.manuallyInstalled = true
+    // One record shape for fresh install and update alike: the spread carries an
+    // update's prior persistence and flags through, a fresh install starts them.
+    database.installedAddons[addonId] = {
+        ...(existing || {}),
+        installedVersion: manifest.latestVersion,
+        contentHash,
+        noteHashes,
+        manifestSourceUrl: fetchUrl,
+        meta,
+        manifest: storedManifest,
+        updateAvailable: false,
+        // Pure user intent: only ever promoted, never reset by a maintenance sync.
+        manuallyInstalled: manual || isSelf || !!existing?.manuallyInstalled,
+        enabled: wasInstalled ? !!existing.enabled : isSelf
     }
-    const record = database.installedAddons[addonId]
-    if (!isSelf || pendingPrompts.length > 0) record.persistence = record.persistence || {}
-    if (pendingPrompts.length > 0) record.persistence.pendingPrompts = pendingPrompts
+    const record = getRecord(database, addonId)
+    if (pendingPrompts.length > 0) ensurePersistence(record).pendingPrompts = pendingPrompts
     // The metadata baseline advances here rather than when the user answers: the
     // prompt below carries both values it needs, so it stays applicable either way.
-    if (!isSelf) record.persistence.metadataBaseline = declaredMetadata(m)
+    if (!isSelf) ensurePersistence(record).metadataBaseline = declaredMetadata(m)
     await saveDatabase(database)
     log("done", `${addonId}: ${wasInstalled ? "updated to" : "installed at"} v${manifest.latestVersion}`)
     if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
@@ -1521,32 +1504,7 @@ async function syncAddon(addonId, options = {}) {
         await runHook(addonId, m.hooks?.postInstall, { phase: "postInstall", ...hookContext })
         return
     }
-    await runHook(addonId, m.hooks?.postUpdate, { phase: "postUpdate", ...hookContext })
-    // An addon shipping its own review hook replaces the whole-content diff
-    // collected before the sync with its own item list. It runs here, after the
-    // sync and after postUpdate, so it reads its own updated code against
-    // already-migrated data. Anything other than an array (a hook that threw, or
-    // returned junk) leaves the built-in diff in place as the fallback; an empty
-    // array is a real answer and clears it.
-    const hookItems = m.hooks?.updateReview
-        ? await runHook(addonId, m.hooks.updateReview, { phase: "collect", ...hookContext })
-        : null
-    // Settings review runs last, against notes the sync has already replaced, and
-    // is *additive*: it appends its own entry to whatever prompts are pending
-    // rather than replacing them, so an addon that also ships persistent content
-    // notes keeps their whole-file diffs alongside it.
-    const settingsPrompt = await collectSettingsPrompt(addonId, m, meta.name || addonId)
-    const extraPrompts = [metadataPrompt, settingsPrompt].filter(Boolean)
-    if (!Array.isArray(hookItems) && extraPrompts.length === 0) return
-    await updateDatabase(database => {
-        const persistence = database.installedAddons[addonId].persistence || {}
-        let prompts = Array.isArray(hookItems) ? hookItems : (persistence.pendingPrompts || [])
-        const replacedSources = new Set(extraPrompts.map(p => p.source))
-        prompts = [...prompts.filter(p => !replacedSources.has(p.source)), ...extraPrompts]
-        if (prompts.length > 0) persistence.pendingPrompts = prompts
-        else delete persistence.pendingPrompts
-        database.installedAddons[addonId].persistence = persistence
-    })
+    await runPostSyncReviews(addonId, m, meta.name || addonId, metadataPrompt, hookContext)
 }
 
 // Installs by manifestSourceUrl alone — the caller doesn't need to know the addon's id.
@@ -1557,6 +1515,20 @@ async function installByUrl(manifestSourceUrl, options = {}) {
     await syncAddon(manifest.id, { ...options, manifestSourceUrl })
 }
 
+// Syncs the given addons in sequence and returns which of them queued update
+// prompts, so a caller only has to run the review flow over `promptQueue`.
+// `onProgress` gets a short "which addon, how far along" line per addon.
+async function syncMany(addonIds, onProgress = null) {
+    const promptQueue = []
+    for (let i = 0; i < addonIds.length; i++) {
+        const addonId = addonIds[i]
+        if (onProgress) onProgress(`${addonId} (${i + 1}/${addonIds.length})`)
+        await syncAddon(addonId)
+        if ((await getPendingPrompts(addonId)).length > 0) promptQueue.push(addonId)
+    }
+    return { promptQueue }
+}
+
 // =========================================================================
 // Lifecycle / query: enable/disable, read-only addon listing, update-checking, and database validation.
 // =========================================================================
@@ -1564,22 +1536,23 @@ async function installByUrl(manifestSourceUrl, options = {}) {
 async function enableAddon(addonId, enabled) {
     if (!addonId.trim()) return
     let database = await loadDatabase()
-    const rootNoteId = await resolveAddonRootNoteId(addonId, database.installedAddons[addonId].manifest)
+    const record = getRecord(database, addonId)
+    const rootNoteId = await resolveAddonRootNoteId(addonId, record.manifest)
     if (!rootNoteId) return
     await api.runOnBackend((tamFileIdLabel, addonId, noteId, enabled, addonLabels) => {
         for (const id of api.getNote(noteId).getSubtreeNoteIds()) {
             const note = api.getNote(id)
             if (!note.getOwnedLabelValue(tamFileIdLabel)?.startsWith(`${addonId}/`)) continue
             for (const attribute of note.getOwnedAttributes() || []) {
-                const isDisabledAttr = attribute.name.toLowerCase().includes("disabled:")
+                const isDisabledAttr = attribute.name.startsWith("disabled:")
                 if (enabled ? !isDisabledAttr : !addonLabels.includes(attribute.name)) continue
-                const newName = enabled ? attribute.name.replace("disabled:", "") : `disabled:${attribute.name}`
+                const newName = enabled ? attribute.name.slice("disabled:".length) : `disabled:${attribute.name}`
                 note.removeAttribute(attribute.type, attribute.name)
                 note.addAttribute(attribute.type, newName, attribute.value, attribute.isInheritable, attribute.position)
             }
         }
     }, [tamFileIdLabel, addonId, rootNoteId, enabled, addonLabels])
-    database.installedAddons[addonId].enabled = enabled
+    record.enabled = enabled
     await saveDatabase(database)
     log("done", `${addonId}: ${enabled ? "enabled" : "disabled"}`)
 }
@@ -1604,14 +1577,23 @@ async function getAllAddons() {
         }
         return result
     }, [tamFileIdLabel, lookups])
+    // A narrow projection rather than the raw record: these are the fields the
+    // UI renders, so the record's internals (stored manifest, hashes, prompt
+    // bookkeeping) never leak into the view layer.
     const addons = {}
     for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
         if (!addon.installedVersion) continue
         addons[addonId] = {
             id: addonId,
             ...(addon.meta || {}),
+            installedVersion: addon.installedVersion,
             latestVersion: addon.installedVersion,
-            ...addon,
+            updateAvailable: !!addon.updateAvailable,
+            availableVersion: addon.availableVersion,
+            enabled: !!addon.enabled,
+            manifestSourceUrl: addon.manifestSourceUrl,
+            readmeLocalId: addon.manifest?.readmeNote || null,
+            hasPersistentData: persistentLocalIds(addon.manifest || {}).size > 0,
             ...(resolved[addonId] || {})
         }
     }
@@ -1684,6 +1666,23 @@ async function checkForAddonUpdates() {
 //
 // `self` marks a repair to TAM's own notes, which needs a reload before it has
 // actually taken effect.
+
+// What each code means in one line, shipped on the row itself so the UI's
+// Issue column explains itself without its own copy of this map.
+const ISSUE_TITLES = {
+    "duplicate-id": "Duplicate TAMFILEID",
+    "orphaned-note": "Orphaned note",
+    "unclaimed-note": "Unclaimed note",
+    "dead-source": "Source unreachable",
+    "unverifiable-source": "Source carries no hashes",
+    "partial-sync": "Sync half-failed",
+    "missing-note": "Note not installed",
+    "missing-attachment": "Attachment not installed",
+    "content-drift": "Content doesn't match manifest",
+    "broken-wiring": "Wiring not applied",
+    "duplicate-child-title": "Duplicate child name breaks the script bundle"
+}
+
 function issueRow(addonId, code, target, detail, fixes = []) {
     const FIX_LABELS = {
         resync: "Re-sync",
@@ -1695,6 +1694,7 @@ function issueRow(addonId, code, target, detail, fixes = []) {
     return {
         addonId,
         code,
+        title: ISSUE_TITLES[code] || code,
         target,
         detail,
         fixes: fixes.filter(Boolean).map(fix => ({
@@ -1763,18 +1763,11 @@ async function readLiveAddon(addonId, noteDefs, contentIds) {
     }, [tamFileIdLabel, addonId, noteDefs, contentIds])
 }
 
-// The whole audit, as one flat list of rows. Read-only: nothing is deleted,
-// re-synced or repointed until repairIssue() is called with a row.
-async function diagnose() {
-    log("step", "running diagnostics")
-    const database = await loadDatabase()
-    const catalogSources = await catalogSourceIndex()
-    const rows = []
-
-    // TAM's own bookkeeping. A duplicate is the one thing a live-lookup design
-    // can't self-correct - getNoteWithLabel() just returns whichever match it
-    // finds first - and TAM can't tell which copy is the real one, so this is
-    // reported without a repair.
+// TAM's own bookkeeping. A duplicate is the one thing a live-lookup design
+// can't self-correct - getNoteWithLabel() just returns whichever match it
+// finds first - and TAM can't tell which copy is the real one, so this is
+// reported without a repair.
+async function auditDuplicateTamIds(rows) {
     const duplicateIds = await api.runOnBackend((tamFileIdLabel) => {
         const byValue = {}
         for (const note of api.getNotesWithLabel(tamFileIdLabel)) {
@@ -1790,8 +1783,10 @@ async function diagnose() {
         rows.push(issueRow(tamFileId.split("/")[0], "duplicate-id", tamFileId,
             `claimed by ${noteIds.length} notes at once (${noteIds.join(", ")}) - delete the wrong one by hand`, []))
     }
+}
 
-    // Notes the tree is holding that nothing owns any more.
+// Notes the tree is holding that nothing owns any more.
+async function auditUnownedNotes(rows) {
     for (const note of await findOrphanedNotes()) {
         rows.push(issueRow(note.tamFileId.split("/")[0], "orphaned-note", note.title,
             "has no parents left, so nothing in the tree reaches it",
@@ -1804,185 +1799,233 @@ async function diagnose() {
                 : "sits under the addon root carrying no #TAMFILEID",
             [{ kind: "delete", noteId: note.noteId }]))
     }
+}
 
-    // Each installed addon against its live manifest.
-    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
-        if (!addon.installedVersion) continue
+function auditMissingNotes({ addonId, notes, live, persistentIds, resyncFixes }, rows) {
+    for (const noteDef of notes) {
+        if (live[noteDef.id]) continue
+        rows.push(issueRow(addonId, "missing-note", noteDef.title,
+            persistentIds.has(noteDef.id)
+                ? `persistent note '${noteDef.id}' is not installed - saved data for it may have been lost`
+                : `declared note '${noteDef.id}' is not installed`,
+            resyncFixes))
+    }
+}
 
-        // TAM audits itself like anything else, but its repairs are marked
-        // `self`. Rewriting a script note doesn't disturb the already-loaded
-        // instance - the running copy lives in memory - so the repair is safe to
-        // apply from inside TAM; what isn't safe is treating it as done, since
-        // every note would be repaired while the old code kept running. `self`
-        // is what makes the UI demand a reload instead.
-        const isSelf = addonId === TAM_ID
-        const canRepoint = !!catalogSources[addonId]
-        const resyncFixes = [{ kind: "resync", self: isSelf }]
-        // A source that can't be reached is the one case with a real choice:
-        // point it at a catalog's copy, or accept it's gone and remove it. TAM
-        // itself is never offered for uninstall - there'd be nothing left to run
-        // the uninstall, let alone anything to manage addons with afterwards.
-        const sourceFixes = [
-            canRepoint ? { kind: "repoint", self: isSelf } : null,
-            isSelf ? null : { kind: "uninstall" }
-        ].filter(Boolean)
-
-        let manifestFetched
-        try {
-            manifestFetched = await fetchManifest(addon.manifestSourceUrl)
-        } catch (e) {
-            log("warn", `${addonId}: manifest unreachable at ${addon.manifestSourceUrl}`)
-            rows.push(issueRow(addonId, "dead-source", addon.manifestSourceUrl,
-                "its manifest can no longer be fetched"
-                + (canRepoint ? "" : ", and no catalog offers a replacement"),
-                sourceFixes))
-            continue
-        }
-
-        const m = normalizeManifest(manifestFetched)
-        const notes = m.notes || []
-        const hashedNotes = notes.filter(noteDef => noteDef.sha)
-
-        if (!manifestFetched.contentHash && hashedNotes.length === 0) {
-            rows.push(issueRow(addonId, "unverifiable-source", addon.manifestSourceUrl,
-                "carries no contentHash and no per-note hashes, so update detection falls back to comparing "
-                + "version numbers and installed content can't be checked at all"
-                + (canRepoint ? "" : ", and no catalog offers a hashed replacement"),
-                sourceFixes))
-        } else if (manifestFetched.contentHash && !addon.contentHash) {
-            rows.push(issueRow(addonId, "partial-sync", `v${addon.installedVersion}`,
-                "the last sync never recorded a contentHash, so at least one note failed to install "
-                + "while the version was still advanced",
+async function auditContentDrift({ addonId, notes, live, resyncFixes }, rows) {
+    for (const noteDef of notes) {
+        const entry = live[noteDef.id]
+        if (!entry || entry.content === null) continue
+        if (await sha256Hex(entry.content) !== noteDef.sha) {
+            rows.push(issueRow(addonId, "content-drift", noteDef.title,
+                "the installed copy doesn't match the manifest - stale bytes, or edited by hand",
                 resyncFixes))
         }
+    }
+}
 
-        // What can meaningfully be compared against a manifest `sha`, which is
-        // the digest of the *source file*. A frozen note is meant to diverge, a
-        // renderAsHTML note stores marked.parse() output rather than the markdown
-        // that was hashed, and a binary note isn't worth shipping over the wire
-        // to hash.
-        const persistentIds = persistentLocalIds(m)
-        const contentIds = hashedNotes
-            .filter(noteDef => !noteDef.binary && !noteDef.renderAsHTML && !contentIsFrozen(noteDef, persistentIds))
-            .map(noteDef => noteDef.id)
-        const { adoptable } = await readNoteResolution(addonId, notes)
-        const live = await readLiveAddon(
-            addonId,
-            notes.map(noteDef => ({ id: noteDef.id, adoptableNoteId: adoptable[sourceIdentityOf(noteDef)] || null })),
-            contentIds
-        )
-
-        for (const noteDef of notes) {
-            if (live[noteDef.id]) continue
-            rows.push(issueRow(addonId, "missing-note", noteDef.title,
-                persistentIds.has(noteDef.id)
-                    ? `persistent note '${noteDef.id}' is not installed - saved data for it may have been lost`
-                    : `declared note '${noteDef.id}' is not installed`,
+// An attachment is invisible in the tree and its absence is only ever
+// logged server-side, so an icon pack whose font never landed just
+// silently stops being offered.
+function auditMissingAttachments({ addonId, notes, live, resyncFixes }, rows) {
+    for (const noteDef of notes) {
+        const entry = live[noteDef.id]
+        if (!entry) continue
+        for (const att of (noteDef.attachments || [])) {
+            if (entry.attachments.includes(att.title)) continue
+            rows.push(issueRow(addonId, "missing-attachment", `${noteDef.title}/${att.title}`,
+                `declared attachment '${att.title}' is not installed on note '${noteDef.id}'`,
                 resyncFixes))
         }
+    }
+}
 
-        for (const noteDef of notes) {
-            const entry = live[noteDef.id]
-            if (!entry || entry.content === null) continue
-            if (await sha256Hex(entry.content) !== noteDef.sha) {
-                rows.push(issueRow(addonId, "content-drift", noteDef.title,
-                    "the installed copy doesn't match the manifest - stale bytes, or edited by hand",
-                    resyncFixes))
-            }
+// A note missing entirely is already a row above; these only look at
+// wiring between notes that both exist, so one failure reads as one row.
+function auditChildWiring({ addonId, m, live, resyncFixes }, rows) {
+    for (const link of (m.children || [])) {
+        if (link.parent === "root" || link.parent === "persistence") continue
+        const parent = live[link.parent]
+        const child = live[link.child]
+        if (!parent || !child) continue
+        if (!child.parentIds.includes(parent.noteId)) {
+            rows.push(issueRow(addonId, "broken-wiring", link.child,
+                `is not parented under '${link.parent}' as the manifest declares`,
+                resyncFixes))
         }
+    }
+}
 
-        // An attachment is invisible in the tree and its absence is only ever
-        // logged server-side, so an icon pack whose font never landed just
-        // silently stops being offered.
-        for (const noteDef of notes) {
-            const entry = live[noteDef.id]
-            if (!entry) continue
-            for (const att of (noteDef.attachments || [])) {
-                if (entry.attachments.includes(att.title)) continue
-                rows.push(issueRow(addonId, "missing-attachment", `${noteDef.title}/${att.title}`,
-                    `declared attachment '${att.title}' is not installed on note '${noteDef.id}'`,
-                    resyncFixes))
-            }
+function auditRelationWiring({ addonId, m, live, resyncFixes }, rows) {
+    for (const relation of (m.relations || [])) {
+        const from = live[relation.from]
+        const to = live[relation.to]
+        if (!from || !to) continue
+        const present = from.relations.some(attr => attributeMatches(attr, relation.type, to.noteId))
+        if (!present) {
+            rows.push(issueRow(addonId, "broken-wiring", `~${relation.type}`,
+                `from '${relation.from}' to '${relation.to}' is missing`,
+                resyncFixes))
         }
+    }
+}
 
-        // A note missing entirely is already a row above; these only look at
-        // wiring between notes that both exist, so one failure reads as one row.
-        for (const link of (m.children || [])) {
-            if (link.parent === "root" || link.parent === "persistence") continue
-            const parent = live[link.parent]
-            const child = live[link.child]
-            if (!parent || !child) continue
-            if (!child.parentIds.includes(parent.noteId)) {
-                rows.push(issueRow(addonId, "broken-wiring", link.child,
-                    `is not parented under '${link.parent}' as the manifest declares`,
-                    resyncFixes))
-            }
+// Trilium builds a script bundle as
+//   function(exports, module, require, api, <one param per required child>)
+// naming each parameter after that child's *title*. Two children of one
+// note sharing a title emit the same parameter name twice, and the whole
+// bundle dies at parse time with "Duplicate parameter name not allowed in
+// this context" - the note simply stops running, with nothing in the
+// manifest to explain why.
+//
+// A stale copy gets there when two notes share a #TAMSOURCEURL: adoption
+// picks whichever getNoteWithLabel() returns first, so successive syncs
+// can parent two different copies of one file under the same note.
+// reconcileNoteParenting() can't undo it - the stale copy isn't in this
+// addon's noteMap, so it never looks at it.
+function auditDuplicateChildTitles({ addonId, m, notes, live }, rows) {
+    for (const noteDef of notes) {
+        const entry = live[noteDef.id]
+        if (!entry) continue
+        const declaredChildIds = new Set((m.children || [])
+            .filter(link => link.parent === noteDef.id)
+            .map(link => live[link.child]?.noteId)
+            .filter(Boolean))
+        const byTitle = {}
+        for (const child of entry.children) {
+            (byTitle[child.title] = byTitle[child.title] || []).push(child)
         }
-        for (const relation of (m.relations || [])) {
-            const from = live[relation.from]
-            const to = live[relation.to]
-            if (!from || !to) continue
-            const present = from.relations.some(attr => attributeMatches(attr, relation.type, to.noteId))
-            if (!present) {
-                rows.push(issueRow(addonId, "broken-wiring", `~${relation.type}`,
-                    `from '${relation.from}' to '${relation.to}' is missing`,
-                    resyncFixes))
-            }
-        }
-        // Trilium builds a script bundle as
-        //   function(exports, module, require, api, <one param per required child>)
-        // naming each parameter after that child's *title*. Two children of one
-        // note sharing a title emit the same parameter name twice, and the whole
-        // bundle dies at parse time with "Duplicate parameter name not allowed in
-        // this context" - the note simply stops running, with nothing in the
-        // manifest to explain why.
-        //
-        // A stale copy gets there when two notes share a #TAMSOURCEURL: adoption
-        // picks whichever getNoteWithLabel() returns first, so successive syncs
-        // can parent two different copies of one file under the same note.
-        // reconcileNoteParenting() can't undo it - the stale copy isn't in this
-        // addon's noteMap, so it never looks at it.
-        for (const noteDef of notes) {
-            const entry = live[noteDef.id]
-            if (!entry) continue
-            const declaredChildIds = new Set((m.children || [])
-                .filter(link => link.parent === noteDef.id)
-                .map(link => live[link.child]?.noteId)
-                .filter(Boolean))
-            const byTitle = {}
-            for (const child of entry.children) {
-                (byTitle[child.title] = byTitle[child.title] || []).push(child)
-            }
-            for (const [title, sameTitle] of Object.entries(byTitle)) {
-                if (sameTitle.length < 2) continue
-                const stale = sameTitle.filter(child => !declaredChildIds.has(child.noteId))
-                // Only offer to detach when a declared copy is among them, so the
-                // one the manifest actually wants is the one left behind.
-                const canDetach = stale.length < sameTitle.length
-                for (const child of stale) {
-                    rows.push(issueRow(addonId, "duplicate-child-title", title,
-                        `'${noteDef.title}' has ${sameTitle.length} children named '${title}', which makes its `
-                        + "script bundle fail to parse and stops the note running"
-                        + (canDetach ? "" : " - none of them is the one this manifest declares, so detach the wrong one by hand"),
-                        canDetach ? [{ kind: "detach", noteId: child.noteId, parentNoteId: entry.noteId }] : []))
-                }
-            }
-        }
-
-        for (const label of (m.labels || [])) {
-            const entry = live[label.note]
-            if (!entry) continue
-            const { name } = parseInheritableName(label.name)
-            const value = String(label.value ?? "")
-            const present = entry.labels.some(attr => attributeMatches(attr, name, value))
-            if (!present) {
-                rows.push(issueRow(addonId, "broken-wiring", `#${name}`,
-                    `on '${label.note}' is missing or holds the wrong value`,
-                    resyncFixes))
+        for (const [title, sameTitle] of Object.entries(byTitle)) {
+            if (sameTitle.length < 2) continue
+            const stale = sameTitle.filter(child => !declaredChildIds.has(child.noteId))
+            // Only offer to detach when a declared copy is among them, so the
+            // one the manifest actually wants is the one left behind.
+            const canDetach = stale.length < sameTitle.length
+            for (const child of stale) {
+                rows.push(issueRow(addonId, "duplicate-child-title", title,
+                    `'${noteDef.title}' has ${sameTitle.length} children named '${title}', which makes its `
+                    + "script bundle fail to parse and stops the note running"
+                    + (canDetach ? "" : " - none of them is the one this manifest declares, so detach the wrong one by hand"),
+                    canDetach ? [{ kind: "detach", noteId: child.noteId, parentNoteId: entry.noteId }] : []))
             }
         }
     }
+}
 
+function auditLabelWiring({ addonId, m, live, resyncFixes }, rows) {
+    for (const label of (m.labels || [])) {
+        const entry = live[label.note]
+        if (!entry) continue
+        const { name } = parseInheritableName(label.name)
+        const value = String(label.value ?? "")
+        const present = entry.labels.some(attr => attributeMatches(attr, name, value))
+        if (!present) {
+            rows.push(issueRow(addonId, "broken-wiring", `#${name}`,
+                `on '${label.note}' is missing or holds the wrong value`,
+                resyncFixes))
+        }
+    }
+}
+
+// One installed addon against its live manifest: source health first, then the
+// live tree gathered once and handed to each family above.
+//
+// TAM audits itself like anything else, but its repairs are marked
+// `self`. Rewriting a script note doesn't disturb the already-loaded
+// instance - the running copy lives in memory - so the repair is safe to
+// apply from inside TAM; what isn't safe is treating it as done, since
+// every note would be repaired while the old code kept running. `self`
+// is what makes the UI demand a reload instead.
+async function auditAddon(addonId, addon, catalogSources, rows) {
+    const isSelf = addonId === TAM_ID
+    const canRepoint = !!catalogSources[addonId]
+    const resyncFixes = [{ kind: "resync", self: isSelf }]
+    // A source that can't be reached is the one case with a real choice:
+    // point it at a catalog's copy, or accept it's gone and remove it. TAM
+    // itself is never offered for uninstall - there'd be nothing left to run
+    // the uninstall, let alone anything to manage addons with afterwards.
+    // The repoint fix carries the catalog URL it was diagnosed with, so the
+    // repair doesn't have to refetch every catalog to find it again.
+    const sourceFixes = [
+        canRepoint ? { kind: "repoint", self: isSelf, url: catalogSources[addonId] } : null,
+        isSelf ? null : { kind: "uninstall" }
+    ].filter(Boolean)
+
+    let manifestFetched
+    try {
+        manifestFetched = await fetchManifest(addon.manifestSourceUrl)
+    } catch (e) {
+        log("warn", `${addonId}: manifest unreachable at ${addon.manifestSourceUrl}`)
+        rows.push(issueRow(addonId, "dead-source", addon.manifestSourceUrl,
+            "its manifest can no longer be fetched"
+            + (canRepoint ? "" : ", and no catalog offers a replacement"),
+            sourceFixes))
+        return
+    }
+
+    const m = normalizeManifest(manifestFetched)
+    const notes = m.notes || []
+    const hashedNotes = notes.filter(noteDef => noteDef.sha)
+
+    if (!manifestFetched.contentHash && hashedNotes.length === 0) {
+        rows.push(issueRow(addonId, "unverifiable-source", addon.manifestSourceUrl,
+            "carries no contentHash and no per-note hashes, so update detection falls back to comparing "
+            + "version numbers and installed content can't be checked at all"
+            + (canRepoint ? "" : ", and no catalog offers a hashed replacement"),
+            sourceFixes))
+    } else if (manifestFetched.contentHash && !addon.contentHash) {
+        rows.push(issueRow(addonId, "partial-sync", `v${addon.installedVersion}`,
+            "the last sync never recorded a contentHash, so at least one note failed to install "
+            + "while the version was still advanced",
+            resyncFixes))
+    }
+
+    // What can meaningfully be compared against a manifest `sha`, which is
+    // the digest of the *source file*. A frozen note is meant to diverge, a
+    // renderAsHTML note stores marked.parse() output rather than the markdown
+    // that was hashed, and a binary note isn't worth shipping over the wire
+    // to hash.
+    const persistentIds = persistentLocalIds(m)
+    const contentIds = hashedNotes
+        .filter(noteDef => !noteDef.binary && !noteDef.renderAsHTML && !contentIsFrozen(noteDef, persistentIds))
+        .map(noteDef => noteDef.id)
+    const { adoptable } = await readNoteResolution(addonId, notes)
+    const live = await readLiveAddon(
+        addonId,
+        notes.map(noteDef => ({ id: noteDef.id, adoptableNoteId: adoptable[sourceIdentityOf(noteDef)] || null })),
+        contentIds
+    )
+
+    const ctx = { addonId, m, notes, live, persistentIds, resyncFixes }
+    auditMissingNotes(ctx, rows)
+    await auditContentDrift(ctx, rows)
+    auditMissingAttachments(ctx, rows)
+    auditChildWiring(ctx, rows)
+    auditRelationWiring(ctx, rows)
+    auditDuplicateChildTitles(ctx, rows)
+    auditLabelWiring(ctx, rows)
+}
+
+// The whole audit, as one flat list of rows. Read-only: nothing is deleted,
+// re-synced or repointed until repairIssue() is called with a row. One issue
+// family per function above; this is just the order they run in.
+async function diagnose() {
+    log("step", "running diagnostics")
+    const database = await loadDatabase()
+    const catalogSources = await catalogSourceIndex()
+    const rows = []
+    await auditDuplicateTamIds(rows)
+    await auditUnownedNotes(rows)
+    // Audited concurrently - the manifest refetch dominates each addon's audit -
+    // with every addon appending to its own list, so row order stays stable.
+    const installed = Object.entries(database.installedAddons || {})
+        .filter(([, addon]) => addon.installedVersion)
+    const addonRows = await Promise.all(installed.map(async ([addonId, addon]) => {
+        const own = []
+        await auditAddon(addonId, addon, catalogSources, own)
+        return own
+    }))
+    for (const own of addonRows) rows.push(...own)
     log("done", rows.length ? `diagnostics found ${rows.length} issue(s)` : "diagnostics found no issues")
     return rows
 }
@@ -2021,17 +2064,15 @@ async function repairIssue(issue, fix) {
     }
 
     if (fix.kind === "repoint") {
-        const catalogSources = await catalogSourceIndex()
-        const url = catalogSources[issue.addonId]
         const database = await loadDatabase()
-        const record = database.installedAddons[issue.addonId]
-        if (!url || !record) {
+        const record = getRecord(database, issue.addonId)
+        if (!fix.url || !record) {
             log("error", `${issue.addonId}: no catalog offers a replacement manifest any more`)
             return { requiresReload: false }
         }
-        record.manifestSourceUrl = url
+        record.manifestSourceUrl = fix.url
         await saveDatabase(database)
-        log("info", `${issue.addonId}: repointed at ${url}`)
+        log("info", `${issue.addonId}: repointed at ${fix.url}`)
     }
 
     // Maintenance, not a manual install: a repaired addon must not start
@@ -2191,7 +2232,7 @@ async function deleteAddon(addonId, options = {}) {
     const { deleteData = false } = options
     if (!addonId.trim()) return
     let database = await loadDatabase()
-    const addonRecord = database.installedAddons[addonId]
+    const addonRecord = getRecord(database, addonId)
     const persistentIds = deleteData
         ? []
         : [...persistentLocalIds(addonRecord?.manifest || {}), addonAnchorPersistenceLocalId]
@@ -2203,7 +2244,7 @@ async function deleteAddon(addonId, options = {}) {
 
 // Pre-uninstall safety check: finds every relation pointing into an addon's subtree from outside it.
 async function findExternalReferences(addonId) {
-    const addonRecord = (await loadDatabase()).installedAddons[addonId]
+    const addonRecord = getRecord(await loadDatabase(), addonId)
     if (addonRecord?.manifest?.allowExternalReferences) return []
     const rootNoteId = await resolveAddonRootNoteId(addonId, addonRecord?.manifest)
     if (!rootNoteId) return []
@@ -2233,7 +2274,7 @@ async function uninstallAddon(addonId, options = {}) {
     const { deleteData = false } = options
     if (!addonId.trim()) return
     const database = await loadDatabase()
-    const record = database.installedAddons[addonId]
+    const record = getRecord(database, addonId)
     if (!record?.installedVersion) return
     log("step", `${addonId}: uninstalling${deleteData ? " and deleting its saved data" : " (saved data kept)"}`)
     // Runs while every note this addon owns is still in place, and is told
@@ -2248,7 +2289,7 @@ async function uninstallAddon(addonId, options = {}) {
 
 // Whether an addon owns any persistent notes — drives the "delete stored data" option on uninstall.
 async function hasPersistentData(addonId) {
-    const record = (await loadDatabase()).installedAddons[addonId]
+    const record = getRecord(await loadDatabase(), addonId)
     return persistentLocalIds(record?.manifest || {}).size > 0
 }
 
@@ -2265,7 +2306,7 @@ async function reinitializeDatabase() {
         catalogs: database.catalogs || [],
         installedAddons: {
             [TAM_ID]: {
-                manifestSourceUrl: database.installedAddons[TAM_ID]?.manifestSourceUrl
+                manifestSourceUrl: getRecord(database, TAM_ID)?.manifestSourceUrl
             }
         }
     })
@@ -2300,6 +2341,7 @@ module.exports.fetchCatalogMeta = fetchCatalogMeta
 module.exports.getAllAddons = getAllAddons
 module.exports.checkForAddonUpdates = checkForAddonUpdates
 module.exports.syncAddon = syncAddon
+module.exports.syncMany = syncMany
 module.exports.installByUrl = installByUrl
 module.exports.uninstallAddon = uninstallAddon
 module.exports.hasPersistentData = hasPersistentData

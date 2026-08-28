@@ -50,22 +50,6 @@ const QUIET_COMMANDS = new Set([
     "request-uninstall"
 ])
 
-// What each diagnosis code means in one line, shown in the table's Issue column
-// so a row explains itself without a trip to the docs.
-const ISSUE_TITLES = {
-    "duplicate-id": "Duplicate TAMFILEID",
-    "orphaned-note": "Orphaned note",
-    "unclaimed-note": "Unclaimed note",
-    "dead-source": "Source unreachable",
-    "unverifiable-source": "Source carries no hashes",
-    "partial-sync": "Sync half-failed",
-    "missing-note": "Note not installed",
-    "missing-attachment": "Attachment not installed",
-    "content-drift": "Content doesn't match manifest",
-    "broken-wiring": "Wiring not applied",
-    "duplicate-child-title": "Duplicate child name breaks the script bundle"
-}
-
 function typeColor(type) {
     return TYPE_COLORS[type] || "#6b7280"
 }
@@ -123,7 +107,7 @@ function DiagnosticsTable({ issues, reloadRequired, onRepair, onDismiss }) {
                             {issues.map((issue, index) => (
                                 <tr key={`${issue.addonId}/${issue.code}/${issue.target}/${index}`}>
                                     <td>{issue.addonId}</td>
-                                    <td>{ISSUE_TITLES[issue.code] || issue.code}</td>
+                                    <td>{issue.title}</td>
                                     <td><code>{issue.target}</code></td>
                                     <td>{issue.detail}</td>
                                     <td>
@@ -224,6 +208,17 @@ function BackLink({ onClick, text = "All Addons" }) {
     return <a className="back" onClick={onClick}>← {text}</a>
 }
 
+// The full-page frame every top-level view renders inside.
+function TamPage({ header, overlay = null, children }) {
+    return (
+        <div className="TAM-body">
+            <header>{header}</header>
+            <main>{children}</main>
+            {overlay}
+        </div>
+    )
+}
+
 function Spinner() {
     return <div className="TAM-spinner" />
 }
@@ -263,9 +258,7 @@ function computeStats(addons, catalogs) {
         if (!addonData.installedVersion) continue
         installedCount++
         if (addonData.updateAvailable) updateCount++
-        // An addon holds user data if its manifest attaches anything under the reserved
-        // "persistence" parent keyword.
-        if (addonData.manifest?.children?.some(c => c.parent === "persistence")) persistedCount++
+        if (addonData.hasPersistentData) persistedCount++
     }
     return { catalogCount: catalogs.length, installedCount, persistedCount, updateCount }
 }
@@ -544,17 +537,11 @@ function AddonCard({ addonData, onOpen, onInstall, onUpdate, onEnable, onSetting
 }
 
 function ListView({ addons, catalogAddons, onOpenAddon, onOpenSettings, onInstall, onUpdate, onEnable, onSettings }) {
-    // Libraries are an implementation detail of whatever addon depends on
-    // them — TAM installs/updates/uninstalls them automatically via the
-    // dependency graph, so there's nothing for the user to do with one
-    // directly. Catalog entries already installed are represented by their
-    // real installed record instead — dedup by id.
+    // Catalog entries already installed are represented by their real
+    // installed record instead — dedup by id.
     const installedIds = new Set(Object.keys(addons))
-    const catalogOnly = Object.values(catalogAddons).filter(a => a.type !== "library" && !installedIds.has(a.id))
-    const allAddons = [
-        ...Object.values(addons).filter(a => a.type !== "library"),
-        ...catalogOnly
-    ]
+    const catalogOnly = Object.values(catalogAddons).filter(a => !installedIds.has(a.id))
+    const allAddons = [...Object.values(addons), ...catalogOnly]
     allAddons.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
     const { search, setSearch, typeFilter, setTypeFilter, visible, availableTypes } = useAddonFilter(allAddons)
@@ -670,17 +657,16 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReins
 
     useEffect(() => {
         setReadmeHtml(null)
-        const readmeLocalId = addonData.manifest?.readmeNote
-        if (!addonData.installedVersion || !readmeLocalId) return
+        if (!addonData.installedVersion || !addonData.readmeLocalId) return
         setReadmeLoading(true)
-        libTAMjs.fetchReadmeHtml(addonData.id, readmeLocalId).then(html => {
+        libTAMjs.fetchReadmeHtml(addonData.id, addonData.readmeLocalId).then(html => {
             setReadmeHtml(html)
             setReadmeLoading(false)
         }).catch(e => {
             console.error("TAM: failed to render README", e)
             setReadmeLoading(false)
         })
-    }, [addonData.id, addonData.installedVersion, addonData.manifest?.readmeNote])
+    }, [addonData.id, addonData.installedVersion, addonData.readmeLocalId])
 
     return (
         <div className="addon-layout">
@@ -872,6 +858,13 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         return freshAddons
     }
 
+    // Reloads installed state plus every catalog's browsable entries.
+    async function reloadAll() {
+        const freshAddons = await reload()
+        await loadCatalogAddons(await libTAMjs.getCatalogs())
+        return freshAddons
+    }
+
     // Merges every added catalog's addons into one id-keyed map, so the main
     // list can show everything browsable, not just what's installed.
     async function loadCatalogAddons(catalogUrls) {
@@ -913,8 +906,7 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
     }
 
     async function handleLoadAddons() {
-        const freshAddons = await reload()
-        await loadCatalogAddons(await libTAMjs.getCatalogs())
+        const freshAddons = await reloadAll()
         // TAM's own Database record starts out seeded with just a manifestSourceUrl (see
         // database.json) — if its first sync hasn't completed yet, run it now, the same
         // way any other addon's first sync would run.
@@ -925,14 +917,12 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleAddCatalog(command) {
         await libTAMjs.addCatalog(command.url)
-        await reload()
-        await loadCatalogAddons(await libTAMjs.getCatalogs())
+        await reloadAll()
     }
 
     async function handleDeleteCatalog(command) {
         await libTAMjs.deleteCatalog(command.url)
-        await reload()
-        await loadCatalogAddons(await libTAMjs.getCatalogs())
+        await reloadAll()
     }
 
     async function handleBrowseCatalog(command) {
@@ -978,17 +968,11 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
         window.location.reload()
     }
 
-    // Shared by update-addon and reinstall-addon — both are just syncAddon followed
-    // by the same pending-prompt check.
+    // Shared by update-addon and reinstall-addon — a one-addon syncMany, then the
+    // same queue-advance the update-all flow uses.
     async function handleUpdateAddon(command) {
-        await libTAMjs.syncAddon(command.addon)
-        const prompts = await libTAMjs.getPendingPrompts(command.addon)
-        if (prompts.length > 0) {
-            setPendingPrompts(prompts)
-            setPromptAddonId(command.addon)
-        } else {
-            await reloadAndActivate()
-        }
+        const { promptQueue } = await libTAMjs.syncMany([command.addon])
+        await advancePromptQueue(promptQueue)
     }
 
     async function handleResolvePrompts(command) {
@@ -1002,21 +986,11 @@ function useTamCommands(resolveDisplayNote, dialogActions) {
 
     async function handleUpdateAll() {
         const targets = Object.values(addons)
-            // Libraries are hidden and update themselves as a side effect of updating
-            // whatever depends on them — updating them here too would be redundant.
-            .filter(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
+            .filter(a => a.installedVersion && a.updateAvailable)
             .map(a => a.id)
-
-        const queue = []
-        for (let i = 0; i < targets.length; i++) {
-            const addonId = targets[i]
-            setProgressDetail(`${addonId} (${i + 1}/${targets.length})`)
-            await libTAMjs.syncAddon(addonId)
-            const prompts = await libTAMjs.getPendingPrompts(addonId)
-            if (prompts.length > 0) queue.push(addonId)
-        }
+        const { promptQueue } = await libTAMjs.syncMany(targets, setProgressDetail)
         setProgressDetail(null)
-        await advancePromptQueue(queue)
+        await advancePromptQueue(promptQueue)
     }
 
     async function handleEnableAddon(command) {
@@ -1143,58 +1117,50 @@ export default function RepoManager() {
         return <div>Loading addons...</div>
     }
 
+    const plainHeader = (
+        <div className="hdr">
+            <h1>Trilium Addon Manager</h1>
+        </div>
+    )
+
     if (uninstallPrompt) {
         return (
-            <div className="TAM-body">
-                <header>
-                    <div className="hdr">
-                        <h1>Trilium Addon Manager</h1>
-                    </div>
-                </header>
-                <main>
-                    <UninstallDialog
-                        addonId={uninstallPrompt.addonId}
-                        references={uninstallPrompt.references}
-                        hasData={uninstallPrompt.hasData}
-                        onProceed={deleteData => {
-                            const addonId = uninstallPrompt.addonId
-                            setUninstallPrompt(null)
-                            dispatch({ command: "delete-addon", addon: addonId, deleteData })
-                        }}
-                        onCancel={() => setUninstallPrompt(null)}
-                    />
-                </main>
-            </div>
+            <TamPage header={plainHeader}>
+                <UninstallDialog
+                    addonId={uninstallPrompt.addonId}
+                    references={uninstallPrompt.references}
+                    hasData={uninstallPrompt.hasData}
+                    onProceed={deleteData => {
+                        const addonId = uninstallPrompt.addonId
+                        setUninstallPrompt(null)
+                        dispatch({ command: "delete-addon", addon: addonId, deleteData })
+                    }}
+                    onCancel={() => setUninstallPrompt(null)}
+                />
+            </TamPage>
         )
     }
 
     if (pendingPrompts.length > 0 && promptAddonId) {
         return (
-            <div className="TAM-body">
-                <header>
-                    <div className="hdr">
-                        <h1>Trilium Addon Manager</h1>
-                    </div>
-                </header>
-                <main>
-                    {promptQueue.length > 0 && (
-                        <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
-                    )}
-                    <PromptReview
-                        key={promptAddonId}
-                        prompts={pendingPrompts}
-                        onResolve={(decisions) => dispatch({
-                            command: "resolve-prompts",
-                            addonId: promptAddonId,
-                            decisions
-                        })}
-                    />
-                </main>
-            </div>
+            <TamPage header={plainHeader}>
+                {promptQueue.length > 0 && (
+                    <p>{promptAddonId} — {promptQueue.length} more addon(s) to review after this</p>
+                )}
+                <PromptReview
+                    key={promptAddonId}
+                    prompts={pendingPrompts}
+                    onResolve={(decisions) => dispatch({
+                        command: "resolve-prompts",
+                        addonId: promptAddonId,
+                        decisions
+                    })}
+                />
+            </TamPage>
         )
     }
 
-    const anyUpdateAvailable = Object.values(addons).some(a => a.type !== "library" && a.installedVersion && a.updateAvailable)
+    const anyUpdateAvailable = Object.values(addons).some(a => a.installedVersion && a.updateAvailable)
 
     const handleInstall = entryData => dispatch({
         command: "install-addon",
@@ -1269,7 +1235,7 @@ export default function RepoManager() {
         )
     }
 
-    const installedCount = Object.values(addons).filter(a => a.type !== "library" && a.installedVersion).length
+    const installedCount = Object.values(addons).filter(a => a.installedVersion).length
 
     let headerContent
     if (view.type === "list") {
@@ -1317,26 +1283,25 @@ export default function RepoManager() {
     const busyLabel = isBusy ? (progressDetail || commandLabel(pendingCommand)) : null
 
     return (
-        <div className="TAM-body">
-            <header>{headerContent}</header>
-            <main>
-                {diagnostics !== null && (
-                    <DiagnosticsTable
-                        issues={diagnostics}
-                        reloadRequired={reloadRequired}
-                        onRepair={(issue, fix) => dispatch(
-                            // Uninstall goes through TAM's normal uninstall flow, so the
-                            // dangling-reference and delete-my-data questions still get asked.
-                            fix.kind === "uninstall"
-                                ? { command: "request-uninstall", addon: issue.addonId }
-                                : { command: "repair-issue", issue, fix }
-                        )}
-                        onDismiss={() => setDiagnostics(null)}
-                    />
-                )}
-                {bodyContent}
-            </main>
-            {logOpen && <ActivityLog busyLabel={busyLabel} onDismiss={() => setLogOpen(false)} />}
-        </div>
+        <TamPage
+            header={headerContent}
+            overlay={logOpen && <ActivityLog busyLabel={busyLabel} onDismiss={() => setLogOpen(false)} />}
+        >
+            {diagnostics !== null && (
+                <DiagnosticsTable
+                    issues={diagnostics}
+                    reloadRequired={reloadRequired}
+                    onRepair={(issue, fix) => dispatch(
+                        // Uninstall goes through TAM's normal uninstall flow, so the
+                        // dangling-reference and delete-my-data questions still get asked.
+                        fix.kind === "uninstall"
+                            ? { command: "request-uninstall", addon: issue.addonId }
+                            : { command: "repair-issue", issue, fix }
+                    )}
+                    onDismiss={() => setDiagnostics(null)}
+                />
+            )}
+            {bodyContent}
+        </TamPage>
     )
 }

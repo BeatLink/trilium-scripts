@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "8.1.1",
+    "latestVersion": "8.2.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json",
@@ -73,6 +73,13 @@
                 "sourceUrl": "marked.min.js"
             },
             {
+                "id": "tam-manifest-model",
+                "title": "tam-manifest-model.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "tam-manifest-model.js"
+            },
+            {
                 "id": "libsettings-core",
                 "title": "libSettingsCore.js",
                 "type": "code",
@@ -127,6 +134,10 @@
             {
                 "parent": "lib-tam",
                 "child": "marked"
+            },
+            {
+                "parent": "lib-tam",
+                "child": "tam-manifest-model"
             },
             {
                 "parent": "lib-tam",
@@ -202,6 +213,11 @@
             },
             {
                 "note": "marked",
+                "name": "iconClass",
+                "value": "bx bx-customize"
+            },
+            {
+                "note": "tam-manifest-model",
                 "name": "iconClass",
                 "value": "bx bx-customize"
             },

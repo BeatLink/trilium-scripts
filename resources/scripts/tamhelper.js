@@ -157,26 +157,9 @@ function uniqueName(base, used) {
 }
 
 
-// Local ids whose children[] parent chain roots at the reserved "persistence" parent keyword.
-// Empty set when nothing attaches there. MUST stay in sync with persistentLocalIds() in lib-tam.js.
-function persistentLocalIds(m) {
-    const persistent = new Set();
-    const childrenOf = {};
-    for (const c of (m.children || []).filter((c) => c.child)) {
-        (childrenOf[c.parent] = childrenOf[c.parent] || []).push(c.child);
-    }
-    const stack = [...(childrenOf["persistence"] || [])];
-    for (const id of stack) persistent.add(id);
-    while (stack.length) {
-        for (const child of childrenOf[stack.pop()] || []) {
-            if (!persistent.has(child)) {
-                persistent.add(child);
-                stack.push(child);
-            }
-        }
-    }
-    return persistent;
-}
+// The manifest-shape helpers shared with lib-tam.js, required straight from the
+// addon's own source so the validator and the runtime can't drift apart.
+const { persistentLocalIds } = require(path.join(__dirname, "..", "..", "addons", "trilium-addon-manager@beatlink", "tam-manifest-model.js"));
 
 
 function runGit(args, cwd) {
@@ -248,10 +231,46 @@ function loadAddons() {
 // validate
 // ===========================================================================
 
-const REQUIRED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
+// Absence of any of these is a warning; only `id` is a hard requirement, gated in cmdValidate itself.
+const EXPECTED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
 const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
 const ICON_PACK_FONT_MIMES = new Set(["font/woff2", "font/woff", "font/ttf"]);
+
+const REQUIRE_RE = /require\(\s*["']([^"']+)["']\s*\)/g;
+const IMPORT_RE = /^\s*import\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/gm;
+const EXPORT_RE = /^\s*export\s+(const|let|var|function|class|default|\{)/m;
+const TAM_REQUIRE_RE = /tamRequire\(\s*["']([^"']+)["']\s*\)/g;
+
+// One rule per function, run in declaration order over a shared per-manifest
+// context; a check returning false ends that manifest's run (a gating fault,
+// or a metadata-only addon with nothing more to check).
+const MANIFEST_CHECKS = [
+    checkExpectedFields,
+    checkIdShape,
+    checkHomepage,
+    checkReadmeFile,
+    checkManifestSourceUrl,
+    prepareNoteContext,
+    checkNoteDeclarations,
+    checkRoot,
+    checkNamedNotes,
+    checkSettings,
+    checkHooks,
+    checkScriptEnv,
+    checkEsModuleSyntax,
+    checkTreeReachability,
+    checkRedundantPersistenceFlags,
+    checkGenericTitles,
+    checkSourceUrls,
+    checkAttachments,
+    checkIconPacks,
+    checkChildrenRefs,
+    checkRelationRefs,
+    checkLabelRefs,
+    checkRequireReachability,
+    checkTamRequireTargets,
+];
 
 
 async function cmdValidate(args) {
@@ -260,15 +279,8 @@ async function cmdValidate(args) {
     const error = (p, msg) => errors.push(`ERROR   ${p}: ${msg}`);
     const warn = (p, msg) => warnings.push(`WARNING ${p}: ${msg}`);
 
-    const requireRe = /require\(\s*["']([^"']+)["']\s*\)/g;
-    const importRe = /^\s*import\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/gm;
-    const exportRe = /^\s*export\s+(const|let|var|function|class|default|\{)/m;
-    const tamRequireRe = /tamRequire\(\s*["']([^"']+)["']\s*\)/g;
-
     const manifestFiles = iterManifests();
     for (const manifestFile of manifestFiles) {
-        const addonDir = path.dirname(manifestFile);
-
         let manifest;
         try {
             manifest = JSON.parse(readText(manifestFile));
@@ -276,399 +288,21 @@ async function cmdValidate(args) {
             error(manifestFile, `invalid JSON -- ${e.message}`);
             continue;
         }
-
-        const addonId = manifest.id;
-        if (!addonId) {
+        if (!manifest.id) {
             error(manifestFile, "missing required field 'id'");
             continue;
         }
-
-        for (const field of REQUIRED_FIELDS) {
-            if (!(field in manifest)) {
-                warn(manifestFile, `missing field '${field}'`);
-            }
+        const ctx = {
+            manifestFile,
+            addonDir: path.dirname(manifestFile),
+            args,
+            manifest,
+            addonId: manifest.id,
+            error, warn, fixes,
+        };
+        for (const check of MANIFEST_CHECKS) {
+            if (await check(ctx) === false) break;
         }
-
-        if (addonId.includes(" ")) {
-            error(manifestFile, `'id' contains spaces: "${addonId}"`);
-            continue;
-        }
-
-        // homepage URL must end with addons/{id} (only when it contains /addons/)
-        const homepage = manifest.homepage || "";
-        if (homepage) {
-            let parsedUrl;
-            try {
-                parsedUrl = new URL(homepage);
-            } catch {
-                parsedUrl = null;
-            }
-            if (parsedUrl) {
-                const decodedPath = decodeURIComponent(parsedUrl.pathname).replace(/\/+$/, "");
-                const expected = `addons/${addonId}`;
-                if (decodedPath.includes("/addons/") && !decodedPath.endsWith(expected)) {
-                    if (args.fix) {
-                        let parts = decodedPath.split("/");
-                        const revIdx = [...parts].reverse().indexOf("addons");
-                        if (revIdx !== -1) {
-                            const addonsIdx = parts.length - 1 - revIdx;
-                            parts = parts.slice(0, addonsIdx + 1).concat([addonId]);
-                        } else {
-                            parts[parts.length - 1] = addonId;
-                        }
-                        parsedUrl.pathname = parts.join("/");
-                        const newHomepage = parsedUrl.toString();
-                        manifest.homepage = newHomepage;
-                        writeText(manifestFile, jsonDumps(manifest, 4) + "\n");
-                        fixes.push(`FIXED   updated homepage in '${manifestFile}': '${homepage}' -> '${newHomepage}'`);
-                    } else {
-                        warn(manifestFile, `homepage does not end with 'addons/${addonId}' (run --fix to update)`);
-                    }
-                }
-            }
-        }
-
-        const readmeRel = manifest.readme;
-        if (readmeRel && !exists(path.join(addonDir, readmeRel))) {
-            error(manifestFile, `'readme' points to "${readmeRel}" but file not found`);
-        }
-
-        // Not authored any more -- publish sets it. A source manifest still
-        // carries it so an install predating the publish phase, refetching the
-        // raw manifest, is told where the published one lives and moves itself
-        // over on its next sync.
-        const publishedUrl = publishedManifestUrl(manifest.id);
-        if (!manifest.manifestSourceUrl) {
-            warn(manifestFile, `missing 'manifestSourceUrl' -- should be ${publishedUrl}`);
-        } else if (manifest.manifestSourceUrl !== publishedUrl) {
-            if (args.fix) {
-                manifest.manifestSourceUrl = publishedUrl;
-                writeText(manifestFile, jsonDumps(manifest, 4) + "\n");
-                fixes.push(`FIXED   updated manifestSourceUrl in '${manifestFile}' -> '${publishedUrl}'`);
-            } else {
-                error(manifestFile, `'manifestSourceUrl' is '${manifest.manifestSourceUrl}' but publish serves this manifest at ${publishedUrl}`);
-            }
-        }
-
-        const m = manifest.manifest;
-        if (m == null) {
-            continue; // metadata-only addon
-        }
-
-        const notes = m.notes;
-        if (!Array.isArray(notes)) {
-            error(manifestFile, "manifest.notes must be an array");
-            continue;
-        }
-
-        const noteIds = new Set(), byId = {};
-        for (const note of notes) {
-            const nid = note.id || note.title;
-            if (nid) {
-                // A repeated id resolves to one note, so the later entry is silently
-                // dropped -- and if the two differ, which one installs is not obvious.
-                if (noteIds.has(nid)) {
-                    error(manifestFile, `note '${nid}' is declared more than once in notes`);
-                }
-                noteIds.add(nid);
-                byId[nid] = note;
-            }
-            if (!note.title) {
-                warn(manifestFile, `note '${nid}' missing 'title'`);
-            }
-        }
-
-        // TAM itself bootstraps via a manual ZIP import, so its own manifest is the one
-        // exception that still declares a real root note. Every other addon's root is
-        // synthesized by TAM (ensureAddonAnchor) -- its manifest only ever references it via
-        // the reserved "root" parent keyword in children[], never as a notes[] entry.
-        const rootId = m.root;
-        if (rootId) {
-            if (!noteIds.has(rootId)) {
-                error(manifestFile, `manifest.root '${rootId}' not found in notes`);
-            }
-        } else if (!(m.children || []).some((c) => c.parent === "root")) {
-            error(manifestFile, "manifest.children must attach at least one note to the reserved \"root\" parent");
-        }
-
-        for (const field of ["settingsNote", "readmeNote"]) {
-            const localId = m[field];
-            if (localId && !noteIds.has(localId)) {
-                error(manifestFile, `manifest.${field} '${localId}' not found in notes`);
-            }
-        }
-
-        // Local ids whose children[] parent chain roots at the reserved "persistence" parent
-        // keyword -- these are "persistent": created once, prompt-on-update, never touched by
-        // uninstall.
-        const persistentIds = persistentLocalIds(m);
-
-        // settingsNote should point at a render note, not the raw code note
-        const settingsNote = byId[m.settingsNote];
-        if (settingsNote && settingsNote.type === "code") {
-            warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
-        }
-
-        // manifest.settings hands TAM the schema/defaults/config trio it reviews per
-        // setting instead of whole-file diffing the config. The schema (fields) and
-        // the defaults (their shipped values) have to be structural, since both ship
-        // anew each update; the config has to be persistent (it holds the user's own
-        // divergences) and must ship no content of its own, or the note would still
-        // be offered for whole-file replacement on every update.
-        if (m.settings) {
-            for (const role of ["schema", "defaults", "config"]) {
-                const localId = m.settings[role];
-                if (!localId) {
-                    error(manifestFile, `manifest.settings.${role} is missing`);
-                    continue;
-                }
-                if (!noteIds.has(localId)) {
-                    error(manifestFile, `manifest.settings.${role} '${localId}' not found in notes`);
-                    continue;
-                }
-                const note = byId[localId];
-                const isPersistent = persistentIds.has(localId);
-                if (role !== "config" && isPersistent) {
-                    error(manifestFile, `manifest.settings.${role} '${localId}' is attached under the reserved "persistence" parent -- it ships anew on every update, so it has to be structural`);
-                }
-                if (role === "defaults" && !note.sourceUrl && !note.content) {
-                    error(manifestFile, `manifest.settings.defaults '${localId}' ships no content (sourceUrl/content) -- it holds every setting's shipped value, which the schema no longer carries`);
-                }
-                if (role === "config") {
-                    if (!isPersistent) {
-                        error(manifestFile, `manifest.settings.config '${localId}' is not attached under the reserved "persistence" parent -- the user's settings would be overwritten on every update`);
-                    }
-                    if (note.sourceUrl || note.content) {
-                        error(manifestFile, `manifest.settings.config '${localId}' ships content (sourceUrl/content) -- declare it empty so TAM reviews it per setting instead of offering to replace the whole file`);
-                    }
-                }
-                if (note.mime && note.mime !== "application/json") {
-                    warn(manifestFile, `manifest.settings.${role} '${localId}' has mime '${note.mime}' -- expected application/json`);
-                }
-            }
-            // libsettings reads a config note's sources off its own `sourceConfig`
-            // relations, so an unlinked defaults note is simply never merged in.
-            const linksDefaults = (m.relations || []).some(
-                (r) => r.from === m.settings.config && r.type === "sourceConfig" && r.to === m.settings.defaults
-            );
-            if (m.settings.defaults && m.settings.config && !linksDefaults) {
-                error(manifestFile, `manifest.settings.config '${m.settings.config}' has no sourceConfig relation to the defaults note '${m.settings.defaults}' -- libsettings would read no defaults at all`);
-            }
-        }
-
-        // TAM runs a hook via FNote.executeScript(), which only hands back a return
-        // value for a frontend note, and hook code has to be replaced on update, so
-        // it can never live under "persistence".
-        for (const [phase, localId] of Object.entries(m.hooks || {})) {
-            if (!HOOK_PHASES.has(phase)) {
-                error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
-                continue;
-            }
-            if (!noteIds.has(localId)) {
-                error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
-                continue;
-            }
-            const mime = byId[localId].mime || "";
-            if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
-                error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
-            }
-            if (persistentIds.has(localId)) {
-                error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
-            }
-        }
-        if (m.hooks?.updateReview && persistentIds.size === 0) {
-            warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
-        }
-
-        // Notes served as static HTTP resources are exempt from the env check.
-        const resourceNoteIds = new Set(
-            (m.labels || [])
-                .filter((lbl) => lbl.name === "customResourceProvider")
-                .map((lbl) => lbl.note)
-        );
-
-        for (const note of notes) {
-            const nid = note.id || note.title || "?";
-            const mime = note.mime || "";
-            if (mime.startsWith("application/javascript")) {
-                if (mime.includes("env=hybrid")) {
-                    error(manifestFile, `note '${nid}': mime declares 'env=hybrid', which does not exist -- ship two notes (env=frontend + env=backend) instead`);
-                } else if (!mime.includes("env=frontend") && !mime.includes("env=backend") && !resourceNoteIds.has(nid)) {
-                    warn(manifestFile, `note '${nid}': mime '${mime}' is missing an env=frontend/env=backend qualifier`);
-                }
-            }
-        }
-
-        // plain .js notes are never transpiled -- ES export/import will throw.
-        // Resource notes are exempt for the same reason they skip the env check:
-        // they are served raw over HTTP and never require()'d, so an ESM bundle
-        // loaded with a dynamic import() is correct rather than broken.
-        for (const note of notes) {
-            const nid = note.id || note.title || "?";
-            const sourceUrl = note.sourceUrl || "";
-            if (sourceUrl.endsWith(".js") && !resourceNoteIds.has(nid)) {
-                try {
-                    const src = (await readSource(sourceUrl, manifestFile)).toString("utf8");
-                    if (exportRe.test(src)) {
-                        warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
-                    }
-                } catch (e) {
-                    warn(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
-                }
-            }
-        }
-
-        // notes unreachable from "root" (or "persistence") via children[] will never be created
-        const localChildren = new Set(
-            (m.children || []).filter((c) => c.child).map((c) => c.child)
-        );
-        for (const nid of noteIds) {
-            if (nid !== rootId && !localChildren.has(nid)) {
-                warn(manifestFile, `note '${nid}' is not attached under any parent in 'children' -- it will never be created`);
-            }
-        }
-
-        // skipOnUpdate/promptOnUpdate are implied by placement under the reserved "persistence"
-        // parent -- redundant there
-        for (const note of notes) {
-            const nid = note.id || note.title || "?";
-            if (persistentIds.has(nid) && (note.skipOnUpdate || note.promptOnUpdate)) {
-                warn(manifestFile, `note '${nid}' is attached under the reserved "persistence" parent, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
-            }
-        }
-
-        // generic library titles collide globally across addons
-        for (const note of notes) {
-            const title = note.title || "";
-            if (GENERIC_TITLES.has(title.toLowerCase()) && note.type === "code") {
-                warn(manifestFile, `note title '${title}' is generic -- require()/the bundle-global namespace is shared across all addons; use a fully-qualified title`);
-            }
-        }
-
-        // sourceUrl files must be fetchable
-        for (const note of notes) {
-            const nid = note.id || note.title || "?";
-            const sourceUrl = note.sourceUrl;
-            if (sourceUrl) {
-                try {
-                    await readSource(sourceUrl, manifestFile);
-                } catch (e) {
-                    error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
-                }
-            }
-        }
-
-        // Attachments are how Trilium carries an icon pack's font file (it reads
-        // getAttachmentsByRole("file") and picks by mime), and an attachment is
-        // matched on its title, so a blank one can never be found again.
-        const seenAttachments = new Set();
-        for (const note of notes) {
-            const nid = note.id || note.title || "?";
-            if (note.attachments !== undefined && !Array.isArray(note.attachments)) {
-                error(manifestFile, `note '${nid}': 'attachments' must be an array`);
-                continue;
-            }
-            for (const att of note.attachments || []) {
-                if (!att.title) {
-                    error(manifestFile, `note '${nid}': an attachment is missing 'title', which is what TAM matches it on across syncs`);
-                    continue;
-                }
-                const key = `${nid}\u0000${att.title}`;
-                if (seenAttachments.has(key)) {
-                    error(manifestFile, `note '${nid}': two attachments share the title '${att.title}' -- the second would overwrite the first`);
-                }
-                seenAttachments.add(key);
-                if (!att.mime) {
-                    error(manifestFile, `note '${nid}': attachment '${att.title}' is missing 'mime'`);
-                }
-                if (att.role && att.role !== "file" && att.role !== "image") {
-                    warn(manifestFile, `note '${nid}': attachment '${att.title}' has role '${att.role}' -- expected 'file' or 'image'`);
-                }
-                if (!att.sourceUrl && att.content == null) {
-                    error(manifestFile, `note '${nid}': attachment '${att.title}' ships no content (sourceUrl/content)`);
-                }
-                if (att.sourceUrl) {
-                    try {
-                        await readSource(att.sourceUrl, manifestFile);
-                    } catch (e) {
-                        error(manifestFile, `note '${nid}': attachment '${att.title}' sourceUrl '${att.sourceUrl}' could not be read (${e.message})`);
-                    }
-                }
-            }
-        }
-
-        // An icon pack is a JSON manifest note labelled #iconPack=<prefix> with the
-        // font as an attachment. Any of the three missing and Trilium drops the pack
-        // with nothing but a line in the server log.
-        for (const label of (m.labels || []).filter((lbl) => lbl.name === "iconPack")) {
-            const nid = label.note;
-            const note = byId[nid];
-            if (!note) continue;
-            if (!/^[a-zA-Z0-9_-]+$/.test(label.value || "")) {
-                error(manifestFile, `note '${nid}': #iconPack prefix '${label.value || ""}' must be non-empty and only alphanumerics, hyphens and underscores`);
-            }
-            if (label.value === "bx") {
-                error(manifestFile, `note '${nid}': #iconPack prefix 'bx' is taken by Trilium's built-in Boxicons pack`);
-            }
-            if (note.type !== "code" || note.mime !== "application/json") {
-                error(manifestFile, `note '${nid}': an #iconPack note must be type 'code' with mime 'application/json', not '${note.type}'/'${note.mime}'`);
-            }
-            const font = (note.attachments || []).find((att) => ICON_PACK_FONT_MIMES.has(att.mime));
-            if (!font) {
-                error(manifestFile, `note '${nid}': #iconPack note has no font attachment -- it needs one with mime ${[...ICON_PACK_FONT_MIMES].join(", ")}`);
-            } else if ((font.role || "file") !== "file") {
-                error(manifestFile, `note '${nid}': #iconPack font attachment '${font.title}' has role '${font.role}' -- Trilium only reads role 'file'`);
-            }
-            if (note.sourceUrl) {
-                try {
-                    const parsed = JSON.parse((await readSource(note.sourceUrl, manifestFile)).toString("utf8"));
-                    if (!parsed || typeof parsed.icons !== "object" || !parsed.icons) {
-                        error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' has no 'icons' object`);
-                    }
-                } catch (e) {
-                    error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' is not readable JSON (${e.message})`);
-                }
-            }
-        }
-
-        // children references. "root"/"persistence" are reserved parent keywords meaning
-        // "TAM's synthesized structural/persistence anchor" -- never real declared notes.
-        // A cross-addon child (c.addon set) names an export from that OTHER addon's manifest,
-        // not a local id here, so it's exempt from the local noteIds check.
-        for (const c of m.children || []) {
-            const parent = c.parent, child = c.child;
-            if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
-                error(manifestFile, `children: parent '${parent}' not found in notes`);
-            }
-            if (child && !c.addon && !noteIds.has(child)) {
-                error(manifestFile, `children: child '${child}' not found in notes`);
-            }
-        }
-
-        // relations references
-        for (const rel of m.relations || []) {
-            const fromId = rel.from, toId = rel.to;
-            if (fromId && !noteIds.has(fromId)) {
-                error(manifestFile, `relations: from '${fromId}' not found in notes`);
-            }
-            if (toId && !noteIds.has(toId)) {
-                warn(manifestFile, `relations: to '${toId}' not found in notes (may be a literal noteId)`);
-            }
-        }
-
-        // labels references
-        for (const label of m.labels || []) {
-            const nid = label.note;
-            if (nid && !noteIds.has(nid)) {
-                error(manifestFile, `labels: note '${nid}' not found in notes`);
-            }
-        }
-
-        // require()/import targets must be co-installed in the requiring note's subtree
-        await validateRequireReachability(manifestFile, m, notes, requireRe, importRe, warn);
-
-        // tamRequire("addon@author/localId") targets must name a real, frontend-loadable note
-        await validateTamRequireTargets(manifestFile, addonId, m, notes, tamRequireRe, error);
     }
 
     for (const msg of [...fixes, ...warnings, ...errors]) {
@@ -680,6 +314,464 @@ async function cmdValidate(args) {
     if (errors.length) {
         process.exit(1);
     }
+}
+
+
+function checkExpectedFields({ manifest, manifestFile, warn }) {
+    for (const field of EXPECTED_FIELDS) {
+        if (!(field in manifest)) {
+            warn(manifestFile, `missing field '${field}'`);
+        }
+    }
+}
+
+
+function checkIdShape({ addonId, manifestFile, error }) {
+    if (addonId.includes(" ")) {
+        error(manifestFile, `'id' contains spaces: "${addonId}"`);
+        return false;
+    }
+}
+
+
+// homepage URL must end with addons/{id} (only when it contains /addons/)
+function checkHomepage({ manifest, manifestFile, addonId, args, warn, fixes }) {
+    const homepage = manifest.homepage || "";
+    if (!homepage) return;
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(homepage);
+    } catch {
+        parsedUrl = null;
+    }
+    if (!parsedUrl) return;
+    const decodedPath = decodeURIComponent(parsedUrl.pathname).replace(/\/+$/, "");
+    const expected = `addons/${addonId}`;
+    if (!decodedPath.includes("/addons/") || decodedPath.endsWith(expected)) return;
+    if (args.fix) {
+        let parts = decodedPath.split("/");
+        const revIdx = [...parts].reverse().indexOf("addons");
+        if (revIdx !== -1) {
+            const addonsIdx = parts.length - 1 - revIdx;
+            parts = parts.slice(0, addonsIdx + 1).concat([addonId]);
+        } else {
+            parts[parts.length - 1] = addonId;
+        }
+        parsedUrl.pathname = parts.join("/");
+        const newHomepage = parsedUrl.toString();
+        manifest.homepage = newHomepage;
+        writeText(manifestFile, jsonDumps(manifest, 4) + "\n");
+        fixes.push(`FIXED   updated homepage in '${manifestFile}': '${homepage}' -> '${newHomepage}'`);
+    } else {
+        warn(manifestFile, `homepage does not end with 'addons/${addonId}' (run --fix to update)`);
+    }
+}
+
+
+function checkReadmeFile({ manifest, addonDir, manifestFile, error }) {
+    const readmeRel = manifest.readme;
+    if (readmeRel && !exists(path.join(addonDir, readmeRel))) {
+        error(manifestFile, `'readme' points to "${readmeRel}" but file not found`);
+    }
+}
+
+
+// Not authored any more -- publish sets it. A source manifest still
+// carries it so an install predating the publish phase, refetching the
+// raw manifest, is told where the published one lives and moves itself
+// over on its next sync.
+function checkManifestSourceUrl({ manifest, manifestFile, args, error, warn, fixes }) {
+    const publishedUrl = publishedManifestUrl(manifest.id);
+    if (!manifest.manifestSourceUrl) {
+        warn(manifestFile, `missing 'manifestSourceUrl' -- should be ${publishedUrl}`);
+    } else if (manifest.manifestSourceUrl !== publishedUrl) {
+        if (args.fix) {
+            manifest.manifestSourceUrl = publishedUrl;
+            writeText(manifestFile, jsonDumps(manifest, 4) + "\n");
+            fixes.push(`FIXED   updated manifestSourceUrl in '${manifestFile}' -> '${publishedUrl}'`);
+        } else {
+            error(manifestFile, `'manifestSourceUrl' is '${manifest.manifestSourceUrl}' but publish serves this manifest at ${publishedUrl}`);
+        }
+    }
+}
+
+
+// Attaches the note-tree context every later check reads. False ends the run:
+// a metadata-only addon, or a notes[] that isn't usable at all.
+function prepareNoteContext(ctx) {
+    const m = ctx.manifest.manifest;
+    if (m == null) {
+        return false; // metadata-only addon
+    }
+    if (!Array.isArray(m.notes)) {
+        ctx.error(ctx.manifestFile, "manifest.notes must be an array");
+        return false;
+    }
+    ctx.m = m;
+    ctx.notes = m.notes;
+    ctx.noteIds = new Set();
+    ctx.byId = {};
+    for (const note of ctx.notes) {
+        const nid = note.id || note.title;
+        if (nid) {
+            ctx.noteIds.add(nid);
+            ctx.byId[nid] = note;
+        }
+    }
+    // Local ids whose children[] parent chain roots at the reserved "persistence" parent
+    // keyword -- these are "persistent": created once, prompt-on-update, never touched by
+    // uninstall.
+    ctx.persistentIds = persistentLocalIds(m);
+    // Notes served as static HTTP resources are exempt from the env check.
+    ctx.resourceNoteIds = new Set(
+        (m.labels || [])
+            .filter((lbl) => lbl.name === "customResourceProvider")
+            .map((lbl) => lbl.note)
+    );
+}
+
+
+function checkNoteDeclarations({ notes, manifestFile, error, warn }) {
+    const seen = new Set();
+    for (const note of notes) {
+        const nid = note.id || note.title;
+        if (nid) {
+            // A repeated id resolves to one note, so the later entry is silently
+            // dropped -- and if the two differ, which one installs is not obvious.
+            if (seen.has(nid)) {
+                error(manifestFile, `note '${nid}' is declared more than once in notes`);
+            }
+            seen.add(nid);
+        }
+        if (!note.title) {
+            warn(manifestFile, `note '${nid}' missing 'title'`);
+        }
+    }
+}
+
+
+// TAM itself bootstraps via a manual ZIP import, so its own manifest is the one
+// exception that still declares a real root note. Every other addon's root is
+// synthesized by TAM (ensureAddonAnchor) -- its manifest only ever references it via
+// the reserved "root" parent keyword in children[], never as a notes[] entry.
+function checkRoot({ m, noteIds, manifestFile, error }) {
+    const rootId = m.root;
+    if (rootId) {
+        if (!noteIds.has(rootId)) {
+            error(manifestFile, `manifest.root '${rootId}' not found in notes`);
+        }
+    } else if (!(m.children || []).some((c) => c.parent === "root")) {
+        error(manifestFile, "manifest.children must attach at least one note to the reserved \"root\" parent");
+    }
+}
+
+
+function checkNamedNotes({ m, noteIds, byId, manifestFile, error, warn }) {
+    for (const field of ["settingsNote", "readmeNote"]) {
+        const localId = m[field];
+        if (localId && !noteIds.has(localId)) {
+            error(manifestFile, `manifest.${field} '${localId}' not found in notes`);
+        }
+    }
+    // settingsNote should point at a render note, not the raw code note
+    const settingsNote = byId[m.settingsNote];
+    if (settingsNote && settingsNote.type === "code") {
+        warn(manifestFile, `settingsNote '${m.settingsNote}' is a raw code note -- point it at the wrapping render note instead`);
+    }
+}
+
+
+// manifest.settings hands TAM the schema/defaults/config trio it reviews per
+// setting instead of whole-file diffing the config. The schema (fields) and
+// the defaults (their shipped values) have to be structural, since both ship
+// anew each update; the config has to be persistent (it holds the user's own
+// divergences) and must ship no content of its own, or the note would still
+// be offered for whole-file replacement on every update.
+function checkSettings({ m, noteIds, byId, persistentIds, manifestFile, error, warn }) {
+    if (!m.settings) return;
+    for (const role of ["schema", "defaults", "config"]) {
+        const localId = m.settings[role];
+        if (!localId) {
+            error(manifestFile, `manifest.settings.${role} is missing`);
+            continue;
+        }
+        if (!noteIds.has(localId)) {
+            error(manifestFile, `manifest.settings.${role} '${localId}' not found in notes`);
+            continue;
+        }
+        const note = byId[localId];
+        const isPersistent = persistentIds.has(localId);
+        if (role !== "config" && isPersistent) {
+            error(manifestFile, `manifest.settings.${role} '${localId}' is attached under the reserved "persistence" parent -- it ships anew on every update, so it has to be structural`);
+        }
+        if (role === "defaults" && !note.sourceUrl && !note.content) {
+            error(manifestFile, `manifest.settings.defaults '${localId}' ships no content (sourceUrl/content) -- it holds every setting's shipped value, which the schema no longer carries`);
+        }
+        if (role === "config") {
+            if (!isPersistent) {
+                error(manifestFile, `manifest.settings.config '${localId}' is not attached under the reserved "persistence" parent -- the user's settings would be overwritten on every update`);
+            }
+            if (note.sourceUrl || note.content) {
+                error(manifestFile, `manifest.settings.config '${localId}' ships content (sourceUrl/content) -- declare it empty so TAM reviews it per setting instead of offering to replace the whole file`);
+            }
+        }
+        if (note.mime && note.mime !== "application/json") {
+            warn(manifestFile, `manifest.settings.${role} '${localId}' has mime '${note.mime}' -- expected application/json`);
+        }
+    }
+    // libsettings reads a config note's sources off its own `sourceConfig`
+    // relations, so an unlinked defaults note is simply never merged in.
+    const linksDefaults = (m.relations || []).some(
+        (r) => r.from === m.settings.config && r.type === "sourceConfig" && r.to === m.settings.defaults
+    );
+    if (m.settings.defaults && m.settings.config && !linksDefaults) {
+        error(manifestFile, `manifest.settings.config '${m.settings.config}' has no sourceConfig relation to the defaults note '${m.settings.defaults}' -- libsettings would read no defaults at all`);
+    }
+}
+
+
+// TAM runs a hook via FNote.executeScript(), which only hands back a return
+// value for a frontend note, and hook code has to be replaced on update, so
+// it can never live under "persistence".
+function checkHooks({ m, noteIds, byId, persistentIds, manifestFile, error, warn }) {
+    for (const [phase, localId] of Object.entries(m.hooks || {})) {
+        if (!HOOK_PHASES.has(phase)) {
+            error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
+            continue;
+        }
+        if (!noteIds.has(localId)) {
+            error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
+            continue;
+        }
+        const mime = byId[localId].mime || "";
+        if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
+            error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
+        }
+        if (persistentIds.has(localId)) {
+            error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
+        }
+    }
+    if (m.hooks?.updateReview && persistentIds.size === 0) {
+        warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
+    }
+}
+
+
+function checkScriptEnv({ notes, resourceNoteIds, manifestFile, error, warn }) {
+    for (const note of notes) {
+        const nid = note.id || note.title || "?";
+        const mime = note.mime || "";
+        if (mime.startsWith("application/javascript")) {
+            if (mime.includes("env=hybrid")) {
+                error(manifestFile, `note '${nid}': mime declares 'env=hybrid', which does not exist -- ship two notes (env=frontend + env=backend) instead`);
+            } else if (!mime.includes("env=frontend") && !mime.includes("env=backend") && !resourceNoteIds.has(nid)) {
+                warn(manifestFile, `note '${nid}': mime '${mime}' is missing an env=frontend/env=backend qualifier`);
+            }
+        }
+    }
+}
+
+
+// plain .js notes are never transpiled -- ES export/import will throw.
+// Resource notes are exempt for the same reason they skip the env check:
+// they are served raw over HTTP and never require()'d, so an ESM bundle
+// loaded with a dynamic import() is correct rather than broken.
+async function checkEsModuleSyntax({ notes, resourceNoteIds, manifestFile, warn }) {
+    for (const note of notes) {
+        const nid = note.id || note.title || "?";
+        const sourceUrl = note.sourceUrl || "";
+        if (sourceUrl.endsWith(".js") && !resourceNoteIds.has(nid)) {
+            try {
+                const src = (await readSource(sourceUrl, manifestFile)).toString("utf8");
+                if (EXPORT_RE.test(src)) {
+                    warn(manifestFile, `note '${nid}': plain .js source uses ES 'export' syntax, which is not transpiled -- use CommonJS module.exports instead`);
+                }
+            } catch (e) {
+                warn(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
+            }
+        }
+    }
+}
+
+
+// notes unreachable from "root" (or "persistence") via children[] will never be created
+function checkTreeReachability({ m, noteIds, manifestFile, warn }) {
+    const localChildren = new Set(
+        (m.children || []).filter((c) => c.child).map((c) => c.child)
+    );
+    for (const nid of noteIds) {
+        if (nid !== m.root && !localChildren.has(nid)) {
+            warn(manifestFile, `note '${nid}' is not attached under any parent in 'children' -- it will never be created`);
+        }
+    }
+}
+
+
+// skipOnUpdate/promptOnUpdate are implied by placement under the reserved "persistence"
+// parent -- redundant there
+function checkRedundantPersistenceFlags({ notes, persistentIds, manifestFile, warn }) {
+    for (const note of notes) {
+        const nid = note.id || note.title || "?";
+        if (persistentIds.has(nid) && (note.skipOnUpdate || note.promptOnUpdate)) {
+            warn(manifestFile, `note '${nid}' is attached under the reserved "persistence" parent, so skipOnUpdate/promptOnUpdate is implied and should be removed`);
+        }
+    }
+}
+
+
+// generic library titles collide globally across addons
+function checkGenericTitles({ notes, manifestFile, warn }) {
+    for (const note of notes) {
+        const title = note.title || "";
+        if (GENERIC_TITLES.has(title.toLowerCase()) && note.type === "code") {
+            warn(manifestFile, `note title '${title}' is generic -- require()/the bundle-global namespace is shared across all addons; use a fully-qualified title`);
+        }
+    }
+}
+
+
+// sourceUrl files must be fetchable
+async function checkSourceUrls({ notes, manifestFile, error }) {
+    for (const note of notes) {
+        const nid = note.id || note.title || "?";
+        const sourceUrl = note.sourceUrl;
+        if (sourceUrl) {
+            try {
+                await readSource(sourceUrl, manifestFile);
+            } catch (e) {
+                error(manifestFile, `note '${nid}': sourceUrl '${sourceUrl}' could not be read (${e.message})`);
+            }
+        }
+    }
+}
+
+
+// Attachments are how Trilium carries an icon pack's font file (it reads
+// getAttachmentsByRole("file") and picks by mime), and an attachment is
+// matched on its title, so a blank one can never be found again.
+async function checkAttachments({ notes, manifestFile, error, warn }) {
+    const seenAttachments = new Set();
+    for (const note of notes) {
+        const nid = note.id || note.title || "?";
+        if (note.attachments !== undefined && !Array.isArray(note.attachments)) {
+            error(manifestFile, `note '${nid}': 'attachments' must be an array`);
+            continue;
+        }
+        for (const att of note.attachments || []) {
+            if (!att.title) {
+                error(manifestFile, `note '${nid}': an attachment is missing 'title', which is what TAM matches it on across syncs`);
+                continue;
+            }
+            const key = `${nid}\u0000${att.title}`;
+            if (seenAttachments.has(key)) {
+                error(manifestFile, `note '${nid}': two attachments share the title '${att.title}' -- the second would overwrite the first`);
+            }
+            seenAttachments.add(key);
+            if (!att.mime) {
+                error(manifestFile, `note '${nid}': attachment '${att.title}' is missing 'mime'`);
+            }
+            if (att.role && att.role !== "file" && att.role !== "image") {
+                warn(manifestFile, `note '${nid}': attachment '${att.title}' has role '${att.role}' -- expected 'file' or 'image'`);
+            }
+            if (!att.sourceUrl && att.content == null) {
+                error(manifestFile, `note '${nid}': attachment '${att.title}' ships no content (sourceUrl/content)`);
+            }
+            if (att.sourceUrl) {
+                try {
+                    await readSource(att.sourceUrl, manifestFile);
+                } catch (e) {
+                    error(manifestFile, `note '${nid}': attachment '${att.title}' sourceUrl '${att.sourceUrl}' could not be read (${e.message})`);
+                }
+            }
+        }
+    }
+}
+
+
+// An icon pack is a JSON manifest note labelled #iconPack=<prefix> with the
+// font as an attachment. Any of the three missing and Trilium drops the pack
+// with nothing but a line in the server log.
+async function checkIconPacks({ m, byId, manifestFile, error }) {
+    for (const label of (m.labels || []).filter((lbl) => lbl.name === "iconPack")) {
+        const nid = label.note;
+        const note = byId[nid];
+        if (!note) continue;
+        if (!/^[a-zA-Z0-9_-]+$/.test(label.value || "")) {
+            error(manifestFile, `note '${nid}': #iconPack prefix '${label.value || ""}' must be non-empty and only alphanumerics, hyphens and underscores`);
+        }
+        if (label.value === "bx") {
+            error(manifestFile, `note '${nid}': #iconPack prefix 'bx' is taken by Trilium's built-in Boxicons pack`);
+        }
+        if (note.type !== "code" || note.mime !== "application/json") {
+            error(manifestFile, `note '${nid}': an #iconPack note must be type 'code' with mime 'application/json', not '${note.type}'/'${note.mime}'`);
+        }
+        const font = (note.attachments || []).find((att) => ICON_PACK_FONT_MIMES.has(att.mime));
+        if (!font) {
+            error(manifestFile, `note '${nid}': #iconPack note has no font attachment -- it needs one with mime ${[...ICON_PACK_FONT_MIMES].join(", ")}`);
+        } else if ((font.role || "file") !== "file") {
+            error(manifestFile, `note '${nid}': #iconPack font attachment '${font.title}' has role '${font.role}' -- Trilium only reads role 'file'`);
+        }
+        if (note.sourceUrl) {
+            try {
+                const parsed = JSON.parse((await readSource(note.sourceUrl, manifestFile)).toString("utf8"));
+                if (!parsed || typeof parsed.icons !== "object" || !parsed.icons) {
+                    error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' has no 'icons' object`);
+                }
+            } catch (e) {
+                error(manifestFile, `note '${nid}': #iconPack manifest '${note.sourceUrl}' is not readable JSON (${e.message})`);
+            }
+        }
+    }
+}
+
+
+// children references. "root"/"persistence" are reserved parent keywords meaning
+// "TAM's synthesized structural/persistence anchor" -- never real declared notes.
+function checkChildrenRefs({ m, noteIds, manifestFile, error }) {
+    for (const c of m.children || []) {
+        const parent = c.parent, child = c.child;
+        if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
+            error(manifestFile, `children: parent '${parent}' not found in notes`);
+        }
+        if (child && !noteIds.has(child)) {
+            error(manifestFile, `children: child '${child}' not found in notes`);
+        }
+    }
+}
+
+
+function checkRelationRefs({ m, noteIds, manifestFile, error, warn }) {
+    for (const rel of m.relations || []) {
+        const fromId = rel.from, toId = rel.to;
+        if (fromId && !noteIds.has(fromId)) {
+            error(manifestFile, `relations: from '${fromId}' not found in notes`);
+        }
+        if (toId && !noteIds.has(toId)) {
+            warn(manifestFile, `relations: to '${toId}' not found in notes (may be a literal noteId)`);
+        }
+    }
+}
+
+
+function checkLabelRefs({ m, noteIds, manifestFile, error }) {
+    for (const label of m.labels || []) {
+        const nid = label.note;
+        if (nid && !noteIds.has(nid)) {
+            error(manifestFile, `labels: note '${nid}' not found in notes`);
+        }
+    }
+}
+
+
+// require()/import targets must be co-installed in the requiring note's subtree
+async function checkRequireReachability({ manifestFile, m, notes, warn }) {
+    await validateRequireReachability(manifestFile, m, notes, REQUIRE_RE, IMPORT_RE, warn);
+}
+
+
+// tamRequire("addon@author/localId") targets must name a real, frontend-loadable note
+async function checkTamRequireTargets({ manifestFile, addonId, m, notes, error }) {
+    await validateTamRequireTargets(manifestFile, addonId, m, notes, TAM_REQUIRE_RE, error);
 }
 
 

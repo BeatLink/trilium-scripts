@@ -35,13 +35,12 @@ Trilium Addon Manager (TAM) is a widget-based addon installer for [TriliumNext N
 TAM's own widget is a self-contained Preact app (`TAM.jsx`), styled to match the
 GitHub Pages catalog (`resources/docs/`) — same card grid, type badges, search/filter toolbar, and sidebar
 detail layout — while still adapting to Trilium's light/dark theme via its own CSS custom properties
-for surfaces and text. It has **no addon dependencies of its own** (`dependencies: []` in its own
-manifest) — everything below is built directly against `trilium:preact`'s built-in components rather
-than a shared library like `libsettings@beatlink`, since a dependency failure in the addon manager
-itself would risk taking down the one thing that could otherwise fix it.
+for surfaces and text. It depends on no other addon's notes — everything below is built directly
+against `trilium:preact`'s built-in components rather than a shared library like
+`libsettings@beatlink`, since a failure in the addon manager itself would risk taking down the one
+thing that could otherwise fix it.
 
-- **List view** (default) — a searchable, filterable card grid of every installed addon (libraries
-  excluded — see [Hidden libraries](ARCHITECTURE.md#hidden-libraries-resolved-lazily-and-rootlessly)) merged with every
+- **List view** (default) — a searchable, filterable card grid of every installed addon merged with every
   not-yet-installed addon from every added catalog (fetched live and deduped by id against what's
   already installed), so it shows everything available across every added catalog plus anything
   manually installed by URL, not just what's already on disk. Clicking an installed card opens its
