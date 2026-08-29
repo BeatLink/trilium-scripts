@@ -157,9 +157,17 @@ function uniqueName(base, used) {
 }
 
 
-// The manifest-shape helpers shared with lib-tam.js, required straight from the
-// addon's own source so the validator and the runtime can't drift apart.
-const { persistentLocalIds } = require(path.join(__dirname, "..", "..", "addons", "trilium-addon-manager@beatlink", "tam-manifest-model.js"));
+// The manifest-shape helpers and shared constants from lib-tam.js's own model
+// note, required straight from the addon's source so the toolchain and the
+// runtime can't drift apart.
+const {
+    addonAnchorRootLocalId,
+    addonAnchorPersistenceLocalId,
+    anchorIconClass,
+    TYPE_COLORS,
+    childEdges,
+    persistentLocalIds,
+} = require(path.join(__dirname, "..", "..", "addons", "trilium-addon-manager@beatlink", "tam-manifest-model.js"));
 
 
 function runGit(args, cwd) {
@@ -234,7 +242,6 @@ function loadAddons() {
 // Absence of any of these is a warning; only `id` is a hard requirement, gated in cmdValidate itself.
 const EXPECTED_FIELDS = ["id", "name", "description", "author", "homepage", "license", "latestVersion", "type"];
 const GENERIC_TITLES = new Set(["lib", "library", "libsettings", "settings", "utils", "helper", "helpers"]);
-const HOOK_PHASES = new Set(["postInstall", "postUpdate", "updateReview", "preUninstall"]);
 const ICON_PACK_FONT_MIMES = new Set(["font/woff2", "font/woff", "font/ttf"]);
 
 const REQUIRE_RE = /require\(\s*["']([^"']+)["']\s*\)/g;
@@ -256,7 +263,6 @@ const MANIFEST_CHECKS = [
     checkRoot,
     checkNamedNotes,
     checkSettings,
-    checkHooks,
     checkScriptEnv,
     checkEsModuleSyntax,
     checkTreeReachability,
@@ -530,33 +536,6 @@ function checkSettings({ m, noteIds, byId, persistentIds, manifestFile, error, w
 }
 
 
-// TAM runs a hook via FNote.executeScript(), which only hands back a return
-// value for a frontend note, and hook code has to be replaced on update, so
-// it can never live under "persistence".
-function checkHooks({ m, noteIds, byId, persistentIds, manifestFile, error, warn }) {
-    for (const [phase, localId] of Object.entries(m.hooks || {})) {
-        if (!HOOK_PHASES.has(phase)) {
-            error(manifestFile, `manifest.hooks.${phase} is not a hook phase (expected one of ${[...HOOK_PHASES].join(", ")})`);
-            continue;
-        }
-        if (!noteIds.has(localId)) {
-            error(manifestFile, `manifest.hooks.${phase} '${localId}' not found in notes`);
-            continue;
-        }
-        const mime = byId[localId].mime || "";
-        if (mime !== "text/jsx" && !mime.includes("env=frontend")) {
-            error(manifestFile, `manifest.hooks.${phase} '${localId}' has mime '${mime}' -- a hook must be a frontend script (application/javascript;env=frontend or text/jsx)`);
-        }
-        if (persistentIds.has(localId)) {
-            error(manifestFile, `manifest.hooks.${phase} '${localId}' is attached under the reserved "persistence" parent -- hook code must be replaced on update, so it has to be structural`);
-        }
-    }
-    if (m.hooks?.updateReview && persistentIds.size === 0) {
-        warn(manifestFile, "manifest.hooks.updateReview is declared but the addon has no persistent notes to review");
-    }
-}
-
-
 function checkScriptEnv({ notes, resourceNoteIds, manifestFile, error, warn }) {
     for (const note of notes) {
         const nid = note.id || note.title || "?";
@@ -784,12 +763,7 @@ async function validateRequireReachability(manifestFile, m, notes, requireRe, im
     }
     const localTitles = new Set(Object.values(idToTitle).filter(Boolean));
 
-    const localChildEdges = {};
-    for (const c of m.children || []) {
-        const parent = c.parent;
-        if (!parent || !c.child) continue;
-        (localChildEdges[parent] ||= []).push(c.child);
-    }
+    const localChildEdges = childEdges(m.children);
 
     function descendants(startId) {
         const seen = new Set();
@@ -921,16 +895,6 @@ function safeName(title) {
 }
 
 
-// Local id for the synthetic root entry `processManifest` builds when a manifest has no
-// declared `m.root` -- must match addonAnchorRootLocalId in lib-tam.js, since a ZIP-installed
-// note's #TAMFILEID has to line up with what TAM's own ensureAddonAnchor would create live.
-const SYNTHETIC_ROOT_LOCAL_ID = "__tamAddonRoot__";
-// Same idea for whatever attaches under the reserved "persistence" parent keyword -- must match
-// addonAnchorPersistenceLocalId in lib-tam.js. Live sync parents this under the separate global
-// "Addon Data" anchor; a ZIP export is one tree, so it's nested under the synthetic root here
-// purely as an export approximation.
-const SYNTHETIC_PERSISTENCE_LOCAL_ID = "__tamAddonPersistenceRoot__";
-
 async function processManifest(fullManifest, manifestFile) {
     // Build ZIP entries for one manifest.
     // Returns { rootEntry, zipFiles, warnings, uuidMap }.
@@ -940,15 +904,17 @@ async function processManifest(fullManifest, manifestFile) {
     for (const n of m.notes || []) notesById[n.id] = n;
 
     // No declared m.root -- every addon but TAM itself. TAM synthesizes this note live
-    // (ensureAddonAnchor); mirror that here purely so the ZIP has a single top-level note to
-    // build around, titled after the addon, content-free, TAM's own icon.
-    const rootLid = m.root || SYNTHETIC_ROOT_LOCAL_ID;
+    // (ensureAddonAnchor) under the shared anchor local id; mirror that here purely so the
+    // ZIP has a single top-level note to build around, titled after the addon, content-free.
+    const rootLid = m.root || addonAnchorRootLocalId;
     if (!m.root) {
         notesById[rootLid] = { id: rootLid, title: fullManifest.name || fullManifest.id, type: "text", mime: "text/html", sourceUrl: null };
     }
 
+    // Live sync parents this under the separate global "Addon Data" anchor; a ZIP export is
+    // one tree, so it's nested under the synthetic root here purely as an export approximation.
     const hasPersistence = (m.children || []).some((c) => c.parent === "persistence");
-    const persistenceLid = SYNTHETIC_PERSISTENCE_LOCAL_ID;
+    const persistenceLid = addonAnchorPersistenceLocalId;
     if (hasPersistence) {
         notesById[persistenceLid] = { id: persistenceLid, title: "Persistence", type: "text", mime: "text/html", sourceUrl: null };
     }
@@ -979,8 +945,8 @@ async function processManifest(fullManifest, manifestFile) {
     for (const lbl of m.labels || []) (noteLabels[lbl.note] ||= []).push(lbl);
     for (const rel of m.relations || []) (noteRelations[rel.from] ||= []).push(rel);
     // The synthetic anchors' own #iconClass -- TAM sets this uniformly on every anchor it owns.
-    if (!m.root) noteLabels[rootLid] = [{ note: rootLid, name: "iconClass", value: "bx bx-customize" }];
-    if (hasPersistence) noteLabels[persistenceLid] = [{ note: persistenceLid, name: "iconClass", value: "bx bx-customize" }];
+    if (!m.root) noteLabels[rootLid] = [{ note: rootLid, name: "iconClass", value: anchorIconClass }];
+    if (hasPersistence) noteLabels[persistenceLid] = [{ note: persistenceLid, name: "iconClass", value: anchorIconClass }];
 
     const zipFiles = [], warnings = [];
     const usedBases = {};
@@ -1430,11 +1396,6 @@ const PAGES_URL = "https://beatlink.github.io/trilium-scripts/";
 const CATALOG_URL = `${PAGES_URL}catalog.json`;
 
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]);
-const TYPE_COLORS = {
-    widget: "#2563eb", theme: "#7c3aed", css: "#059669",
-    script: "#d97706", library: "#0891b2", template: "#be185d",
-    iconpack: "#c2410c",
-};
 
 
 function badge(t) {

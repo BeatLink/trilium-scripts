@@ -5,9 +5,20 @@ const marked = require("marked.min.js")
 // review reads a schema, a config and a registry's shipped-vs-stored delta
 // exactly the way the settings form that wrote them does.
 const { isPlainObject, mergeSchemas, mergeSources, mergeDefaults, titleFor } = require("libSettingsCore.js")
-// The manifest-shape helpers shared with tamhelper.js, which requires the same
-// file from disk, so the runtime and the validator can't drift apart.
-const { buildParentMaps, topologicalSort, normalizeManifest, persistentLocalIds, sourceIdentityOf } = require("tam-manifest-model.js")
+// The manifest-shape helpers and shared constants from tam-manifest-model.js,
+// which tamhelper.js requires from disk, so the runtime and the validator
+// can't drift apart.
+const {
+    addonAnchorRootLocalId,
+    addonAnchorPersistenceLocalId,
+    anchorIconClass,
+    TYPE_COLORS,
+    buildParentMaps,
+    topologicalSort,
+    normalizeManifest,
+    persistentLocalIds,
+    sourceIdentityOf
+} = require("tam-manifest-model.js")
 
 const addonRootLabel = "addonRoot"
 
@@ -21,15 +32,12 @@ async function getPersistenceNoteId() {
     return await api.currentNote.getRelationValue(addonPersistenceLabel)
 }
 
-// Synthetic local ids for the per-addon anchor notes TAM itself owns (never declared by an addon's own manifest).
-const addonAnchorRootLocalId = "__tamAddonRoot__"
-const addonAnchorPersistenceLocalId = "__tamAddonPersistenceRoot__"
 const synthesizedAnchorLocalIds = [addonAnchorRootLocalId, addonAnchorPersistenceLocalId]
 
 // Find-or-create the one note that owns every note this addon resolves under (structural or persistent).
 async function ensureAddonAnchor(addonId, addonName, localId, parentRealId) {
     const tamFileId = `${addonId}/${localId}`
-    return await api.runOnBackend((tamFileIdLabel, tamFileId, addonId, addonName, parentRealId) => {
+    return await api.runOnBackend((tamFileIdLabel, tamFileId, addonId, addonName, parentRealId, anchorIconClass) => {
         let existing = api.getNoteWithLabel(tamFileIdLabel, tamFileId)
         if (existing && existing.isDeleted) existing = null
         if (existing) {
@@ -42,9 +50,9 @@ async function ensureAddonAnchor(addonId, addonName, localId, parentRealId) {
         const { note } = api.createTextNote(parentRealId, addonName, "")
         note.setLabel(tamFileIdLabel, tamFileId)
         note.setLabel("addonId", addonId)
-        note.setLabel("iconClass", "bx bx-customize")
+        note.setLabel("iconClass", anchorIconClass)
         return note.noteId
-    }, [tamFileIdLabel, tamFileId, addonId, addonName, parentRealId])
+    }, [tamFileIdLabel, tamFileId, addonId, addonName, parentRealId, anchorIconClass])
 }
 
 const databaseLabel = "database"
@@ -82,8 +90,21 @@ async function updateDatabase(mutate) {
 // one-section edit instead of a hunt through every reader.
 // =========================================================================
 
+// The whole installed-record map; loadDatabase guarantees it exists.
+function installedAddons(database) {
+    return database.installedAddons
+}
+
 function getRecord(database, addonId) {
-    return database.installedAddons[addonId]
+    return installedAddons(database)[addonId]
+}
+
+function setRecord(database, addonId, record) {
+    installedAddons(database)[addonId] = record
+}
+
+function deleteRecord(database, addonId) {
+    delete installedAddons(database)[addonId]
 }
 
 // The record's TAM-side bookkeeping (prompts and review baselines); undefined until first written.
@@ -186,12 +207,6 @@ function clearLog() {
 // Helpers: pure extractors, guards, and formatters for common patterns, with no side effects.
 // =========================================================================
 
-// Checks if a note's #TAMFILEID belongs to the specified addon.
-function isOwnTamFileId(note, addonId) {
-    const tamFileId = note.getOwnedLabelValue(tamFileIdLabel)
-    return tamFileId && tamFileId.startsWith(`${addonId}/`)
-}
-
 // Whether the sync leaves this note's content alone once it exists: a persistent
 // note holds the user's own data and a skipOnUpdate note (TAM's own live
 // database among them) keeps whatever it has. The audit pairs with this - a note
@@ -206,17 +221,6 @@ function contentIsFrozen(noteDef, persistentIds) {
 // the wiring the manifest declared.
 function attributeMatches(attr, name, value) {
     return (attr.name === name || attr.name === `disabled:${name}`) && attr.value === value
-}
-
-// Encodes a TAM file ID from addon ID and local note ID.
-function encodeTamFileId(addonId, localId) {
-    return `${addonId}/${localId}`
-}
-
-// Decodes a TAM file ID into [addonId, localId].
-function decodeTamFileId(tamFileId) {
-    const [addonId, ...rest] = tamFileId.split("/")
-    return [addonId, rest.join("/")]
 }
 
 // Extracts metadata fields from a manifest for storage in the database.
@@ -352,7 +356,6 @@ function stripManifestForStorage(m) {
         // Kept because resolvePrompt needs to find the schema and config notes
         // again, long after the sync that produced the prompt has finished.
         settings: m.settings || null,
-        hooks: m.hooks || null,
         allowExternalReferences: m.allowExternalReferences,
         children: m.children || []
     }
@@ -382,20 +385,42 @@ async function resolveAddonRootNoteId(addonId, storedManifest) {
     return await resolveStoredNoteId(addonId, storedManifest?.root ?? addonAnchorRootLocalId)
 }
 
-// Writes declared labels and relations onto already-resolved notes in one hop.
-// An attribute TAM has disabled lives under a `disabled:` name, and writing to
+// Writes declared titles, labels and relations onto notes in one hop. An
+// attribute TAM has disabled lives under a `disabled:` name, and writing to
 // that name is what keeps a disabled addon disabled across a re-sync.
+//
+// An action addresses its note by real `noteId` or by `tamFileId` (resolved
+// live); `value: null` removes the attribute; a relation's `targetTamFileId`
+// resolves live too, falling back to `value` as a raw note id. This is the one
+// attribute writer, shared by the sync and the metadata review's apply.
 async function applyAttributes(actions) {
     if (actions.length === 0) return
-    await api.runOnBackend((actions) => {
-        for (const { noteId, type, name, value, isInheritable } of actions) {
-            const note = api.getNote(noteId)
+    await api.runOnBackend((tamFileIdLabel, actions) => {
+        for (const action of actions) {
+            const { type, name, value, isInheritable } = action
+            let note = action.noteId
+                ? api.getNote(action.noteId)
+                : api.getNoteWithLabel(tamFileIdLabel, action.tamFileId)
+            if (!note || note.isDeleted) continue
+            if (type === "title") {
+                note.title = value
+                note.save()
+                continue
+            }
             const disabledName = `disabled:${name}`
             const isLabel = type === "label"
             const hasDisabled = isLabel ? note.hasOwnedLabel(disabledName) : note.hasRelation(disabledName)
             const targetName = hasDisabled ? disabledName : name
-            if (!isLabel) {
-                note.setRelation(targetName, value)
+            if (value === null) {
+                if (isLabel) note.removeLabel(targetName)
+                else note.removeRelation(targetName)
+            } else if (!isLabel) {
+                let target = value
+                if (action.targetTamFileId) {
+                    const targetNote = api.getNoteWithLabel(tamFileIdLabel, action.targetTamFileId)
+                    if (targetNote && !targetNote.isDeleted) target = targetNote.noteId
+                }
+                note.setRelation(targetName, target)
             } else if (isInheritable) {
                 note.removeLabel(targetName)
                 note.addLabel(targetName, value, true)
@@ -403,7 +428,7 @@ async function applyAttributes(actions) {
                 note.setLabel(targetName, value)
             }
         }
-    }, [actions])
+    }, [tamFileIdLabel, actions])
 }
 
 // One backend hop answering, for every declared note at once, which are already
@@ -828,9 +853,8 @@ async function getPendingPrompts(addonId) {
 }
 
 // `decision` is a plain boolean for a built-in whole-content prompt, or a
-// { [itemKey]: boolean } map for an item-level one — settings items TAM applies
-// itself, hook-produced items the addon's own hook applies, since only it knows
-// what an item means.
+// { [itemKey]: boolean } map for an item-level review kind, dispatched by the
+// prompt's `source` through the reviewKinds registry.
 async function resolvePrompt(addonId, noteLocalId, decision) {
     log("info", `${addonId}: applying your choices for '${noteLocalId}'`)
     const database = await loadDatabase()
@@ -838,20 +862,9 @@ async function resolvePrompt(addonId, noteLocalId, decision) {
     const prompt = (getPersistence(record)?.pendingPrompts || [])
         .find(p => p.noteLocalId === noteLocalId)
     if (!prompt) return
-    if (prompt.source === settingsPromptSource) {
-        await applySettingsSelections(addonId, record.manifest, decision || {})
-        return
-    }
-    if (prompt.source === metadataPromptSource) {
-        await applyMetadataSelections(addonId, prompt, decision || {})
-        return
-    }
-    if (prompt.items) {
-        await runHook(addonId, record.manifest?.hooks?.updateReview, {
-            phase: "apply",
-            noteLocalId,
-            selections: decision || {}
-        })
+    const kind = prompt.source && reviewKinds[prompt.source]
+    if (kind) {
+        await kind.apply(addonId, record, prompt, decision || {})
         return
     }
     if (!decision) return
@@ -862,6 +875,29 @@ async function resolvePrompt(addonId, noteLocalId, decision) {
 
 async function clearPendingPrompts(addonId) {
     await updateDatabase(database => setPendingPrompts(getRecord(database, addonId), []))
+}
+
+// =========================================================================
+// Review bookkeeping shared by every item-level review kind: where a kind's
+// "what shipped last time" baseline lives on the record, and the shape of the
+// pending-prompts entry its items become.
+// =========================================================================
+
+async function loadReviewBaseline(addonId, baselineKey) {
+    const database = await loadDatabase()
+    return getPersistence(getRecord(database, addonId))?.[baselineKey]
+}
+
+async function saveReviewBaseline(addonId, baselineKey, value) {
+    await updateDatabase(database => {
+        const record = getRecord(database, addonId)
+        if (record) ensurePersistence(record)[baselineKey] = value
+    })
+}
+
+// A pending-prompts entry for one review kind's item list; null when there is nothing to decide.
+function itemPrompt(source, noteLocalId, title, items) {
+    return items.length === 0 ? null : { noteLocalId, source, title, items }
 }
 
 // =========================================================================
@@ -1058,18 +1094,11 @@ async function loadSettingsState(addonId, m) {
     }
 }
 
-async function saveSettingsBaseline(addonId, shipped) {
-    await updateDatabase(database => {
-        const record = getRecord(database, addonId)
-        if (record) ensurePersistence(record).settingsBaseline = shipped
-    })
-}
-
 // First install: the user has customized nothing, so record where the defaults
 // stand and leave the first update with nothing to review.
 async function recordSettingsBaseline(addonId, m) {
     const state = await loadSettingsState(addonId, m)
-    if (state) await saveSettingsBaseline(addonId, state.shipped)
+    if (state) await saveReviewBaseline(addonId, "settingsBaseline", state.shipped)
 }
 
 // Runs after an update's notes are in place, so it reads the *new* schema
@@ -1079,13 +1108,12 @@ async function recordSettingsBaseline(addonId, m) {
 async function collectSettingsPrompt(addonId, m, title) {
     const state = await loadSettingsState(addonId, m)
     if (!state) return null
-    const database = await loadDatabase()
-    const baseline = getPersistence(getRecord(database, addonId))?.settingsBaseline
+    const baseline = await loadReviewBaseline(addonId, "settingsBaseline")
     // No baseline means this install predates the settings review: there is
     // genuinely no way to know which of its stored values were deliberate, so
     // record where things stand and review nothing this once.
     if (!isPlainObject(baseline)) {
-        await saveSettingsBaseline(addonId, state.shipped)
+        await saveReviewBaseline(addonId, "settingsBaseline", state.shipped)
         return null
     }
     if (adoptUnchangedDefaults(state.schema, state.stored, baseline, state.defaults)) {
@@ -1093,18 +1121,15 @@ async function collectSettingsPrompt(addonId, m, title) {
     }
     const items = settingsReviewItems(state.schema, state.stored, baseline, state.defaults)
     if (items.length === 0) {
-        await saveSettingsBaseline(addonId, state.shipped)
+        await saveReviewBaseline(addonId, "settingsBaseline", state.shipped)
         return null
     }
     // The baseline deliberately does not move here: it advances only once the
     // user has answered, so an update they never applied is asked about again
-    // rather than silently forgotten.
-    return {
-        noteLocalId: m.settings.config,
-        source: settingsPromptSource,
-        title,
-        items: items.map(({ key, label, current, incoming, defaultSelected }) => ({ key, label, current, incoming, defaultSelected }))
-    }
+    // rather than silently forgotten. `field`/`id` stay internal to this file,
+    // so the prompt carries only what the review screen renders.
+    return itemPrompt(settingsPromptSource, m.settings.config, title,
+        items.map(({ key, label, current, incoming, defaultSelected }) => ({ key, label, current, incoming, defaultSelected })))
 }
 
 // `true` for an item means "use the new default": it drops the user's override —
@@ -1115,8 +1140,7 @@ async function collectSettingsPrompt(addonId, m, title) {
 async function applySettingsSelections(addonId, m, selections) {
     const state = await loadSettingsState(addonId, m)
     if (!state) return
-    const database = await loadDatabase()
-    const baseline = getPersistence(getRecord(database, addonId))?.settingsBaseline
+    const baseline = await loadReviewBaseline(addonId, "settingsBaseline")
     if (isPlainObject(baseline)) {
         for (const item of settingsReviewItems(state.schema, state.stored, baseline, state.defaults)) {
             if (selections[item.key]) {
@@ -1137,7 +1161,7 @@ async function applySettingsSelections(addonId, m, selections) {
         }
         await writeJsonNote(state.configNoteId, state.stored)
     }
-    await saveSettingsBaseline(addonId, state.shipped)
+    await saveReviewBaseline(addonId, "settingsBaseline", state.shipped)
 }
 
 // =========================================================================
@@ -1252,8 +1276,7 @@ function metadataReviewItems(now, then, live) {
 // Runs *before* the sync rewrites anything. Returns a prompt entry (appended to
 // the pending prompts once the sync is done) or null when nothing moved.
 async function collectMetadataPrompt(addonId, m, title) {
-    const database = await loadDatabase()
-    const baseline = getPersistence(getRecord(database, addonId))?.metadataBaseline
+    const baseline = await loadReviewBaseline(addonId, "metadataBaseline")
     // No baseline means this install predates the metadata review: there is no
     // way to tell a user's rename from a declaration that has always been this
     // way, so record where things stand and review nothing this once.
@@ -1268,87 +1291,40 @@ async function collectMetadataPrompt(addonId, m, title) {
         }
     }
     const items = metadataReviewItems(declared, baseline, await liveMetadata(addonId, wanted))
-    if (items.length === 0) return null
-    return { noteLocalId: metadataPromptLocalId, source: metadataPromptSource, title, items }
+    return itemPrompt(metadataPromptSource, metadataPromptLocalId, title, items)
 }
 
 // `true` for an item makes the note match the manifest (including dropping a
 // label or relation the manifest no longer declares, which nothing else does);
-// `false` writes back what the note held before the update.
+// `false` writes back what the note held before the update. The writes go
+// through the same applyAttributes the sync uses.
 async function applyMetadataSelections(addonId, prompt, selections) {
-    const actions = (prompt.items || []).map(item => ({
-        localId: item.localId,
-        kind: item.kind,
-        name: item.name,
-        value: selections[item.key] ? item.incomingValue : item.currentValue
-    }))
-    await api.runOnBackend((tamFileIdLabel, addonId, actions) => {
-        for (const action of actions) {
-            const note = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${action.localId}`)
-            if (!note || note.isDeleted) continue
-            if (action.kind === "title") {
-                note.title = action.value
-                note.save()
-                continue
-            }
-            const disabledName = `disabled:${action.name}`
-            const isLabel = action.kind === "label"
-            const hasDisabled = isLabel ? note.hasOwnedLabel(disabledName) : note.hasRelation(disabledName)
-            const name = hasDisabled ? disabledName : action.name
-            if (action.value === null) {
-                if (isLabel) note.removeLabel(name)
-                else note.removeRelation(name)
-                continue
-            }
-            if (isLabel) {
-                note.setLabel(name, action.value)
-                continue
-            }
-            const target = api.getNoteWithLabel(tamFileIdLabel, `${addonId}/${action.value}`)
-            note.setRelation(name, target && !target.isDeleted ? target.noteId : action.value)
+    await applyAttributes((prompt.items || []).map(item => {
+        const value = selections[item.key] ? item.incomingValue : item.currentValue
+        return {
+            tamFileId: `${addonId}/${item.localId}`,
+            type: item.kind,
+            name: item.name,
+            value,
+            // Stored as the manifest states it: a local id of this addon
+            // resolves live, anything else passes through as a raw note id.
+            targetTamFileId: item.kind === "relation" && value !== null ? `${addonId}/${value}` : null
         }
-    }, [tamFileIdLabel, addonId, actions])
+    }))
 }
 
 // =========================================================================
-// Hooks: the addon-declared lifecycle scripts (manifest `hooks`) TAM executes at install/update/uninstall points.
+// Review kinds: one registry entry per item-level prompt `source`, giving the
+// Update Review a single dispatch point. A prompt with no source is the
+// built-in whole-content diff, applied inline by resolvePrompt.
 // =========================================================================
 
-const hookContextLabel = "tamHookContext"
-
-// Runs one hook note and returns whatever it returned.
-//
-// FNote.executeScript() takes no arguments and only yields a return value for a
-// *frontend* note (a backend one is POSTed to the server and its result thrown
-// away), so context goes in on a temporary label and `validate` requires hooks
-// to be frontend JS/JSX — backend work is still reachable through the hook's own
-// api.runOnBackend. executeScript() is independent of the #run labels
-// enableAddon toggles, so hooks fire on a disabled addon too, which postInstall
-// (a fresh install is left disabled) and preUninstall both depend on.
-//
-// Never fatal: a hook that throws is swallowed by Trilium's own bundle error
-// handling and arrives here as undefined, and every caller treats an
-// unusable return the same as a hook that was never declared.
-async function runHook(addonId, localId, context) {
-    if (!localId || addonId === TAM_ID) return undefined
-    const noteId = await resolveStoredNoteId(addonId, localId)
-    if (!noteId) {
-        log("warn", `${addonId}: hook note '${localId}' did not resolve`)
-        return undefined
-    }
-    await api.runOnBackend((noteId, name, value) => {
-        api.getNote(noteId).setLabel(name, value)
-    }, [noteId, hookContextLabel, JSON.stringify({ addonId, ...context })])
-    try {
-        const note = await api.getNote(noteId)
-        return await note.executeScript()
-    } catch (e) {
-        log("error", `${addonId}: hook '${localId}' failed - ${e.message}`)
-        return undefined
-    } finally {
-        await api.runOnBackend((noteId, name) => {
-            api.getNote(noteId).removeLabel(name)
-        }, [noteId, hookContextLabel])
+const reviewKinds = {
+    [settingsPromptSource]: {
+        apply: (addonId, record, prompt, selections) => applySettingsSelections(addonId, record.manifest, selections)
+    },
+    [metadataPromptSource]: {
+        apply: (addonId, record, prompt, selections) => applyMetadataSelections(addonId, prompt, selections)
     }
 }
 
@@ -1399,31 +1375,21 @@ async function resolveAnchors(addonId, addonName, isSelf, hasPersistence) {
     return anchors
 }
 
-// The update tail, after the notes are in place: the postUpdate hook, then the
-// review collectors, then one merge into the record's pending prompts.
-//
-// An addon shipping its own updateReview hook replaces the whole-content diffs
-// collected before the sync with its own item list. It runs here, after
-// postUpdate, so it reads its own updated code against already-migrated data.
-// Anything other than an array (a hook that threw, or returned junk) leaves the
-// built-in diffs in place as the fallback; an empty array is a real answer and
-// clears them. The settings and metadata entries are *additive* on top of
-// either outcome, so an addon that also ships persistent content notes keeps
-// its whole-file diffs alongside them.
-async function runPostSyncReviews(addonId, m, title, metadataPrompt, hookContext) {
-    await runHook(addonId, m.hooks?.postUpdate, { phase: "postUpdate", ...hookContext })
-    const hookItems = m.hooks?.updateReview
-        ? await runHook(addonId, m.hooks.updateReview, { phase: "collect", ...hookContext })
-        : null
+// The update tail, after the notes are in place: the review collectors, then
+// one merge into the record's pending prompts. The settings and metadata
+// entries are *additive* alongside the whole-content diffs collected before
+// the sync, each replacing only a prior entry of its own `source`.
+async function runPostSyncReviews(addonId, m, title, metadataPrompt) {
     // Settings review runs last, against notes the sync has already replaced.
     const settingsPrompt = await collectSettingsPrompt(addonId, m, title)
     const extraPrompts = [metadataPrompt, settingsPrompt].filter(Boolean)
-    if (!Array.isArray(hookItems) && extraPrompts.length === 0) return
+    if (extraPrompts.length === 0) return
     await updateDatabase(database => {
         const record = getRecord(database, addonId)
-        let prompts = Array.isArray(hookItems) ? hookItems : (getPersistence(record)?.pendingPrompts || [])
         const replacedSources = new Set(extraPrompts.map(p => p.source))
-        prompts = [...prompts.filter(p => !replacedSources.has(p.source)), ...extraPrompts]
+        const prompts = (getPersistence(record)?.pendingPrompts || [])
+            .filter(p => !replacedSources.has(p.source))
+            .concat(extraPrompts)
         setPendingPrompts(record, prompts)
     })
 }
@@ -1476,7 +1442,7 @@ async function syncAddon(addonId, options = {}) {
     const noteHashes = recordedNoteHashes(m, noteMap, storedNoteHashes)
     // One record shape for fresh install and update alike: the spread carries an
     // update's prior persistence and flags through, a fresh install starts them.
-    database.installedAddons[addonId] = {
+    setRecord(database, addonId, {
         ...(existing || {}),
         installedVersion: manifest.latestVersion,
         contentHash,
@@ -1488,7 +1454,7 @@ async function syncAddon(addonId, options = {}) {
         // Pure user intent: only ever promoted, never reset by a maintenance sync.
         manuallyInstalled: manual || isSelf || !!existing?.manuallyInstalled,
         enabled: wasInstalled ? !!existing.enabled : isSelf
-    }
+    })
     const record = getRecord(database, addonId)
     if (pendingPrompts.length > 0) ensurePersistence(record).pendingPrompts = pendingPrompts
     // The metadata baseline advances here rather than when the user answers: the
@@ -1498,13 +1464,11 @@ async function syncAddon(addonId, options = {}) {
     log("done", `${addonId}: ${wasInstalled ? "updated to" : "installed at"} v${manifest.latestVersion}`)
     if (!wasInstalled && !isSelf) await enableAddon(addonId, false)
     if (isSelf) return
-    const hookContext = { previousVersion, newVersion: manifest.latestVersion }
     if (!wasInstalled) {
         await recordSettingsBaseline(addonId, m)
-        await runHook(addonId, m.hooks?.postInstall, { phase: "postInstall", ...hookContext })
         return
     }
-    await runPostSyncReviews(addonId, m, meta.name || addonId, metadataPrompt, hookContext)
+    await runPostSyncReviews(addonId, m, meta.name || addonId, metadataPrompt)
 }
 
 // Installs by manifestSourceUrl alone — the caller doesn't need to know the addon's id.
@@ -1561,7 +1525,7 @@ async function enableAddon(addonId, enabled) {
 async function getAllAddons() {
     let database = await loadDatabase()
     const lookups = []
-    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+    for (const [addonId, addon] of Object.entries(installedAddons(database))) {
         if (!addon.installedVersion || !addon.manifest) continue
         lookups.push({ addonId, rootLocalId: addon.manifest.root ?? addonAnchorRootLocalId, settingsLocalId: addon.manifest.settingsNote })
     }
@@ -1581,7 +1545,7 @@ async function getAllAddons() {
     // UI renders, so the record's internals (stored manifest, hashes, prompt
     // bookkeeping) never leak into the view layer.
     const addons = {}
-    for (const [addonId, addon] of Object.entries(database.installedAddons || {})) {
+    for (const [addonId, addon] of Object.entries(installedAddons(database))) {
         if (!addon.installedVersion) continue
         addons[addonId] = {
             id: addonId,
@@ -1612,7 +1576,7 @@ async function getAllAddons() {
  */
 async function checkForAddonUpdates() {
     let database = await loadDatabase()
-    const installed = database.installedAddons || {}
+    const installed = installedAddons(database)
     log("step", `checking ${Object.keys(installed).length} installed addon(s) for updates`)
     await Promise.all(Object.entries(installed).map(async ([addonId, addon]) => {
         if (!addon.installedVersion || !addon.manifestSourceUrl) return
@@ -2018,7 +1982,7 @@ async function diagnose() {
     await auditUnownedNotes(rows)
     // Audited concurrently - the manifest refetch dominates each addon's audit -
     // with every addon appending to its own list, so row order stays stable.
-    const installed = Object.entries(database.installedAddons || {})
+    const installed = Object.entries(installedAddons(database))
         .filter(([, addon]) => addon.installedVersion)
     const addonRows = await Promise.all(installed.map(async ([addonId, addon]) => {
         const own = []
@@ -2153,7 +2117,7 @@ async function findOrphanedNotes() {
 // either untagged, or tagged for an addon that isn't installed any more.
 async function findInvalidAddonTreeNotes() {
     const database = await loadDatabase()
-    const installedIds = Object.keys(database.installedAddons || {})
+    const installedIds = Object.keys(installedAddons(database))
     const addonsRootId = await getAddonRootNoteId()
     if (!addonsRootId) return []
     return await api.runOnBackend((tamFileIdLabel, addonsRootId, installedIds) => {
@@ -2237,7 +2201,7 @@ async function deleteAddon(addonId, options = {}) {
         ? []
         : [...persistentLocalIds(addonRecord?.manifest || {}), addonAnchorPersistenceLocalId]
     await detachAddonOwnedBranches(addonId, persistentIds)
-    delete database.installedAddons[addonId]
+    deleteRecord(database, addonId)
     await saveDatabase(database)
     log("done", `${addonId}: uninstalled`)
 }
@@ -2277,13 +2241,6 @@ async function uninstallAddon(addonId, options = {}) {
     const record = getRecord(database, addonId)
     if (!record?.installedVersion) return
     log("step", `${addonId}: uninstalling${deleteData ? " and deleting its saved data" : " (saved data kept)"}`)
-    // Runs while every note this addon owns is still in place, and is told
-    // whether its data is about to go with them.
-    await runHook(addonId, record.manifest?.hooks?.preUninstall, {
-        phase: "preUninstall",
-        version: record.installedVersion,
-        deleteData
-    })
     await deleteAddon(addonId, { deleteData })
 }
 
@@ -2296,7 +2253,7 @@ async function hasPersistentData(addonId) {
 // Recovery tool: uninstalls every addon except TAM itself, then hard-resets the Database note to just its catalogs and a bare TAM entry.
 async function reinitializeDatabase() {
     let database = await loadDatabase()
-    const doomed = Object.keys(database.installedAddons || {}).filter(id => id !== TAM_ID)
+    const doomed = Object.keys(installedAddons(database)).filter(id => id !== TAM_ID)
     log("step", `reinitializing: uninstalling ${doomed.length} addon(s) and clearing TAM's own install state`)
     for (const addonId of doomed) {
         await uninstallAddon(addonId)
@@ -2358,3 +2315,4 @@ module.exports.log = log
 module.exports.subscribeToLog = subscribeToLog
 module.exports.getLogEntries = getLogEntries
 module.exports.clearLog = clearLog
+module.exports.TYPE_COLORS = TYPE_COLORS

@@ -26,16 +26,9 @@ const libTAMjs = require("lib-tam.js")
 // type-color palette, command labels, and the useAddonFilter hook.
 // =========================================================================
 
-// Same palette as tamhelper.js's TYPE_COLORS, so TAM's own UI matches the
-// GitHub Pages catalog's badge colors exactly.
-const TYPE_COLORS = {
-    widget: "#2563eb",
-    theme: "#7c3aed",
-    css: "#059669",
-    script: "#d97706",
-    library: "#0891b2",
-    template: "#be185d"
-}
+// The shared palette from tam-manifest-model.js (via lib-tam.js), so TAM's own
+// UI matches the GitHub Pages catalog's badge colors by construction.
+const TYPE_COLORS = libTAMjs.TYPE_COLORS
 
 const TAM_ID = "trilium-addon-manager@beatlink"
 
@@ -327,14 +320,14 @@ function useAddonFilter(items) {
 // dangling-references/delete-my-data questions asked before an uninstall.
 // =========================================================================
 
-// A hook-produced item's values are arbitrary JSON, not necessarily strings.
+// An item's values are arbitrary JSON, not necessarily strings.
 function formatPromptValue(value) {
     return typeof value === "string" ? value : JSON.stringify(value, null, 2)
 }
 
-// One prompt is either a whole-note content diff (TAM's built-in producer, one
-// boolean decision) or a list of items an addon's own updateReview hook produced
-// (one boolean per item key). Both render as the same Keep Mine / Use New pair.
+// One prompt is either a whole-note content diff (one boolean decision) or an
+// item-level review kind's list (one boolean per item key). Both render as the
+// same Keep Mine / Use New pair.
 function PromptChoice({ selected, onSelect, current, incoming }) {
     return (
         <div className="TAM-prompt-options">

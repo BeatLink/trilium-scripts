@@ -9,7 +9,7 @@ Browse available addons at **https://beatlink.github.io/trilium-scripts/**
 > explore only — do not use it to manage real/production Trilium data yet.
 >
 > **7.0.0 breaks in-place updates from 6.x.** Addons are now installed from published manifests (see
-> [Publishing](ARCHITECTURE.md#publishing)); the raw manifests a 6.x install points at no longer carry absolute
+> [Publishing](docs/ARCHITECTURE.md#publishing)); the raw manifests a 6.x install points at no longer carry absolute
 > URLs, which a 6.x client cannot resolve. Reinstall TAM from the
 > [latest release](https://github.com/BeatLink/trilium-scripts/releases/latest) ZIP — every note is
 > re-adopted by its `#TAMFILEID`, so nothing is duplicated and persisted data is untouched — and
@@ -17,9 +17,9 @@ Browse available addons at **https://beatlink.github.io/trilium-scripts/**
 
 ## Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — how TAM works: its own note tree, note identity, the
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** — how TAM works: its own note tree, note identity, the
   Database record, the sync/publish pipeline, persistence, and the update review.
-- **[MANIFEST.md](MANIFEST.md)** — the `_tam_manifest_.json` format, the catalog format, and the
+- **[MANIFEST.md](docs/MANIFEST.md)** — the `_tam_manifest_.json` format, the catalog format, and the
   `tamhelper.js` toolchain that builds and publishes both.
 
 ---
@@ -47,14 +47,14 @@ thing that could otherwise fix it.
   detail view; clicking a not-yet-installed one shows an **Install** button.
 - **Catalog browse view** — fetches a specific catalog's `tam-addons[]` list and every manifest it
   points at, fresh, every time (nothing about a catalog's contents is ever cached — see
-  [The Database Record](ARCHITECTURE.md#the-database-record)). Not-yet-installed entries show an **Install** button;
+  [The Database Record](docs/ARCHITECTURE.md#the-database-record)). Not-yet-installed entries show an **Install** button;
   already-installed ones open the normal detail view instead. Reached via the **Browse** button on
   that catalog's row in the Settings view, not from the main list.
 - **Addon detail view** — one page per addon (mirroring `resources/docs/{addon-id}/index.html`): a sticky
   sidebar with the addon's metadata table and full action set (Home Page, Install/Delete,
   Enable/Disable, Settings, Update), and a main panel with the description and — for
   installed addons that declare a `readmeNote` — the addon's own README rendered from its locally
-  installed note (see [`readmeNote`](MANIFEST.md#readmenote-optional)), no network fetch required.
+  installed note (see [`readmeNote`](docs/MANIFEST.md#readmenote-optional)), no network fetch required.
 - **Settings view** — TAM's own housekeeping page, built manually (no `libsettings@beatlink`
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
   data, addons with an update available), catalog management (each catalog's row has **Browse**,
@@ -73,7 +73,7 @@ thing that could otherwise fix it.
   silently — a persistent note that differs still goes through the usual Keep Mine / Use New prompt.
   An addon whose source has gone unreachable offers **Uninstall** alongside the repoint, and that
   goes through the normal uninstall flow, so you're still asked about dangling references and saved
-  data. See [Diagnostics](ARCHITECTURE.md#diagnostics).
+  data. See [Diagnostics](docs/ARCHITECTURE.md#diagnostics).
 - **Activity log** — a full-screen page recording every operation, in place of the old blocking
   spinner overlay: each note installed, each prompt queued, each update check, each repair. It
   **opens itself whenever something starts running** so you can watch it work, and says so in its
