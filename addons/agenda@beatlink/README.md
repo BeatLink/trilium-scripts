@@ -125,6 +125,15 @@ Task edits (if [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) is in
 [`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) subscribes and re-files the
 overview note live.
 
+## Upgrading from 11.x
+
+Version 12.0.0 hands the iCal feed note to
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md), the addon that writes it. This
+addon no longer ships a `calendar.ical` note and its Settings note no longer carries an `~icalNote`
+relation. Update both addons together: while agenda is on 12.0.0 and the Overview is still on 1.x the
+feed note is gone and `custom/agendaCalendar.ical` returns nothing. Once the Overview is on 2.0.0 the
+URL is unchanged and the feed refills on its next refresh.
+
 ## Upgrading from 7.x
 
 Version 8.0.0 finishes the split started in 4.0.0: this addon no longer references
@@ -173,7 +182,6 @@ Sources are grouped by kind, and note titles match the file names:
 | `ui/` | `Settings.jsx` (the Agenda Settings page), `settings.css` |
 | `lib/` | `settings.js` — `getAgendaSettings()`, the reader every agenda addon uses; `dimensions.js`; `migrate.js` |
 | `config/` | `schema.json`, `defaults.json` |
-| `static/` | `calendar.ical` — the seed body of the iCal feed note the Overview widget writes |
 
 `lib/settings.js` and `lib/dimensions.js` are also pulled by
 [`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) through relative `sourceUrl`s, so

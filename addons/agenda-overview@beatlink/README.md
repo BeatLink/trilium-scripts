@@ -20,8 +20,8 @@ On every note, and on each `agenda:tasksChanged` event (broadcast by
 - sorts and prefixes the matching notes per the display elements the profile references;
 - re-files them as clones under the profile's overview note, so opening that note shows the current
   list in whichever collection view is configured;
-- regenerates the iCal feed note (`#customResourceProvider agendaCalendar.ical`, served from
-  `agenda@beatlink`) from the same list.
+- regenerates the iCal feed note it ships (`#customResourceProvider agendaCalendar.ical`, served at
+  `custom/agendaCalendar.ical`) from the same list, finding it by that label.
 
 The widget itself offers the profile picker, the collection-view picker, and a link through to the
 Agenda Settings page.
@@ -40,6 +40,7 @@ Sources are grouped by kind, and note titles match the file names:
 | ------ | ----- |
 | `ui/` | `Overview.jsx` (the right-pane widget), `Collapsible.jsx`, `overview.css` |
 | `lib/` | `overview.js` (re-filing and the iCal write), `query.js` (search + filter + sort), `config.js` (the derived display elements) |
+| `static/` | `calendar.ical` — the seed body of the iCal feed note |
 
 `lib/` additionally carries copies of `agenda@beatlink`'s `settings.js`, `dimensions.js` and
 `migrate.js`, pulled through relative `sourceUrl`s: Trilium

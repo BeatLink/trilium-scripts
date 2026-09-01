@@ -164,7 +164,7 @@ async function computeStatuses(dateRules, groupingInfo, noteIds) {
     return { statusByNote, columns: columns.map(column => column.display) }
 }
 
-async function updateTaskLists(profileContext, constants, icalNoteId) {
+async function updateTaskLists(profileContext, constants) {
     const data = await loadData(profileContext.schemaNoteId, profileContext.configNoteId)
     const profile = await getActiveProfile(profileContext)
     if (!profile) return
@@ -201,7 +201,7 @@ async function updateTaskLists(profileContext, constants, icalNoteId) {
         await api.reloadNotes([overviewNoteId, ...sortedNotes])
     }
 
-    await setCalendarEvents(profileContext, constants, icalNoteId)
+    await setCalendarEvents(profileContext, constants)
 }
 
 async function sendNotificationForDueTasks(profileContext, constants) {
@@ -215,7 +215,13 @@ async function sendNotificationForDueTasks(profileContext, constants) {
     }
 }
 
-async function setCalendarEvents(profileContext, constants, icalNoteId) {
+// The feed note ships with this addon, found by the resource label Trilium routes
+// /custom/agendaCalendar.ical to - unique by construction, since two notes
+// claiming one path would break the route.
+async function setCalendarEvents(profileContext, constants) {
+    const [icalNote] = await api.searchForNotes('#customResourceProvider = "agendaCalendar.ical"')
+    if (!icalNote) return
+
     const taskIds = await getTaskList(profileContext)
     const notes = await Promise.all(taskIds.map(taskId => api.getNote(taskId)))
     const icalString = generateCalendar(notes, {
@@ -225,7 +231,7 @@ async function setCalendarEvents(profileContext, constants, icalNoteId) {
     })
     await api.runOnBackend((icalNoteId, icalString) => {
         api.getNote(icalNoteId).setContent(icalString, { forceSave: true })
-    }, [icalNoteId, icalString])
+    }, [icalNote.noteId, icalString])
 }
 
 // Appends a task reference to the My Day note (once), optionally as a todo item.

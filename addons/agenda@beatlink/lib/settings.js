@@ -1,6 +1,6 @@
 // The values every agenda widget reads. The #agendaConfig label and the
-// schemaNote/configNote/icalNote relations sit on the Settings note, which is
-// the anchor this resolves through at runtime.
+// schemaNote/configNote relations sit on the Settings note, which is the
+// anchor this resolves through at runtime.
 //
 // CommonJS, and separate from the page that edits these values, because
 // agenda-overview@beatlink ships its own copy of this file and has no use for
@@ -17,7 +17,6 @@ async function getAgendaSettings() {
 
     const schemaNoteId = anchor.getRelationValue("schemaNote")
     const configNoteId = anchor.getRelationValue("configNote")
-    const icalNoteId = anchor.getRelationValue("icalNote") || ""
     if (!schemaNoteId || !configNoteId) return null
 
     // Bring an older install's persisted config up to the current shape before
@@ -50,7 +49,7 @@ async function getAgendaSettings() {
     // time; dimensions.js owns the shape.
     const dimensions = normalizeDimensions(settings)
 
-    return { constants, profileContext, dimensions, schemaNoteId, configNoteId, icalNoteId }
+    return { constants, profileContext, dimensions, schemaNoteId, configNoteId }
 }
 
 module.exports = { getAgendaSettings }

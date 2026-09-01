@@ -126,8 +126,8 @@ function AgendaOverviewWidgetJSX() {
         (async () => {
             const settings = await getAgendaSettings()
             if (!settings) return
-            const { constants, profileContext, icalNoteId } = settings
-            setIds({ constants, profileContext, icalNoteId })
+            const { constants, profileContext } = settings
+            setIds({ constants, profileContext })
         })()
     }, [])
 
@@ -137,14 +137,14 @@ function AgendaOverviewWidgetJSX() {
         setProfile(newProfile)
         setProfiles(ps => (ps || []).map(p => p.id === newProfile.id ? newProfile : p))
         saveProfile(newProfile)
-        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+        updateTaskLists(ids.profileContext, ids.constants)
     }
 
     const switchProfile = async (id) => {
         setProfileId(id)
         await setActiveProfile(ids.profileContext, id)
         ids.profileContext.activeProfileId = id
-        await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+        await updateTaskLists(ids.profileContext, ids.constants)
     }
 
     useEffect(() => {
@@ -162,13 +162,13 @@ function AgendaOverviewWidgetJSX() {
             const allProfiles = await getAllProfiles(ids.profileContext)
             setProfiles(allProfiles)
             setProfileId(active.id)
-            await updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+            await updateTaskLists(ids.profileContext, ids.constants)
         })()
     }, [noteId, ids])
 
     useTriliumEvent("agenda:tasksChanged", () => {
         if (!ids) return
-        updateTaskLists(ids.profileContext, ids.constants, ids.icalNoteId)
+        updateTaskLists(ids.profileContext, ids.constants)
     })
 
     useEffect(() => {

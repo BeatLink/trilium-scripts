@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.1.0",
+    "latestVersion": "2.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",
@@ -21,6 +21,13 @@
             {
                 "id": "grp-lib",
                 "title": "lib",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-static",
+                "title": "static",
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
@@ -87,6 +94,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "../agenda@beatlink/lib/migrate.js"
+            },
+            {
+                "id": "ical",
+                "title": "calendar.ical",
+                "type": "code",
+                "mime": "text/plain",
+                "sourceUrl": "static/calendar.ical"
             },
             {
                 "id": "readme",
@@ -164,6 +178,10 @@
             },
             {
                 "parent": "root",
+                "child": "grp-static"
+            },
+            {
+                "parent": "root",
                 "child": "readme"
             },
             {
@@ -201,6 +219,10 @@
             {
                 "parent": "grp-lib",
                 "child": "migrate"
+            },
+            {
+                "parent": "grp-static",
+                "child": "ical"
             },
             {
                 "parent": "overview",
@@ -298,12 +320,22 @@
                 "value": "libIcal.js"
             },
             {
+                "note": "ical",
+                "name": "customResourceProvider",
+                "value": "agendaCalendar.ical"
+            },
+            {
                 "note": "grp-ui",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
             {
                 "note": "grp-lib",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-static",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
@@ -349,6 +381,11 @@
             },
             {
                 "note": "migrate",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "ical",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

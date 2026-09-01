@@ -5,20 +5,13 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "11.0.0",
+    "latestVersion": "12.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [
-            {
-                "id": "grp-static",
-                "title": "static",
-                "type": "text",
-                "mime": "text/html",
-                "sourceUrl": null
-            },
             {
                 "id": "grp-config",
                 "title": "config",
@@ -81,13 +74,6 @@
                 "type": "text",
                 "mime": "text/html",
                 "sourceUrl": null
-            },
-            {
-                "id": "ical",
-                "title": "calendar.ical",
-                "type": "code",
-                "mime": "text/plain",
-                "sourceUrl": "static/calendar.ical"
             },
             {
                 "id": "settings-page",
@@ -221,16 +207,8 @@
                 "child": "settings"
             },
             {
-                "parent": "grp-static",
-                "child": "ical"
-            },
-            {
                 "parent": "root",
                 "child": "grp-config"
-            },
-            {
-                "parent": "root",
-                "child": "grp-static"
             },
             {
                 "parent": "settings-ui",
@@ -269,11 +247,6 @@
                 "to": "schema"
             },
             {
-                "from": "settings",
-                "type": "icalNote",
-                "to": "ical"
-            },
-            {
                 "from": "settings-page",
                 "type": "renderNote",
                 "to": "settings-ui"
@@ -285,11 +258,6 @@
             }
         ],
         "labels": [
-            {
-                "note": "ical",
-                "name": "customResourceProvider",
-                "value": "agendaCalendar.ical"
-            },
             {
                 "note": "settings-css",
                 "name": "appCss",
@@ -341,11 +309,6 @@
                 "value": "bx bx-task"
             },
             {
-                "note": "ical",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
                 "note": "settings-page",
                 "name": "iconClass",
                 "value": "bx bx-task"
@@ -367,11 +330,6 @@
             },
             {
                 "note": "grp-config",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "grp-static",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },
