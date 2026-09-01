@@ -38,7 +38,7 @@
     "dimensions": {
         "type": "registry",
         "label": "Dimensions",
-        "description": "The classification axes notes are tagged with. Each dimension is one note label plus its ordered vocabulary of values. Adding a dimension here gives you a triage queue and a picker on the Organize page, with no code change. Value order is this list's order, so reordering never rewrites a tagged note. agenda@beatlink keeps its own separate registry for the Overview's derived display elements; the two never read each other.",
+        "description": "The classification axes notes are tagged with. Each dimension is one note label plus its ordered vocabulary of values. Adding a dimension here gives you a triage queue and a picker on the Organize page, with no code change. Value order is this list's order, so reordering never rewrites a tagged note. agenda-overview@beatlink keeps its own separate registry for the Overview's derived display elements; the two never read each other.",
         "category": "Dimensions",
         "tab": "Dimensions",
         "itemSchema": {

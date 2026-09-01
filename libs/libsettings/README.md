@@ -512,8 +512,8 @@ the full schema still edits elsewhere:
 `only` is a display filter, not a schema subset — every field is still loaded, merged, and persisted,
 so a change here writes the whole document like any other save. The Save button appears when the
 *visible* tab has fields (so an embedded single-tab panel gets its own Save). See
-[`agenda@beatlink`](../agenda@beatlink/)'s `organizeTemplates.jsx` (the Organize page's Templates tab),
-which pairs `only` with `onSaved` to apply derived labels after each save.
+[`agenda-organize@beatlink`](../../addons/agenda-organize@beatlink/)'s `organizeDimensions.jsx`, which
+renders the Dimensions tab on its own inside the Organize Editor.
 
 #### `onSaved` — a post-save hook
 

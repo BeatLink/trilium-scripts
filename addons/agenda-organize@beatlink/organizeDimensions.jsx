@@ -11,7 +11,7 @@ const { getOrganizeConfigIds } = require("organizeSettings.js")
 // template-picker@beatlink's own registry (its ~template relation, not a #type
 // label), so there is no "Match Templates By Name" step on this panel.
 //
-// agenda@beatlink keeps its own separate registry of the same shape for the
+// agenda-overview@beatlink keeps its own separate registry of the same shape for the
 // Overview's derived prefix/color/grouping/filter variants. The two are edited
 // independently and neither addon reads the other's config note, so a vocabulary
 // you want in both places is entered in both places.
@@ -49,7 +49,7 @@ export function DimensionsPanel() {
                 one. Renaming its <strong>Name</strong> or reordering the list is safe. A dimension
                 that <strong>scaffolds a root note per value</strong> (Area) shapes the notebook
                 roots the queues expect. Item type is assigned via template-picker@beatlink's own widget,
-                not a dimension here. agenda@beatlink's Overview reads its own separate dimensions
+                not a dimension here. agenda-overview@beatlink reads its own separate dimensions
                 registry, so a change here does not reach it.
             </p>
             <SettingsForm

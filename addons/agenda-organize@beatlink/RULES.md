@@ -83,7 +83,7 @@ Rule ids (`S1`, `Q2`, …) are for referring to them later; they carry no meanin
 | id | Rule |
 |----|------|
 | C1 | Own settings note, tagged `#agendaOrganizeConfig`, holds three things: `organizeNoteId`, the four quick-times (`morning` 08:00, `noon` 12:00, `evening` 17:00, `night` 20:00) and the `dimensions` registry. |
-| C2 | The classification `dimensions` registry is owned **here**. `agenda@beatlink` declares its own separate registry of the same shape for the Overview's derived display elements; neither addon reads the other's config note, and the two vocabularies are free to diverge. |
+| C2 | The classification `dimensions` registry is owned **here**. `agenda-overview@beatlink` declares its own separate registry of the same shape for the Overview's derived display elements; neither addon reads the other's config note, and the two vocabularies are free to diverge. |
 | C3 | Item **type** is not a dimension — it is read out of template-picker's registry via `#templatePickerConfig`. |
 | C4 | That one cross-addon read degrades gracefully: a missing registry means an empty vocabulary and empty queues, never a crash. |
 

@@ -1,11 +1,11 @@
 {
     "id": "agenda-task@beatlink",
     "name": "Agenda Task",
-    "description": "The Task widget from agenda@beatlink, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Recurrence is edited in a popover behind a button that reads the rule back in plain English; the other sections are collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which agenda declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
+    "description": "The Task widget from the original agenda addon, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Recurrence is edited in a popover behind a button that reads the rule back in plain English; the other sections are collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda-overview@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which the Overview declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.4.4",
+    "latestVersion": "3.4.5",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",

@@ -5,12 +5,13 @@
 //
 // The classification axes the Overview renders by. A "dimension" is one note
 // label plus its ordered vocabulary of values — area and priority ship as
-// defaults, but the set is open-ended: anything registered in agenda's
+// defaults, but the set is open-ended: anything registered in this addon's
 // `dimensions` config gets a sort ordinal and a derived prefix/color/grouping/
 // filter variant, with no code change.
 //
-// This registry lives in agenda's own #agendaConfig note. agenda-organize@beatlink
-// keeps a separate registry of the same shape in #agendaOrganizeConfig, for its
+// This registry lives in this addon's own #agendaOverviewConfig note.
+// agenda-organize@beatlink keeps a separate registry of the same shape in
+// #agendaOrganizeConfig, for its
 // triage queues and the flags only they need (triage, actionableOnly,
 // scaffoldsAreas, writeColor). The two are independent and free to diverge:
 // neither addon reads the other's config note, and assigning a value to a note is
@@ -45,11 +46,11 @@ function normalizeDimensions(settings) {
         }))
 }
 
-// Resolve agenda's own settings note ids, the same #agendaConfig discovery
-// settings.js does; duplicated here to keep this module free of a require() on
-// the .jsx tree — it loads in every widget.
+// Resolve this addon's own settings note ids, the same #agendaOverviewConfig
+// discovery settings.js does; duplicated here to keep this module free of a
+// require() on the .jsx tree — it loads in every widget.
 async function getDimensionConfigIds() {
-    const anchors = await api.searchForNotes("#agendaConfig")
+    const anchors = await api.searchForNotes("#agendaOverviewConfig")
     if (!anchors.length) return null
     const anchor = anchors[0]
     const schemaNoteId = anchor.getRelationValue("schemaNote")
@@ -58,7 +59,7 @@ async function getDimensionConfigIds() {
     return { schemaNoteId, configNoteId }
 }
 
-// The registered dimensions, in config order. Returns [] when agenda's config
+// The registered dimensions, in config order. Returns [] when the config note
 // isn't discoverable, so callers degrade to "no dimensions" rather than throw.
 async function getDimensions() {
     const ids = await getDimensionConfigIds()

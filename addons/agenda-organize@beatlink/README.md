@@ -1,6 +1,6 @@
 # Agenda Organize
 
-The opinionated GTD Organize workflow, split out of `agenda@beatlink` into its own addon: the
+The opinionated GTD Organize workflow, split out of the original agenda addon into its own addon: the
 **Organize** render page and the **Organize Editor** settings page. It bakes a specific triage flow
 on top of agenda's generic engine,
 driven by the open-ended **dimensions** vocabulary (area, priority, and any you add) plus
@@ -14,8 +14,9 @@ This addon owns its own settings note (`organizeSchema.json` / `organizeConfig.j
 registry. Everything is edited from the **Organize Editor** page.
 
 The **`dimensions`** registry lives in that same note, so nothing here reads another addon's
-configuration. [`agenda@beatlink`](../agenda@beatlink/README.md) keeps its own separate registry of the
-same shape in `#agendaConfig`, for the Overview's derived prefix/color/grouping/filter variants and its
+configuration. [`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) keeps its own
+separate registry of the same shape in `#agendaOverviewConfig`, for the Overview's derived
+prefix/color/grouping/filter variants and its
 sort ordinals. The two are edited independently and are free to diverge: a vocabulary you want in both
 places is entered in both places.
 
@@ -60,7 +61,8 @@ priority ship as defaults, but the set is open-ended. The triage queues enumerat
 dimensions, so adding one needs no code change. `key` is the stored value (stable and order-free, so
 reordering never rewrites a tagged note); position IS the order.
 
-`agenda@beatlink` declares a registry of the same shape in its own `#agendaConfig`, minus the four
+`agenda-overview@beatlink` declares a registry of the same shape in its own `#agendaOverviewConfig`,
+minus the four
 Organize-only flags below, for the Overview's sort ordinals and derived display elements. Neither addon
 reads the other's config note.
 

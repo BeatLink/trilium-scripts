@@ -87,10 +87,10 @@ sort by name until you run **Reapply order** once.
 
 What the prefix does break is anything of your own that matches the exact value: a saved search or
 exclude filter written as `#area = career` wants `#area %= '\d+-career'` (or just `#area *= career`),
-and other addons that read `#area` see the new value too. `agenda@beatlink` is the one to check: its
-`dimensions` registry deliberately stores order-free keys and `agenda-organize@beatlink` compares
-`#area` against them, so its triage queues will read prefixed notes as misfiled and offer to write
-the bare key back. Keep the two apart, or give agenda's area values the same prefixes.
+and other addons that read `#area` see the new value too. `agenda-overview@beatlink` is the one to
+check: its `dimensions` registry deliberately stores order-free keys and `agenda-organize@beatlink`
+compares `#area` against them, so its triage queues will read prefixed notes as misfiled and offer to
+write the bare key back. Keep the two apart, or give their area values the same prefixes.
 
 ## Upgrading from 2.5.x
 

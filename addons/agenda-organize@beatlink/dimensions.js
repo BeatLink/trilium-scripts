@@ -8,8 +8,9 @@
 // is open-ended: anything registered in this addon's `dimensions` config gets a
 // triage queue and a picker on the Organize page, with no code change.
 //
-// This registry lives in Organize's OWN #agendaOrganizeConfig note. agenda@beatlink
-// keeps a separate registry of the same shape in #agendaConfig, for the Overview's
+// This registry lives in Organize's OWN #agendaOrganizeConfig note.
+// agenda-overview@beatlink keeps a separate registry of the same shape in
+// #agendaOverviewConfig, for the Overview's
 // derived prefix/color/grouping/filter variants and its sort ordinals. The two are
 // independent and free to diverge: neither addon reads the other's config note.
 //

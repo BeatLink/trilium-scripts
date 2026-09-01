@@ -4,7 +4,7 @@
 // tagged #agendaOrganizeConfig: the Organize Note picker, the four quick-times and
 // the `dimensions` classification registry its triage queues assign from
 // (dimensions.js reads that one). No setting is read from another addon's config
-// note; agenda@beatlink keeps its own separate dimensions registry for the
+// note; agenda-overview@beatlink keeps its own separate dimensions registry for the
 // Overview's derived display elements.
 //
 // The Inbox is NOT read from config — organize.js finds it by its

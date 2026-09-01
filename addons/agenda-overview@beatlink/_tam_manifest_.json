@@ -1,11 +1,11 @@
 {
     "id": "agenda-overview@beatlink",
     "name": "Agenda Overview",
-    "description": "The Overview widget from agenda@beatlink, split out as its own addon: a right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed. Every value it reads - profiles, searches, filters, the display-element library and the dimensions registry - lives in agenda@beatlink's #agendaConfig settings note, which this addon discovers at runtime and never writes to; agenda@beatlink is therefore required. agenda-organize@beatlink's own dimensions registry is a separate vocabulary and is never read here. It ships its own copy of agenda's settings.js and dimensions.js readers because Trilium resolves an import only within the importing note's own subtree.",
+    "description": "A right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed note it ships (#customResourceProvider agendaCalendar.ical). It owns the agenda configuration those rules live in: one settings note (schema.json/defaults.json/config.json, tagged #agendaOverviewConfig) holding an open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own - the profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference, plus the Agenda Settings page that edits all of it. Each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant, derived at read time so they can never drift from the vocabulary. Version 3.0.0 absorbs agenda@beatlink, which no longer exists: run this addon's migrate-config-from-agenda.js once before updating, or the next sync prunes your config note. Self-contained - it ships no sibling's code and reads no sibling's settings note. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Every sibling owns its own settings note and reads nothing from this one - agenda-task@beatlink (the Task pane; #agendaTaskConfig), agenda-myday@beatlink (the My Day focus panel; #agendaMyDayConfig) and agenda-organize@beatlink (the GTD triage page; #agendaOrganizeConfig), which keeps its own separate dimensions registry for its triage queues.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "2.0.0",
+    "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",
@@ -79,21 +79,21 @@
                 "title": "settings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../agenda@beatlink/lib/settings.js"
+                "sourceUrl": "lib/settings.js"
             },
             {
                 "id": "dimensions",
                 "title": "dimensions.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../agenda@beatlink/lib/dimensions.js"
+                "sourceUrl": "lib/dimensions.js"
             },
             {
                 "id": "migrate",
                 "title": "migrate.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "../agenda@beatlink/lib/migrate.js"
+                "sourceUrl": "lib/migrate.js"
             },
             {
                 "id": "ical",
@@ -101,6 +101,62 @@
                 "type": "code",
                 "mime": "text/plain",
                 "sourceUrl": "static/calendar.ical"
+            },
+            {
+                "id": "grp-config",
+                "title": "config",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "schema",
+                "title": "schema.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config/schema.json"
+            },
+            {
+                "id": "defaults",
+                "title": "defaults.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": "config/defaults.json"
+            },
+            {
+                "id": "config",
+                "title": "config.json",
+                "type": "code",
+                "mime": "application/json",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings",
+                "title": "Settings",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings-page",
+                "title": "Agenda Settings",
+                "type": "render",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "settings-ui",
+                "title": "Settings.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "ui/Settings.jsx"
+            },
+            {
+                "id": "settings-css",
+                "title": "settings.css",
+                "type": "code",
+                "mime": "text/css",
+                "sourceUrl": "ui/settings.css"
             },
             {
                 "id": "readme",
@@ -295,9 +351,82 @@
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
+            },
+            {
+                "parent": "persistence",
+                "child": "config"
+            },
+            {
+                "parent": "settings-page",
+                "child": "settings-ui"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "dimensions"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-page"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-ui"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "settings-css"
+            },
+            {
+                "parent": "grp-config",
+                "child": "schema"
+            },
+            {
+                "parent": "grp-config",
+                "child": "defaults"
+            },
+            {
+                "parent": "grp-config",
+                "child": "settings"
+            },
+            {
+                "parent": "root",
+                "child": "grp-config"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "migrate"
+            },
+            {
+                "parent": "settings-ui",
+                "child": "agenda-settings"
             }
         ],
-        "relations": [],
+        "relations": [
+            {
+                "from": "settings",
+                "type": "configNote",
+                "to": "config"
+            },
+            {
+                "from": "settings",
+                "type": "schemaNote",
+                "to": "schema"
+            },
+            {
+                "from": "settings-page",
+                "type": "renderNote",
+                "to": "settings-ui"
+            },
+            {
+                "from": "config",
+                "type": "sourceConfig",
+                "to": "defaults"
+            }
+        ],
         "labels": [
             {
                 "note": "overview",
@@ -393,8 +522,59 @@
                 "note": "readme",
                 "name": "iconClass",
                 "value": "bx bx-task"
+            },
+            {
+                "note": "settings-css",
+                "name": "appCss",
+                "value": ""
+            },
+            {
+                "note": "settings",
+                "name": "agendaOverviewConfig",
+                "value": ""
+            },
+            {
+                "note": "schema",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings-page",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings-ui",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "settings-css",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
             }
         ],
-        "readmeNote": "readme"
+        "readmeNote": "readme",
+        "settingsNote": "settings-page",
+        "settings": {
+            "schema": "schema",
+            "defaults": "defaults",
+            "config": "config"
+        }
     }
 }

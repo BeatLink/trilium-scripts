@@ -3,7 +3,7 @@
 // Type: Code -> JS Frontend
 // Library only (CommonJS, require()'d by agendaSettings.jsx).
 //
-// A versioned config-transform pipeline for agenda's shared config note.
+// A versioned config-transform pipeline for this addon's config note.
 //
 // Why this exists, given the schema already self-heals: a registry's `default`
 // in schema.json is the *shipped* entry set, reconciled into every install on
@@ -16,7 +16,8 @@
 // data. This module gives them a home.
 //
 // Version storage: a plain note label `#agendaConfigVersion` on the config
-// anchor note (the one tagged #agendaConfig), NOT a field inside config.json.
+// anchor note (the one tagged #agendaOverviewConfig), NOT a field inside
+// config.json.
 // config.json is loaded/saved through libsettings' schema-aware path, which
 // rebuilds the persisted object from schema-declared keys only and would strip
 // any bookkeeping key we tried to keep there. A note label sidesteps that
@@ -104,7 +105,7 @@ async function writeConfig(configNoteId, config) {
 // already current and does nothing. Called from getAgendaSettings() before it
 // loads settings, so every widget and page sees migrated config.
 //
-// `anchorNoteId` is the #agendaConfig note (where the version label lives);
+// `anchorNoteId` is the #agendaOverviewConfig note (where the version label lives);
 // `configNoteId` is its configNote target (the config.json note).
 //
 // A brand-new install (version 0, but its config was written by the current

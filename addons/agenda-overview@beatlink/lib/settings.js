@@ -1,17 +1,16 @@
-// The values every agenda widget reads. The #agendaConfig label and the
+// The values the Overview widget reads. The #agendaOverviewConfig label and the
 // schemaNote/configNote relations sit on the Settings note, which is the
 // anchor this resolves through at runtime.
 //
-// CommonJS, and separate from the page that edits these values, because
-// agenda-overview@beatlink ships its own copy of this file and has no use for
-// the page.
+// CommonJS, and separate from the page that edits these values, so the widget
+// pulls in the readers without the settings form's .jsx tree.
 
 const { loadSettings } = require("libSettingsUI.jsx")
 const { normalizeDimensions } = require("dimensions.js")
 const { runMigrations } = require("migrate.js")
 
 async function getAgendaSettings() {
-    const anchors = await api.searchForNotes("#agendaConfig")
+    const anchors = await api.searchForNotes("#agendaOverviewConfig")
     if (!anchors.length) return null
     const anchor = anchors[0]
 
@@ -26,8 +25,8 @@ async function getAgendaSettings() {
 
     const settings = await loadSettings(schemaNoteId, configNoteId)
 
-    // The three task labels agenda itself reads (overview columns, iCal feed,
-    // due notifications), declared in agenda's own schema. The rest of the task
+    // The three task labels this addon reads (overview columns, iCal feed, due
+    // notifications), declared in its own schema. The rest of the task
     // vocabulary - the split date/time labels and duration - is written and read
     // only by agenda-task@beatlink, out of its own #agendaTaskConfig note.
     const constants = {

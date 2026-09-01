@@ -6,8 +6,9 @@
 // Task's own settings note, tagged #agendaTaskConfig: the label constants and
 // the reschedule buttons' option registry, plus the raw note ids Task needs to
 // save that registry back. This addon reads no other addon's settings note -
-// agenda@beatlink declares the handful of task labels it needs in its own
-// #agendaConfig schema, so renaming a label here means renaming it there too.
+// agenda-overview@beatlink declares the handful of task labels it needs in its
+// own #agendaOverviewConfig schema, so renaming a label here means renaming it
+// there too.
 
 async function getAgendaTaskSettings() {
     const anchors = await api.searchForNotes("#agendaTaskConfig")
