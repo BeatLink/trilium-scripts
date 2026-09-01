@@ -1,7 +1,7 @@
 import { useState, useEffect, LoadingSpinner } from "trilium:preact"
 import { SettingsForm } from "libSettingsUI.jsx"
 
-const { getMyDayConfigIds } = require("myDaySettings.js")
+const { getMyDayConfigIds } = require("settings.js")
 
 export default function MyDayEditor() {
     const [ids, setIds] = useState(undefined)

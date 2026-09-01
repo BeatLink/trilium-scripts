@@ -14,7 +14,7 @@ const {
     getMyDaySettings,
     addTaskToMyDay,
     removeTaskFromMyDay
-} = require("myDaySettings.js")
+} = require("settings.js")
 
 // A per-task panel: shown in the right pane while a task note is active, with a
 // single button that files the task onto the My Day note or takes it back off.

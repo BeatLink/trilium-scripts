@@ -1,11 +1,11 @@
 {
     "id": "agenda-myday@beatlink",
     "name": "Agenda My Day",
-    "description": "A right-pane panel shown on every note, modelled on Microsoft To Do's My Day page. Your My Day note is edited in place at the top of the panel as rich text, so today's list is always on screen and never has to be navigated to. Below it sits a collapsible Suggestions section listing recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note and clones the task under it; tasks already on your day drop off the list. It optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today (or unfiled, link and clone together) without going to the My Day note first. Fully self-contained: it owns its settings note (myDaySchema.json/myDayConfig.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a text note of your own and the panel edits it. Editing in the panel reuses the CKEditor instance Trilium builds for the note detail, so until a text note has been opened once in the session the panel shows the note read-only.",
+    "description": "A right-pane panel shown on every note, modelled on Microsoft To Do's My Day page. Your My Day note is edited in place at the top of the panel as rich text, so today's list is always on screen and never has to be navigated to. Below it sits a collapsible Suggestions section listing recommended tasks to add to your day - grouped into Earlier, Today and Next 7 Days - each with a + that files it onto the My Day note and clones the task under it; tasks already on your day drop off the list. It optionally files tasks in automatically as their start time arrives, and sends a desktop notification as each task comes due. A second right-pane panel appears on task notes themselves - any note carrying the configurable task label - with a single Add to My Day / Remove from My Day button, so a task can be filed onto today (or unfiled, link and clone together) without going to the My Day note first. Fully self-contained: it owns its settings note (config/schema.json and its config.json, tagged #agendaMyDayConfig) and resolves its task list from a configurable Trilium search rather than depending on agenda-overview@beatlink's code. The default search matches agenda's task vocabulary (#startDateTime/#dueDateTime), so the two interoperate through shared label conventions, but neither requires the other. No My Day note ships with the addon: point the My Day Note setting at a text note of your own and the panel edits it. Editing in the panel reuses the CKEditor instance Trilium builds for the note detail, so until a text note has been opened once in the session the panel shows the note read-only.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-myday@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "14.0.0",
+    "latestVersion": "15.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-myday@beatlink/_tam_manifest_.json",
@@ -13,39 +13,60 @@
         "settingsNote": "myday-editor-page",
         "notes": [
             {
+                "id": "grp-ui",
+                "title": "ui",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-lib",
+                "title": "lib",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
+                "id": "grp-config",
+                "title": "config",
+                "type": "text",
+                "mime": "text/html",
+                "sourceUrl": null
+            },
+            {
                 "id": "my-day",
-                "title": "myDayWidget.jsx",
+                "title": "MyDay.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "myDayWidget.jsx"
+                "sourceUrl": "ui/MyDay.jsx"
             },
             {
                 "id": "my-day-task",
-                "title": "myDayTaskWidget.jsx",
+                "title": "TaskWidget.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "myDayTaskWidget.jsx"
+                "sourceUrl": "ui/TaskWidget.jsx"
             },
             {
                 "id": "my-day-note",
-                "title": "myDayNote.jsx",
+                "title": "MyDayNote.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "myDayNote.jsx"
+                "sourceUrl": "ui/MyDayNote.jsx"
             },
             {
                 "id": "my-day-css",
-                "title": "myDay.css",
+                "title": "myday.css",
                 "type": "code",
                 "mime": "text/css",
-                "sourceUrl": "myDay.css"
+                "sourceUrl": "ui/myday.css"
             },
             {
                 "id": "myday-settings",
-                "title": "myDaySettings.js",
+                "title": "settings.js",
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
-                "sourceUrl": "myDaySettings.js"
+                "sourceUrl": "lib/settings.js"
             },
             {
                 "id": "myday-editor-page",
@@ -56,28 +77,28 @@
             },
             {
                 "id": "myday-editor",
-                "title": "myDayEditor.jsx",
+                "title": "Editor.jsx",
                 "type": "code",
                 "mime": "text/jsx",
-                "sourceUrl": "myDayEditor.jsx"
+                "sourceUrl": "ui/Editor.jsx"
             },
             {
                 "id": "myday-schema",
-                "title": "myDaySchema.json",
+                "title": "schema.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "myDaySchema.json"
+                "sourceUrl": "config/schema.json"
             },
             {
                 "id": "myday-defaults",
-                "title": "myDayDefaults.json",
+                "title": "defaults.json",
                 "type": "code",
                 "mime": "application/json",
-                "sourceUrl": "myDayDefaults.json"
+                "sourceUrl": "config/defaults.json"
             },
             {
                 "id": "myday-config",
-                "title": "myDayConfig.json",
+                "title": "config.json",
                 "type": "code",
                 "mime": "application/json",
                 "sourceUrl": null
@@ -122,23 +143,15 @@
         "children": [
             {
                 "parent": "root",
-                "child": "my-day"
+                "child": "grp-ui"
             },
             {
                 "parent": "root",
-                "child": "my-day-css"
+                "child": "grp-lib"
             },
             {
                 "parent": "root",
-                "child": "myday-editor-page"
-            },
-            {
-                "parent": "myday-editor-page",
-                "child": "myday-schema"
-            },
-            {
-                "parent": "myday-editor-page",
-                "child": "myday-defaults"
+                "child": "grp-config"
             },
             {
                 "parent": "root",
@@ -149,12 +162,40 @@
                 "child": "myday-config"
             },
             {
-                "parent": "root",
+                "parent": "grp-ui",
+                "child": "myday-editor-page"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "my-day"
+            },
+            {
+                "parent": "grp-ui",
                 "child": "my-day-task"
             },
             {
-                "parent": "my-day-task",
+                "parent": "grp-ui",
+                "child": "my-day-note"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "myday-editor"
+            },
+            {
+                "parent": "grp-ui",
+                "child": "my-day-css"
+            },
+            {
+                "parent": "grp-lib",
                 "child": "myday-settings"
+            },
+            {
+                "parent": "grp-config",
+                "child": "myday-schema"
+            },
+            {
+                "parent": "grp-config",
+                "child": "myday-defaults"
             },
             {
                 "parent": "my-day",
@@ -162,6 +203,10 @@
             },
             {
                 "parent": "my-day",
+                "child": "myday-settings"
+            },
+            {
+                "parent": "my-day-task",
                 "child": "myday-settings"
             },
             {
@@ -181,16 +226,16 @@
                 "child": "libsettings-ui"
             },
             {
+                "parent": "myday-settings",
+                "child": "libnotification-lib"
+            },
+            {
                 "parent": "libsettings-ui",
                 "child": "libsettings-core"
             },
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
-            },
-            {
-                "parent": "myday-settings",
-                "child": "libnotification-lib"
             }
         ],
         "relations": [
@@ -293,6 +338,26 @@
             },
             {
                 "note": "libnotification-lib",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-ui",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-lib",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "grp-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "myday-defaults",
                 "name": "iconClass",
                 "value": "bx bx-task"
             }

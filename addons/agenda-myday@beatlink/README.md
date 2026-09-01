@@ -1,6 +1,7 @@
 # Agenda My Day
 
-The My Day focus panel, originally split out of [`agenda@beatlink`](../agenda@beatlink/README.md) and
+The My Day focus panel, originally split out of the agenda addon (now
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md)) and
 now fully standalone. It ships **two right-pane widgets**: the main panel, shown on every note and
 modelled on Microsoft To Do's My Day page, and a small **per-task panel** shown on task notes
 themselves.
@@ -117,7 +118,7 @@ remaining parent, so a note living *solely* under My Day is left in place rather
 
 Everything is edited from the **My Day Editor** page, which is also the settings anchor: it carries
 the **`#agendaMyDayConfig`** label plus the `~schemaNote` / `~configNote` relations the widget follows
-to find its configuration. `myDaySchema.json` sits under the editor; `myDayConfig.json` lives in the
+to find its configuration. `config/schema.json` describes the settings; `config.json` lives in the
 addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 
 | Setting | Effect |
@@ -131,15 +132,28 @@ addon's TAM persistence anchor, so your settings survive updates and reinstalls.
 | **Due Datetime Label** | Note label holding a task's due datetime, without the `#`. Default `dueDateTime`. |
 | **Task Label** | Note label marking a note as a task, without the `#`. Any note carrying it gets the per-task Add / Remove button. Default `agendaTaskWidget`. |
 
+## Layout
+
+Sources are grouped by kind, and note titles match the file names:
+
+| Folder | Holds |
+| ------ | ----- |
+| `ui/` | `MyDay.jsx` (the right-pane panel and its suggestion list), `MyDayNote.jsx` (the embedded editor), `TaskWidget.jsx` (the per-task Add / Remove panel), `Editor.jsx` (the My Day Editor settings page), `myday.css` |
+| `lib/` | `settings.js` — settings access, the task search, and the add / remove / prune operations |
+| `config/` | `schema.json`, `defaults.json` |
+
+Trilium resolves an `import` / `require` by note title within the importer's subtree, not by path, so
+the folders are a repo-side convention only.
+
 ## Relationship to timer@beatlink
 
 The countdown timer that used to sit in this panel is now [`timer@beatlink`](../timer@beatlink/README.md),
 its own right-pane panel with its own `#timerConfig` settings note. Nothing here references it.
 
-## Relationship to agenda@beatlink
+## Relationship to the other agenda addons
 
-**None, in code.** This addon is standalone: it requires nothing from `agenda@beatlink` and works
-with it uninstalled. "Which tasks exist, and when are they scheduled?" is answered by the **Task
+**None, in code.** This addon is standalone: it requires nothing from `agenda-overview@beatlink` and
+works with it uninstalled. "Which tasks exist, and when are they scheduled?" is answered by the **Task
 Search** setting plus the two label-name settings, all owned here.
 
 The defaults are chosen to match agenda's task vocabulary — `#startDateTime` / `#dueDateTime`, minus

@@ -8,7 +8,7 @@ import {
     Button,
 } from "trilium:preact";
 
-import { MyDayNote } from "myDayNote.jsx"
+import { MyDayNote } from "MyDayNote.jsx"
 
 const {
     getMyDaySettings,
@@ -17,7 +17,7 @@ const {
     addDueTasksToMyDay,
     sendNotificationForDueTasks,
     pruneMyDayNote
-} = require("myDaySettings.js")
+} = require("settings.js")
 
 // One suggested task: its title, when it's scheduled, and a + that files it onto
 // the My Day note.

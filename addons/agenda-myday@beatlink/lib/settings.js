@@ -1,11 +1,12 @@
 // Settings access and suggestion queries for agenda-myday@beatlink.
 //
-// This addon is self-contained: it owns its settings (myDaySchema.json /
-// myDayConfig.json, anchored on the #agendaMyDayConfig-tagged My Day Editor
+// This addon is self-contained: it owns its settings (config/schema.json and
+// its config.json, anchored on the #agendaMyDayConfig-tagged My Day Editor
 // page) and resolves its own task list from a plain Trilium search, so nothing
-// here depends on agenda@beatlink's code. Point `taskSearch` at whatever notes
-// you want floated; the shipped default matches agenda's task vocabulary, so
-// the two interoperate through shared label conventions, not a code dependency.
+// here depends on agenda-overview@beatlink's code. Point `taskSearch` at
+// whatever notes you want floated; the shipped default matches agenda's task
+// vocabulary, so the two interoperate through shared label conventions, not a
+// code dependency.
 
 const { loadSettings } = require("libSettingsUI.jsx")
 const notifications = require("libNotification.js")
