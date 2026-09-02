@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.0.0",
+    "latestVersion": "5.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",
@@ -73,6 +73,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "lib/config.js"
+            },
+            {
+                "id": "picker-sources",
+                "title": "pickerSources.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libpickersources/pickerSources.js"
             },
             {
                 "id": "agenda-settings",
@@ -266,6 +273,10 @@
                 "child": "migrate"
             },
             {
+                "parent": "grp-lib",
+                "child": "picker-sources"
+            },
+            {
                 "parent": "grp-static",
                 "child": "ical"
             },
@@ -380,6 +391,14 @@
             {
                 "parent": "settings-ui",
                 "child": "agenda-settings"
+            },
+            {
+                "parent": "lib-config",
+                "child": "picker-sources"
+            },
+            {
+                "parent": "picker-sources",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
@@ -537,6 +556,11 @@
             },
             {
                 "note": "grp-config",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "picker-sources",
                 "name": "iconClass",
                 "value": "bx bx-task"
             }
