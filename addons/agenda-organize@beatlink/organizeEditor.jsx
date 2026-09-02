@@ -114,8 +114,9 @@ export default function OrganizeEditor() {
         <div className="profile-editor">
             <h2>Organize Editor</h2>
             <p>
-                Pick the note that hosts the Organize triage UI and set the quick-times its
-                start-date buttons use. The vocabulary the queues triage by is not edited here: each
+                Pick the note that hosts the Organize triage UI, set the quick-times its start-date
+                buttons use, and list any notes the triage queues should leave alone under Exclude
+                Filters. The vocabulary the queues triage by is not edited here: each
                 queue comes from the picker addon that owns it — areas from area-picker@beatlink,
                 levels from priority-widget@beatlink, types from template-picker@beatlink. The
                 notebook structure the queues walk is yours to create and tag; nothing provisions it.

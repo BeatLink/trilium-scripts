@@ -34,5 +34,29 @@
         "description": "The time the Organize \"Night\" button sets.",
         "category": "Organize",
         "tab": "Times"
+    },
+    "excludeFilters": {
+        "type": "registry",
+        "label": "Exclude Filters",
+        "tab": "Exclude Filters",
+        "description": "Notes matching any enabled filter's search query are skipped by every triage queue on the Organize page. The misfiled-notes queue and the Invalid Roots table still report them: those are about the notebook being wrong, not about work you have chosen not to triage.",
+        "itemSchema": {
+            "name": {
+                "type": "string",
+                "label": "Name",
+                "default": "New Filter"
+            },
+            "query": {
+                "type": "string",
+                "label": "Search Query",
+                "description": "Trilium search syntax (same as the search bar), e.g. #archived or note.type = code.",
+                "default": ""
+            },
+            "enabled": {
+                "type": "boolean",
+                "label": "Enabled",
+                "default": true
+            }
+        }
     }
 }

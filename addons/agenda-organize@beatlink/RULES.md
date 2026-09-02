@@ -82,11 +82,12 @@ Rule ids (`S1`, `Q2`, …) are for referring to them later; they carry no meanin
 
 | id | Rule |
 |----|------|
-| C1 | Own settings note, tagged `#agendaOrganizeConfig`, holds two things: `organizeNoteId` and the four quick-times (`morning` 08:00, `noon` 12:00, `evening` 17:00, `night` 20:00). No vocabulary is stored here. |
+| C1 | Own settings note, tagged `#agendaOrganizeConfig`, holds three things: `organizeNoteId`, the four quick-times (`morning` 08:00, `noon` 12:00, `evening` 17:00, `night` 20:00) and `excludeFilters`. No vocabulary is stored here. |
 | C2 | Every classification axis is generated from the picker addon that owns it — area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink — read live through `libpickersources`. Install a picker and its queue appears; uninstall it and the queue goes. `agenda-overview@beatlink` generates its display elements from the same three, so the two agree by construction. |
 | C3 | Item **type** stays separate from the two label axes: a note's type is a `~template` relation, assigned by template-picker's own widget, so there is no type queue here. |
 | C4 | Every cross-addon read degrades gracefully: a picker that isn't installed means no queue for that axis, never a crash. |
-| C5 | Area values carry a positional prefix (`01-career`) while a root's `#agendaOrganizeArea` identity usually does not. Every comparison strips a leading `NN-` from both sides; only the value written back is canonical. |
+| C5 | A note matching an enabled exclude filter is dropped from every triage queue, but still descended into, and is still reported by the misfiled and Invalid Roots checks. |
+| C6 | Area values carry a positional prefix (`01-career`) while a root's `#agendaOrganizeArea` identity usually does not. Every comparison strips a leading `NN-` from both sides; only the value written back is canonical. |
 
 ## 7. Where the coupling actually is
 

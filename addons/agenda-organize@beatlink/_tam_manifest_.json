@@ -1,11 +1,11 @@
 {
     "id": "agenda-organize@beatlink",
     "name": "Agenda Organize",
-    "description": "The Organize triage UI from the original agenda addon. Nothing provisions the notebook structure: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. No classification vocabulary is stored here: each triage queue is generated from the picker addon that owns its axis and read live from that addon's own settings note - areas from area-picker@beatlink (#areaConfig), levels from priority-widget@beatlink (#priorityConfig), types from template-picker@beatlink (#templatePickerConfig) - so install a picker and its queue appears, uninstall it and the queue goes, and a value renamed or recoloured there shows up immediately. A value assigned from a queue is byte-identical to one assigned from the picker's own widget, positional prefix included; every root and note comparison tolerates both spellings so a root is never offered for deletion over one. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per axis, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Its own settings note (organizeSchema.json/organizeDefaults.json, tagged #agendaOrganizeConfig) holds only the Organize note picker and the four quick-times. agenda-overview@beatlink generates its display elements from the same three pickers, so the two agree by construction.",
+    "description": "The Organize triage UI from the original agenda addon. Nothing provisions the notebook structure: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. No classification vocabulary is stored here: each triage queue is generated from the picker addon that owns its axis and read live from that addon's own settings note - areas from area-picker@beatlink (#areaConfig), levels from priority-widget@beatlink (#priorityConfig), types from template-picker@beatlink (#templatePickerConfig) - so install a picker and its queue appears, uninstall it and the queue goes, and a value renamed or recoloured there shows up immediately. A value assigned from a queue is byte-identical to one assigned from the picker's own widget, positional prefix included; every root and note comparison tolerates both spellings so a root is never offered for deletion over one. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per axis, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Its own settings note (organizeSchema.json/organizeDefaults.json, tagged #agendaOrganizeConfig) holds the Organize note picker, the four quick-times and Exclude Filters - the same registry the picker addons carry, dropping any note matching an enabled search query from every triage queue (still descended into, and still reported by the misfiled and Invalid Roots checks). agenda-overview@beatlink generates its display elements from the same three pickers, so the two agree by construction.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.0.0",
+    "latestVersion": "5.1.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",
@@ -240,6 +240,10 @@
             {
                 "parent": "picker-registry",
                 "child": "libsettings-ui"
+            },
+            {
+                "parent": "organize-page-src",
+                "child": "picker-registry"
             }
         ],
         "relations": [

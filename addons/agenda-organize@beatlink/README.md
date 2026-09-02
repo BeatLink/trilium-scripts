@@ -23,6 +23,13 @@ that owns its axis, read live from that addon's own settings note:
 | Priority | [`priority-widget@beatlink`](../priority-widget@beatlink/README.md)'s `#priorityConfig` | the active profile's label, usually `#priority`, plus `#color` |
 | Type | [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s `#templatePickerConfig` | a note's `~template` relation, assigned by that addon's own widget |
 
+Its own settings note also holds **Exclude Filters**, the same registry the picker addons carry: any
+note matching an enabled filter's search query is dropped from every triage queue, so work you have
+deliberately parked stops being offered. Excluded notes are still *descended into* — excluding a
+container should not hide what is inside it — and the misfiled-notes queue and Invalid Roots table
+still report them, since those are about the notebook being wrong rather than about work you have
+chosen not to triage.
+
 Install a picker and its queue appears; uninstall it and the queue goes with it. Rename, recolour or
 reorder a value there and the queues follow immediately — there is no copy here to fall out of step,
 and a value assigned from a queue is byte-identical to one assigned from the picker's own widget.
@@ -165,8 +172,8 @@ it in rather than re-fetching if template-picker is already installed). This is 
 read: the copy tracks template-picker's registry content, but template-picker knows nothing about
 Organize.
 
-The Organize Editor (`organizeEditor.jsx`) hosts two tabs — **Times** straight from the schema, plus
-the **Organize Note** picker as an `extraPanels` entry. There is no Workflow
+The Organize Editor (`organizeEditor.jsx`) hosts three tabs — **Times** and **Exclude Filters**
+straight from the schema, plus the **Organize Note** picker as an `extraPanels` entry. There is no Workflow
 Setup tab: nothing on this side provisions structure.
 
 Per TAM's direct-child require rule, `dimensions` is a child of every note that requires it

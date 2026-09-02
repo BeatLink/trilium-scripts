@@ -1,12 +1,23 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
+import { getExcludeFilters, getExcludedNoteIds } from "pickerRegistry.jsx"
 
 const {
     getBucketTemplates, getOrganizeCandidates, getMisfiledNotes, getInvalidBuckets,
     assignStartDate, assignTemplate, refileNote, deleteNote, mergeBucketInto
 } = require("organize.js")
 const { getDimensions, assignDimension } = require("dimensions.js")
-const { getTimeSettings } = require("organizeSettings.js")
+const { getTimeSettings, getOrganizeConfigIds } = require("organizeSettings.js")
+
+// Note ids matching any enabled Organize exclude filter, or [] when there are
+// none (or the settings note is missing), so triage carries on unfiltered.
+async function getExcludedFromTriage() {
+    const ids = await getOrganizeConfigIds()
+    if (!ids) return []
+    const filters = await getExcludeFilters(ids.schemaNoteId, ids.configNoteId)
+    if (!filters.length) return []
+    return getExcludedNoteIds(filters)
+}
 
 // Compute the YYYY-MM-DD for each quick date option, relative to today, using
 // api.dayjs (bundled with Trilium). "Next weekend" = the upcoming Saturday.
@@ -374,8 +385,13 @@ function TriagePanel() {
         const templates = await getBucketTemplates()
         const actionableTemplateIds = templates.filter(t => t.actionable).map(t => t.noteId)
 
+        // Organize's own exclude filters, resolved to note ids before the walk so
+        // one search per filter covers every queue. Same registry shape, and the
+        // same libpicker readers, the picker addons use.
+        const excludedNoteIds = await getExcludedFromTriage()
+
         const [cands, mis, invalid, tms] = await Promise.all([
-            getOrganizeCandidates(dims.map(d => d.label), actionableTemplateIds),
+            getOrganizeCandidates(dims.map(d => d.label), actionableTemplateIds, excludedNoteIds),
             getMisfiledNotes(rootDim, templates),
             getInvalidBuckets(rootDim, templates),
             getTimeSettings()

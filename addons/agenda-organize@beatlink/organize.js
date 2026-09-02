@@ -96,9 +96,14 @@ async function getBucketTemplates() {
 // registry. `isSubtask` marks a note whose primary parent's own ~template is
 // itself actionable (excluded from the no-start-date queue — it's scheduled
 // with its parent).
-async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
-    return api.runOnBackend((labels, dimensionLabels, actionableTemplateIds) => {
+async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds, excludedNoteIds = []) {
+    return api.runOnBackend((labels, dimensionLabels, actionableTemplateIds, excludedNoteIds) => {
         const actionableSet = new Set(actionableTemplateIds)
+        // Notes the user has told Organize not to nag about (its own exclude
+        // filters). Dropped from the candidate set, so they leave every triage
+        // queue at once; the misfiled and Invalid Roots checks are separate walks
+        // and still report them, being about the notebook rather than the work.
+        const excludedSet = new Set(excludedNoteIds)
         // Scope roots: the Inbox note + every Area root + every Type root. An
         // area root carries the area label and NO bucket label (a legacy nested
         // bucket carries both, and is reached by descending anyway). A note
@@ -194,7 +199,9 @@ async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
             for (const child of note.getChildNotes()) {
                 if (seen.has(child.noteId)) continue
                 seen.add(child.noteId)
-                if (!structuralIds.has(child.noteId)) {
+                // Excluded notes are skipped as candidates but still descended
+                // into: excluding a container should not hide the work inside it.
+                if (!structuralIds.has(child.noteId) && !excludedSet.has(child.noteId)) {
                     const assigned = {}
                     for (const label of dimensionLabels) {
                         assigned[label] = child.getLabelValue(label) || ""
@@ -217,7 +224,7 @@ async function getOrganizeCandidates(dimensionLabels, actionableTemplateIds) {
 
         for (const root of rootNotes) visit(root)
         return out
-    }, [LABELS, dimensionLabels, actionableTemplateIds])
+    }, [LABELS, dimensionLabels, actionableTemplateIds, excludedNoteIds])
 }
 
 // Find notes filed under a root that disagrees with the note's own labels. The

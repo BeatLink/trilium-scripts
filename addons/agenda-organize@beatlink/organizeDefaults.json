@@ -3,5 +3,6 @@
     "morningTime": "08:00",
     "noonTime": "12:00",
     "eveningTime": "17:00",
-    "nightTime": "20:00"
+    "nightTime": "20:00",
+    "excludeFilters": {}
 }
