@@ -2,41 +2,32 @@
 
 The opinionated GTD Organize workflow, split out of the original agenda addon into its own addon: the
 **Organize** render page and the **Organize Editor** settings page. It bakes a specific triage flow
-on top of agenda's generic engine,
-driven by the open-ended **dimensions** vocabulary (area, priority, and any you add) plus
-[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry for item type.
-It reuses agenda's mechanism (config, filters, colors, kanban, task widget) — it does not fork it.
+on top of agenda's generic engine, driven entirely by the picker addons you have installed:
+[`area-picker@beatlink`](../area-picker@beatlink/README.md),
+[`priority-widget@beatlink`](../priority-widget@beatlink/README.md) and
+[`template-picker@beatlink`](../template-picker@beatlink/README.md). It reuses agenda's mechanism
+(config, filters, colors, kanban, task widget) — it does not fork it.
 
 ## Configuration and cross-addon reads
 
-This addon owns its own settings note (`organizeSchema.json` / `organizeConfig.json`) tagged
-**`#agendaOrganizeConfig`**: the **Organize Note** picker, the four quick-times and the **`dimensions`**
-registry. Everything is edited from the **Organize Editor** page.
+This addon's own settings note (`organizeSchema.json` / `organizeConfig.json`, tagged
+**`#agendaOrganizeConfig`**) holds two things: the **Organize Note** picker and the four quick-times.
+Both are edited from the **Organize Editor** page.
 
-The **`dimensions`** registry lives in that same note, so nothing here reads another addon's
-configuration. [`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) keeps its own
-separate registry of the same shape in `#agendaOverviewConfig`, for the Overview's derived
-prefix/color/grouping/filter variants and its
-sort ordinals. The two are edited independently and are free to diverge: a vocabulary you want in both
-places is entered in both places.
+**No classification vocabulary is stored here.** Each triage queue is generated from the picker addon
+that owns its axis, read live from that addon's own settings note:
 
-The **Inbox** is not read from config: `organize.js` finds it by the `#agendaOrganizeSpecial=inbox`
-label, which you put on your own Inbox note.
+| Queue | Comes from | Writes |
+| ----- | ---------- | ------ |
+| Area | [`area-picker@beatlink`](../area-picker@beatlink/README.md)'s `#areaConfig` | `#area`, the key behind its position (`01-career`), plus `#color` |
+| Priority | [`priority-widget@beatlink`](../priority-widget@beatlink/README.md)'s `#priorityConfig` | the active profile's label, usually `#priority`, plus `#color` |
+| Type | [`template-picker@beatlink`](../template-picker@beatlink/README.md)'s `#templatePickerConfig` | a note's `~template` relation, assigned by that addon's own widget |
 
-## Where the roots come from
-
-**Nothing provisions them.** The scaffolder addon that used to build the tree is gone; you make the
-root notes yourself and tag them with the three structural identity labels this addon reads
-(`#agendaOrganizeArea` / `#agendaOrganizeType` / `#agendaOrganizeSpecial` — see
-[Root contract](#4-root-contract)). [`template-picker@beatlink`](../template-picker@beatlink/README.md)
-ships an empty, unlabelled root container note per bundled template as a starting point; move them
-where you want them and add the identity label.
-
-Until roots carry those labels the triage queues are simply empty — the addon reads them, it never
-writes them.
-
-The labels keep their `agendaOrganize*` names: renaming them would orphan every root in an existing
-tree for no benefit.
+Install a picker and its queue appears; uninstall it and the queue goes with it. Rename, recolour or
+reorder a value there and the queues follow immediately — there is no copy here to fall out of step,
+and a value assigned from a queue is byte-identical to one assigned from the picker's own widget.
+[`agenda-overview@beatlink`](../agenda-overview@beatlink/README.md) generates its display elements
+from the same three addons, so the two agree by construction rather than by discipline.
 
 ## 1. Purpose / workflow
 
@@ -51,98 +42,46 @@ An opinionated system that guides a **Collect → Organize → Review → Execut
   onto agenda's Task View page modes + sorts; no separate code.
 - **Execute** — work the daily list. Uses the same agenda views.
 
-## 2. Dimensions
+## 2. Where the vocabulary comes from
 
-This addon owns one open-ended **`dimensions`** registry, declared in
-[`organizeSchema.json`](organizeSchema.json) and shipped in [`organizeDefaults.json`](organizeDefaults.json),
-loaded by [`dimensions.js`](dimensions.js) → `getDimensions()`. A dimension is one
-note label plus its ordered vocabulary of values `[{ key, name, color, actionable, icon }]`; area and
-priority ship as defaults, but the set is open-ended. The triage queues enumerate the registered
-dimensions, so adding one needs no code change. `key` is the stored value (stable and order-free, so
-reordering never rewrites a tagged note); position IS the order.
+[`dimensions.js`](dimensions.js) → `getDimensions()` returns one axis per installed picker, read
+through [`libpickersources`](../../libs/libpickersources/README.md) — the same shared table
+`agenda-overview@beatlink` renders from. An axis is one note label plus its ordered vocabulary of
+values `[{ key, name, color }]`, where `key` is exactly what that picker tags a note with.
 
-`agenda-overview@beatlink` declares a registry of the same shape in its own `#agendaOverviewConfig`,
-minus the four
-Organize-only flags below, for the Overview's sort ordinals and derived display elements. Neither addon
-reads the other's config note.
+Two behaviours are Organize's own rather than anything a picker declares, so they are fixed per axis
+in `QUEUE_BEHAVIOUR`:
 
-Item **type** is deliberately NOT one of these dimensions — it moved out entirely to
-[`template-picker@beatlink`](../template-picker@beatlink/README.md)'s own registry. A note's type is
-its `~template` relation, assigned by template-picker's own right-pane widget (or its Missing Templates
-page), never a `#type` label agenda writes. Organize reads that registry read-only, via
-`getBucketTemplates()` in [`organize.js`](organize.js) (discovered through template-picker's own
-`#templatePickerConfig` anchor, the same shape agenda uses for its own `#agendaConfig`) — to tell a
-Type root's identity from a current template and for the actionable-item set. See
-[template-picker's README](../template-picker@beatlink/README.md) for its own registry fields
-(Name, Template Note, Enabled, Color, Actionable, Bucket Icon).
+| Behaviour | Applies to | Effect |
+|-----------|-----------|--------|
+| `scaffoldsAreas` | area | The axis whose values are the notebook's root notes, so a root is judged against this vocabulary. |
+| `actionableOnly` | priority | Restricts that queue to notes whose `~template` is marked **Actionable** in template-picker (and non-subtasks) — priority is about scheduling work, not filing it. |
 
-`assignDimension(noteId, dim, value)` is the single write path for these dimensions (used by
-the Organize triage queues). It writes `#<label>=<key>` and optionally mirrors `#color`
-(`writeColor`). Per-dimension flags:
+Both pickers mirror the chosen value's colour onto `#color` when they assign, so
+`assignDimension(noteId, dim, value)` — the single write path from the queues — does the same. It
+writes `#<label>=<key>` and the matching `#color`.
 
-| Flag               | Effect |
-|--------------------|--------|
-| `triage`           | Gives the dimension a "Notes Without X" queue. |
-| `actionableOnly`   | Restricts that queue to notes whose `~template` is a template-picker entry marked **Actionable** (and non-subtasks). |
-| `writeColor`       | Also writes `#color` from the chosen value. |
-| `scaffoldsAreas`   | Marks the axis that gets one root note per value (the Area axis). |
+**Area values carry a positional prefix.** area-picker tags `01-career`, while a root note's
+`#agendaOrganizeArea` identity is usually the bare key you labelled it with, often written before that
+prefix existed. Every comparison in [`organize.js`](organize.js) — misfiled detection and the Invalid
+Roots check — strips a leading `NN-` from both sides before comparing, so the two spellings match and
+a root is never offered for deletion over a spelling difference. Only the value *written* is
+canonical: adopting a root's value writes what the picker writes today.
 
-**Actionable** and the per-template **Bucket Icon** live on template-picker's own registry rows now,
-not on any dimension value. `#agendaTaskWidget` is a separate, orthogonal label: it gates
-whether the Task editor shows at all. It's set as an inheritable label on the template note.
-Classification (area, priority, item type) is assigned via each dimension's own dedicated picker
-addon, not the Task editor.
+Item **type** stays separate from the two label axes because a note's type is a `~template` relation,
+assigned by template-picker's own widget (or its Missing Templates page), never a `#type` label.
+Organize reads that registry read-only, via `getBucketTemplates()` in [`organize.js`](organize.js), to
+tell a Type root's identity from a current template and for the actionable-item set. There is no
+"Notes Without Type" queue here.
 
-Folding or renaming an Area value leaves its old slug on already-tagged notes; nothing re-keys them
-automatically any more, so retag them yourself (the **Invalid Roots** table surfaces the stranded
-root). Type roots need no equivalent: a Type root's identity is its template's own noteId, which
-never gets renamed the way a string slug did.
-
-### Notebook structure
-
-**Two parallel top-level trees, each exactly one level deep**, plus the three container singletons:
-
-```
-Inbox / My Day / Agenda
-Career/   Home/   Fitness/  …     one root per Area value, items directly inside
-Task/     Project/  Note/   …     one root per enabled template, items directly inside
-```
-
-Neither tree nests the other: an Area root has no type buckets under it, and a Type root has no area
-buckets under it. A filed item lives in **both** trees at once as a Trilium **clone** — one branch
-under the Area root matching its `#area`, one under the Type root matching its `~template`. The same
-note, two paths to it.
-
-You create the **roots**; cloning an item into its two roots is the Organize page's job, done per
-note during triage.
-
-The public `#area` / `#type` labels are what tell the kinds of container apart. Only
-`AreaCollection` still ships as a template (with
-[`template-picker@beatlink`](../template-picker@beatlink/README.md)); the other two rows are label
-conventions with no template behind them any more:
-
-| Note              | Template         | Public labels                          |
-|-------------------|------------------|----------------------------------------|
-| Area root         | `AreaCollection` | `#area=<slug>` `#type=areacollection`  |
-| Type root         | none             | `#type=typecollection` (no `#area`)    |
-| Inbox/My Day/Agenda | none           | `#type=special`                        |
-
-A Type root carries **no `#area`** — it spans every area. It is a *container*, not an instance of the
-type it holds, so its `#type` is the fixed `typecollection` marker even though it files notes whose
-`~template` is something else entirely. Which template it collects is carried by the private
-identity label `#agendaOrganizeType=<templateNoteId>`.
-
-The three private identity labels are **mutually exclusive** — `#agendaOrganizeArea=<areaSlug>` on an
-Area root, `#agendaOrganizeType=<templateNoteId>` on a Type root, `#agendaOrganizeSpecial=<name>` on a
-singleton — so "which kind of root is this?" is a single label read.
+`#agendaTaskWidget` is a separate, orthogonal label: it gates whether the Task editor shows at all,
+and is set as an inheritable label on the template note.
 
 ## 3. The Organize page (`organizePage.jsx`)
 
-Two tabs: **Triage** (the one-at-a-time queues) and **Dimensions** (`DimensionsPanel` from
-[`organizeDimensions.jsx`](organizeDimensions.jsx)). The Dimensions tab edits this addon's own
-`#agendaOrganizeConfig` — a single-tab `SettingsForm` scoped `only="Dimensions"`. Editing a value's **Name** or
-reordering the list is safe; editing its **Key** orphans every note carrying that value. Item type
-isn't here at all — it's edited on template-picker's own settings note.
+One tab: **Triage**, the one-at-a-time queues. There is no Dimensions tab any more — every axis is
+edited on the settings note of the picker that owns it. There, renaming or reordering a value is
+safe; changing its **Key** orphans every note carrying the old one.
 
 The Triage tab loads the dimension list plus template-picker's enabled registry
 (`getBucketTemplates()`) up front, then `organize.js` does a single backend walk of the Inbox / Area
@@ -217,16 +156,17 @@ its `~renderNote` relation to the `#agendaOrganizeRender` code note, and its `#i
 `bx bx-sort-down` — reverting the previously-chosen note back to a text note. (See
 `reconcileOrganizeNote` in [`organizeEditor.jsx`](organizeEditor.jsx).)
 
-`organizePage.jsx` imports `DimensionsPanel` (`organizeDimensions.jsx`) and requires `organize.js`,
-`dimensions.js` and `organizeSettings.js`. `organize.js` requires
+`organizePage.jsx` requires `organize.js`, `dimensions.js` and `organizeSettings.js`; `dimensions.js`
+requires `pickerSources.js` from [`libpickersources`](../../libs/libpickersources/README.md).
+`organize.js` requires
 `templateRegistry.jsx` directly — this addon's manifest declares its own `registry` note (same
 `sourceUrl` as template-picker@beatlink's `templateRegistry.jsx`, so TAM's sourceUrl dedup clones
 it in rather than re-fetching if template-picker is already installed). This is a one-directional
 read: the copy tracks template-picker's registry content, but template-picker knows nothing about
 Organize.
 
-The Organize Editor (`organizeEditor.jsx`) hosts three tabs — **Times** and **Dimensions** straight
-from the schema, plus the **Organize Note** picker as an `extraPanels` entry. There is no Workflow
+The Organize Editor (`organizeEditor.jsx`) hosts two tabs — **Times** straight from the schema, plus
+the **Organize Note** picker as an `extraPanels` entry. There is no Workflow
 Setup tab: nothing on this side provisions structure.
 
 Per TAM's direct-child require rule, `dimensions` is a child of every note that requires it

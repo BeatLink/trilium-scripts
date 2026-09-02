@@ -1,6 +1,5 @@
 import { useState, useEffect } from "trilium:preact"
 import { activateNote } from "trilium:api"
-import { DimensionsPanel } from "organizeDimensions.jsx"
 
 const {
     getBucketTemplates, getOrganizeCandidates, getMisfiledNotes, getInvalidBuckets,
@@ -603,15 +602,9 @@ export default function OrganizePanel() {
                 >
                     Triage
                 </button>
-                <button
-                    className={"workflow-window-tab" + (tab === "dimensions" ? " workflow-window-tab-active" : "")}
-                    onClick={() => setTab("dimensions")}
-                >
-                    Dimensions
-                </button>
             </div>
             <div className="workflow-window-panel">
-                {tab === "triage" ? <TriagePanel /> : <DimensionsPanel />}
+                <TriagePanel />
             </div>
         </div>
     )

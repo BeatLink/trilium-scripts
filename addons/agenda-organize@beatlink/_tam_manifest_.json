@@ -1,11 +1,11 @@
 {
     "id": "agenda-organize@beatlink",
     "name": "Agenda Organize",
-    "description": "The Organize triage UI from the original agenda addon. Nothing provisions the notebook structure: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per classification dimension, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Fully self-contained settings in its own note (organizeSchema.json/organizeDefaults.json) tagged #agendaOrganizeConfig - the Organize note picker, the four quick-times, and its own `dimensions` classification registry. Nothing here reads agenda-overview@beatlink's #agendaOverviewConfig: it keeps its own separate dimensions registry for the Overview's derived prefix/color/grouping/filter variants, and the two are free to diverge. Item type comes from template-picker@beatlink's own registry (a note's ~template relation). Every cross-addon read degrades gracefully: until roots carry the identity labels the queues are simply empty.",
+    "description": "The Organize triage UI from the original agenda addon. Nothing provisions the notebook structure: this addon reads the structural identity labels (#agendaOrganizeArea / #agendaOrganizeType / #agendaOrganizeSpecial) you put on your own root notes, and triages the items filed under those roots. No classification vocabulary is stored here: each triage queue is generated from the picker addon that owns its axis and read live from that addon's own settings note - areas from area-picker@beatlink (#areaConfig), levels from priority-widget@beatlink (#priorityConfig), types from template-picker@beatlink (#templatePickerConfig) - so install a picker and its queue appears, uninstall it and the queue goes, and a value renamed or recoloured there shows up immediately. A value assigned from a queue is byte-identical to one assigned from the picker's own widget, positional prefix included; every root and note comparison tolerates both spellings so a root is never offered for deletion over one. The Organize page - shown on a note you pick in the Organize Editor - walks the Inbox, Area and Type subtrees (de-duped, since a filed item is reachable from two roots) and gives you one triage queue per axis, plus a start-date queue with Morning/Noon/Evening/Night quick-times, a misfiled-notes queue that checks each note against the axis of the root it sits under, and an Invalid Roots cleanup table. Filing an item into its Area root and its Type root as a Trilium clone is this addon's per-note job. Its own settings note (organizeSchema.json/organizeDefaults.json, tagged #agendaOrganizeConfig) holds only the Organize note picker and the four quick-times. agenda-overview@beatlink generates its display elements from the same three pickers, so the two agree by construction.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-organize@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "4.0.1",
+    "latestVersion": "5.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",
@@ -25,13 +25,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "organize.js"
-            },
-            {
-                "id": "organize-dimensions",
-                "title": "organizeDimensions.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "organizeDimensions.jsx"
             },
             {
                 "id": "organize-settings",
@@ -95,6 +88,20 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "dimensions.js"
+            },
+            {
+                "id": "picker-sources",
+                "title": "pickerSources.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "../../libs/libpickersources/pickerSources.js"
+            },
+            {
+                "id": "picker-registry",
+                "title": "pickerRegistry.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libpicker/pickerRegistry.jsx"
             },
             {
                 "id": "registry",
@@ -180,10 +187,6 @@
             },
             {
                 "parent": "organize-page-src",
-                "child": "organize-dimensions"
-            },
-            {
-                "parent": "organize-page-src",
                 "child": "organize-lib"
             },
             {
@@ -193,14 +196,6 @@
             {
                 "parent": "organize-page-src",
                 "child": "dimensions"
-            },
-            {
-                "parent": "organize-dimensions",
-                "child": "libsettings-ui"
-            },
-            {
-                "parent": "organize-dimensions",
-                "child": "organize-settings"
             },
             {
                 "parent": "organize-lib",
@@ -229,6 +224,22 @@
             {
                 "parent": "libsettings-ui",
                 "child": "libsettings-style"
+            },
+            {
+                "parent": "dimensions",
+                "child": "picker-sources"
+            },
+            {
+                "parent": "picker-sources",
+                "child": "libsettings-ui"
+            },
+            {
+                "parent": "registry",
+                "child": "picker-registry"
+            },
+            {
+                "parent": "picker-registry",
+                "child": "libsettings-ui"
             }
         ],
         "relations": [
@@ -290,11 +301,6 @@
                 "value": "bx bx-sort-down"
             },
             {
-                "note": "organize-dimensions",
-                "name": "iconClass",
-                "value": "bx bx-sort-down"
-            },
-            {
                 "note": "organize-settings",
                 "name": "iconClass",
                 "value": "bx bx-sort-down"
@@ -333,6 +339,16 @@
                 "note": "libsettings-style",
                 "name": "appCss",
                 "value": ""
+            },
+            {
+                "note": "picker-sources",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "picker-registry",
+                "name": "iconClass",
+                "value": "bx bx-task"
             }
         ],
         "readmeNote": "readme",

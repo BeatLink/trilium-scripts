@@ -263,14 +263,29 @@ async function getMisfiledNotes(rootDim, bucketTemplates) {
         // Area roots carry the area label and no bucket label (a legacy nested
         // bucket carries both). Each axis is indexed by its identity value so a
         // note's own labels resolve straight to the root it belongs under.
+        // area-picker tags a note with the area's key behind its position
+        // ("01-career"), while a root note's #agendaOrganizeArea identity is
+        // whatever you labelled it with - usually the bare key, and written long
+        // before the prefix existed. Every comparison below runs through this so
+        // the two spellings match; only the value WRITTEN back is canonical.
+        // Inlined rather than shared: runOnBackend ships this closure alone.
+        const areaKeyOf = (value) => (value || "").replace(/^\d+-/, "")
+
         const areaRootNotes = areaTagged.filter(n => !n.getLabelValue(labels.bucket))
         const areaRootByKey = {}
-        for (const n of areaRootNotes) areaRootByKey[n.getLabelValue(labels.area)] = n
+        for (const n of areaRootNotes) areaRootByKey[areaKeyOf(n.getLabelValue(labels.area))] = n
         const typeRootById = {}
         for (const n of typeTagged) typeRootById[n.getLabelValue(labels.type)] = n
 
+        // Keyed by the bare key, and mapping back to the vocabulary's CURRENT
+        // value, so "adopt the root's value" writes what the picker writes today
+        // rather than re-stamping whatever spelling the root happens to carry.
         const colorByKey = {}
-        for (const v of rootDim.values) colorByKey[v.key] = v.color || ""
+        const currentKeyByKey = {}
+        for (const v of rootDim.values) {
+            colorByKey[areaKeyOf(v.key)] = v.color || ""
+            currentKeyByKey[areaKeyOf(v.key)] = v.key
+        }
 
         // template noteId -> display name (for the "Set type to …" button).
         const bucketNameByKey = {}
@@ -317,7 +332,8 @@ async function getMisfiledNotes(rootDim, bucketTemplates) {
                 // Compare only the axis this branch represents. A note with no
                 // value on that axis is unclassified, not misfiled — we don't
                 // know where it belongs.
-                const areaMisfiled = axis === "area" && !!noteArea && noteArea !== rootValue
+                const areaMisfiled = axis === "area" && !!noteArea
+                    && areaKeyOf(noteArea) !== areaKeyOf(rootValue)
                 const typeMisfiled = axis === "type" && !!noteTemplate && noteTemplate !== rootValue
 
                 if (areaMisfiled || typeMisfiled) {
@@ -325,7 +341,7 @@ async function getMisfiledNotes(rootDim, bucketTemplates) {
                     // label — the branch it should have been filed under. The
                     // note's clone on the other axis is untouched.
                     const target = areaMisfiled
-                        ? areaRootByKey[noteArea]
+                        ? areaRootByKey[areaKeyOf(noteArea)]
                         : typeRootById[noteTemplate]
                     const targetPath = target ? pathOf(target) : ""
 
@@ -350,8 +366,10 @@ async function getMisfiledNotes(rootDim, bucketTemplates) {
                                 : "",
                             // The other fix direction: keep the note where it is
                             // and adopt the root's own value instead.
-                            updateAreaTo: areaMisfiled ? rootValue : "",
-                            updateAreaColor: areaMisfiled ? (colorByKey[rootValue] || "") : "",
+                            updateAreaTo: areaMisfiled
+                                ? (currentKeyByKey[areaKeyOf(rootValue)] || rootValue) : "",
+                            updateAreaColor: areaMisfiled
+                                ? (colorByKey[areaKeyOf(rootValue)] || "") : "",
                             updateTemplateTo: typeMisfiled ? rootValue : "",
                             updateTemplateToTitle: typeMisfiled ? (bucketNameByKey[rootValue] || "") : ""
                         }
@@ -449,7 +467,11 @@ async function assignTemplate(noteId, templateNoteId) {
 // tree path.
 async function getInvalidBuckets(rootDim, bucketTemplates) {
     return api.runOnBackend((labels, rootDim, bucketTemplates) => {
-        const areaKeys = new Set(rootDim.values.map(v => v.key))
+        // See getMisfiledNotes: a root's identity and the picker's value can be
+        // spelled with or without the positional prefix, and a root judged on the
+        // wrong spelling would be offered for deletion.
+        const areaKeyOf = (value) => (value || "").replace(/^\d+-/, "")
+        const areaKeys = new Set(rootDim.values.map(v => areaKeyOf(v.key)))
         const bucketKeys = new Set(bucketTemplates.map(t => t.noteId))
         const bucketNameByKey = {}
         for (const t of bucketTemplates) bucketNameByKey[t.noteId] = t.name
@@ -510,7 +532,7 @@ async function getInvalidBuckets(rootDim, bucketTemplates) {
         // are judged on their area slug alone.
         for (const note of api.searchForNotes(`#${labels.area}`)) {
             const area = note.getLabelValue(labels.area) || ""
-            record(note, area, "", !areaKeys.has(area), false)
+            record(note, area, "", !areaKeys.has(areaKeyOf(area)), false)
         }
 
         // Type roots are judged on their template noteId alone.
