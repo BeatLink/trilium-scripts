@@ -20,20 +20,20 @@ export default function AgendaSettings() {
 
     // Every tab here comes from the schema's own `category`/`tab` keys. The
     // Organize-note picker moved out to agenda-organize@beatlink's own editor
-    // along with the Organize config keys and its own dimensions registry;
-    // the Task label and Reschedule Options panels moved out to
-    // agenda-task@beatlink's own Task Settings page along with #agendaTaskConfig.
+    // along with the Organize config keys; the Task label and Reschedule Options
+    // panels moved out to agenda-task@beatlink's own Task Settings page along
+    // with #agendaTaskConfig.
     return (
         <div className="profile-editor">
             <h2>Agenda Settings</h2>
             <p>
                 Override the label-name vocabulary (Settings). Under Review, pick the shared overview
-                note and active profile, build out your profiles, and choose their searches and filters.
-                Under Display Elements, manage the reusable sort/prefix/color/grouping/date-rule building
-                blocks — each on its own tab; a profile only ever references an element by name, so
-                editing the element on its own tab changes it everywhere it's used. Edit the classification
-                vocabulary the Overview groups and colours by under Dimensions. The Organize triage UI
-                keeps its own separate dimensions registry, edited in agenda-organize@beatlink's own editor.
+                note and active profile, build out your profiles, choose their searches and filters, and
+                manage the reusable sort/prefix/color/grouping/date-rule building blocks those profiles
+                reference — each on its own tab; a profile only ever references an element by name, so
+                editing the element on its own tab changes it everywhere it's used. Area and priority
+                ship as entries in those tabs; classifying a note is agenda-organize@beatlink's job,
+                out of its own separate vocabulary.
             </p>
             <SettingsForm
                 schemaNoteId={schemaNoteId}

@@ -1,8 +1,6 @@
 {
     "_categories": [
         "Review",
-        "Display Elements",
-        "Dimensions",
         "Settings"
     ],
     "startDatetimeLabel": {
@@ -45,49 +43,6 @@
         "type": "json",
         "hidden": true,
         "label": "Section State"
-    },
-    "dimensions": {
-        "type": "registry",
-        "label": "Dimensions",
-        "description": "The classification axes the Overview groups, colours, prefixes and filters by. Each dimension is one note label plus its ordered vocabulary of values. Adding a dimension here gives you a sort ordinal and a derived prefix/color/grouping/filter variant, with no code change. Value order is this list's order, so reordering never rewrites a tagged note. agenda-organize@beatlink keeps its own separate registry for its triage queues; the two never read each other.",
-        "category": "Dimensions",
-        "tab": "Dimensions",
-        "itemSchema": {
-            "name": {
-                "type": "string",
-                "label": "Name",
-                "default": "New Dimension"
-            },
-            "label": {
-                "type": "string",
-                "label": "Note Label",
-                "description": "The note label values are written to, without the leading #.",
-                "default": ""
-            },
-            "values": {
-                "type": "registry",
-                "label": "Values",
-                "default": {},
-                "itemSchema": {
-                    "name": {
-                        "type": "string",
-                        "label": "Name",
-                        "default": ""
-                    },
-                    "key": {
-                        "type": "string",
-                        "label": "Label Value",
-                        "description": "The stored value. Changing it orphans every note already tagged with the old one.",
-                        "default": ""
-                    },
-                    "color": {
-                        "type": "color",
-                        "label": "Color",
-                        "default": "gray"
-                    }
-                }
-            }
-        }
     },
     "profiles": {
         "type": "registry",
@@ -289,7 +244,7 @@
     "sorts": {
         "type": "registry",
         "label": "Sorts",
-        "category": "Display Elements",
+        "category": "Review",
         "tab": "Sorts",
         "itemSchema": {
             "name": {
@@ -324,7 +279,7 @@
     "prefixes": {
         "type": "registry",
         "label": "Prefixes",
-        "category": "Display Elements",
+        "category": "Review",
         "tab": "Prefixes",
         "itemSchema": {
             "name": {
@@ -406,7 +361,7 @@
     "colors": {
         "type": "registry",
         "label": "Colors",
-        "category": "Display Elements",
+        "category": "Review",
         "tab": "Colors",
         "itemSchema": {
             "name": {
@@ -488,7 +443,7 @@
     "groupings": {
         "type": "registry",
         "label": "Groupings",
-        "category": "Display Elements",
+        "category": "Review",
         "tab": "Groupings",
         "itemSchema": {
             "name": {
@@ -595,7 +550,7 @@
     "dateRules": {
         "type": "registry",
         "label": "Date Rules",
-        "category": "Display Elements",
+        "category": "Review",
         "tab": "Date Rules",
         "itemSchema": {
             "name": {

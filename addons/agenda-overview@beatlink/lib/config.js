@@ -1,9 +1,4 @@
 const { loadSettings, saveSettings } = require("libSettingsUI.jsx")
-const { normalizeDimensions, getSortValueMaps } = require("dimensions.js")
-
-// Derived registry ids are prefixed so they can never collide with a
-// hand-written one.
-const DERIVED_PREFIX = "dim-"
 
 function reshapeVariant(variant) {
     if (!variant) return variant
@@ -115,124 +110,17 @@ function mapEntries(source, mapValue) {
 async function loadData(schemaNoteId, configNoteId) {
     const values = await loadSettings(schemaNoteId, configNoteId)
     const searchGroups = values.searchGroups || {}
-    const dimensions = normalizeDimensions(values)
-    // Derived groups are merged in BEFORE the profile reshape, so a profile's
-    // filter checklist sees them alongside the hand-written ones.
-    const filterGroups = {
-        ...(values.filterGroups || {}),
-        ...derivedFilterGroups(dimensions, values.filterGroups || {}, Object.keys(values.profiles || {}))
-    }
+    const filterGroups = values.filterGroups || {}
 
     return {
-        dimensions,
         dateRules: mapEntries(values.dateRules, reshapeDateRule),
         sorts: mapEntries(values.sorts, reshapeSort),
-        prefixes: { ...mapEntries(values.prefixes, reshapeVariant), ...derivedPrefixes(dimensions) },
-        colors: { ...mapEntries(values.colors, reshapeVariant), ...derivedColors(dimensions) },
-        groupings: { ...mapEntries(values.groupings, reshapeGrouping), ...derivedGroupings(dimensions) },
+        prefixes: mapEntries(values.prefixes, reshapeVariant),
+        colors: mapEntries(values.colors, reshapeVariant),
+        groupings: mapEntries(values.groupings, reshapeGrouping),
         profiles: mapEntries(values.profiles, (profile, id) =>
             reshapeProfile(profile, searchGroups, filterGroups, id))
     }
-}
-
-// Prefix / color / grouping / filter variants DERIVED from the registered
-// dimensions, so adding a dimension yields all four for free and none of them can
-// drift from the vocabulary. They used to be hardcoded copies of the area and
-// priority lists in schema.json, which had already gone stale (the area filter
-// group listed 4 of 13 areas).
-//
-// Emitted already reshaped — the same shape reshapeVariant/reshapeGrouping
-// produce — and merged over the user's own entries under a `dim-` id. This is
-// strictly read-path: a derived registry must never reach saveSettings, or
-// filterRegistryBySchema would record it as user edits and freeze the
-// derivation. loadData is the only place they are injected, and the save
-// helpers below all go through loadSettings instead.
-function derivedPrefixes(dimensions) {
-    const out = {}
-    for (const dim of dimensions) {
-        if (!dim.values.length) continue
-        const children = {}
-        for (const value of dim.values) children[value.key] = value.name
-        out[DERIVED_PREFIX + dim.id] = {
-            name: dim.name, type: "label", label: dim.label, children, noValue: ""
-        }
-    }
-    return out
-}
-
-function derivedColors(dimensions) {
-    const out = {}
-    for (const dim of dimensions) {
-        if (!dim.values.length) continue
-        const children = {}
-        for (const value of dim.values) children[value.key] = value.color || "gray"
-        out[DERIVED_PREFIX + dim.id] = {
-            name: dim.name, type: "label", label: dim.label, children, noValue: ""
-        }
-    }
-    return out
-}
-
-function derivedGroupings(dimensions) {
-    const out = {}
-    for (const dim of dimensions) {
-        if (!dim.values.length) continue
-        const children = {}
-        for (const value of dim.values) {
-            children[value.key] = { display: value.name, color: value.color || "gray" }
-        }
-        out[DERIVED_PREFIX + dim.id] = {
-            name: `By ${dim.name}`,
-            type: "label",
-            label: dim.label,
-            children,
-            noValue: { display: `No ${dim.name}`, color: "" }
-        }
-    }
-    return out
-}
-
-// Filter groups are the hybrid case: the CHILDREN are derived from the
-// vocabulary, but each child's `enabled` flag is user state, not derivation. So
-// the stored group (if any) is merged over the derived one by child id, and the
-// group keeps its `profileId` so the profile checklist still resolves it.
-//
-// A group whose children are all enabled is a no-op (getFilteredNotes ANDs the
-// groups, ORs within one), so a newly added dimension never silently hides
-// notes.
-function derivedFilterGroups(dimensions, stored, profileIds) {
-    const out = {}
-    for (const dim of dimensions) {
-        if (!dim.values.length) continue
-        const id = DERIVED_PREFIX + dim.id
-        const storedGroup = stored[id]
-        const storedChildren = (storedGroup && storedGroup.children) || {}
-
-        const children = {}
-        for (const value of dim.values) {
-            const storedChild = storedChildren[value.key]
-            children[value.key] = {
-                name: value.name,
-                type: "search",
-                rule: `#${dim.label}='${value.key}'`,
-                enabled: storedChild ? !!storedChild.enabled : true
-            }
-        }
-        const noneStored = storedChildren.none
-        children.none = {
-            name: `No ${dim.name}`,
-            type: "search",
-            rule: `#!${dim.label} OR #${dim.label}=''`,
-            enabled: noneStored ? !!noneStored.enabled : true
-        }
-
-        out[id] = {
-            name: dim.name,
-            profileId: (storedGroup && storedGroup.profileId) || profileIds[0] || "",
-            children
-        }
-    }
-    return out
 }
 
 async function saveProfile(profile) {
@@ -288,9 +176,6 @@ async function saveSectionState({ schemaNoteId, configNoteId }, profileId, state
 
 module.exports = {
     loadData,
-    // Re-exported from dimensions.js so libAgendaQuery's zero-arg call site
-    // (config.getSortValueMaps()) is unchanged.
-    getSortValueMaps,
     saveProfile,
     getAllProfiles,
     getActiveProfile,

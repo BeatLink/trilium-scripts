@@ -46,7 +46,153 @@
 //   - Registry fields are stored wrapped: `config.<name> = { entries, removedIds }`.
 //     `entries` is a map keyed by id; `removedIds` an array. Operate on those,
 //     not on a flat map.
-const MIGRATIONS = []
+function registryOf(node) {
+    if (!node || typeof node !== "object") return { entries: {}, removedIds: [] }
+    const wrapped = node.entries || node.removedIds
+    return {
+        entries: (wrapped ? node.entries : node) || {},
+        removedIds: (wrapped && node.removedIds) || []
+    }
+}
+
+const DERIVED_PREFIX = "dim-"
+const VARIANT_REGISTRIES = ["prefixes", "colors", "groupings", "filterGroups"]
+
+// Merges `fields` into a registry entry, keeping whatever the user already
+// stored there. Nested `children` merge one level deeper, since that is where
+// the per-value deltas live.
+function putEntry(registry, id, fields) {
+    const existing = registry.entries[id] || {}
+    const children = registryOf(existing.children)
+    for (const [childId, childFields] of Object.entries(registryOf(fields.children).entries)) {
+        children.entries[childId] = { ...(children.entries[childId] || {}), ...childFields }
+    }
+    for (const removed of registryOf(fields.children).removedIds) {
+        if (!children.removedIds.includes(removed)) children.removedIds.push(removed)
+    }
+    registry.entries[id] = { ...existing, ...fields, children }
+}
+
+// 1 -> folds the `dimensions` registry into hand-written prefix/color/grouping/
+// filter entries, one per dimension, keyed by the dimension's own id. The
+// registry is gone from the schema, so its stored deltas would otherwise be
+// dropped on the next save, taking a renamed value or a recoloured area with
+// them. Shipped area/priority variants come from defaults.json now, so only the
+// user's own edits have to be carried across - which is exactly what a stored
+// delta holds.
+//
+// Filter groups are the one variant that was already persisted, under the
+// derivation's `dim-` prefixed ids (that is where each child's `enabled` flag
+// lived), so those entries are renamed onto the new ids first and the fold
+// merges over them.
+function foldDimensionsIntoVariants(config) {
+    const registries = {}
+    for (const name of VARIANT_REGISTRIES) {
+        const registry = registryOf(config[name])
+        for (const id of Object.keys(registry.entries)) {
+            if (!id.startsWith(DERIVED_PREFIX)) continue
+            const plainId = id.slice(DERIVED_PREFIX.length)
+            registry.entries[plainId] = { ...registry.entries[plainId], ...registry.entries[id] }
+            delete registry.entries[id]
+        }
+        registry.removedIds = registry.removedIds.map(id =>
+            id.startsWith(DERIVED_PREFIX) ? id.slice(DERIVED_PREFIX.length) : id)
+        registries[name] = registry
+    }
+
+    const profiles = registryOf(config.profiles)
+    const firstProfileId = Object.keys(profiles.entries)[0] || "default"
+    const dimensions = registryOf(config.dimensions)
+
+    for (const [dimId, dim] of Object.entries(dimensions.entries)) {
+        if (!dim || typeof dim !== "object") continue
+        const values = registryOf(dim.values)
+        const { name, label } = dim
+
+        const shared = {}
+        if (name !== undefined) shared.name = name
+        if (label !== undefined) shared.label = label
+
+        const children = { prefixes: {}, colors: {}, groupings: {}, filterGroups: {} }
+        for (const [valueId, value] of Object.entries(values.entries)) {
+            if (!value || typeof value !== "object") continue
+            const prefix = {}, color = {}, grouping = {}, filter = {}
+            if (value.key !== undefined) {
+                prefix.labelValue = value.key
+                color.labelValue = value.key
+                grouping.labelValue = value.key
+                if (label !== undefined) filter.rule = `#${label}='${value.key}'`
+            }
+            if (value.name !== undefined) {
+                prefix.display = value.name
+                grouping.display = value.name
+                filter.name = value.name
+            }
+            if (value.color !== undefined) {
+                color.display = value.color
+                grouping.color = value.color
+            }
+            // A value with no filter child to merge into is new, so it needs a
+            // complete entry; one that has a child keeps that child's `enabled`.
+            const storedFilter = registryOf((registries.filterGroups.entries[dimId] || {}).children)
+            if (!storedFilter.entries[valueId]) {
+                filter.type = "search"
+                filter.enabled = true
+            }
+            children.prefixes[valueId] = prefix
+            children.colors[valueId] = color
+            children.groupings[valueId] = grouping
+            children.filterGroups[valueId] = filter
+        }
+
+        const childRemovals = values.removedIds
+        putEntry(registries.prefixes, dimId, {
+            ...shared, type: "label",
+            children: { entries: children.prefixes, removedIds: childRemovals }
+        })
+        putEntry(registries.colors, dimId, {
+            ...shared, type: "label",
+            children: { entries: children.colors, removedIds: childRemovals }
+        })
+        putEntry(registries.groupings, dimId, {
+            ...shared, type: "label",
+            ...(name === undefined ? {} : { name: `By ${name}` }),
+            children: { entries: children.groupings, removedIds: childRemovals }
+        })
+        putEntry(registries.filterGroups, dimId, {
+            ...(name === undefined ? {} : { name }),
+            profileId: (registries.filterGroups.entries[dimId] || {}).profileId || firstProfileId,
+            children: { entries: children.filterGroups, removedIds: childRemovals }
+        })
+    }
+
+    // A dimension the user deleted has to stay deleted in each variant.
+    for (const name of VARIANT_REGISTRIES) {
+        for (const id of dimensions.removedIds) {
+            if (!registries[name].removedIds.includes(id)) registries[name].removedIds.push(id)
+        }
+        config[name] = registries[name]
+    }
+
+    // Profiles referenced the derived variants by their `dim-` prefixed ids.
+    for (const profile of Object.values(profiles.entries)) {
+        if (!profile || typeof profile !== "object") continue
+        for (const key of ["prefixSelected", "colorSelected", "groupingSelected", "sortSelected"]) {
+            const value = profile[key]
+            if (typeof value === "string" && value.startsWith(DERIVED_PREFIX)) {
+                profile[key] = value.slice(DERIVED_PREFIX.length)
+            }
+        }
+    }
+    config.profiles = profiles
+
+    delete config.dimensions
+    return config
+}
+
+const MIGRATIONS = [
+    { to: 1, run: foldDimensionsIntoVariants }
+]
 
 // The version a fresh install (and an install past every migration) sits at.
 // Equals the highest `to` in MIGRATIONS. Kept as its own constant so a fresh

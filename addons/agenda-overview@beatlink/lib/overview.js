@@ -125,19 +125,16 @@ async function configureOverviewNote(overviewNoteId, viewType, boardGroupBy = ""
     }, [overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes])
 }
 
-// Promoted attribute definitions shown on the overview's cards/rows: the fixed
-// date/display columns, then one per registered dimension (so a dimension the
-// user adds gets its own column with no code change).
+// Promoted attribute definitions shown on the overview's cards/rows.
 // durationDisplay/recurrenceDisplay are declared as columns but written by
 // agenda-task@beatlink, which keeps them current on every task edit. Without
 // that addon installed the two columns simply stay empty.
-function promotedAttributesForConstants(constants = {}, dimensions = []) {
+function promotedAttributesForConstants(constants = {}) {
     const specs = [
         [constants.START_DATETIME_LABEL, "promoted,single,datetime", "Start"],
         [constants.DUE_DATETIME_LABEL, "promoted,single,datetime", "Due"],
         ["durationDisplay", "promoted,single,text", "Duration"],
-        ["recurrenceDisplay", "promoted,single,text", "Recurrence"],
-        ...dimensions.map(dim => [dim.label, "promoted,single,text", dim.name])
+        ["recurrenceDisplay", "promoted,single,text", "Recurrence"]
     ]
     return specs
         .filter(([name]) => name)
@@ -186,7 +183,7 @@ async function updateTaskLists(profileContext, constants) {
             ({ statusByNote, columns: boardColumns } = await computeStatuses(data.dateRules, grouping, sortedNotes))
         }
 
-        const promotedAttributes = promotedAttributesForConstants(constants, data.dimensions)
+        const promotedAttributes = promotedAttributesForConstants(constants)
         await configureOverviewNote(overviewNoteId, viewType, boardGroupBy, statusByNote, boardColumns, promotedAttributes)
 
         const prefixDict = await getPrefixes(data.dateRules, data.prefixes[profile.prefixes.selected], sortedNotes)

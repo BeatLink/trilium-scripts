@@ -1,11 +1,11 @@
 {
     "id": "agenda-overview@beatlink",
     "name": "Agenda Overview",
-    "description": "A right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed note it ships (#customResourceProvider agendaCalendar.ical). It owns the agenda configuration those rules live in: one settings note (schema.json/defaults.json/config.json, tagged #agendaOverviewConfig) holding an open-ended `dimensions` registry - area and priority ship as defaults, but you can add your own - the profiles, and the searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference, plus the Agenda Settings page that edits all of it. Each dimension gets a sort ordinal and a derived prefix/color/grouping/filter variant, derived at read time so they can never drift from the vocabulary. Version 3.0.0 absorbs agenda@beatlink, which no longer exists: run this addon's migrate-config-from-agenda.js once before updating, or the next sync prunes your config note. Self-contained - it ships no sibling's code and reads no sibling's settings note. Item type is a separate axis owned by template-picker@beatlink's own registry (a note's ~template relation, not a dimension label). Every sibling owns its own settings note and reads nothing from this one - agenda-task@beatlink (the Task pane; #agendaTaskConfig), agenda-myday@beatlink (the My Day focus panel; #agendaMyDayConfig) and agenda-organize@beatlink (the GTD triage page; #agendaOrganizeConfig), which keeps its own separate dimensions registry for its triage queues.",
+    "description": "A right-pane widget whose search/filter/sort/prefix/color rules re-file the active profile's matching notes under a shared overview note shown as a built-in collection view, and write the same task list out as an iCal feed note it ships (#customResourceProvider agendaCalendar.ical). It owns the agenda configuration those rules live in: one settings note (schema.json/defaults.json/config.json, tagged #agendaOverviewConfig) holding the profiles and the searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference, plus the Agenda Settings page that edits all of it, under one Review category (Display Elements merged into it in 4.0.0) plus Settings. Every display element is a hand-written entry - area and priority ship as prefix, colour, grouping and filter entries you can edit like any other. Version 4.0.0 removes the `dimensions` registry and the variants it derived; a config migration folds an existing install's dimensions into those four entries on the first read, but sorting by #area becomes alphabetical and the overview's per-dimension columns are gone. Version 3.0.0 absorbed agenda@beatlink, which no longer exists: run this addon's migrate-config-from-agenda.js once before updating from 2.x, or the next sync prunes your config note. Self-contained - it ships no sibling's code and reads no sibling's settings note. Item type is owned by template-picker@beatlink's own registry (a note's ~template relation). Every sibling owns its own settings note and reads nothing from this one - agenda-task@beatlink (the Task pane; #agendaTaskConfig), agenda-myday@beatlink (the My Day focus panel; #agendaMyDayConfig) and agenda-organize@beatlink (the GTD triage page; #agendaOrganizeConfig), which keeps its own separate dimensions registry for its triage queues.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.0.0",
+    "latestVersion": "4.0.0",
     "type": "widget",
     "readme": "README.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-overview@beatlink/_tam_manifest_.json",
@@ -80,13 +80,6 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "lib/settings.js"
-            },
-            {
-                "id": "dimensions",
-                "title": "dimensions.js",
-                "type": "code",
-                "mime": "application/javascript;env=frontend",
-                "sourceUrl": "lib/dimensions.js"
             },
             {
                 "id": "migrate",
@@ -270,10 +263,6 @@
             },
             {
                 "parent": "grp-lib",
-                "child": "dimensions"
-            },
-            {
-                "parent": "grp-lib",
                 "child": "migrate"
             },
             {
@@ -298,23 +287,15 @@
             },
             {
                 "parent": "agenda-settings",
-                "child": "dimensions"
-            },
-            {
-                "parent": "agenda-settings",
                 "child": "migrate"
             },
             {
-                "parent": "dimensions",
-                "child": "libsettings-ui"
-            },
-            {
                 "parent": "lib-config",
                 "child": "libsettings-ui"
             },
             {
                 "parent": "lib-config",
-                "child": "dimensions"
+                "child": "agenda-settings"
             },
             {
                 "parent": "lib-query",
@@ -359,10 +340,6 @@
             {
                 "parent": "settings-page",
                 "child": "settings-ui"
-            },
-            {
-                "parent": "settings-ui",
-                "child": "dimensions"
             },
             {
                 "parent": "settings-ui",
@@ -500,11 +477,6 @@
             },
             {
                 "note": "agenda-settings",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "dimensions",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

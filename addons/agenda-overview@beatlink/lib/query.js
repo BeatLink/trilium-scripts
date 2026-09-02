@@ -89,15 +89,12 @@ async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
         Object.values(allowedByGroup).every(allowed => allowed.includes(noteId)))
 }
 
-// `valueMaps` (see libAgendaConfig.getSortValueMaps) orders attributes whose
-// stored values are order-free stable slugs — #area sorts by its configured
-// position rather than alphabetically. Resolved per call so an area reorder
-// takes effect without a reload; callers that already hold the maps can pass
-// them in to skip the lookup.
-async function sortNoteIds(sortString, noteIds, valueMaps) {
+// Sorts by the notes' stored label values as strings. A label whose vocabulary
+// is not lexically ordered (#area) sorts alphabetically; #priority stores its
+// rank as the value's own prefix, so the shipped priority sorts are descending.
+async function sortNoteIds(sortString, noteIds) {
     const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
-    const maps = valueMaps ?? await config.getSortValueMaps()
-    const sorted = multisort.sortChildNotes(sortString, notes, maps)
+    const sorted = multisort.sortChildNotes(sortString, notes)
     return sorted.map(note => note.noteId)
 }
 
