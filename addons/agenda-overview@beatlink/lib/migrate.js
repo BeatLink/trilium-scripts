@@ -190,8 +190,54 @@ function foldDimensionsIntoVariants(config) {
     return config
 }
 
+const PICKER_IDS = ["area", "priority", "template"]
+const PICKER_PREFIX = "picker-"
+
+// 2 -> repoints an install at the entries the pickers now generate. Area,
+// priority and template stopped being shipped entries: whichever pickers are
+// installed stand their own up at `picker-<source>`, per profile for the search
+// and filter groups. What was stored under the old ids was a delta against a
+// copy of a vocabulary that lives in those addons, so the only parts worth
+// carrying over are the ones the config genuinely owns - a profile's choice of
+// entry, and a group's per-value on/off flags.
+function repointAtDerivedEntries(config) {
+    const profiles = registryOf(config.profiles)
+
+    for (const profile of Object.values(profiles.entries)) {
+        if (!profile || typeof profile !== "object") continue
+        for (const key of ["prefixSelected", "colorSelected", "groupingSelected", "sortSelected"]) {
+            if (PICKER_IDS.includes(profile[key])) profile[key] = PICKER_PREFIX + profile[key]
+        }
+    }
+    config.profiles = profiles
+
+    // The variants held nothing but a stale copy of the picker's vocabulary.
+    for (const name of ["prefixes", "colors", "groupings"]) {
+        const registry = registryOf(config[name])
+        for (const id of PICKER_IDS) delete registry.entries[id]
+        config[name] = registry
+    }
+
+    // The groups held the flags, which move onto the per-profile derived id.
+    for (const name of ["searchGroups", "filterGroups"]) {
+        const registry = registryOf(config[name])
+        for (const id of PICKER_IDS) {
+            const group = registry.entries[id]
+            if (!group) continue
+            const profileId = group.profileId || Object.keys(profiles.entries)[0] || "default"
+            const moved = `${PICKER_PREFIX}${id}-${profileId}`
+            registry.entries[moved] = { ...registry.entries[moved], ...group }
+            delete registry.entries[id]
+        }
+        config[name] = registry
+    }
+
+    return config
+}
+
 const MIGRATIONS = [
-    { to: 1, run: foldDimensionsIntoVariants }
+    { to: 1, run: foldDimensionsIntoVariants },
+    { to: 2, run: repointAtDerivedEntries }
 ]
 
 // The version a fresh install (and an install past every migration) sits at.

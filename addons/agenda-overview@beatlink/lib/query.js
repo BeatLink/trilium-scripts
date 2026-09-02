@@ -89,12 +89,13 @@ async function getFilteredNotes(dateRules, filterGroupsChildren, notesList) {
         Object.values(allowedByGroup).every(allowed => allowed.includes(noteId)))
 }
 
-// Sorts by the notes' stored label values as strings. A label whose vocabulary
-// is not lexically ordered (#area) sorts alphabetically; #priority stores its
-// rank as the value's own prefix, so the shipped priority sorts are descending.
-async function sortNoteIds(sortString, noteIds) {
+// Sorts by the notes' stored values as strings, except where `valueMaps` supplies
+// ordinals for an attribute (loadData builds one per resolved picker), which is
+// what makes a criterion follow the order configured in that picker rather than
+// the alphabetical accident of its stored values.
+async function sortNoteIds(sortString, noteIds, valueMaps) {
     const notes = await Promise.all(noteIds.map(noteId => api.getNote(noteId)))
-    const sorted = multisort.sortChildNotes(sortString, notes)
+    const sorted = multisort.sortChildNotes(sortString, notes, valueMaps)
     return sorted.map(note => note.noteId)
 }
 
@@ -117,6 +118,13 @@ async function classifyNote(noteId, info, dateRules) {
     if (info.type === "label") {
         const labelValue = (await api.getNote(noteId)).getLabelValue(info.label)
         return { kind: "label", labelValue }
+    }
+    // A relation classifies by its target's noteId, reported as a label match so
+    // every lookup downstream (prefix/color children, group columns) stays one
+    // keyed dictionary regardless of which attribute the value came off.
+    if (info.type === "relation") {
+        const target = (await api.getNote(noteId)).getRelationValue(info.relation)
+        return { kind: "label", labelValue: target }
     }
     if (info.type === "recurrence") {
         const recurrence = (await api.getNote(noteId)).getLabelValue(info.label)
@@ -173,7 +181,8 @@ function getGroupColumns(groupingInfo) {
     if (!groupingInfo) return []
 
     let columns
-    if (groupingInfo.type === "label" || groupingInfo.type === "recurrence") {
+    if (groupingInfo.type === "label" || groupingInfo.type === "recurrence"
+        || groupingInfo.type === "relation") {
         columns = Object.entries(groupingInfo.children || {})
             .map(([key, child]) => ({ key, display: child.display, color: child.color }))
     } else if (groupingInfo.type === "dayjs") {
@@ -195,10 +204,20 @@ function getGroupColumns(groupingInfo) {
 }
 
 async function setGroupForNote(groupingInfo, noteId, targetGroupKey) {
-    if (!groupingInfo || groupingInfo.type !== "label") return
-    await api.runOnBackend((noteId, label, value) => {
-        api.getNote(noteId).setLabel(label, value)
-    }, [noteId, groupingInfo.label, targetGroupKey])
+    if (!groupingInfo) return
+    if (groupingInfo.type === "label") {
+        await api.runOnBackend((noteId, label, value) => {
+            api.getNote(noteId).setLabel(label, value)
+        }, [noteId, groupingInfo.label, targetGroupKey])
+        return
+    }
+    // A relation grouping's column key is the target's noteId, so dropping a
+    // note on a column repoints the relation at it.
+    if (groupingInfo.type === "relation") {
+        await api.runOnBackend((noteId, relation, targetNoteId) => {
+            api.getNote(noteId).setRelation(relation, targetNoteId)
+        }, [noteId, groupingInfo.relation, targetGroupKey])
+    }
 }
 
 async function getTaskList(profileContext) {
@@ -224,7 +243,7 @@ async function getSortedTaskList(profileContext, profileId = null) {
     const searchedNotes = await getNotesForSearchGroups(profile.searchGroups.children)
     const filteredNotes = await getFilteredNotes(data.dateRules, profile.filterGroups.children, searchedNotes)
     const sortRule = data.sorts[profile.sorts.selected]?.rule || ""
-    return sortNoteIds(sortRule, filteredNotes)
+    return sortNoteIds(sortRule, filteredNotes, data.sortValueMaps)
 }
 
 module.exports = {

@@ -149,6 +149,30 @@
                 "registry": "profiles",
                 "default": ""
             },
+            "type": {
+                "type": "select",
+                "label": "Source",
+                "description": "By Area, By Priority and By Template build one search per value from that addon's own settings, so there is nothing to fill in below. Groups for the installed pickers are generated for you; the group is ignored when the addon isn't installed.",
+                "default": "manual",
+                "options": [
+                    {
+                        "value": "manual",
+                        "label": "Manual"
+                    },
+                    {
+                        "value": "area",
+                        "label": "By Area"
+                    },
+                    {
+                        "value": "priority",
+                        "label": "By Priority"
+                    },
+                    {
+                        "value": "template",
+                        "label": "By Template"
+                    }
+                ]
+            },
             "children": {
                 "type": "registry",
                 "label": "Searches",
@@ -169,9 +193,13 @@
                         "label": "Enabled",
                         "default": true
                     }
+                },
+                "showWhen": {
+                    "type": "manual"
                 }
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "filterGroups": {
         "type": "registry",
@@ -189,6 +217,30 @@
                 "label": "Profile",
                 "registry": "profiles",
                 "default": ""
+            },
+            "type": {
+                "type": "select",
+                "label": "Source",
+                "description": "By Area, By Priority and By Template build one filter per value from area-picker@beatlink's, priority-widget@beatlink's and template-picker@beatlink's own settings, so there is nothing to fill in below; the group is ignored when that addon isn't installed.",
+                "default": "manual",
+                "options": [
+                    {
+                        "value": "manual",
+                        "label": "Manual"
+                    },
+                    {
+                        "value": "area",
+                        "label": "By Area"
+                    },
+                    {
+                        "value": "priority",
+                        "label": "By Priority"
+                    },
+                    {
+                        "value": "template",
+                        "label": "By Template"
+                    }
+                ]
             },
             "children": {
                 "type": "registry",
@@ -237,9 +289,13 @@
                         "label": "Enabled",
                         "default": true
                     }
+                },
+                "showWhen": {
+                    "type": "manual"
                 }
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "sorts": {
         "type": "registry",
@@ -257,10 +313,37 @@
                 "label": "Criteria",
                 "default": [],
                 "itemSchema": {
+                    "source": {
+                        "type": "select",
+                        "label": "Sort By",
+                        "description": "Attribute sorts by the note label named below. The picker options sort by that addon's own configured order instead - a criterion sourced from an addon that isn't installed is skipped.",
+                        "default": "none",
+                        "options": [
+                            {
+                                "value": "none",
+                                "label": "Attribute"
+                            },
+                            {
+                                "value": "area",
+                                "label": "By Area"
+                            },
+                            {
+                                "value": "priority",
+                                "label": "By Priority"
+                            },
+                            {
+                                "value": "template",
+                                "label": "By Template"
+                            }
+                        ]
+                    },
                     "attribute": {
                         "type": "string",
                         "label": "Attribute",
-                        "default": ""
+                        "default": "",
+                        "showWhen": {
+                            "source": "none"
+                        }
                     },
                     "desc": {
                         "type": "boolean",
@@ -274,7 +357,8 @@
                     }
                 }
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "prefixes": {
         "type": "registry",
@@ -299,8 +383,21 @@
                     {
                         "value": "dayjs",
                         "label": "By Date"
+                    },
+                    {
+                        "value": "area",
+                        "label": "By Area"
+                    },
+                    {
+                        "value": "priority",
+                        "label": "By Priority"
+                    },
+                    {
+                        "value": "template",
+                        "label": "By Template"
                     }
-                ]
+                ],
+                "description": "By Area, By Priority and By Template read the vocabulary from area-picker@beatlink's, priority-widget@beatlink's and template-picker@beatlink's own settings, so there is nothing to fill in below; each is empty when that addon isn't installed. By Template reads a note's ~template relation rather than a label."
             },
             "label": {
                 "type": "string",
@@ -356,7 +453,8 @@
                 "label": "No-Value Prefix",
                 "default": ""
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "colors": {
         "type": "registry",
@@ -381,8 +479,21 @@
                     {
                         "value": "dayjs",
                         "label": "By Date"
+                    },
+                    {
+                        "value": "area",
+                        "label": "By Area"
+                    },
+                    {
+                        "value": "priority",
+                        "label": "By Priority"
+                    },
+                    {
+                        "value": "template",
+                        "label": "By Template"
                     }
-                ]
+                ],
+                "description": "By Area, By Priority and By Template read the vocabulary from area-picker@beatlink's, priority-widget@beatlink's and template-picker@beatlink's own settings, so there is nothing to fill in below; each is empty when that addon isn't installed. By Template reads a note's ~template relation rather than a label."
             },
             "label": {
                 "type": "string",
@@ -438,7 +549,8 @@
                 "label": "No-Value Color",
                 "default": ""
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "groupings": {
         "type": "registry",
@@ -467,8 +579,21 @@
                     {
                         "value": "recurrence",
                         "label": "By Recurrence"
+                    },
+                    {
+                        "value": "area",
+                        "label": "By Area"
+                    },
+                    {
+                        "value": "priority",
+                        "label": "By Priority"
+                    },
+                    {
+                        "value": "template",
+                        "label": "By Template"
                     }
-                ]
+                ],
+                "description": "By Area, By Priority and By Template read the vocabulary from area-picker@beatlink's, priority-widget@beatlink's and template-picker@beatlink's own settings, so there is nothing to fill in below; each is empty when that addon isn't installed. By Template reads a note's ~template relation rather than a label."
             },
             "label": {
                 "type": "string",
@@ -545,7 +670,8 @@
                 "label": "No-Value Column Color",
                 "default": ""
             }
-        }
+        },
+        "description": "An entry is generated automatically for each installed picker (area-picker@beatlink, priority-widget@beatlink, template-picker@beatlink) and cannot be edited here - change the vocabulary in that addon's own settings."
     },
     "dateRules": {
         "type": "registry",

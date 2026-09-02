@@ -6,7 +6,8 @@ out as an iCal feed. It also owns the agenda configuration those rules live in �
 searches/filters/sorts/prefixes/colors/groupings/date-rules those profiles reference — and the
 **Agenda Settings** page that edits all of it.
 
-Self-contained: it ships no other addon's code and reads no other addon's settings note. The Task pane
+Self-contained: it ships no other addon's code, and the only settings note it reads besides its own is
+area-picker@beatlink's, for variants set to **By Area** (see Configuration). The Task pane
 ([`agenda-task@beatlink`](../agenda-task@beatlink/README.md)), the My Day focus panel
 ([`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md)) and the GTD triage page
 ([`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)) are each their own addon on the
@@ -32,25 +33,47 @@ Agenda Settings page.
 
 The config lives in one settings note holding a `schema.json`/`defaults.json`/`config.json` set. That
 note is tagged **`#agendaOverviewConfig`** and resolved at runtime by `getAgendaSettings()` in
-[`lib/settings.js`](lib/settings.js). Every display element is a hand-written entry: area and priority
-ship as prefix, colour, grouping and filter entries in `defaults.json`, and classifying a note by them
-is [`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)'s job, out of its own separate
-vocabulary. Adding a classification axis of your own means adding the entries you want it to have —
-there is nothing that generates them for you, and nothing that keeps them in step with each other.
+[`lib/settings.js`](lib/settings.js). What it holds is small: your profiles, the date rules, and the
+date/recurrence display elements. **Nothing about area, priority or template is stored here at all.**
 
-The Agenda Settings page groups its tabs under two workflow categories, using
-[`libsettings`](../../libs/libsettings/README.md)'s category level (`_categories` + per-field
-`category`):
+## Generated from the pickers
 
-- **Review** — Overview Note, Active Profile, Profiles, Searches, Filters (what the active profile
-  shows), then Sorts, Prefixes, Colors, Groupings and Date Rules: the reusable building blocks a
-  profile references by name (Date Rules in particular is the primitive Prefixes/Colors/Groupings/
-  Filters all reference).
-- **Settings** — the three task label names this addon reads: start datetime, due datetime and
-  recurrence. [`agenda-task@beatlink`](../agenda-task@beatlink/README.md) and
-  [`agenda-myday@beatlink`](../agenda-myday@beatlink/README.md) declare their own copies of that
-  vocabulary in their own config notes. Renaming a label means renaming it in each installed addon that
-  reads it; in exchange none of them reads another's config note or ships another's code.
+Whenever one of these addons is installed, this one stands up a full set of entries for it, live from
+that addon's own settings note:
+
+| Picker | Reads | Classifies by |
+| ------ | ----- | ------------- |
+| [`area-picker@beatlink`](../area-picker@beatlink/README.md) | `#areaConfig` | `#area`, whose value is the key behind its position (`01-career`) |
+| [`priority-widget@beatlink`](../priority-widget@beatlink/README.md) | `#priorityConfig` | the active profile's own label, usually `#priority` |
+| [`template-picker@beatlink`](../template-picker@beatlink/README.md) | `#templatePickerConfig` | a note's `~template` relation, keyed by the template note's id |
+
+Each one generates six things, keyed `picker-<name>` so they can never collide with an entry of your
+own: a **prefix**, a **colour**, a **grouping**, a **sort** (that picker's order, then start date), a
+**search group** and a **filter group** — the last two per profile, since each profile keeps its own
+on/off state. Every value starts ticked in both, so installing a picker surfaces everything it knows
+about and you turn off what you don't want. A generated **template** search also skips notes filed
+directly under another note of the same template — a task under a task is part of that task, not a
+separate item — so the overview stays a list of work rather than a flattened tree. Area and priority
+searches carry no such clause: those axes group notes, they don't nest them. Those flags are the one part that is yours and is
+remembered; the names, colours, rules and order are re-read every time, so renaming an area or adding
+a template shows up immediately and nothing here can drift from the addon that owns it.
+
+Uninstall a picker and its entries leave with it — a profile pointing at one falls back to no
+colours/prefixes, its groups vanish rather than filtering everything away, and its sort criterion
+drops out while the criteria after it still apply. Nothing errors, and nothing is left behind to edit.
+
+The corollary is worth saying plainly: **with none of the pickers installed, a fresh install has no
+searches, so the overview is empty.** Install the picker for the axis you work in, or build a search
+group by hand.
+
+You can still point an entry of your own at a picker: a prefix, colour or grouping's **Type**, a
+search or filter group's **Source**, and a sort criterion's **Sort By** all offer By Area / By
+Priority / By Template. The generated entries are simply those, pre-made.
+
+A note on template-picker: it fills in template note ids with its **Scan**, so run that once. Until
+then its registry has nothing resolvable and a By Template entry behaves as if the addon weren't
+installed. Classifying a note remains
+[`agenda-organize@beatlink`](../agenda-organize@beatlink/README.md)'s job, out of its own vocabulary.
 
 ### Config migrations
 
@@ -62,6 +85,41 @@ handles: an ordered list of one-time transforms of the raw persisted config, gat
 `#agendaConfigVersion` label on the settings note so each step runs exactly once per install.
 `getAgendaSettings()` runs any pending steps before the first read. The shipped list is empty (nothing
 to reshape yet); adding a step is push-one-entry + bump the version.
+
+## Upgrading from 4.x
+
+Version 5.0.0 stops shipping any copy of a picker's vocabulary. Where 4.x shipped `area`, `priority`
+and `template` entries that you could point at a picker, 5.0.0 ships none of them and generates the
+whole set — prefix, colour, grouping, sort, search group, filter group — for each picker you have
+installed. See **Generated from the pickers** above.
+
+What this removes from `defaults.json`:
+
+- the `area`, `priority` and `template` prefix, colour, grouping and filter entries;
+- the eight curated template search rules (`~template.title='3. Task'` and friends) and the two
+  leaf-task variants. The generated searches match on the template's note id instead and keep the
+  "not nested under the same template" exclusion. Two things about them do not come back: the curated
+  rules also excluded anything filed under a **Task** specifically, whatever its own template, and the
+  leaf-task rules selected on a note's *children*. Both are query logic rather than vocabulary, so
+  nothing generates them — they are in this addon's git history and paste straight into a
+  hand-written search group;
+- the five sorts that ordered by area, priority or `#type`. Each picker now generates its own
+  `<Name> → Start Date` sort. Three of those five ordered by `#type`, a label nothing has written
+  since item type became a `~template` relation, so they had been silently doing nothing.
+
+`startDate`, `title`, the date and recurrence elements, and the date/recurrence filter groups are
+untouched — no picker owns those.
+
+Your config is repointed automatically on the first read by a
+[`lib/migrate.js`](lib/migrate.js) step: profiles that selected `area`/`priority`/`template` now
+select `picker-…`, and a stored search or filter group under those ids moves to its per-profile
+`picker-<name>-<profile>` id, keeping every on/off flag. Stored *edits* to a shipped area/priority
+variant are dropped, because what they edited was a copy of a vocabulary that lives in the picker.
+
+**Sorting behaviour changes twice over.** Sorting by `#area` follows the picker's configured order
+again rather than the alphabet (4.0.0 had lost the ordinals along with the dimensions registry), and
+the shipped priority sorts lose their descending flag, since the picker lists `4-critical` first and
+ascending now means the same thing.
 
 ## Upgrading from 3.x
 
@@ -84,11 +142,9 @@ the flatter model.
 
 Two behaviours change that no migration can preserve:
 
-- **Sorting by `#area` is alphabetical now.** Value order used to come from the dimension's registry
-  position, fed to the sort layer as ordinal maps; with no registry there is nothing to derive an
-  ordinal from, so the stored value sorts as the string it is. The shipped priority sorts are flipped
-  to descending to compensate, since `#priority` stores its rank as the value's own prefix
-  (`4-critical` … `1-low`).
+- **Sorting by `#area` was alphabetical for one version.** Value order used to come from the
+  dimension's registry position, and with no registry there was nothing to derive an ordinal from.
+  5.0.0 restores configured order by taking it from the picker instead — see below.
 - **The overview's Area and Priority columns are gone.** The promoted attributes on the overview note
   were generated one per dimension; the four fixed columns (Start, Due, Duration, Recurrence) stay.
 

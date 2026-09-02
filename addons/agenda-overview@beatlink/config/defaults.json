@@ -11,68 +11,16 @@
             "viewType": "list",
             "sortSelected": "startDate",
             "prefixSelected": "interval",
-            "colorSelected": "priority",
-            "groupingSelected": "priority"
+            "colorSelected": "picker-priority",
+            "groupingSelected": "picker-priority"
         }
     },
-    "searchGroups": {
-        "type": {
-            "name": "Note Type",
-            "profileId": "default",
-            "children": {
-                "all": {
-                    "name": "All Tasks",
-                    "rule": "(#startDateTime != \"\" OR #dueDateTime != \"\") AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": false
-                },
-                "goal": {
-                    "name": "1. Goal",
-                    "rule": "~template.title='1. Goal' AND not(note.parents.relations.template.title='1. Goal') AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": true
-                },
-                "routine": {
-                    "name": "2. Routines",
-                    "rule": "~template.title='2. Routine' AND not(note.parents.relations.template.title='2. Routine') AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": true
-                },
-                "tasks": {
-                    "name": "3. Tasks",
-                    "rule": "~template.title='3. Task' AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": true
-                },
-                "future": {
-                    "name": "4. Future",
-                    "rule": "~template.title='4. Future' AND not(note.parents.relations.template.title='4. Future') AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": true
-                },
-                "project": {
-                    "name": "5. Projects",
-                    "rule": "~template.title='5. Project' AND not(note.parents.relations.template.title='5. Project') AND not(note.parents.relations.template.title='3. Task')",
-                    "enabled": true
-                }
-            }
-        },
-        "leaf": {
-            "name": "Leaf Tasks",
-            "profileId": "default",
-            "children": {
-                "leafTasks": {
-                    "name": "Leaf Subtasks",
-                    "rule": "~template.title='3. Task' AND note.ancestors.relations.template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
-                    "enabled": false
-                },
-                "leafTasksAnyDepth": {
-                    "name": "Leaf Tasks (Any Depth)",
-                    "rule": "~template.title='3. Task' AND not(note.children.relations.template.title='3. Task')",
-                    "enabled": false
-                }
-            }
-        }
-    },
+    "searchGroups": {},
     "filterGroups": {
         "date": {
             "name": "Date",
             "profileId": "default",
+            "type": "manual",
             "children": {
                 "noDate": {
                     "name": "No Date",
@@ -133,6 +81,7 @@
         "recurrence": {
             "name": "Recurrence",
             "profileId": "default",
+            "type": "manual",
             "children": {
                 "hourly": {
                     "name": "Hourly",
@@ -171,132 +120,6 @@
                     "enabled": true
                 }
             }
-        },
-        "area": {
-            "name": "Area",
-            "profileId": "default",
-            "children": {
-                "career": {
-                    "name": "Career",
-                    "type": "search",
-                    "rule": "#area='career'",
-                    "enabled": true
-                },
-                "finances": {
-                    "name": "Finances",
-                    "type": "search",
-                    "rule": "#area='finances'",
-                    "enabled": true
-                },
-                "legal": {
-                    "name": "Legal",
-                    "type": "search",
-                    "rule": "#area='legal'",
-                    "enabled": true
-                },
-                "home": {
-                    "name": "Home",
-                    "type": "search",
-                    "rule": "#area='home'",
-                    "enabled": true
-                },
-                "car": {
-                    "name": "Car",
-                    "type": "search",
-                    "rule": "#area='car'",
-                    "enabled": true
-                },
-                "tech": {
-                    "name": "Tech",
-                    "type": "search",
-                    "rule": "#area='tech'",
-                    "enabled": true
-                },
-                "fitness": {
-                    "name": "Fitness",
-                    "type": "search",
-                    "rule": "#area='fitness'",
-                    "enabled": true
-                },
-                "grooming": {
-                    "name": "Grooming",
-                    "type": "search",
-                    "rule": "#area='grooming'",
-                    "enabled": true
-                },
-                "sexual": {
-                    "name": "Sexual",
-                    "type": "search",
-                    "rule": "#area='sexual'",
-                    "enabled": true
-                },
-                "social": {
-                    "name": "Social",
-                    "type": "search",
-                    "rule": "#area='social'",
-                    "enabled": true
-                },
-                "mental": {
-                    "name": "Mental",
-                    "type": "search",
-                    "rule": "#area='mental'",
-                    "enabled": true
-                },
-                "identity": {
-                    "name": "Identity",
-                    "type": "search",
-                    "rule": "#area='identity'",
-                    "enabled": true
-                },
-                "fun": {
-                    "name": "Fun",
-                    "type": "search",
-                    "rule": "#area='fun'",
-                    "enabled": true
-                },
-                "none": {
-                    "name": "No Area",
-                    "type": "search",
-                    "rule": "#!area OR #area=''",
-                    "enabled": true
-                }
-            }
-        },
-        "priority": {
-            "name": "Priority",
-            "profileId": "default",
-            "children": {
-                "4-critical": {
-                    "name": "Must Do",
-                    "type": "search",
-                    "rule": "#priority='4-critical'",
-                    "enabled": true
-                },
-                "3-high": {
-                    "name": "Should Do",
-                    "type": "search",
-                    "rule": "#priority='3-high'",
-                    "enabled": true
-                },
-                "2-medium": {
-                    "name": "Could Do",
-                    "type": "search",
-                    "rule": "#priority='2-medium'",
-                    "enabled": true
-                },
-                "1-low": {
-                    "name": "Want to Do",
-                    "type": "search",
-                    "rule": "#priority='1-low'",
-                    "enabled": true
-                },
-                "none": {
-                    "name": "No Priority",
-                    "type": "search",
-                    "rule": "#!priority OR #priority=''",
-                    "enabled": true
-                }
-            }
         }
     },
     "sorts": {
@@ -304,6 +127,7 @@
             "name": "Start Date",
             "criteria": [
                 {
+                    "source": "none",
                     "attribute": "startDateTime",
                     "desc": false,
                     "caseInsensitive": false
@@ -314,94 +138,10 @@
             "name": "Title",
             "criteria": [
                 {
+                    "source": "none",
                     "attribute": "title",
                     "desc": false,
                     "caseInsensitive": true
-                }
-            ]
-        },
-        "typePriorityStartDate": {
-            "name": "Type → Priority → Start Date",
-            "criteria": [
-                {
-                    "attribute": "type",
-                    "desc": false,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "priority",
-                    "desc": true,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "startDateTime",
-                    "desc": false,
-                    "caseInsensitive": false
-                }
-            ]
-        },
-        "typeStartDate": {
-            "name": "Type → Start Date",
-            "criteria": [
-                {
-                    "attribute": "type",
-                    "desc": false,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "startDateTime",
-                    "desc": false,
-                    "caseInsensitive": false
-                }
-            ]
-        },
-        "area": {
-            "name": "Area → Start Date",
-            "criteria": [
-                {
-                    "attribute": "area",
-                    "desc": false,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "startDateTime",
-                    "desc": false,
-                    "caseInsensitive": false
-                }
-            ]
-        },
-        "priorityStartDate": {
-            "name": "Priority → Start Date",
-            "criteria": [
-                {
-                    "attribute": "priority",
-                    "desc": true,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "startDateTime",
-                    "desc": false,
-                    "caseInsensitive": false
-                }
-            ]
-        },
-        "priorityTypeStartDate": {
-            "name": "Priority → Type → Start Date",
-            "criteria": [
-                {
-                    "attribute": "priority",
-                    "desc": true,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "type",
-                    "desc": false,
-                    "caseInsensitive": false
-                },
-                {
-                    "attribute": "startDateTime",
-                    "desc": false,
-                    "caseInsensitive": false
                 }
             ]
         }
@@ -445,90 +185,6 @@
                 }
             },
             "noValuePrefix": "No Date Set"
-        },
-        "area": {
-            "name": "Area",
-            "type": "label",
-            "label": "area",
-            "children": {
-                "career": {
-                    "labelValue": "career",
-                    "display": "Career"
-                },
-                "finances": {
-                    "labelValue": "finances",
-                    "display": "Finances"
-                },
-                "legal": {
-                    "labelValue": "legal",
-                    "display": "Legal"
-                },
-                "home": {
-                    "labelValue": "home",
-                    "display": "Home"
-                },
-                "car": {
-                    "labelValue": "car",
-                    "display": "Car"
-                },
-                "tech": {
-                    "labelValue": "tech",
-                    "display": "Tech"
-                },
-                "fitness": {
-                    "labelValue": "fitness",
-                    "display": "Fitness"
-                },
-                "grooming": {
-                    "labelValue": "grooming",
-                    "display": "Grooming"
-                },
-                "sexual": {
-                    "labelValue": "sexual",
-                    "display": "Sexual"
-                },
-                "social": {
-                    "labelValue": "social",
-                    "display": "Social"
-                },
-                "mental": {
-                    "labelValue": "mental",
-                    "display": "Mental"
-                },
-                "identity": {
-                    "labelValue": "identity",
-                    "display": "Identity"
-                },
-                "fun": {
-                    "labelValue": "fun",
-                    "display": "Fun"
-                }
-            },
-            "noValuePrefix": ""
-        },
-        "priority": {
-            "name": "Priority",
-            "type": "label",
-            "label": "priority",
-            "children": {
-                "4-critical": {
-                    "labelValue": "4-critical",
-                    "display": "Must Do"
-                },
-                "3-high": {
-                    "labelValue": "3-high",
-                    "display": "Should Do"
-                },
-                "2-medium": {
-                    "labelValue": "2-medium",
-                    "display": "Could Do"
-                },
-                "1-low": {
-                    "labelValue": "1-low",
-                    "display": "Want to Do"
-                }
-            },
-            "noValuePrefix": ""
         }
     },
     "colors": {
@@ -569,90 +225,6 @@
                     "color": "lightgray"
                 }
             }
-        },
-        "area": {
-            "name": "Area",
-            "type": "label",
-            "label": "area",
-            "children": {
-                "career": {
-                    "labelValue": "career",
-                    "display": "red"
-                },
-                "finances": {
-                    "labelValue": "finances",
-                    "display": "red"
-                },
-                "legal": {
-                    "labelValue": "legal",
-                    "display": "red"
-                },
-                "home": {
-                    "labelValue": "home",
-                    "display": "darkorange"
-                },
-                "car": {
-                    "labelValue": "car",
-                    "display": "darkorange"
-                },
-                "tech": {
-                    "labelValue": "tech",
-                    "display": "darkorange"
-                },
-                "fitness": {
-                    "labelValue": "fitness",
-                    "display": "gold"
-                },
-                "grooming": {
-                    "labelValue": "grooming",
-                    "display": "gold"
-                },
-                "sexual": {
-                    "labelValue": "sexual",
-                    "display": "gold"
-                },
-                "social": {
-                    "labelValue": "social",
-                    "display": "lime"
-                },
-                "mental": {
-                    "labelValue": "mental",
-                    "display": "lime"
-                },
-                "identity": {
-                    "labelValue": "identity",
-                    "display": "lime"
-                },
-                "fun": {
-                    "labelValue": "fun",
-                    "display": "magenta"
-                }
-            },
-            "noValueColor": ""
-        },
-        "priority": {
-            "name": "Priority",
-            "type": "label",
-            "label": "priority",
-            "children": {
-                "4-critical": {
-                    "labelValue": "4-critical",
-                    "display": "red"
-                },
-                "3-high": {
-                    "labelValue": "3-high",
-                    "display": "gold"
-                },
-                "2-medium": {
-                    "labelValue": "2-medium",
-                    "display": "lime"
-                },
-                "1-low": {
-                    "labelValue": "1-low",
-                    "display": "cyan"
-                }
-            },
-            "noValueColor": ""
         }
     },
     "groupings": {
@@ -738,109 +310,6 @@
                     "color": "gray"
                 }
             }
-        },
-        "area": {
-            "name": "By Area",
-            "type": "label",
-            "label": "area",
-            "children": {
-                "career": {
-                    "labelValue": "career",
-                    "display": "Career",
-                    "color": "red"
-                },
-                "finances": {
-                    "labelValue": "finances",
-                    "display": "Finances",
-                    "color": "red"
-                },
-                "legal": {
-                    "labelValue": "legal",
-                    "display": "Legal",
-                    "color": "red"
-                },
-                "home": {
-                    "labelValue": "home",
-                    "display": "Home",
-                    "color": "darkorange"
-                },
-                "car": {
-                    "labelValue": "car",
-                    "display": "Car",
-                    "color": "darkorange"
-                },
-                "tech": {
-                    "labelValue": "tech",
-                    "display": "Tech",
-                    "color": "darkorange"
-                },
-                "fitness": {
-                    "labelValue": "fitness",
-                    "display": "Fitness",
-                    "color": "gold"
-                },
-                "grooming": {
-                    "labelValue": "grooming",
-                    "display": "Grooming",
-                    "color": "gold"
-                },
-                "sexual": {
-                    "labelValue": "sexual",
-                    "display": "Sexual",
-                    "color": "gold"
-                },
-                "social": {
-                    "labelValue": "social",
-                    "display": "Social",
-                    "color": "lime"
-                },
-                "mental": {
-                    "labelValue": "mental",
-                    "display": "Mental",
-                    "color": "lime"
-                },
-                "identity": {
-                    "labelValue": "identity",
-                    "display": "Identity",
-                    "color": "lime"
-                },
-                "fun": {
-                    "labelValue": "fun",
-                    "display": "Fun",
-                    "color": "magenta"
-                }
-            },
-            "noValueDisplay": "No Area",
-            "noValueColor": ""
-        },
-        "priority": {
-            "name": "By Priority",
-            "type": "label",
-            "label": "priority",
-            "children": {
-                "4-critical": {
-                    "labelValue": "4-critical",
-                    "display": "Must Do",
-                    "color": "red"
-                },
-                "3-high": {
-                    "labelValue": "3-high",
-                    "display": "Should Do",
-                    "color": "gold"
-                },
-                "2-medium": {
-                    "labelValue": "2-medium",
-                    "display": "Could Do",
-                    "color": "lime"
-                },
-                "1-low": {
-                    "labelValue": "1-low",
-                    "display": "Want to Do",
-                    "color": "cyan"
-                }
-            },
-            "noValueDisplay": "No Priority",
-            "noValueColor": ""
         }
     },
     "dateRules": {

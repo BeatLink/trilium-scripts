@@ -171,7 +171,7 @@ async function updateTaskLists(profileContext, constants) {
         const searchedNotes = await getNotesForSearchGroups(profile.searchGroups.children)
         const filteredNotes = await getFilteredNotes(data.dateRules, profile.filterGroups.children, searchedNotes)
         const sortRule = data.sorts[profile.sorts.selected]?.rule || ""
-        const sortedNotes = await sortNoteIds(sortRule, filteredNotes)
+        const sortedNotes = await sortNoteIds(sortRule, filteredNotes, data.sortValueMaps)
 
         const viewType = profile.viewType || "list"
         const grouping = data.groupings[profile.groupings.selected]
