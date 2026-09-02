@@ -1,4 +1,6 @@
-// Parse "priority:desc;area;title:caseInsensitive" into an array of criteria objects
+// Parse "priority:desc;area;title:caseInsensitive" into an array of criteria
+// objects. An attribute written `~name` sorts by that relation's target (see
+// getValue) rather than by a label of the same name.
 function parseSortCriteria(sortString) {
     return sortString.split(";").map(segment => {
         const parts = segment.trim().split(":");
@@ -14,9 +16,12 @@ function parseSortCriteria(sortString) {
 
 const BUILTINS = new Set(["noteId", "title", "dateCreated", "dateModified"]);
 
-// Get a comparable value for a note attribute (builtin or label).
+// Get a comparable value for a note attribute: a builtin, a label, or - when the
+// attribute is written `~name` - the noteId a relation points at. Sorting by a
+// raw noteId is meaningless on its own, so a relation attribute is only useful
+// paired with a `valueMaps` entry that turns those ids into ordinals.
 //
-// `valueMaps` optionally supplies a per-attribute { labelValue -> ordinal } map,
+// `valueMaps` optionally supplies a per-attribute { value -> ordinal } map,
 // so an attribute whose values carry no intrinsic order can still sort by a
 // caller-defined one. Its use case is a vocabulary whose display order lives in
 // config rather than in the stored value (agenda's #area, whose values are
@@ -28,7 +33,9 @@ function getValue(note, attribute, valueMaps) {
     if (BUILTINS.has(attribute)) {
         return note[attribute] ?? "";
     }
-    const raw = note.getLabelValue(attribute) ?? "";
+    const raw = attribute.startsWith("~")
+        ? note.getRelationValue(attribute.slice(1)) ?? ""
+        : note.getLabelValue(attribute) ?? "";
     const map = valueMaps && valueMaps[attribute];
     if (map) return map[raw] ?? Number.MAX_SAFE_INTEGER;
     return raw;

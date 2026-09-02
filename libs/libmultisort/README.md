@@ -31,9 +31,23 @@ priority:desc;area;startDateTime;title:caseInsensitive
 
 `noteId`, `title`, `dateCreated`, `dateModified` are read directly from the note object. All other attribute names are resolved via `note.getLabelValue()`.
 
+## Relation attributes
+
+An attribute written `~name` sorts by `note.getRelationValue("name")` — the noteId the relation points at — instead of a label:
+
+```
+~template;startDateTime
+```
+
+A raw noteId has no meaningful order of its own, so this is only useful with a `valueMaps` entry (below) turning those ids into ordinals.
+
+## `valueMaps`
+
+`sortChildNotes(sortString, childNotes, valueMaps)` takes an optional `{ attribute: { value: ordinal } }` map, for attributes whose values carry no intrinsic order — a vocabulary whose display order lives in config rather than in the stored value. A value missing from its map sorts after every mapped one, so retired values collect at the end. The key is the attribute exactly as it appears in the sort string, `~` included.
+
 ## API
 
-### `sortChildNotes(sortString, childNotes)`
+### `sortChildNotes(sortString, childNotes, valueMaps?)`
 
 Returns a new sorted array of notes. Does not mutate the input.
 
