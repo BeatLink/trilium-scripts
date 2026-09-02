@@ -129,47 +129,6 @@ async function getPickerVocabularies(sourceIds) {
     return vocabularies
 }
 
-// A picker-sourced variant's children, keyed by the value the picker actually
-// tags with. Only that form: the key is also a board column's identity, and
-// dropping a note on a column writes the key back, so aliasing a second spelling
-// would double every column and make half of them write a stale value.
-//
-// Values the picker has disabled are kept. `enabled` decides whether the picker
-// offers a value, not whether notes already carry it, and dropping them here
-// would quietly strip the colour or prefix off every note tagged before it was
-// retired.
-function pickerChildren(vocabulary, valueOf) {
-    const children = {}
-    for (const value of vocabulary.values) children[value.labelValue] = valueOf(value)
-    return children
-}
-
-// A picker-sourced filter group's children: one search rule per value plus the
-// no-value catch-all, keyed the same way the variants are.
-//
-// The children are derived but each `enabled` flag is user state, so the stored
-// flags are merged over the top - that hybrid is the whole reason this group
-// keeps a stored entry at all. A value added in the picker later arrives
-// enabled, so it never silently hides the notes tagged with it.
-function pickerFilterChildren(vocabulary, title, stored) {
-    const children = {}
-    for (const value of vocabulary.values) {
-        children[value.labelValue] = {
-            name: value.title,
-            type: "search",
-            rule: ruleFor(vocabulary, value),
-            enabled: stored[value.labelValue] ? !!stored[value.labelValue].enabled : true
-        }
-    }
-    children.none = {
-        name: `No ${title}`,
-        type: "search",
-        rule: noValueRuleFor(vocabulary),
-        enabled: stored.none ? !!stored.none.enabled : true
-    }
-    return children
-}
-
 module.exports = {
     PICKER_SOURCES,
     getPickerVocabulary,
