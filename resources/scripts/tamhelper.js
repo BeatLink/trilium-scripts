@@ -2014,16 +2014,25 @@ async function cmdBumpHalon(args) {
         return;
     }
 
+    // Halon commits for its own reasons, and most of them leave this file alone.
+    // The pin is compared by content rather than by commit so that a bump means
+    // the stylesheet actually changed -- moving it for an untouched file would
+    // report an update to every installation and hand them the same bytes back.
+    // Fetching also proves the new commit serves the file at all: a pin at a
+    // commit that does not carry it installs an empty note.
+    const url = `https://raw.githubusercontent.com/${HALON_REPO}/${latest}/${HALON_FILE}`;
+    const [pinnedBytes, latestBytes] = await Promise.all([fetchBuffer(note.sourceUrl), fetchBuffer(url)]);
+
+    if (pinnedBytes.equals(latestBytes)) {
+        console.log(`${HALON_REPO} has moved to ${latest.slice(0, 7)}, but ${HALON_FILE} is unchanged -- pin left at ${current.slice(0, 7)}.`);
+        return;
+    }
+
     if (args.check) {
-        console.error(`${HALON_MANIFEST}: pinned to ${current.slice(0, 7)}, but ${HALON_REPO}'s main is ${latest.slice(0, 7)}`);
+        console.error(`${HALON_MANIFEST}: ${HALON_FILE} changed between ${current.slice(0, 7)} and ${latest.slice(0, 7)}`);
         console.error("  run: node resources/scripts/tamhelper.js bump-halon");
         process.exit(1);
     }
-
-    // Move the pin only once the new commit actually serves the file: a pin at a
-    // commit that does not carry the stylesheet installs an empty note.
-    const url = `https://raw.githubusercontent.com/${HALON_REPO}/${latest}/${HALON_FILE}`;
-    await fetchBuffer(url);
 
     note.sourceUrl = url;
     writeText(HALON_MANIFEST, jsonDumps(manifest, 4) + "\n");
@@ -2069,7 +2078,7 @@ commands:
   publish [--addons-dir D] [--out-dir D] [--commit SHA]
                                             Resolve + hash every manifest into resources/docs/
   generate-readme                           Regenerate README.md's addon table
-  bump-halon [--check]                      Move halon@beatlink's pin to Halon's current main
+  bump-halon [--check]                      Re-pin halon@beatlink when Halon's stylesheet changes
   publish-release                           Upload *.zip files to GitHub Releases
 `;
 
