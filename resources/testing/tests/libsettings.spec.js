@@ -24,10 +24,12 @@ const { httpClient, wrapPage } = require("../testing");
 
 // libsettings is a `library`: it has no runtime toggle and users don't install
 // it directly -- it ships as a dependency of the addons that use it. So install
-// a real consumer (area-picker) from the local catalog; TAM resolves and
+// a real consumer (expanded) from the local catalog; TAM resolves and
 // installs its libsettings dependency, and libSettings.js (the engine under
 // test) lands with it.
-const HOST_ADDON_ID = "area-picker@beatlink";
+// expanded ships the backend flavour of the lib, which is the note these tests
+// evaluate and the anchor execScript needs; frontend-only consumers do not.
+const HOST_ADDON_ID = "expanded@beatlink";
 
 async function waitForNote(tri, query, { timeoutMs = 30_000, everyMs = 1000 } = {}) {
     const deadline = Date.now() + timeoutMs;
@@ -44,7 +46,9 @@ test.beforeAll(async ({ browser }) => {
     const tri = httpClient();
     const raw = await browser.newPage();
     try {
-        await installViaTam(wrapPage(raw), tri, HOST_ADDON_ID);
+        // url mode: expanded has no bare-id dependencies, and a catalog card is
+        // matched on substring, which "Expanded" shares with other addons' text.
+        await installViaTam(wrapPage(raw), tri, HOST_ADDON_ID, { mode: "url" });
     } finally {
         await raw.close();
     }
@@ -119,7 +123,7 @@ async function runWithLib(tri, schemaJson, defaultsJson, configJson, body) {
     return res.executionResult;
 }
 
-// A minimal schema mirroring area-picker's shape: a `list` of items plus a
+// A minimal schema mirroring a picker addon's shape: a `list` of items plus a
 // scalar, and a `registry` -- with the values every one of them ships in the
 // defaults source rather than in the schema, which only describes the fields.
 const SCHEMA = {

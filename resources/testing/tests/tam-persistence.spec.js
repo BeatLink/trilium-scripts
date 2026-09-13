@@ -1,18 +1,17 @@
 "use strict";
 /* Backend test for TAM's persistence mechanism (two-roots / placement model).
 
-An addon declares a `persistenceRoot` local id in its manifest; every note under
-that subtree is "persistent". area-picker@beatlink places its `config` note under
-`persist-root`. TAM resolves persistent notes as ordinary #TAMFILEID notes, but
-anchored under the shared "Addon Data" note (a stable, TAM-owned anchor the
-uninstall/prune sweeps skip), and never overwrites their content on update. So
-user config survives an update or an uninstall, and a later reinstall re-adopts
-the same note by #TAMFILEID.
+A manifest parents a note on the reserved "persistence" keyword to mark it
+persistent; expanded@beatlink places its `config` note there. TAM resolves
+persistent notes as ordinary #TAMFILEID notes, but anchored under the shared
+"Addon Data" note (a stable, TAM-owned anchor the uninstall/prune sweeps skip),
+and never overwrites their content on update. So user config survives an update
+or an uninstall, and a later reinstall re-adopts the same note by #TAMFILEID.
 
-These tests install area-picker@beatlink through TAM's UI and assert the resulting
+These tests install expanded@beatlink through TAM's UI and assert the resulting
 tree shape over ETAPI + /api/script/exec:
 
-  - the config note is tagged #TAMFILEID="area-picker@beatlink/config"
+  - the config note is tagged #TAMFILEID="expanded@beatlink/config"
   - it is NOT tagged #TAMDATAID (that namespace is gone)
   - it lives under the "Addon Data" subtree
   - settings.jsx's ~configNote relation points at it
@@ -22,21 +21,28 @@ tree shape over ETAPI + /api/script/exec:
 const { test, expect, installViaTam } = require("../testing");
 const { httpClient, wrapPage } = require("../testing");
 
-const ADDON_ID = "area-picker@beatlink";
+// expanded is the subject because it both persists a config note and ships the
+// backend libSettings.js that execScript has to anchor on.
+const ADDON_ID = "expanded@beatlink";
 const FILE_ID = `${ADDON_ID}/config`;
+// Several installed addons ship a settings.jsx, so find this one by its own
+// #TAMFILEID rather than by title.
+const SETTINGS_FILE_ID = `${ADDON_ID}/settings`;
 
 test.beforeAll(async ({ browser }) => {
     test.setTimeout(180_000);
     const raw = await browser.newPage();
     try {
-        await installViaTam(wrapPage(raw), httpClient(), ADDON_ID);
+        // url mode: expanded has no bare-id dependencies, and a catalog card is
+        // matched on substring, which "Expanded" shares with other addons' text.
+        await installViaTam(wrapPage(raw), httpClient(), ADDON_ID, { mode: "url" });
     } finally {
         await raw.close();
     }
 });
 
 // execScript needs a backend/code note as its startNoteId anchor. libSettings.js
-// (area-picker's backend-env dependency, installed above) is that note.
+// (expanded's backend-env dependency, installed above) is that note.
 let anchorNoteId = null;
 async function backendAnchor(tri) {
     if (anchorNoteId) return anchorNoteId;
@@ -100,11 +106,11 @@ test("settings.jsx's ~configNote points at the config note", async ({ tri }) => 
     const info = await configNoteInfo(tri);
     expect(info).toBeTruthy();
 
-    const target = await runBackend(tri, `() => {
-        const settings = api.searchForNotes("note.title = 'settings.jsx' AND #TAMFILEID")[0];
+    const target = await runBackend(tri, `(settingsFileId) => {
+        const settings = api.getNoteWithLabel("TAMFILEID", settingsFileId);
         if (!settings) return null;
         return settings.getRelationValue("configNote");
-    }`, []);
+    }`, [SETTINGS_FILE_ID]);
     expect(target, "settings.jsx has no ~configNote relation").toBeTruthy();
     expect(target).toBe(info.noteId);
 });
@@ -113,13 +119,13 @@ test("a write to the config note is the live config the addon reads back", async
     const info = await configNoteInfo(tri);
     expect(info).toBeTruthy();
 
-    const readBack = await runBackend(tri, `(fileId) => {
+    const readBack = await runBackend(tri, `(fileId, settingsFileId) => {
         const config = api.getNoteWithLabel("TAMFILEID", fileId);
         config.setContent(JSON.stringify({ theme: "sentinel-value" }));
 
-        const settings = api.searchForNotes("note.title = 'settings.jsx' AND #TAMFILEID")[0];
+        const settings = api.getNoteWithLabel("TAMFILEID", settingsFileId);
         const configNoteId = settings.getRelationValue("configNote");
         return JSON.parse(api.getNote(configNoteId).getContent() || "{}").theme;
-    }`, [FILE_ID]);
+    }`, [FILE_ID, SETTINGS_FILE_ID]);
     expect(readBack).toBe("sentinel-value");
 });

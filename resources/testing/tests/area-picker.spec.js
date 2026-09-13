@@ -91,15 +91,16 @@ test("schema.json imported as a JSON code note", async ({ tri }) => {
     expect(note.mime).toBe("application/json");
 });
 
-test("config.json became a persisted AddonData copy (not a shipped #TAMFILEID note)", async ({ tri }) => {
-    // config.json is the target of settings.jsx's AddonData:config relation, so
-    // TAM's persistence consumes the shipped origin: the live config lives under
-    // "Addon Data" tagged #TAMDATAID, and NO #TAMFILEID config.json remains.
+test("config.json is the persisted #TAMFILEID copy", async ({ tri }) => {
+    // config.json is parented on the reserved "persistence" keyword, so TAM
+    // resolves it as an ordinary #TAMFILEID note anchored under the shared
+    // "Addon Data" note. The older #TAMDATAID namespace is gone.
     // (tam-persistence.spec.js exercises this mechanism in full.)
-    const shipped = await tri.searchNotes("note.title = 'config.json' AND #TAMFILEID");
-    expect(shipped.length, "a #TAMFILEID config.json survived -- persistence didn't consume it").toBe(0);
-    const persisted = await tri.searchNotes("#TAMDATAID = 'area-picker@beatlink/config'");
-    expect(persisted.length, "no persisted config copy under #TAMDATAID").toBeGreaterThan(0);
+    const { results: persisted } = await tri.searchNotes(
+        "note.title = 'config.json' AND #TAMFILEID = 'area-picker@beatlink/config'");
+    expect(persisted.length, "no config.json tagged #TAMFILEID=area-picker@beatlink/config").toBe(1);
+    const { results: legacy } = await tri.searchNotes("#TAMDATAID");
+    expect(legacy.length, "#TAMDATAID is a removed namespace but a note still carries it").toBe(0);
 });
 
 test("widget #widget label is live after enable", async ({ tri }) => {
@@ -131,10 +132,12 @@ test("libsettings dependency landed alongside the addon", async ({ tri }) => {
 
 // ---- Behaviour (frontend) -------------------------------------------------
 
-// The widget only renders when the active note already carries an #area label
-// (see areaPickerPreact.jsx `setVisible`). Pick TAM's own root as the target
-// note, tag it, drive the dropdown, then untag it so the suite leaves no residue
-// on shared state that later tests read.
+// The widget renders only when the active note carries the promoted label
+// DEFINITION #label:area -- not the #area value (see areaPickerPreact.jsx
+// `setVisible`, which reads getLabelValue("label:area")). Normally that
+// definition is inherited from a template; here both are set by hand. Pick TAM's
+// own root as the target note, tag it, drive the dropdown, then untag it so the
+// suite leaves no residue on shared state that later tests read.
 async function targetNoteId(tri) {
     const { results } = await tri.searchNotes("note.title = 'trilium-addon-manager@beatlink'");
     expect(results.length).toBeGreaterThan(0);
@@ -167,40 +170,58 @@ async function removeLabel(tri, noteId, name) {
     }
 }
 
-test("widget mounts on a note that has an #area label", async ({ tri, page }) => {
-    const noteId = await targetNoteId(tri);
+// FormDropdownList drops the `class` it is handed, so the widget's own
+// .dropdown-component class never reaches the DOM: target the bootstrap
+// structure it really renders. Its items are li.dropdown-item with no role.
+const dropdownToggle = (page) => page.locator("#x-area-picker-widget .dropdown-toggle").first();
+const dropdownOption = (page, name) =>
+    page.locator("#x-area-picker-widget .dropdown-menu .dropdown-item")
+        .filter({ hasText: new RegExp(`^\\s*${name}\\s*$`) }).first();
+
+// Both labels: the definition makes the widget appear, the value seeds it.
+async function tagArea(tri, noteId) {
+    await setLabel(tri, noteId, "label:area", "promoted,single,text");
     await setLabel(tri, noteId, "area", "01-career");
+}
+
+async function untagArea(tri, noteId) {
+    await removeLabel(tri, noteId, "area");
+    await removeLabel(tri, noteId, "label:area");
+}
+
+test("widget mounts on a note that has an #area label definition", async ({ tri, page }) => {
+    const noteId = await targetNoteId(tri);
+    await tagArea(tri, noteId);
     try {
         await page.gotoNote(noteId);
-        const widget = page.locator("#x-area-picker-widget");
-        await expect(widget).toBeVisible({ timeout: 20_000 });
+        await expect(page.locator("#x-area-picker-widget")).toBeVisible({ timeout: 20_000 });
     } finally {
-        await removeLabel(tri, noteId, "area");
+        await untagArea(tri, noteId);
     }
 });
 
 test("picking an area writes the note's #area label, None clears it", async ({ tri, page }) => {
     const noteId = await targetNoteId(tri);
-    await setLabel(tri, noteId, "area", "01-career");
+    await tagArea(tri, noteId);
     try {
         await page.gotoNote(noteId);
-        const dropdown = page.locator("#x-area-picker-widget .dropdown-component");
-        await expect(dropdown).toBeVisible({ timeout: 20_000 });
+        const toggle = dropdownToggle(page);
+        await expect(toggle).toBeVisible({ timeout: 20_000 });
 
         // Open the dropdown and pick a different, known-shipped area ("Finances").
-        await dropdown.click();
-        await page.getByRole("option", { name: "Finances" }).first().click();
+        await toggle.click();
+        await dropdownOption(page, "Finances").click();
         await expect
             .poll(() => readLabel(tri, noteId, "area"), { timeout: 15_000 })
             .toBe("02-finances");
 
         // Pick "None" -- the widget removes the label entirely.
-        await dropdown.click();
-        await page.getByRole("option", { name: "None" }).first().click();
+        await toggle.click();
+        await dropdownOption(page, "None").click();
         await expect
             .poll(() => readLabel(tri, noteId, "area"), { timeout: 15_000 })
             .toBe(null);
     } finally {
-        await removeLabel(tri, noteId, "area");
+        await untagArea(tri, noteId);
     }
 });

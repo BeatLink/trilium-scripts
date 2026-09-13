@@ -6,8 +6,8 @@ addon server (installViaTam: Settings -> Install by URL -> Enable Addon ->
 reload). No ZIP import. Then asserts, in one suite off that single install:
 
   Deployment (backend, tri, via ETAPI):
-    - both scripts imported as frontend code notes
-    - setupButtons.js carries ~hoistNoteScript -> hoistNote.js
+    - setupButtons.js imported as a frontend code note
+    - the launcher it builds runs Trilium's built-in toggleNoteHoisting command
     - #run=frontendStartup is live (NOT under the disabled: prefix -- proves the
       Enable step actually flipped it)
 
@@ -42,25 +42,24 @@ test.beforeAll(async ({ browser }) => {
 
 // ---- Deployment (backend) -------------------------------------------------
 
-test("both script notes are imported as frontend code notes", async ({ tri }) => {
-    for (const title of ["setupButtons.js", "hoistNote.js"]) {
-        const { results } = await tri.searchNotes(`note.title = '${title}'`);
-        expect(results.length).toBeGreaterThan(0);
-        const note = await tri.getNote(results[0].noteId);
-        expect(note.type).toBe("code");
-        expect(note.mime).toBe("application/javascript;env=frontend");
-    }
+test("setupButtons.js is imported as a frontend code note", async ({ tri }) => {
+    const { results } = await tri.searchNotes("note.title = 'setupButtons.js'");
+    expect(results.length).toBeGreaterThan(0);
+    const note = await tri.getNote(results[0].noteId);
+    expect(note.type).toBe("code");
+    expect(note.mime).toBe("application/javascript;env=frontend");
 });
 
-test("setupButtons carries the ~hoistNoteScript relation to hoistNote", async ({ tri }) => {
-    const { results } = await tri.searchNotes("note.title = 'setupButtons.js'");
-    const setup = await tri.getNote(results[0].noteId);
-    const rel = (setup.attributes || []).find(
-        (a) => a.type === "relation" && a.name === "hoistNoteScript"
-    );
-    expect(rel, "setupButtons.js is missing its ~hoistNoteScript relation").toBeTruthy();
-    const target = await tri.getNote(rel.value);
-    expect(target.title).toBe("hoistNote.js");
+// The addon no longer ships a second script to do the hoisting: setupButtons.js
+// builds a command launcher and hands the work to Trilium's own
+// toggleNoteHoisting, explicitly dropping any ~script relation as it goes.
+test("the launcher runs the built-in toggleNoteHoisting command", async ({ tri }) => {
+    const launcher = await tri.getNote("al_hoistNoteButton");
+    const attrs = launcher.attributes || [];
+    const command = attrs.find((a) => a.type === "label" && a.name === "command");
+    expect(command, "the launcher is missing its #command label").toBeTruthy();
+    expect(command.value).toBe("toggleNoteHoisting");
+    expect(attrs.find((a) => a.type === "relation" && a.name === "script")).toBeFalsy();
 });
 
 test("setupButtons #run=frontendStartup is live after enable", async ({ tri }) => {
@@ -102,7 +101,7 @@ test("clicking the launcher toggles hoisting on and off", async ({ tri, page }) 
     const launcher = hoistLauncher(page);
     await expect(launcher).toBeVisible({ timeout: 20_000 });
 
-    // hoistNote.js drives api.getActiveContext().hoistedNoteId / setHoistedNoteId;
+    // toggleNoteHoisting drives api.getActiveContext().hoistedNoteId;
     // read that same state via Trilium's frontend global (window.glob).
     const hoistedNoteId = () =>
         page.evaluate(() =>
