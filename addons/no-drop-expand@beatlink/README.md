@@ -19,6 +19,12 @@ There is nothing to prevent, only something to undo. The addon notes which folde
 while it was still closed, watches for that folder being opened by the entity change, and closes it
 again, writing the collapse back to the server so it does not return.
 
+The tree also keeps the open note visible: after a move it expands every folder on the way down to
+the active note. Dropping the note you are reading would open the folder a second time, and again
+on every later refresh. So when the dragged note is the active one, the tree moves first to a note
+that stays put: the next sibling of where it was dragged from, else the previous one, else its old
+parent.
+
 Only drops *into* a folder are affected. Dropping between notes to reorder them never expanded
 anything, and hovering over a folder while dragging still opens it after 600ms, which is how you
 drop into a folder you cannot see.
