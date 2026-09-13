@@ -193,14 +193,17 @@ function startAddonServer() {
             return;
         }
 
-        const filePath = path.join(ADDONS_DIR, urlPath);
-        if (req.method !== "GET" || !filePath.startsWith(ADDONS_DIR + path.sep)) {
-            res.writeHead(403).end("forbidden");
+        // Manifests reach the shared libs with ../../libs/..., which lands outside
+        // the addons dir, so that one prefix is served from the repo root.
+        const root = urlPath.startsWith("/libs/") ? REPO_ROOT : ADDONS_DIR;
+        const filePath = path.join(root, urlPath);
+        if (req.method !== "GET" || !filePath.startsWith(root + path.sep)) {
+            res.writeHead(403, CORS).end("forbidden");
             return;
         }
         fs.readFile(filePath, (err, data) => {
             if (err) {
-                res.writeHead(404).end("not found");
+                res.writeHead(404, CORS).end("not found");
                 return;
             }
             res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream", ...CORS });
