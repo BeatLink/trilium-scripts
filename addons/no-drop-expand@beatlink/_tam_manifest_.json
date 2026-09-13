@@ -1,0 +1,50 @@
+{
+    "id": "no-drop-expand@beatlink",
+    "name": "No Drop Expand",
+    "description": "Keeps the note tree closed when you drag a note into a collapsed folder. Trilium normally reveals the note you just moved, which opens every folder above it and saves each one to the database, so the tree stays open after a restart. This blocks that reveal for a moment after each drop. Hover-to-open while dragging still works.",
+    "author": "BeatLink",
+    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/no-drop-expand@beatlink",
+    "license": "GPL-3.0-or-later",
+    "latestVersion": "1.0.0",
+    "type": "script",
+    "readme": "README.md",
+    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/no-drop-expand@beatlink/_tam_manifest_.json",
+    "manifest": {
+        "notes": [
+            {
+                "id": "script",
+                "title": "noDropExpand.js",
+                "type": "code",
+                "mime": "application/javascript;env=frontend",
+                "sourceUrl": "noDropExpand.js"
+            },
+            {
+                "id": "readme",
+                "title": "README.md",
+                "type": "code",
+                "mime": "text/markdown",
+                "sourceUrl": "README.md",
+                "renderAsHTML": true
+            }
+        ],
+        "children": [
+            {
+                "parent": "root",
+                "child": "script"
+            },
+            {
+                "parent": "root",
+                "child": "readme"
+            }
+        ],
+        "relations": [],
+        "labels": [
+            {
+                "note": "script",
+                "name": "run",
+                "value": "frontendStartup"
+            }
+        ],
+        "readmeNote": "readme"
+    }
+}
