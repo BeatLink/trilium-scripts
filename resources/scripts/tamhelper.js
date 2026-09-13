@@ -1974,6 +1974,64 @@ function extractZip(zipPath, destDir) {
 
 
 // ===========================================================================
+// bump-halon
+// ===========================================================================
+
+/* The Halon theme's stylesheet lives in its own repository, so halon@beatlink
+ * vendors no copy: its stylesheet note points at a raw URL pinned to one Halon
+ * commit, which `publish` carries through untouched the way it does any URL into
+ * someone else's repo. The pin is also what makes an update visible -- a published
+ * manifest hashes an absolute sourceUrl by its URL rather than by its content, so
+ * moving the pin is what tells TAM there is something new to fetch, and leaving it
+ * on a branch name would mean TAM never reported one.
+ */
+
+const HALON_REPO = "BeatLink/Halon";
+const HALON_FILE = "trilium/halon.css";
+const HALON_MANIFEST = "addons/halon@beatlink/_tam_manifest_.json";
+const HALON_URL_RE = new RegExp(`^https://raw\\.githubusercontent\\.com/${HALON_REPO}/([0-9a-f]{40})/${HALON_FILE}$`);
+
+
+function halonPinnedNote(manifest) {
+    const note = (manifest.manifest?.notes || []).find((n) => HALON_URL_RE.test(n.sourceUrl || ""));
+    if (!note) die(`ERROR: ${HALON_MANIFEST}: no note carries a commit-pinned ${HALON_REPO} sourceUrl`);
+    return note;
+}
+
+
+async function cmdBumpHalon(args) {
+    if (!exists(HALON_MANIFEST)) die(`ERROR: ${HALON_MANIFEST} not found -- run from the repo root`);
+    const manifest = JSON.parse(readText(HALON_MANIFEST));
+    const note = halonPinnedNote(manifest);
+    const current = HALON_URL_RE.exec(note.sourceUrl)[1];
+
+    const head = runGit(["ls-remote", `https://github.com/${HALON_REPO}`, "refs/heads/main"]);
+    const latest = head && head.split(/\s+/)[0];
+    if (!/^[0-9a-f]{40}$/.test(latest || "")) die(`ERROR: could not resolve ${HALON_REPO}'s main branch`);
+
+    if (current === latest) {
+        console.log(`halon@beatlink is pinned to ${latest.slice(0, 7)}, ${HALON_REPO}'s current main.`);
+        return;
+    }
+
+    if (args.check) {
+        console.error(`${HALON_MANIFEST}: pinned to ${current.slice(0, 7)}, but ${HALON_REPO}'s main is ${latest.slice(0, 7)}`);
+        console.error("  run: node resources/scripts/tamhelper.js bump-halon");
+        process.exit(1);
+    }
+
+    // Move the pin only once the new commit actually serves the file: a pin at a
+    // commit that does not carry the stylesheet installs an empty note.
+    const url = `https://raw.githubusercontent.com/${HALON_REPO}/${latest}/${HALON_FILE}`;
+    await fetchBuffer(url);
+
+    note.sourceUrl = url;
+    writeText(HALON_MANIFEST, jsonDumps(manifest, 4) + "\n");
+    console.log(`halon@beatlink: ${current.slice(0, 7)} -> ${latest.slice(0, 7)}`);
+}
+
+
+// ===========================================================================
 // CLI
 // ===========================================================================
 
@@ -1983,6 +2041,7 @@ function parseArgs(argv) {
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === "--fix") args.fix = true;
+        else if (a === "--check") args.check = true;
         else if (a === "--all") args.all = true;
         else if (a === "--out") args.out = argv[++i];
         else if (a === "--out-dir") args.outDir = argv[++i];
@@ -2010,6 +2069,7 @@ commands:
   publish [--addons-dir D] [--out-dir D] [--commit SHA]
                                             Resolve + hash every manifest into resources/docs/
   generate-readme                           Regenerate README.md's addon table
+  bump-halon [--check]                      Move halon@beatlink's pin to Halon's current main
   publish-release                           Upload *.zip files to GitHub Releases
 `;
 
@@ -2040,6 +2100,9 @@ async function main() {
             break;
         case "generate-readme":
             cmdGenerateReadme(args);
+            break;
+        case "bump-halon":
+            await cmdBumpHalon(args);
             break;
         case "publish-release":
             cmdPublishRelease(args);
