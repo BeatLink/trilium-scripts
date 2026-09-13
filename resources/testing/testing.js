@@ -169,6 +169,8 @@ function startAddonServer() {
         ".md": "text/markdown",
         ".png": "image/png",
     };
+    // TAM fetches these from the Trilium page, which is a different origin.
+    const CORS = { "Access-Control-Allow-Origin": "*" };
     const server = http.createServer((req, res) => {
         // Only GET; only paths that stay inside ADDONS_DIR.
         const urlPath = decodeURIComponent(new URL(req.url, ADDONS_BASE_URL).pathname);
@@ -186,7 +188,7 @@ function startAddonServer() {
                 webUrl: ADDONS_BASE_URL,
                 "tam-addons": addonIds.map(localManifestUrl),
             };
-            res.writeHead(200, { "Content-Type": "application/json" });
+            res.writeHead(200, { "Content-Type": "application/json", ...CORS });
             res.end(JSON.stringify(catalog));
             return;
         }
@@ -201,7 +203,7 @@ function startAddonServer() {
                 res.writeHead(404).end("not found");
                 return;
             }
-            res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream" });
+            res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream", ...CORS });
             res.end(data);
         });
     });
@@ -497,7 +499,8 @@ async function installViaTam(page, tri, addonId, { waitSeconds = 3, mode = "cata
     const manifestUrl = localManifestUrl(addonId);
     const manifest = await fetchLocalJson(manifestUrl);
     const addonName = manifest.name || addonId;
-    const rootTitle = manifest.manifest?.notes?.find(n => n.id === (manifest.manifest?.root))?.title || addonId;
+    // TAM titles a synthesised root note with the manifest's display name, not its id.
+    const rootTitle = manifest.manifest?.notes?.find(n => n.id === (manifest.manifest?.root))?.title || addonName;
 
     if (mode === "url") {
         const render = await openTamRender(page, tri, waitSeconds);
@@ -539,7 +542,7 @@ async function installViaTam(page, tri, addonId, { waitSeconds = 3, mode = "cata
 
     // Confirm the install actually landed by watching for the addon's root note
     // server-side (survives whatever the UI does next).
-    const installed = await waitForSearch(tri, `note.title = '${rootTitle}'`, { timeoutMs: 30_000 });
+    const installed = await waitForSearch(tri, `note.title = '${rootTitle}' OR note.title = '${addonId}'`, { timeoutMs: 30_000 });
     if (installed.length === 0) {
         await debugShot(page, "after-install");
         throw new Error(`installViaTam: ${addonId} did not install -- no note titled '${rootTitle}' appeared (manifest URL ${manifestUrl} reachable from the server?)`);
