@@ -1,25 +1,27 @@
 # No Drop Expand
 
-Keeps the note tree closed when you drag a note into a collapsed folder.
+Keeps the note tree closed when you drop a note into a collapsed folder.
 
 ## The problem
 
-Drag a note into a folder that is closed and Trilium opens that folder, along with every folder
-above it. The expansion is saved to the database, so it survives a restart and syncs to your other
-clients. Reorganising a few notes leaves a tree that is open everywhere.
+Drag a note into a folder that is closed and Trilium opens it. The expansion is saved, so it
+survives a restart and syncs to your other clients. Reorganising a few notes leaves a tree that is
+open everywhere.
+
+The decision is made on the server, not in the browser. Moving a branch into a note runs
+`moveBranchToBranch()` in Trilium's `services/branches.ts`, which sets `isExpanded` on the target
+branch and saves it, "so that the new placement of the branch is immediately visible". That comes
+back down as an entity change, and the tree syncs the folder open to match.
 
 ## What this does
 
-For two seconds after a drop on the tree, this addon blocks the two things that open the folders:
+There is nothing to prevent, only something to undo. The addon notes which folder a drop landed on
+while it was still closed, watches for that folder being opened by the entity change, and closes it
+again, writing the collapse back to the server so it does not return.
 
-- `expandToNote`, which walks the path to the note and opens each folder on it
-- Fancytree's `activeVisible` option, which opens the ancestors of whichever node is made active
-
-The note you moved still becomes the active note and the tree still refreshes normally. Nothing is
-written to the database, so the folders stay shut after a restart too.
-
-Hovering over a folder while dragging still opens it after 600ms, which is how you drop into a
-folder you cannot see. That behaviour is untouched.
+Only drops *into* a folder are affected. Dropping between notes to reorder them never expanded
+anything, and hovering over a folder while dragging still opens it after 600ms, which is how you
+drop into a folder you cannot see.
 
 ## Installation
 

@@ -1,38 +1,36 @@
 /* no-drop-expand@beatlink — startup
 
-Stops the note tree from opening folders after a note is dropped into one.
+Stops the note tree from opening a folder when you drop a note into it.
 
-After every tree reload Trilium brings the active note back into view. When the note you just
-dragged is the active one and it lands inside a collapsed folder, that reveal opens every folder
-above it and saves each one to the database, so they are still open after a restart. Two separate
-pieces of Trilium do it: NoteTreeWidget.expandToNote(), and Fancytree's activeVisible option, which
-expands the ancestors of whatever node is made active.
+The expansion is decided on the server, not in the browser. Moving a branch into a note runs
+moveBranchToBranch() in Trilium's services/branches.ts, which sets isExpanded on the target branch
+and saves it, "so that the new placement of the branch is immediately visible". That change comes
+back down as an entity change, and NoteTreeWidget.updateNode() syncs the node to the branch's new
+isExpanded, which opens the folder. Because the server already wrote it, the folder is still open
+after a restart and on every other client.
 
-This script watches for drops on the tree and turns both off for a moment afterwards. The note you
-moved still becomes the active note, it just stops pulling folders open on its way.
+So there is nothing to prevent, only something to undo. This script notes which folder a drop
+landed on while it was still closed, then watches updateNode for that folder opening and closes it
+again, writing the collapse back to the server so it does not come back.
 
 To use:
     - Add this script as a JS frontend note with #run=frontendStartup.
 */
 
-// How long after a drop the reveal stays blocked, in milliseconds.
-const GRACE_MS = 2000;
+// A drop is forgotten if its entity change has not arrived within this long, in milliseconds.
+const GRACE_MS = 5000;
 
-let blockedUntil = 0;
+// Branch IDs of folders that were closed when a note was dropped on them.
+const droppedOnWhileClosed = new Map();
 
-function isBlocked() {
-    return Date.now() < blockedUntil;
+function remember(branchId) {
+    clearTimeout(droppedOnWhileClosed.get(branchId));
+    droppedOnWhileClosed.set(branchId, setTimeout(() => droppedOnWhileClosed.delete(branchId), GRACE_MS));
 }
 
-// Runs a tree method with Fancytree's reveal-the-active-node expansion switched off.
-function withoutActiveVisible(widget, run) {
-    if (!isBlocked() || !widget.tree) return run();
-
-    const previous = widget.tree.options.activeVisible;
-    widget.tree.options.activeVisible = false;
-    return Promise.resolve(run()).finally(() => {
-        widget.tree.options.activeVisible = previous;
-    });
+function forget(branchId) {
+    clearTimeout(droppedOnWhileClosed.get(branchId));
+    droppedOnWhileClosed.delete(branchId);
 }
 
 // Patched on the prototype so every note tree is covered, including the ones popups create later.
@@ -41,29 +39,36 @@ function patchNoteTree(widget) {
     if (proto.noDropExpandPatched) return;
     proto.noDropExpandPatched = true;
 
-    const expandToNote = proto.expandToNote;
-    proto.expandToNote = function (notePath, logErrors = true) {
-        // The same lookup without the expand flag still finds the note, it just leaves the folders closed.
-        if (isBlocked()) return this.getNodeFromPath(notePath, false, logErrors);
-        return expandToNote.call(this, notePath, logErrors);
-    };
+    const updateNode = proto.updateNode;
+    proto.updateNode = async function (node) {
+        const branchId = node.data.branchId;
+        if (!droppedOnWhileClosed.has(branchId)) return updateNode.call(this, node);
 
-    // The two methods that reactivate the note after the tree changes.
-    for (const name of ["entitiesReloadedEvent", "refresh"]) {
-        const original = proto[name];
-        proto[name] = function (...args) {
-            return withoutActiveVisible(this, () => original.apply(this, args));
-        };
-    }
+        const wasExpanded = node.isExpanded();
+        const result = await updateNode.call(this, node);
+
+        if (!wasExpanded && node.isExpanded()) {
+            forget(branchId);
+            // Writes isExpanded back to false in the cache and on the server, undoing the move.
+            this.setExpanded(branchId, false);
+            await node.setExpanded(false, { noEvents: true, noAnimation: true });
+        }
+
+        return result;
+    };
 }
 
-// Capture phase, so the window opens before Fancytree starts moving the branch.
+// Capture phase, so the folder is read while it is still closed.
 document.addEventListener("drop", (event) => {
     const container = event.target.closest?.("ul.fancytree-container");
     if (!container) return;
 
-    blockedUntil = Date.now() + GRACE_MS;
+    // getNode() only unwraps jQuery events, so hand it the element from this native one.
+    const node = $.ui.fancytree.getNode(event.target);
+    if (!node || node.isExpanded()) return;
+
+    remember(node.data.branchId);
 
     const widget = api.getComponentByEl(container);
-    if (widget && typeof widget.expandToNote === "function") patchNoteTree(widget);
+    if (widget && typeof widget.updateNode === "function") patchNoteTree(widget);
 }, true);
