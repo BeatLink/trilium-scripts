@@ -55,6 +55,7 @@ manifest URL, so a manifest and its files can live anywhere on the web.
 | `manifestSourceUrl` | No¹ | The URL this exact manifest can always be fetched from. Written by `publish`. |
 | `contentHash` | — | *Published only.* Hash over the manifest's structure and every file's content; what update checks compare. Never hand-authored. |
 | `readme` | No | Relative path to the README, for the catalog website. |
+| `changelog` | No | Relative path to the addon's `CHANGELOG.md`, written by `changelog`. `publish` pins it to a commit; TAM and the catalog site render it. Never part of `contentHash`. |
 | `manifest` | No | The note-tree declaration (below). Omit for metadata-only entries. |
 
 ¹ `manifestSourceUrl` is the one field that makes an addon installable and updatable at all: TAM
@@ -276,7 +277,7 @@ installing or updating at all; they only carry the importable `{id}.zip` exports
 
 The toolchain is one Node.js CLI, `resources/scripts/tamhelper.js`, run from the repo root. Inside
 `nix-shell resources/nix` each command is a shell function (`validate`, `tam_to_zip`,
-`zip_to_tam`, `generate_pages`, `publish`, `generate_readme`, `publish_release`). The only runtime
+`zip_to_tam`, `generate_pages`, `publish`, `generate_readme`, `changelog`, `publish_release`). The only runtime
 dependency is `marked` (`npm ci` against the committed lockfile).
 
 ### `validate`
@@ -289,6 +290,9 @@ CI before every publish (exit code 1 on errors). Checks, per manifest:
   this manifest (both auto-fixable with `--fix`).
 - The `readme` file exists; every relative `sourceUrl` (notes and attachments) resolves to a real
   file on disk; absolute ones are fetched.
+- The `changelog` field points at a real file, and is filled in from an existing `CHANGELOG.md`
+  with `--fix`. A hand-authored changelog must carry an entry for `latestVersion`; a generated one
+  is held to its history by `changelog --check` instead.
 - `manifest.root` is only used the TAM way, and otherwise at least one note attaches to `"root"`;
   every note is reachable through `children[]`; all `children`/`relations`/`labels` references
   name declared ids (reserved keywords allowed only as `children[].parent`).
@@ -348,8 +352,26 @@ node resources/scripts/tamhelper.js publish [--addons-dir addons/] [--out-dir re
 
 `generate-pages` builds the static GitHub Pages catalog site into `resources/docs/`: an index of
 cards with search and type filters, and a detail page per addon with its rendered README, metadata,
-and download buttons. `generate-readme` regenerates the repo-root `README.md`'s addon table
+download buttons, and its changelog in a collapsed section below the README. `generate-readme` regenerates the repo-root `README.md`'s addon table
 between its `GENERATED` markers. Both share manifest loading.
+
+### `changelog`
+
+Regenerates every addon's `CHANGELOG.md` from the commits that touched its directory, grouping them
+under whichever `latestVersion` the manifest carried at each commit, and adds the `changelog` field
+to any manifest still missing it. Conventional Commit subjects become the bullets: `feat` under
+**Added**, `fix` under **Fixed**, anything else under **Changed**, with `chore`/`ci`/`test`/`style`/
+`build` dropped and a `!` or `BREAKING CHANGE:` marked in the text.
+
+A file carrying the generated marker is rewritten in place; one without it was hand-authored and is
+left alone, which is the escape hatch for an addon whose history reads badly. `--check` fails
+instead of writing, which is how CI keeps the committed files honest (it needs full history, so the
+workflow checks out with `fetch-depth: 0`). A directory rename ends an addon's history: `git log`
+only follows renames for a single file.
+
+```
+node resources/scripts/tamhelper.js changelog [--check] [--addons-dir addons/]
+```
 
 ### `publish-release` *(CI only)*
 
@@ -357,12 +379,18 @@ Uploads every ZIP from `tam-to-zip --all` to two GitHub releases: a permanently 
 this publish run (how a user gets an older version) and the floating `latest` release (so
 "download current" links never change). Requires an authenticated `gh`.
 
+The release notes are the changelog entries of the addons this push actually changed, found by
+diffing against `--since`, else the push event's `before` commit, else the last `publish-*` tag,
+else `HEAD~1`. With no base commit to diff against (a shallow clone) the notes fall back to naming
+the published commit alone.
+
 ---
 
 ## GitHub Actions workflows
 
-**`publish.yml`** (every push to `main`): `validate`, then `tam-to-zip --all`, then
-`publish-release`.
+**`publish.yml`** (every push to `main`): `validate`, `changelog --check`, then `tam-to-zip --all`,
+then `publish-release`. Checks out full history, which the changelog check and the release notes
+both read.
 
 **`pages.yml`** (every push to `main`): `npm ci`, `generate-pages`, then `publish` pinned to the
 deployed commit, then deploy `resources/docs/` to GitHub Pages.

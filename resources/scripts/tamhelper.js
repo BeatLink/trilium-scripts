@@ -11,6 +11,7 @@ Subcommands (run `tamhelper.js <cmd> -h` for each one's flags):
   generate-readme       Regenerate README.md's addon table from manifests.
   publish-release       Upload built *.zip files to GitHub Releases.
   publish               Resolve + hash every manifest into resources/docs/.
+  changelog             Regenerate every addon's CHANGELOG.md from git history.
 */
 
 const fs = require("fs");
@@ -223,13 +224,11 @@ function loadAddons() {
         if (!meta.id) continue;
 
         const outerDir = path.dirname(metaFile);
-        let readmeHtml = "";
-        const readmeRel = meta.readme;
-        if (readmeRel && exists(path.join(outerDir, readmeRel))) {
-            readmeHtml = renderMd(readText(path.join(outerDir, readmeRel)));
-        }
+        const render = (rel) => (rel && exists(path.join(outerDir, rel)))
+            ? renderMd(readText(path.join(outerDir, rel)))
+            : "";
 
-        addons.push({ meta, readmeHtml, outerDir });
+        addons.push({ meta, readmeHtml: render(meta.readme), changelogHtml: render(meta.changelog), outerDir });
     }
     return addons;
 }
@@ -257,6 +256,7 @@ const MANIFEST_CHECKS = [
     checkIdShape,
     checkHomepage,
     checkReadmeFile,
+    checkChangelogFile,
     checkManifestSourceUrl,
     prepareNoteContext,
     checkNoteDeclarations,
@@ -386,6 +386,35 @@ function checkReadmeFile({ manifest, addonDir, manifestFile, error }) {
 // carries it so an install predating the publish phase, refetching the
 // raw manifest, is told where the published one lives and moves itself
 // over on its next sync.
+/* Only a hand-authored changelog is checked for the current version's entry: a
+ * generated one names the version at HEAD, so a bump not yet committed legitimately
+ * has no entry, and `changelog --check` is what holds those to their history.
+ */
+function checkChangelogFile({ manifest, addonDir, manifestFile, args, error, warn, fixes }) {
+    if (!manifest.changelog) {
+        if (!exists(path.join(addonDir, CHANGELOG_NAME))) return;
+        if (args.fix) {
+            const afterKey = "readme" in manifest ? "readme" : "type";
+            writeText(manifestFile, jsonDumps(insertKeyAfter(manifest, afterKey, "changelog", CHANGELOG_NAME), 4) + "\n");
+            fixes.push(`FIXED   added changelog to '${manifestFile}' -> '${CHANGELOG_NAME}'`);
+        } else {
+            warn(manifestFile, `has a ${CHANGELOG_NAME} but no 'changelog' field (run --fix to add it)`);
+        }
+        return;
+    }
+    const changelogFile = path.join(addonDir, manifest.changelog);
+    if (!exists(changelogFile)) {
+        error(manifestFile, `'changelog' points to "${manifest.changelog}" but file not found`);
+        return;
+    }
+    const text = readText(changelogFile);
+    if (text.includes(CHANGELOG_MARKER) || !manifest.latestVersion) return;
+    if (!changelogSection(text, manifest.latestVersion)) {
+        error(manifestFile, `'${manifest.changelog}' has no entry for version ${manifest.latestVersion}`);
+    }
+}
+
+
 function checkManifestSourceUrl({ manifest, manifestFile, args, error, warn, fixes }) {
     const publishedUrl = publishedManifestUrl(manifest.id);
     if (!manifest.manifestSourceUrl) {
@@ -1508,7 +1537,7 @@ ${cards.join("\n")}
 }
 
 
-function renderAddon(baseHtml, meta, readmeHtml) {
+function renderAddon(baseHtml, meta, readmeHtml, changelogHtml) {
     const aid = meta.id;
     const name = meta.name || aid;
     const version = meta.latestVersion || "—";
@@ -1543,6 +1572,12 @@ function renderAddon(baseHtml, meta, readmeHtml) {
         ? `<div class="readme">${readmeHtml}</div>`
         : '<p class="no-readme">No README available.</p>';
 
+    // Collapsed by default: the README is what a visitor came for, the changelog
+    // is what they check afterwards.
+    const changelog = changelogHtml
+        ? `\n      <details class="changelog"><summary>Changelog</summary><div class="readme">${changelogHtml}</div></details>`
+        : "";
+
     const body = `<header>
   <div class="hdr">
     <a class="back" href="../">← All Addons</a>
@@ -1561,7 +1596,7 @@ function renderAddon(baseHtml, meta, readmeHtml) {
       </div>
     </aside>
     <div class="addon-content">
-      ${content}
+      ${content}${changelog}
     </div>
   </div>
 </main>`;
@@ -1589,7 +1624,7 @@ function cmdGeneratePages(args) {
                 fs.copyFileSync(full, path.join(pageDir, f));
             }
         }
-        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml));
+        writeText(path.join(pageDir, "index.html"), renderAddon(baseHtml, a.meta, a.readmeHtml, a.changelogHtml));
     }
 
     writeText(path.join(docsDir, "index.html"), renderIndex(baseHtml, addons));
@@ -1645,6 +1680,59 @@ function cmdGenerateReadme(args) {
 // publish-release
 // ===========================================================================
 
+function resolveCommit(repoRoot, ref) {
+    // A push event's "before" is all zeroes for a new branch, and a tag that was
+    // never fetched does not resolve -- either way there is nothing to diff against.
+    if (!ref || /^0+$/.test(ref)) return null;
+    return runGit(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], repoRoot);
+}
+
+
+function publishBaseCommit(repoRoot, args) {
+    // What this release is compared against, best first: an explicit --since, the
+    // commit the push started from, the last publish's tag, then the previous commit.
+    const previousTag = runGit(["describe", "--tags", "--abbrev=0", "--match", "publish-*", "HEAD"], repoRoot);
+    for (const ref of [args.since, process.env.GITHUB_EVENT_BEFORE, previousTag, "HEAD~1"]) {
+        const commit = resolveCommit(repoRoot, ref);
+        if (commit) return commit;
+    }
+    return null;
+}
+
+
+/* Release notes are the changelog entries of the addons this push actually
+ * touched, so the release says what changed rather than only which commit it came
+ * from. Everything here degrades to the bare commit line: a shallow CI clone has
+ * no base commit to diff against, and an addon may carry no changelog at all.
+ */
+function releaseNotes(repoRoot, sha, args) {
+    const header = `Auto-published from \`${sha}\``;
+    const base = publishBaseCommit(repoRoot, args);
+    if (!base) return header;
+
+    const addonsDir = args.addonsDir || "addons";
+    const changed = new Set((runGit(["diff", "--name-only", `${base}..HEAD`, "--", addonsDir], repoRoot) || "")
+        .split("\n").filter(Boolean).map((file) => file.split("/").slice(0, 2).join("/")));
+
+    const sections = [];
+    for (const dir of [...changed].sort()) {
+        const manifestFile = path.join(repoRoot, dir, MANIFEST_NAME);
+        if (!exists(manifestFile)) continue;
+        const manifest = JSON.parse(readText(manifestFile));
+        if (!manifest.id) continue;
+        const changelogFile = manifest.changelog ? path.join(repoRoot, dir, manifest.changelog) : null;
+        const section = (changelogFile && exists(changelogFile))
+            ? changelogSection(readText(changelogFile), manifest.latestVersion)
+            : null;
+        // The entry's own "## <version>" heading carries the addon's name here.
+        sections.push(section
+            ? `## ${manifest.id} ${section.replace(/^##\s+/, "")}`
+            : `## ${manifest.id} ${manifest.latestVersion || ""}`.trim());
+    }
+    return sections.length ? `${header}\n\n${sections.join("\n\n")}` : header;
+}
+
+
 function cmdPublishRelease(args) {
     const sha = process.env.GITHUB_SHA || "unknown";
     const runNumber = process.env.GITHUB_RUN_NUMBER || "0";
@@ -1654,7 +1742,8 @@ function cmdPublishRelease(args) {
         die("No *.zip files found to upload");
     }
 
-    const notes = `Auto-published from \`${sha}\``;
+    const repoRoot = path.resolve(runGit(["rev-parse", "--show-toplevel"], ".") || ".");
+    const notes = releaseNotes(repoRoot, sha, args);
 
     function publishTo(tag, title, latest) {
         // `create` fails whenever the release already exists — always true for the
@@ -1766,6 +1855,16 @@ function publishManifest(manifest, manifestFile, repoRoot, baseUrl, identityBase
     const hashInput = JSON.parse(JSON.stringify(published));
     delete hashInput.manifestSourceUrl;
     delete hashInput.contentHash;
+
+    // The changelog is pinned like a note's file, but stays out of the hash: it
+    // is rewritten from history on every commit that touches the addon, and an
+    // update the user is offered should mean the installed notes changed.
+    if (published.changelog && !/^https?:\/\//.test(published.changelog)) {
+        const changelogFile = path.join(addonDir, published.changelog);
+        if (!exists(changelogFile)) die(`ERROR: ${manifestFile}: 'changelog' points at missing file ${published.changelog}`);
+        published.changelog = baseUrl + encodeURI(repoRelative(repoRoot, changelogFile));
+    }
+    delete hashInput.changelog;
 
     const notes = published.manifest?.notes || [];
     const hashNotes = hashInput.manifest?.notes || [];
@@ -2041,6 +2140,199 @@ async function cmdBumpHalon(args) {
 
 
 // ===========================================================================
+// changelog
+// ===========================================================================
+
+/* An addon's CHANGELOG.md is derived from the commits that touched its own
+ * directory, grouped under whichever `latestVersion` its manifest carried at the
+ * time. Conventional Commit subjects are what make that readable, so a commit
+ * message stays the only place a change is written down.
+ *
+ * A file carrying the marker below was written by this command and is rewritten
+ * in place; one without it was hand-authored and is left alone, which is the
+ * escape hatch for an addon whose history does not tell the story well.
+ *
+ * The changelog is metadata beside the manifest, not a note in the addon's tree:
+ * `publish` pins its URL the way it pins a note's, TAM fetches it for the detail
+ * view, and nothing about it is installed.
+ */
+
+const CHANGELOG_NAME = "CHANGELOG.md";
+const CHANGELOG_MARKER = "<!-- Generated by `tamhelper.js changelog` from this addon's git history. Delete this line to hand-author it instead. -->";
+const CONVENTIONAL_RE = /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
+// Housekeeping that says nothing about the addon as installed.
+const SKIPPED_COMMIT_TYPES = new Set(["chore", "ci", "test", "style", "build"]);
+const SECTION_ORDER = ["Added", "Changed", "Fixed"];
+
+
+function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+
+function changelogEntry(subject, body) {
+    // One bullet from one commit, or null when the commit is pure housekeeping.
+    const match = CONVENTIONAL_RE.exec(subject);
+    const type = match ? match[1] : "";
+    if (SKIPPED_COMMIT_TYPES.has(type)) return null;
+    const description = match ? match[4] : subject;
+    const breaking = !!(match && match[3]) || /^BREAKING[ -]CHANGE:/m.test(body);
+    const section = type === "feat" ? "Added" : type === "fix" ? "Fixed" : "Changed";
+    return { section, text: breaking ? `**Breaking:** ${description}` : description };
+}
+
+
+function addonCommits(repoRoot, addonPath) {
+    // Every commit that touched this addon's directory, oldest first. A directory
+    // rename is where its history stops: --follow only works on a single file.
+    const out = runGit(["log", "--reverse", "--format=%H%x00%aI%x00%s%x00%b%x1e", "--", addonPath], repoRoot);
+    if (out === null) die("ERROR: changelog could not read git history");
+    return out.split("\x1e").map((record) => record.trim()).filter(Boolean).map((record) => {
+        const [hash, date, subject, body] = record.split("\x00");
+        return { hash, date, subject, body: body || "" };
+    });
+}
+
+
+function versionAtCommits(repoRoot, manifestPath, commits) {
+    // The version each commit shipped under: read out of the manifest at every
+    // commit that touched it, and inherited by every commit that did not.
+    const touched = new Set((runGit(["log", "--format=%H", "--", manifestPath], repoRoot) || "").split("\n").filter(Boolean));
+    const versions = [];
+    let current = null;
+    for (const commit of commits) {
+        if (touched.has(commit.hash)) {
+            try {
+                current = JSON.parse(runGit(["show", `${commit.hash}:${manifestPath}`], repoRoot)).latestVersion || current;
+            } catch {
+                // The manifest was absent or unparseable at that commit.
+            }
+        }
+        versions.push(current);
+    }
+    // Anything predating the first manifest is credited to the version it arrived at.
+    const first = versions.find(Boolean) || null;
+    return versions.map((version) => version || first);
+}
+
+
+function changelogGroups(repoRoot, addonPath, manifestPath) {
+    // One group per version, newest first, each holding deduplicated bullets.
+    const commits = addonCommits(repoRoot, addonPath);
+    const versions = versionAtCommits(repoRoot, manifestPath, commits);
+    const groups = new Map();
+    commits.forEach((commit, index) => {
+        const version = versions[index];
+        const entry = changelogEntry(commit.subject, commit.body);
+        if (!version || !entry) return;
+        if (!groups.has(version)) groups.set(version, { version, date: "", sections: new Map() });
+        const group = groups.get(version);
+        // Commits arrive oldest first, so the last one to land sets the date.
+        group.date = commit.date.slice(0, 10);
+        const texts = group.sections.get(entry.section) || [];
+        if (!texts.includes(entry.text)) texts.push(entry.text);
+        group.sections.set(entry.section, texts);
+    });
+    return [...groups.values()].reverse();
+}
+
+
+function renderChangelog(name, groups) {
+    const lines = [`# ${name} Changelog`, "", CHANGELOG_MARKER, ""];
+    for (const group of groups) {
+        lines.push(`## ${group.version} - ${group.date}`, "");
+        for (const section of SECTION_ORDER) {
+            const texts = group.sections.get(section);
+            if (!texts) continue;
+            lines.push(`### ${section}`, "");
+            for (const text of texts) lines.push(`- ${text}`);
+            lines.push("");
+        }
+    }
+    return lines.join("\n");
+}
+
+
+function changelogSection(text, version) {
+    // The one version's block out of a changelog, heading included.
+    const start = new RegExp(`^##\\s+v?${escapeRegExp(version)}\\b`, "m").exec(text);
+    if (!start) return null;
+    const rest = text.slice(start.index);
+    const next = /\n##\s/.exec(rest.slice(1));
+    return (next ? rest.slice(0, next.index + 1) : rest).trim();
+}
+
+
+function insertKeyAfter(obj, afterKey, key, value) {
+    // Keeps a manifest's field order readable: JSON.stringify writes keys in
+    // insertion order, so a new field appended at the end would land past `manifest`.
+    if (key in obj) {
+        obj[key] = value;
+        return obj;
+    }
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+        out[k] = v;
+        if (k === afterKey) out[key] = value;
+    }
+    if (!(key in out)) out[key] = value;
+    return out;
+}
+
+
+function repoRelative(repoRoot, target) {
+    return path.relative(repoRoot, path.resolve(target)).split(path.sep).join("/");
+}
+
+
+function cmdChangelog(args) {
+    const repoRoot = path.resolve(runGit(["rev-parse", "--show-toplevel"], ".") || die("ERROR: changelog must run inside a git working copy"));
+    const stale = [], authored = [];
+    let written = 0;
+
+    for (const manifestFile of iterManifests(args.addonsDir || "addons")) {
+        const manifest = JSON.parse(readText(manifestFile));
+        if (!manifest.id) continue;
+        const addonDir = path.dirname(manifestFile);
+        const groups = changelogGroups(repoRoot, repoRelative(repoRoot, addonDir), repoRelative(repoRoot, manifestFile));
+        if (!groups.length) continue;
+
+        const file = path.join(addonDir, CHANGELOG_NAME);
+        if (exists(file) && !readText(file).includes(CHANGELOG_MARKER)) {
+            authored.push(file);
+            continue;
+        }
+        const content = renderChangelog(manifest.name || manifest.id, groups);
+        const current = exists(file) ? readText(file) : null;
+        if (args.check) {
+            if (current !== content) stale.push(file);
+            continue;
+        }
+        if (current !== content) {
+            writeText(file, content);
+            written++;
+        }
+        if (manifest.changelog !== CHANGELOG_NAME) {
+            const afterKey = "readme" in manifest ? "readme" : "type";
+            writeText(manifestFile, jsonDumps(insertKeyAfter(manifest, afterKey, "changelog", CHANGELOG_NAME), 4) + "\n");
+        }
+    }
+
+    if (args.check) {
+        if (!stale.length) {
+            console.log("Changelogs are up to date");
+            return;
+        }
+        for (const file of stale) console.error(`${file}: out of date`);
+        console.error("  run: node resources/scripts/tamhelper.js changelog");
+        process.exit(1);
+    }
+    for (const file of authored) console.log(`Kept hand-authored ${file}`);
+    console.log(`Wrote ${written} changelog(s)`);
+}
+
+
+// ===========================================================================
 // CLI
 // ===========================================================================
 
@@ -2056,6 +2348,8 @@ function parseArgs(argv) {
         else if (a === "--out-dir") args.outDir = argv[++i];
         else if (a === "--addons-dir") args.addonsDir = argv[++i];
         else if (a === "--commit") args.commit = argv[++i];
+        else if (a === "--since") args.since = argv[++i];
+        else if (a.startsWith("--since=")) args.since = a.slice(8);
         else if (a.startsWith("--commit=")) args.commit = a.slice(9);
         else if (a.startsWith("--out=")) args.out = a.slice(6);
         else if (a.startsWith("--out-dir=")) args.outDir = a.slice(10);
@@ -2079,7 +2373,8 @@ commands:
                                             Resolve + hash every manifest into resources/docs/
   generate-readme                           Regenerate README.md's addon table
   bump-halon [--check]                      Re-pin halon@beatlink when Halon's stylesheet changes
-  publish-release                           Upload *.zip files to GitHub Releases
+  changelog [--check] [--addons-dir D]      Regenerate every addon's CHANGELOG.md from git history
+  publish-release [--since REF]             Upload *.zip files to GitHub Releases
 `;
 
 async function main() {
@@ -2112,6 +2407,9 @@ async function main() {
             break;
         case "bump-halon":
             await cmdBumpHalon(args);
+            break;
+        case "changelog":
+            cmdChangelog(args);
             break;
         case "publish-release":
             cmdPublishRelease(args);

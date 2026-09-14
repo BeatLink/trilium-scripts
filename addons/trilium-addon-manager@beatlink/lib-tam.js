@@ -231,7 +231,8 @@ function extractAddonMeta(manifest) {
         author: manifest.author,
         license: manifest.license,
         type: manifest.type,
-        homepage: manifest.homepage
+        homepage: manifest.homepage,
+        changelog: manifest.changelog || null
     }
 }
 
@@ -303,6 +304,7 @@ async function fetchJson(url) {
  */
 async function fetchManifest(manifestSourceUrl) {
     const manifest = await fetchJson(manifestSourceUrl)
+    if (manifest?.changelog) manifest.changelog = new URL(manifest.changelog, manifestSourceUrl).href
     for (const noteDef of (manifest?.manifest?.notes || [])) {
         if (!noteDef.sourceUrl) continue
         noteDef.sourceUrl = new URL(noteDef.sourceUrl, manifestSourceUrl).href
@@ -1554,6 +1556,7 @@ async function getAllAddons() {
             latestVersion: addon.installedVersion,
             updateAvailable: !!addon.updateAvailable,
             availableVersion: addon.availableVersion,
+            availableChangelog: addon.availableChangelog || null,
             enabled: !!addon.enabled,
             manifestSourceUrl: addon.manifestSourceUrl,
             readmeLocalId: addon.manifest?.readmeNote || null,
@@ -1597,6 +1600,9 @@ async function checkForAddonUpdates() {
             } else {
                 delete addon.availableVersion
             }
+            // So "what's new" is the changelog of the version being offered, not the installed one's.
+            if (addon.updateAvailable) addon.availableChangelog = manifest.changelog || null
+            else delete addon.availableChangelog
         } catch (e) {
             log("warn", `${addonId}: update check failed - ${e.message}`)
         }
@@ -2286,6 +2292,14 @@ async function fetchReadmeHtml(addonId, readmeLocalId) {
     return marked.parse(markdown)
 }
 
+// Renders an addon's changelog as HTML for the detail view. It is a file beside
+// the manifest rather than a note in the tree, so it is fetched rather than read
+// out of Trilium - which is also what lets an addon show one before it is installed.
+async function fetchChangelogHtml(changelogUrl) {
+    if (!changelogUrl) return null
+    return marked.parse(await fetchContent(changelogUrl, false))
+}
+
 // =========================================================================
 // Public surface — the same names lib-tam.js has always exported.
 // =========================================================================
@@ -2309,6 +2323,7 @@ module.exports.getPendingPrompts = getPendingPrompts
 module.exports.resolvePrompt = resolvePrompt
 module.exports.clearPendingPrompts = clearPendingPrompts
 module.exports.fetchReadmeHtml = fetchReadmeHtml
+module.exports.fetchChangelogHtml = fetchChangelogHtml
 module.exports.diagnose = diagnose
 module.exports.repairIssue = repairIssue
 module.exports.log = log

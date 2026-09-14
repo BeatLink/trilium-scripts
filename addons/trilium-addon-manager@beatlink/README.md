@@ -55,6 +55,8 @@ thing that could otherwise fix it.
   Enable/Disable, Settings, Update), and a main panel with the description and — for
   installed addons that declare a `readmeNote` — the addon's own README rendered from its locally
   installed note (see [`readmeNote`](docs/MANIFEST.md#readmenote-optional)), no network fetch required.
+  An addon whose manifest carries a `changelog` also gets a **Show Changelog** button that swaps the
+  panel for its release history, showing the incoming version's when an update is pending.
 - **Settings view** — TAM's own housekeeping page, built manually (no `libsettings@beatlink`
   dependency): a stats overview (catalog count, installed addon count, addons with saved/persisted
   data, addons with an update available), catalog management (each catalog's row has **Browse**,

@@ -11,7 +11,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Full history and tags: the changelogs are derived from it, and the release
+      # notes diff this push against the commit the last publish tagged.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -20,10 +24,14 @@ jobs:
       - name: Validate
         run: node resources/scripts/tamhelper.js validate
 
+      - name: Check changelogs
+        run: node resources/scripts/tamhelper.js changelog --check
+
       - name: Build addon ZIPs
         run: node resources/scripts/tamhelper.js tam-to-zip --all
 
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: node resources/scripts/tamhelper.js publish-release

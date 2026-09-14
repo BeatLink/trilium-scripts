@@ -98,6 +98,7 @@ tam_to_zip <manifest-dir>      # manifest -> Trilium-importable ZIP
 zip_to_tam <zip>                # Trilium export ZIP -> starting manifest + source files
 generate_pages                 # rebuild resources/docs/ (incl. catalog.json)
 generate_readme                # regenerate README.md's addon table
+changelog                      # regenerate every addon's CHANGELOG.md from git history
 ```
 
 ## Adding/editing an addon
@@ -106,6 +107,7 @@ generate_readme                # regenerate README.md's addon table
 * Use Validate
 * Update Readme and documentation
 * Bump versions
+* Run `changelog` after committing, so the addon's CHANGELOG.md covers the new version
 
 ## Trilium scripting reference
 

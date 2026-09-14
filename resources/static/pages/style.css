@@ -138,6 +138,10 @@ main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 .readme th { background: #f8fafc; font-weight: 600; }
 .readme blockquote { border-left: 3px solid #e2e8f0; margin: 12px 0; padding: 4px 16px; color: #64748b; }
 .no-readme { color: #94a3b8; font-style: italic; }
+.changelog { margin-top: 16px; }
+.changelog > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #475569; padding: 10px 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.changelog[open] > summary { border-radius: 8px 8px 0 0; border-bottom: none; }
+.changelog[open] > .readme { border-radius: 0 0 8px 8px; }
 
 /* Footer */
 footer { text-align: center; padding: 24px; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 40px; }

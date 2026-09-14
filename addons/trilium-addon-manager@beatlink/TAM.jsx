@@ -647,6 +647,20 @@ function CatalogBrowseView({ catalogUrl, webUrl, entries, loading, installedIds,
 function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReinstall, onEnable }) {
     const [readmeHtml, setReadmeHtml] = useState(null)
     const [readmeLoading, setReadmeLoading] = useState(false)
+    const [changelogHtml, setChangelogHtml] = useState(null)
+    const [showChangelog, setShowChangelog] = useState(false)
+    // An addon with an update pending shows the changelog of the version on offer.
+    const changelogUrl = addonData.availableChangelog || addonData.changelog || null
+
+    useEffect(() => {
+        setChangelogHtml(null)
+        setShowChangelog(false)
+        if (!changelogUrl) return
+        libTAMjs.fetchChangelogHtml(changelogUrl).then(setChangelogHtml).catch(e => {
+            console.error("TAM: failed to render changelog", e)
+            setChangelogHtml('<p class="no-readme">This addon\'s changelog could not be loaded.</p>')
+        })
+    }, [changelogUrl])
 
     useEffect(() => {
         setReadmeHtml(null)
@@ -696,11 +710,25 @@ function AddonDetail({ addonData, isSelf, onInstall, onDelete, onUpdate, onReins
                     {addonData.installedVersion && (
                         <TamButton className="btn-ghost" icon="bx bx-refresh" text="Reinstall" onClick={() => onReinstall(addonData.id)} />
                     )}
+                    {changelogUrl && (
+                        <TamButton
+                            className="btn-ghost"
+                            icon="bx bx-history"
+                            text={showChangelog ? "Show README" : "Show Changelog"}
+                            onClick={() => setShowChangelog(!showChangelog)}
+                        />
+                    )}
                 </div>
             </aside>
             <div className="addon-content">
                 <p className="TAM-addon-description">{addonData.description}</p>
-                {addonData.installedVersion ? (
+                {showChangelog ? (
+                    changelogHtml ? (
+                        <div className="readme" dangerouslySetInnerHTML={{ __html: changelogHtml }} />
+                    ) : (
+                        <Spinner />
+                    )
+                ) : addonData.installedVersion ? (
                     readmeLoading ? (
                         <Spinner />
                     ) : readmeHtml ? (

@@ -289,6 +289,11 @@ doing three things:
 3. **Writes `catalog.json`**, the list of every published manifest URL
    (see [Catalog format](MANIFEST.md#catalog-format)).
 
+A `changelog` path is pinned the same way, but deliberately left out of the `contentHash`: it is
+rewritten from git history on every commit that touches the addon, and an update the user is
+offered should mean the installed notes changed. TAM fetches it for the detail view, preferring the
+changelog of the version being offered over the installed one's.
+
 Publishing is offline and deterministic: only files on disk are hashed, and the same commit always
 publishes byte-identically. A `sourceUrl` that was already absolute points at someone else's repo,
 so it is carried through unhashed (fetching it would make the same commit publish differently
