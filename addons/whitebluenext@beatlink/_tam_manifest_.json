@@ -8,6 +8,7 @@
     "latestVersion": "0.0.6",
     "type": "theme",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/whitebluenext@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [

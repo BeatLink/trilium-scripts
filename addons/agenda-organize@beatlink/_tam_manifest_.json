@@ -8,6 +8,7 @@
     "latestVersion": "5.1.0",
     "type": "widget",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-organize@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "organize-editor-page",

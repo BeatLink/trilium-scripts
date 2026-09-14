@@ -8,6 +8,7 @@
     "latestVersion": "3.0.0",
     "type": "widget",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/web-preview@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-launcher",

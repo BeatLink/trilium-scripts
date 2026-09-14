@@ -8,6 +8,7 @@
     "latestVersion": "1.9.1",
     "type": "script",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-agenda@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",

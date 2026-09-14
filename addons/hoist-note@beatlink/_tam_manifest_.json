@@ -8,6 +8,7 @@
     "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/hoist-note@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [

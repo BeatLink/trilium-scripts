@@ -8,6 +8,7 @@
     "latestVersion": "1.6.0",
     "type": "script",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-first-child@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",

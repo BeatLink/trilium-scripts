@@ -8,6 +8,7 @@
     "latestVersion": "1.7.0",
     "type": "widget",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/youtube-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",

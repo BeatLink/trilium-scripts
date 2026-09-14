@@ -8,6 +8,7 @@
     "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/no-drop-expand@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [

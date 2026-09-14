@@ -8,6 +8,7 @@
     "latestVersion": "0.8.2",
     "type": "widget",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/drawio@siriusxt/_tam_manifest_.json",
     "manifest": {
         "notes": [

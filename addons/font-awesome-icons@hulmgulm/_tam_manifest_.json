@@ -8,6 +8,7 @@
     "latestVersion": "1.2.1",
     "type": "iconpack",
     "readme": "README.md",
+    "changelog": "CHANGELOG.md",
     "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/font-awesome-icons@hulmgulm/_tam_manifest_.json",
     "manifest": {
         "readmeNote": "readme",
