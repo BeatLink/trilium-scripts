@@ -212,6 +212,9 @@ function MainWidget(){
     async function changeRecurrence(value) {
         setValues(current => ({ ...current, recurrence: value }))
         await setTaskLabel(targets, ids.constants[FIELD_LABELS.recurrence], value)
+        // The My Day flag is left alone here, unlike on a date edit: the start
+        // date hasn't moved, so a task on today belongs there still.
+        for (const target of targets) await updateDependentAttributes(target, ids.constants)
         afterChange()
     }
 

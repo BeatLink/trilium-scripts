@@ -127,3 +127,30 @@ test("a field whose targets disagree reads Mixed", async ({ tri, page }) => {
         for (const noteId of [taskOne, taskTwo]) await deleteNote(tri, noteId);
     }
 });
+
+test("turning on a recurrence restates #recurrenceDisplay across the selection", async ({ tri, page }) => {
+    test.setTimeout(120_000);
+    const taskOne = await createNote(tri, "ZzRecurOne");
+    const taskTwo = await createNote(tri, "ZzRecurTwo");
+    await setLabel(tri, taskOne, "agendaTaskWidget", "");
+    await setLabel(tri, taskTwo, "agendaTaskWidget", "");
+
+    try {
+        await page.gotoNote(taskOne);
+        await expect(page.locator(".agenda-task-widget")).toBeVisible({ timeout: 20_000 });
+
+        await treeNode(page, "ZzRecurOne").click({ modifiers: ["Alt"] });
+        await treeNode(page, "ZzRecurTwo").click({ modifiers: ["Alt"] });
+        await expect(paneTitle(page)).toHaveText("Task (2 notes)", { timeout: 20_000 });
+
+        await page.locator(".agenda-task-widget .recurrence-summary").click();
+        await page.locator(".recurrence-popover .enabled-picker label").click();
+
+        for (const noteId of [taskOne, taskTwo]) {
+            await expect.poll(() => readLabel(tri, noteId, "recurrence"), { timeout: 20_000 }).not.toBe(null);
+            await expect.poll(() => readLabel(tri, noteId, "recurrenceDisplay"), { timeout: 20_000 }).not.toBe(null);
+        }
+    } finally {
+        for (const noteId of [taskOne, taskTwo]) await deleteNote(tri, noteId);
+    }
+});
