@@ -38,6 +38,18 @@ async function markDone(noteId) {
     }, [noteId])
 }
 
+// Write one label across a whole selection of tasks in a single backend round
+// trip. An empty value is stored as an empty label rather than removed, which
+// is what clearing a field through the widget has always done.
+async function setTaskLabel(noteIds, name, value) {
+    await api.runOnBackend((noteIds, name, value) => {
+        for (const noteId of noteIds) {
+            const note = api.getNote(noteId)
+            if (note) note.setLabel(name, value)
+        }
+    }, [noteIds, name, value ?? ""])
+}
+
 async function updateDependentAttributes(noteId, constants) {
     if (!noteId) return
 
@@ -185,6 +197,7 @@ module.exports = {
     markUndone,
     rescheduleByDays,
     rescheduleByOption,
+    setTaskLabel,
     updateDependentAttributes,
     clearMyDayFlag,
     clearMyDayFlagIfNotToday,

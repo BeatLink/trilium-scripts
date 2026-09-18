@@ -23,7 +23,7 @@ If the active note's `#area` label points at a key that is disabled or not liste
 
 ## Assigning to several notes at once
 
-Select notes in the note tree (ctrl-click, shift-click) and the picker retargets at the selection,
+Select notes in the note tree (alt-click, shift-click) and the picker retargets at the selection,
 the way Trilium's own bulk actions do: its header reports how many notes are in play, and picking an
 area writes it to all of them in one go. With nothing selected it stays on the active note. Targets
 that currently disagree show a "— Mixed —" entry rather than letting one note's area stand in for

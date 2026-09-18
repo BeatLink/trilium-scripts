@@ -1,9 +1,10 @@
 # Agenda Task
 
-A right-pane widget for a note's start/due dates, duration, recurrence, and an Actions section with
-Complete Task and a row of reschedule buttons. Split out from the original agenda addon (whose
-Overview widget is now `agenda-overview@beatlink`) so Task can be installed, updated, and configured
-independently — the two addons share no code or settings.
+A right-pane widget for the start/due dates, duration and recurrence of a note, or of a whole tree
+multi-selection at once, plus an Actions section with Complete Task and a row of reschedule buttons.
+Split out from the original agenda addon (whose Overview widget is now `agenda-overview@beatlink`)
+so Task can be installed, updated, and configured independently — the two addons share no code or
+settings.
 
 Dates and Duration and Actions are collapsible disclosures, open by default. Recurrence is a single
 button reading the current rule back in plain English ("Every 2 weeks on Monday", or "Does not
@@ -16,6 +17,18 @@ The widget appears in the right pane on any note whose type is marked actionable
 inheritable label, set by the item's template). It edits four kinds of note labels — start/due
 datetime, duration, recurrence — via configurable label names, plus fires `agenda:tasksChanged` after
 any change so `agenda-overview@beatlink`'s widget (if installed) re-files the note.
+
+## Working on several tasks at once
+
+Select notes in the tree (alt-click, or shift-click for a range) and the widget retargets at that
+whole selection, the way `area-picker@beatlink` and `template-picker@beatlink` do: the header counts
+what it will write to ("Task (3 notes)"), every field writes to all of them, and Complete Task and
+the reschedule buttons run over each in turn. Notes in the selection that aren't tasks are dropped,
+so the widget only ever writes task labels to notes marked actionable. With nothing selected it stays
+on the active note.
+
+A field whose targets disagree reads `— Mixed —` and stays that way until a value is chosen, which
+then applies to all of them.
 
 Completing a task with a recurrence rolls its start date forward instead of leaving it done; the
 reschedule buttons offer a configurable set of quick date jumps (fixed days-from-now or a recurrence

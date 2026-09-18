@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/area-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "4.0.1",
+    "latestVersion": "4.0.2",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
@@ -123,6 +123,13 @@
                 "sourceUrl": "../../libs/libpicker/pickerRegistry.jsx"
             },
             {
+                "id": "tree-selection",
+                "title": "treeSelection.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libtreeselection/treeSelection.jsx"
+            },
+            {
                 "id": "libsettings-style",
                 "title": "libSettingsUI.css",
                 "type": "code",
@@ -226,6 +233,10 @@
             {
                 "parent": "script",
                 "child": "picker-registry"
+            },
+            {
+                "parent": "script",
+                "child": "tree-selection"
             },
             {
                 "parent": "registry",

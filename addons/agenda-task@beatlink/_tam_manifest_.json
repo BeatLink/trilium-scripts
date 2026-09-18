@@ -1,11 +1,11 @@
 {
     "id": "agenda-task@beatlink",
     "name": "Agenda Task",
-    "description": "The Task widget from the original agenda addon, split out as its own addon: a right-pane editor for a note's start/due dates, duration, recurrence, and an Actions section with Complete Task and a row of reschedule buttons. Recurrence is edited in a popover behind a button that reads the rule back in plain English; the other sections are collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda-overview@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which the Overview declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
+    "description": "The Task widget from the original agenda addon, split out as its own addon: a right-pane editor for the start/due dates, duration and recurrence of a note, or of a whole tree multi-selection at once, and an Actions section with Complete Task and a row of reschedule buttons. A selection retargets every field and action at each selected task and drops the notes in it that aren't tasks; a field whose targets disagree reads \"Mixed\" until a value is set on all of them. Recurrence is edited in a popover behind a button that reads the rule back in plain English; the other sections are collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda-overview@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which the Overview declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "3.4.5",
+    "latestVersion": "3.5.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
@@ -61,6 +61,13 @@
                 "type": "code",
                 "mime": "application/javascript;env=frontend",
                 "sourceUrl": "agendaTaskSettings.js"
+            },
+            {
+                "id": "tree-selection",
+                "title": "treeSelection.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libtreeselection/treeSelection.jsx"
             },
             {
                 "id": "task-schema",
@@ -210,6 +217,10 @@
                 "child": "lib-task-settings"
             },
             {
+                "parent": "task",
+                "child": "tree-selection"
+            },
+            {
                 "parent": "recurrence-picker",
                 "child": "togglebutton"
             },
@@ -333,6 +344,11 @@
             },
             {
                 "note": "lib-task-settings",
+                "name": "iconClass",
+                "value": "bx bx-task"
+            },
+            {
+                "note": "tree-selection",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

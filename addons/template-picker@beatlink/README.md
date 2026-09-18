@@ -15,7 +15,7 @@ derived from the tree on every note switch.
 
 ## Assigning to several notes at once
 
-Ctrl-click (or shift-click) notes in the tree to select them and the picker retargets at the whole
+Alt-click (or shift-click) notes in the tree to select them and the picker retargets at the whole
 selection, the same way Trilium's own bulk actions do. Its header reads "Template (3 notes)" so you
 can see the scope before picking, and choosing a template writes it to all of them in one go.
 Clicking a note normally clears the selection and the picker goes back to that single note.

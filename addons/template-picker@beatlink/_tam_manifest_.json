@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/template-picker@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "1.17.0",
+    "latestVersion": "1.17.1",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
@@ -129,6 +129,13 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "../../libs/libpicker/pickerRegistry.jsx"
+            },
+            {
+                "id": "tree-selection",
+                "title": "treeSelection.jsx",
+                "type": "code",
+                "mime": "text/jsx",
+                "sourceUrl": "../../libs/libtreeselection/treeSelection.jsx"
             },
             {
                 "id": "libsettings-style",
@@ -356,6 +363,10 @@
             {
                 "parent": "widget",
                 "child": "picker-registry"
+            },
+            {
+                "parent": "widget",
+                "child": "tree-selection"
             },
             {
                 "parent": "registry",

@@ -4,6 +4,7 @@ import {
     useActiveNoteContext,
     useNoteProperty,
     useNoteLabel,
+    useTriliumEvent,
     useEffect,
     useState,
     FormDropdownList,
@@ -11,17 +12,33 @@ import {
     Button,
     useId
 } from "trilium:preact";
+import { getNotes } from "trilium:api"
 
 import { RecurrencePicker } from "recurrencePicker.jsx"
+import { useSelectedNoteIds } from "treeSelection.jsx"
 
 const {
     complete,
     rescheduleByOption,
+    setTaskLabel,
     updateDependentAttributes,
     clearMyDayFlagIfNotToday,
     humanizeRecurrence
 } = require("libAgendaTask.js")
 const { getAgendaTaskSettings } = require("agendaTaskSettings.js")
+
+// Stands in for a field whose targets disagree, the way the Area and Template
+// pickers' own "— Mixed —" entry does.
+const MIXED = "mixed"
+const MIXED_TEXT = "— Mixed —"
+
+// Each edited field, against the settings constant naming the label behind it.
+const FIELD_LABELS = {
+    startDatetime: "START_DATETIME_LABEL",
+    dueDatetime: "DUE_DATETIME_LABEL",
+    duration: "DURATION_LABEL",
+    recurrence: "RECURRENCE_LABEL"
+}
 
 const durationOptions = [
     { key: "", name: "None"},
@@ -44,53 +61,43 @@ const durationOptions = [
     { key: "PT24H", name: "24 Hours"}
 ]
 
-function DatesDurationPicker({ constants, onAfterChange }) {
-    const { note } = useActiveNoteContext();
-    const noteId = useNoteProperty(note, "noteId");
-    const [startDatetime, setStartDatetime] = useNoteLabel(note, constants.START_DATETIME_LABEL)
-    const [dueDatetime, setDueDatetime] = useNoteLabel(note, constants.DUE_DATETIME_LABEL)
-    const [duration, setDuration] = useNoteLabel(note, constants.DURATION_LABEL)
+// The value every target agrees on, or MIXED when they disagree.
+function sharedValue(notes, label) {
+    const values = new Set(notes.map(note => note.getLabelValue(label) ?? ""))
+    return values.size > 1 ? MIXED : ([...values][0] ?? "")
+}
 
-    async function afterChange() {
-        await updateDependentAttributes(noteId, constants)
-        // Editing the dates by hand can move a task off today just as
-        // rescheduling does, so the My Day flag is re-evaluated here too.
-        await clearMyDayFlagIfNotToday(noteId, constants)
-        await onAfterChange()
-    }
+function DatesDurationPicker({ values, onChange }) {
+    const mixedDuration = values.duration === MIXED
 
     return (
         <div>
             <div>
-                <label>Start Date</label>
+                <label>Start Date{values.startDatetime === MIXED ? ` ${MIXED_TEXT}` : ""}</label>
                 <FormTextBox
                     type="datetime-local" placeholder="not set"
-                    currentValue={startDatetime}
-                    onChange={value => {
-                        setStartDatetime(value)
-                        afterChange()
-                    }}
+                    currentValue={values.startDatetime === MIXED ? "" : values.startDatetime}
+                    onChange={value => onChange("startDatetime", value)}
                 />
             </div>
             <div>
-                <label>Due Date</label>
+                <label>Due Date{values.dueDatetime === MIXED ? ` ${MIXED_TEXT}` : ""}</label>
                 <FormTextBox
                     type="datetime-local" placeholder="not set"
-                    currentValue={dueDatetime}
-                    onChange={value => {
-                        setDueDatetime(value)
-                        afterChange()
-                    }}
+                    currentValue={values.dueDatetime === MIXED ? "" : values.dueDatetime}
+                    onChange={value => onChange("dueDatetime", value)}
                 />
             </div>
             <div>
                 <label>Duration</label>
                 <FormDropdownList
-                    values={durationOptions}
-                    currentValue={duration ?? ""}
+                    values={mixedDuration
+                        ? [...durationOptions, { key: MIXED, name: MIXED_TEXT }]
+                        : durationOptions}
+                    currentValue={values.duration}
                     onChange={value => {
-                        setDuration(value)
-                        afterChange()
+                        if (value === MIXED) return
+                        onChange("duration", value)
                     }}
                     keyProperty="key" titleProperty="name"
                     class="dropdown-component form-control"
@@ -100,12 +107,10 @@ function DatesDurationPicker({ constants, onAfterChange }) {
     )
 }
 
-// Adapter binding RecurrencePicker to a note's own recurrence label, for the
-// Task pane's own "Recurrence" section. The editor lives in a popover behind a
+// The Task pane's "Recurrence" section: the editor lives in a popover behind a
 // button that reads the rule back in plain English.
-function NoteRecurrencePicker({ constants, onAfterChange }){
-    const { note } = useActiveNoteContext();
-    const [recurrence, setRecurrence] = useNoteLabel(note, constants.RECURRENCE_LABEL)
+function NoteRecurrencePicker({ recurrence, onChange }){
+    const isMixed = recurrence === MIXED
     const popoverId = useId()
 
     return (
@@ -118,16 +123,13 @@ function NoteRecurrencePicker({ constants, onAfterChange }){
                     popovertarget={popoverId}
                 >
                     <span className="bx bx-repeat" />
-                    {humanizeRecurrence(recurrence) || "Does not repeat"}
+                    {isMixed ? MIXED_TEXT : (humanizeRecurrence(recurrence) || "Does not repeat")}
                 </button>
             </div>
             <div id={popoverId} popover="auto" className="recurrence-popover">
                 <RecurrencePicker
-                    recurrence={recurrence}
-                    onChange={value => {
-                        setRecurrence(value)
-                        onAfterChange()
-                    }}
+                    recurrence={isMixed ? "" : recurrence}
+                    onChange={onChange}
                 />
             </div>
         </div>
@@ -138,7 +140,11 @@ function MainWidget(){
     const { note } = useActiveNoteContext();
     const noteId = useNoteProperty(note, "noteId");
     const [agendaTaskWidget] = useNoteLabel(note, "agendaTaskWidget")
+    const selectedNoteIds = useSelectedNoteIds()
     const [ids, setIds] = useState(null)
+    const [targets, setTargets] = useState([])
+    const [values, setValues] = useState(null)
+    const [reload, setReload] = useState(0)
 
     useEffect(() => {
         (async () => {
@@ -149,14 +155,64 @@ function MainWidget(){
         })()
     }, [])
 
-    if (!ids) return null
-    const isActionable = agendaTaskWidget === ''
-    if (!isActionable) return null
+    // The fields no longer read their notes through useNoteLabel, so anything
+    // else writing to a target's labels has to reach them this way.
+    useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
+        if (!targets.length) return
+        const targetIds = new Set(targets)
+        if (loadResults.getAttributeRows().some(attr => targetIds.has(attr.noteId))) {
+            setReload(count => count + 1)
+        }
+    })
+
+    useEffect(() => {
+        (async () => {
+            if (!ids) return
+            // A tree selection retargets the widget at every selected task,
+            // matching how the Area and Template pickers treat it; with nothing
+            // selected it stays on the active note. Notes that aren't tasks are
+            // dropped, so a mixed selection only writes to the tasks in it.
+            const candidates = selectedNoteIds.length ? selectedNoteIds : (noteId ? [noteId] : [])
+            const notes = (await getNotes(candidates, true))
+                .filter(note => note.getLabelValue("agendaTaskWidget") === "")
+
+            setTargets(notes.map(note => note.noteId))
+            setValues(notes.length ? {
+                startDatetime: sharedValue(notes, ids.constants.START_DATETIME_LABEL),
+                dueDatetime: sharedValue(notes, ids.constants.DUE_DATETIME_LABEL),
+                duration: sharedValue(notes, ids.constants.DURATION_LABEL),
+                recurrence: sharedValue(notes, ids.constants.RECURRENCE_LABEL)
+            } : null)
+        })()
+    }, [noteId, selectedNoteIds, agendaTaskWidget, ids, reload])
+
+    if (!ids || !targets.length || !values) return null
 
     // Broadcast only; the overview widget subscribes and re-files. Do not
     // import libAgendaOverview here (keeps this decoupled from Overview).
     function afterChange() {
+        setReload(count => count + 1)
         api.triggerEvent("agenda:tasksChanged")
+    }
+
+    // The optimistic setValues keeps the inputs steady until the write has
+    // travelled to the backend and back.
+    async function changeDate(field, value) {
+        setValues(current => ({ ...current, [field]: value }))
+        await setTaskLabel(targets, ids.constants[FIELD_LABELS[field]], value)
+        for (const target of targets) {
+            await updateDependentAttributes(target, ids.constants)
+            // Editing the dates by hand can move a task off today just as
+            // rescheduling does, so the My Day flag is re-evaluated here too.
+            await clearMyDayFlagIfNotToday(target, ids.constants)
+        }
+        afterChange()
+    }
+
+    async function changeRecurrence(value) {
+        setValues(current => ({ ...current, recurrence: value }))
+        await setTaskLabel(targets, ids.constants[FIELD_LABELS.recurrence], value)
+        afterChange()
     }
 
     const actions = [
@@ -164,18 +220,25 @@ function MainWidget(){
             key: "complete",
             icon: "bx bx-check",
             text: "Complete Task",
-            onClick: async () => { await complete(noteId, ids.constants); await afterChange() }
+            onClick: async () => {
+                for (const target of targets) await complete(target, ids.constants)
+                afterChange()
+            }
         }
     ]
 
+    const title = selectedNoteIds.length
+        ? `Task (${targets.length} note${targets.length === 1 ? "" : "s"})`
+        : "Task"
+
     return (
-        <RightPanelWidget title="Task">
+        <RightPanelWidget title={title}>
             <div className="agenda-widget agenda-task-widget">
                 <details open>
                     <summary>Dates and Duration</summary>
-                    <DatesDurationPicker constants={ids.constants} onAfterChange={afterChange}/>
+                    <DatesDurationPicker values={values} onChange={changeDate}/>
                 </details>
-                <NoteRecurrencePicker constants={ids.constants} onAfterChange={afterChange}/>
+                <NoteRecurrencePicker recurrence={values.recurrence} onChange={changeRecurrence}/>
                 <details open>
                     <summary>Actions</summary>
                     <div>
@@ -188,8 +251,10 @@ function MainWidget(){
                                 icon="bx bx-calendar"
                                 text={option.name}
                                 onClick={async () => {
-                                    await rescheduleByOption(noteId, ids.constants, option)
-                                    await afterChange()
+                                    for (const target of targets) {
+                                        await rescheduleByOption(target, ids.constants, option)
+                                    }
+                                    afterChange()
                                 }}
                             />
                         ))}
