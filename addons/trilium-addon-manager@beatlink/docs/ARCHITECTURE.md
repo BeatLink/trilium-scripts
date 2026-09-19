@@ -275,7 +275,7 @@ verifiable content.
 
 A **source manifest** (`addons/{id}/_tam_manifest_.json`) names each file relative to itself and
 carries no hashes. `tamhelper.js publish` turns it into the **published manifest** TAM actually
-installs from (deployed to `https://beatlink.github.io/trilium-scripts/{id}/_tam_manifest_.json`),
+installs from (deployed to `https://trilium-community.github.io/trilium-scripts/{id}/_tam_manifest_.json`),
 doing three things:
 
 1. **Pins every relative `sourceUrl` to one commit** (`raw.githubusercontent.com/.../{sha}/...`),

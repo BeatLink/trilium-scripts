@@ -3,13 +3,13 @@
     "name": "Notifications",
     "description": "Polls for notes matching a date label and sends desktop notifications for past-due items.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/notifications@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/notifications@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.3.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/notifications@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/notifications@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

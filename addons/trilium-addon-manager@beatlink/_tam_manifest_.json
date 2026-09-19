@@ -3,13 +3,13 @@
     "name": "Trilium Addon Manager",
     "description": "This addon allows for the easy installation, removal and updating of Trilium addons from any manifest URL or catalog.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/trilium-addon-manager@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "9.1.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/trilium-addon-manager@beatlink/_tam_manifest_.json",
     "manifest": {
         "root": "root",
         "notes": [

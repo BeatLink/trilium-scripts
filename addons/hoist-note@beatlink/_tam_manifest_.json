@@ -3,13 +3,13 @@
     "name": "Hoist Note",
     "description": "A launchbar button that toggles hoisting on the current note.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/hoist-note@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/hoist-note@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/hoist-note@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/hoist-note@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

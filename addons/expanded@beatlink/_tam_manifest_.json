@@ -3,13 +3,13 @@
     "name": "Expanded",
     "description": "Keep selected notes always expanded in the note tree. Tick the promoted 'Always Expanded' checkbox on any note to pin it open permanently, even after restarting Trilium. The label and its promoted definition are configurable in settings.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/expanded@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/expanded@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "2.1.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/expanded@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/expanded@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [

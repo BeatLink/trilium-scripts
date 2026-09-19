@@ -3,13 +3,13 @@
     "name": "Mobile View",
     "description": "These set of scripts allow you to use the full capabilities of the Trilium desktop interface while on a mobile device.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/mobile-view@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/mobile-view@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "0.0.7",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/mobile-view@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/mobile-view@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

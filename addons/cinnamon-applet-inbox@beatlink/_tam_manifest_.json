@@ -3,13 +3,13 @@
     "name": "Cinnamon Applet Inbox",
     "description": "Backend API endpoint for the Trilium API Cinnamon panel applet — surfaces the first line of a designated inbox note, with an optional embedded countdown timer and desktop notification.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/cinnamon-applet-inbox@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.10.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/cinnamon-applet-inbox@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/cinnamon-applet-inbox@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [

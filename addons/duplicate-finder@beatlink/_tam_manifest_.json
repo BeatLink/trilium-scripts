@@ -3,13 +3,13 @@
     "name": "Duplicate Finder",
     "description": "Finds notes with matching title, content and attributes, and converts the extra copies into clones of whichever copy you choose to keep. Which fields count as a match is configurable.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/duplicate-finder@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/duplicate-finder@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.4.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/duplicate-finder@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/duplicate-finder@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-launcher",
         "notes": [

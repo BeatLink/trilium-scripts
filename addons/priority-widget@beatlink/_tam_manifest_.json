@@ -3,13 +3,13 @@
     "name": "Priority Widget",
     "description": "A right pane dropdown widget for setting the priority of a note, plus a Missing Priorities page that triages every note still lacking one, and configurable search-based filters to exclude specific notes from the picker.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/priority-widget@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/priority-widget@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "3.4.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/priority-widget@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/priority-widget@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "exports": {

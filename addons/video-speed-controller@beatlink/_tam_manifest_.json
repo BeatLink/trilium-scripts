@@ -3,13 +3,13 @@
     "name": "Video Speed Controller",
     "description": "A port of the Video Speed Controller browser extension. Puts a draggable speed overlay on every HTML5 video and audio player in Trilium, with keyboard shortcuts to slow down, speed up, reset, rewind, advance, mark and jump. Works on the pages you browse in Trilium Desktop's Web View note type - where the controller is injected into the guest page the way the extension injects into a tab - and on Trilium's own video and audio notes. Speed step, preferred speed, seek distance, per-site remembered speed, controller position and opacity, every key binding, and a per-site blacklist are all configurable.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/video-speed-controller@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/video-speed-controller@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.1.1",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/video-speed-controller@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/video-speed-controller@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-launcher",
         "notes": [

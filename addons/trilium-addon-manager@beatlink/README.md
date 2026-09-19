@@ -2,7 +2,7 @@
 
 ![Screenshot](./image.png)
 
-Browse available addons at **https://beatlink.github.io/trilium-scripts/**
+Browse available addons at **https://trilium-community.github.io/trilium-scripts/**
 
 > ⚠️ **Work in progress.** TAM's manifest format and its Database/persistence model are under
 > active development and changing frequently. Data loss is possible. Install this to test and
@@ -11,7 +11,7 @@ Browse available addons at **https://beatlink.github.io/trilium-scripts/**
 > **7.0.0 breaks in-place updates from 6.x.** Addons are now installed from published manifests (see
 > [Publishing](docs/ARCHITECTURE.md#publishing)); the raw manifests a 6.x install points at no longer carry absolute
 > URLs, which a 6.x client cannot resolve. Reinstall TAM from the
-> [latest release](https://github.com/BeatLink/trilium-scripts/releases/latest) ZIP — every note is
+> [latest release](https://github.com/Trilium-Community/trilium-scripts/releases/latest) ZIP — every note is
 > re-adopted by its `#TAMFILEID`, so nothing is duplicated and persisted data is untouched — and
 > the new install points at the published catalog from then on.
 
@@ -91,7 +91,7 @@ The only thing that's actually different about installing TAM itself is *how* it
 manifest fetch — there's no other TAM around to click "Install" for you. Everything else is the
 ordinary sync path:
 
-1. Download `trilium-addon-manager@beatlink.zip` from the [latest release](https://github.com/BeatLink/trilium-scripts/releases/latest).
+1. Download `trilium-addon-manager@beatlink.zip` from the [latest release](https://github.com/Trilium-Community/trilium-scripts/releases/latest).
 2. In TriliumNext, use **Import** to import the ZIP under any note.
 3. Open the imported `trilium-addon-manager@beatlink` render note.
 4. `database.json`'s seed content pre-populates `installedAddons["trilium-addon-manager@beatlink"]`
@@ -104,4 +104,4 @@ ordinary sync path:
    anything, and finishes by writing a real, fully-populated Database record — after which TAM is
    indistinguishable from any other installed addon, including showing up correctly in future
    "Check for Updates" runs.
-5. Add `https://beatlink.github.io/trilium-scripts/catalog.json` as a catalog (pre-added by default, in `database.json`'s seed content) and browse it to install addons — or install any single addon directly by pasting its `manifestSourceUrl`.
+5. Add `https://trilium-community.github.io/trilium-scripts/catalog.json` as a catalog (pre-added by default, in `database.json`'s seed content) and browse it to install addons — or install any single addon directly by pasting its `manifestSourceUrl`.

@@ -3,13 +3,13 @@
     "name": "Agenda Task",
     "description": "The Task widget from the original agenda addon, split out as its own addon: a right-pane editor for the start/due dates, duration and recurrence of a note, or of a whole tree multi-selection at once, and an Actions section with Complete Task and a row of reschedule buttons. A selection retargets every field and action at each selected task and drops the notes in it that aren't tasks; a field whose targets disagree reads \"Mixed\" until a value is set on all of them. Recurrence is edited in a popover behind a button that reads the rule back in plain English; the other sections are collapsible. Owns its own settings note (schema.json/config.json) tagged #agendaTaskConfig - the label-name overrides and the reschedule buttons' option registry - and its own Task Settings page that edits them. Fully independent of agenda-overview@beatlink: no shared code, no shared settings note, no cross-addon reads in either direction. The two interoperate only through note-label conventions (the start/due/recurrence label names, which the Overview declares separately in its own config) and the agenda:tasksChanged event this addon broadcasts after a change.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-task@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/agenda-task@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "3.5.1",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/agenda-task@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "task-settings",
         "notes": [

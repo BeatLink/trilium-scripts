@@ -3,13 +3,13 @@
     "name": "Halon",
     "description": "A slate and blue theme built on the TriliumNext next base: a recessed navigation frame, raised content, ghost-first controls and hairline structure, with a matching dark mode. Shares one token set with the Halon desktop, GTK, VS Code and terminal themes.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/halon@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/halon@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "0.2.0",
     "type": "theme",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/halon@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/halon@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

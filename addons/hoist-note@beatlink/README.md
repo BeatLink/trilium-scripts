@@ -15,4 +15,4 @@ Hoisting focuses the Trilium note tree on a single note, hiding everything outsi
 
 ## Installation
 
-Install via [Trilium Addon Manager](https://github.com/BeatLink/trilium-scripts/tree/main/addons/trilium-addon-manager%40beatlink) or import the ZIP from [Releases](https://github.com/BeatLink/trilium-scripts/releases/latest).
+Install via [Trilium Addon Manager](https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/trilium-addon-manager%40beatlink) or import the ZIP from [Releases](https://github.com/Trilium-Community/trilium-scripts/releases/latest).

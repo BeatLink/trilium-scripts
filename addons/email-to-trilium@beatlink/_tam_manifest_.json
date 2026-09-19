@@ -3,13 +3,13 @@
     "name": "Email to Trilium",
     "description": "Multi-account email inbox for TriliumNext. Connects to Gmail and Microsoft (Outlook) accounts over their HTTP APIs, lists recent messages in a render view, and lets you turn any email into a note (subject + HTML body + attachments) filed under a per-account target note, or delete it from the mail account.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/email-to-trilium@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/email-to-trilium@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.5.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/email-to-trilium@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/email-to-trilium@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [

@@ -3,13 +3,13 @@
     "name": "WhiteBlueLegacy",
     "description": "Legacy WhiteBlue theme for older versions of Trilium. A white-dominant theme with light blue accents.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/whitebluelegacy@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/whitebluelegacy@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.0.4",
     "type": "theme",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/whitebluelegacy@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/whitebluelegacy@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

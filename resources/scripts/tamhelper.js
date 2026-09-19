@@ -1419,9 +1419,9 @@ try {
     renderMd = (text) => `<pre>${text}</pre>`;
 }
 
-const REPO = "https://github.com/BeatLink/trilium-scripts";
+const REPO = "https://github.com/Trilium-Community/trilium-scripts";
 const RELEASES = `${REPO}/releases/latest`;
-const PAGES_URL = "https://beatlink.github.io/trilium-scripts/";
+const PAGES_URL = "https://trilium-community.github.io/trilium-scripts/";
 const CATALOG_URL = `${PAGES_URL}catalog.json`;
 
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]);

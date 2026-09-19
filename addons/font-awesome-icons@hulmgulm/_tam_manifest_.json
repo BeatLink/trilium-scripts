@@ -3,13 +3,13 @@
     "name": "Font Awesome Icons",
     "description": "Font Awesome 7 free solid and brand icons as note icons, under the fa-solid and fa-brands prefixes.",
     "author": "hulmgulm",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/font-awesome-icons@hulmgulm",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/font-awesome-icons@hulmgulm",
     "license": "OFL-1.1",
     "latestVersion": "1.2.1",
     "type": "iconpack",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/font-awesome-icons@hulmgulm/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/font-awesome-icons@hulmgulm/_tam_manifest_.json",
     "manifest": {
         "readmeNote": "readme",
         "notes": [

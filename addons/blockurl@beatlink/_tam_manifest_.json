@@ -3,13 +3,13 @@
     "name": "BlockURL",
     "description": "Applies a BlockURL block list to Trilium Desktop's Web View note type. A blocked page is replaced with the block screen, blocked links and images are hidden on the pages you browse, and a toolbar button blocks or unblocks the page you are looking at. Needs a BlockURL sync server (https://github.com/BeatLink/BlockURL).",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/blockurl@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/blockurl@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.3.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/blockurl@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/blockurl@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-launcher",
         "notes": [

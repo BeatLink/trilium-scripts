@@ -3,13 +3,13 @@
     "name": "Web View KeePassXC",
     "description": "Fills logins from KeePassXC into Trilium Desktop's built-in Web View note type. Speaks the same encrypted browser protocol keepassxc-browser speaks, straight to KeePassXC's local socket, then injects an entry picker into the page and fills the username, password and one-time code of whichever entry you choose.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/webview-keepassxc@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/webview-keepassxc@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/webview-keepassxc@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/webview-keepassxc@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [

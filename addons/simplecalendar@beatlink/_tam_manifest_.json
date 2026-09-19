@@ -3,13 +3,13 @@
     "name": "Simple Calendar",
     "description": "Shows a FullCalendar day/week/month view of either an external ics feed URL, or notes matching a configurable Trilium search, mapped to start/due date labels. Settings-driven, no manual note setup required.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/simplecalendar@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.6.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/simplecalendar@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/simplecalendar@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "settings-page",
         "notes": [

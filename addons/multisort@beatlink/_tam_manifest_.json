@@ -3,13 +3,13 @@
     "name": "MultiSort",
     "description": "Sorts note children by multiple attributes and criteria using the #multiSorted label.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/multisort@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/multisort@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.3.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/multisort@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/multisort@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {

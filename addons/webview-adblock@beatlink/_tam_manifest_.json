@@ -3,13 +3,13 @@
     "name": "Web View Adblock",
     "description": "Ad and tracker blocking for Trilium Desktop's built-in Web View note type, optionally driven by your Firefox uBlock Origin config. Cancels ad requests with a filter on the webview's Electron session, and injects element-hiding rules into each page to collapse the ad slots that DNS-level blockers can't touch.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/webview-adblock@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/webview-adblock@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "2.2.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/webview-adblock@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/webview-adblock@beatlink/_tam_manifest_.json",
     "manifest": {
         "settingsNote": "launcher",
         "notes": [

@@ -267,7 +267,7 @@ deleting a catalog can never affect installed addons.
 No catalog is needed to install a single addon: **install by URL** fetches one manifest, discovers
 its own `id`, and installs it exactly like a catalog entry.
 
-This repo's catalog (`https://beatlink.github.io/trilium-scripts/catalog.json`) is written by
+This repo's catalog (`https://trilium-community.github.io/trilium-scripts/catalog.json`) is written by
 `publish` and served by GitHub Pages alongside the manifests. GitHub Releases are not involved in
 installing or updating at all; they only carry the importable `{id}.zip` exports.
 

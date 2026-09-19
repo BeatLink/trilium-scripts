@@ -3,13 +3,13 @@
     "name": "No Drop Expand",
     "description": "Keeps the note tree closed when you drop a note into a collapsed folder. Trilium's server marks the target folder expanded on every move and saves it, so the folder stays open after a restart and on your other clients. This closes it again and writes the collapse back. If you drag the note you are reading, the tree moves to the sibling it left behind so nothing has to open to show it. Reordering between notes is unaffected, and hover-to-open while dragging still works.",
     "author": "BeatLink",
-    "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/no-drop-expand@beatlink",
+    "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/no-drop-expand@beatlink",
     "license": "GPL-3.0-or-later",
     "latestVersion": "1.1.0",
     "type": "script",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
-    "manifestSourceUrl": "https://beatlink.github.io/trilium-scripts/no-drop-expand@beatlink/_tam_manifest_.json",
+    "manifestSourceUrl": "https://trilium-community.github.io/trilium-scripts/no-drop-expand@beatlink/_tam_manifest_.json",
     "manifest": {
         "notes": [
             {
