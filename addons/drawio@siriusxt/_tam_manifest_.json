@@ -1,11 +1,11 @@
 {
     "id": "drawio@siriusxt",
     "name": "Draw.io",
-    "description": "Integrates Draw.io diagram editing into TriliumNext \u2014 click any SVG note to edit it inline using the embedded Draw.io editor",
+    "description": "Integrates Draw.io diagram editing into TriliumNext \u2014 edit SVG notes inline with the embedded Draw.io editor",
     "author": "SiriusXT",
     "homepage": "https://github.com/SiriusXT/trilium-drawio",
     "license": "MIT",
-    "latestVersion": "0.8.2",
+    "latestVersion": "0.9.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",

@@ -10,12 +10,13 @@ Integrates [Draw.io](https://www.drawio.com/) diagram editing into TriliumNext. 
 - Supports light, dark, and auto themes
 - Diagrams are saved as SVG and remain readable even if the widget is removed
 - Configurable to use a self-hosted Draw.io instance
+- Export diagrams to a file from Draw.io's own export menu
 
 ## Usage
 
 1. Install via Trilium Addon Manager
 2. Create a new note using the **drawio** template
-3. Click the note to open the Draw.io editor
+3. Use the edit button in the note's action bar to toggle the Draw.io editor; new diagrams open it automatically
 
 ## Notes
 
