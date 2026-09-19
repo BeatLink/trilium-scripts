@@ -43,7 +43,11 @@ if (api.req.method == 'POST' && api.req.body.api_key === apiKey) {
                 });
             }
         }
-        api.res.status(201).json({text: final.title, onclick_data: final.noteId});
+        if (final) {
+            api.res.status(201).json({text: final.title, onclick_data: final.noteId});
+        } else {
+            api.res.status(201).json({text: "", onclick_data: ""});
+        }
     } else if (api.req.body.action == "open_task") {
         api.runOnFrontend((noteID) => {
             api.activateNote(noteID)

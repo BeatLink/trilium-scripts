@@ -32,5 +32,5 @@ Then, in the Cinnamon panel applet's settings:
 
 On each poll, the endpoint runs `searchQuery` as-is, filters the results down to notes whose
 `dateLabel` value is at or before the current minute, picks the earliest or latest match per
-`taskOrder`, and returns its title and note ID. Clicking the panel item calls back into the endpoint
-with `open_task`, which activates that note in Trilium.
+`taskOrder`, and returns its title and note ID (or blank text if nothing matches). Clicking the
+panel item calls back into the endpoint with `open_task`, which activates that note in Trilium.
