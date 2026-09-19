@@ -7,6 +7,7 @@
 ### Changed
 
 - render sections with Trilium's built-in Collapsible
+- add salvaged config from the pre-TAM install
 
 ## 5.1.0 - 2026-09-02
 
