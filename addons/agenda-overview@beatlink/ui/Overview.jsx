@@ -1,4 +1,5 @@
 import {
+    ExternallyControlledCollapsible,
     FormDropdownList,
     FormCheckbox,
     defineWidget,
@@ -9,8 +10,6 @@ import {
     useState,
     useTriliumEvent
 } from "trilium:preact"
-
-import { Collapsible } from "Collapsible.jsx"
 
 const { getAgendaSettings } = require("settings.js")
 const { saveProfile, loadData, updateTaskLists, getMatchingProfile, getAllProfiles, setActiveProfile, getSectionState, saveSectionState } = require("overview.js")
@@ -38,17 +37,18 @@ function CheckboxSection({
     const section = sectionPath.reduce((o, k) => o[k], profile)
 
     return (
-        <Collapsible
-            label={title}
+        <ExternallyControlledCollapsible
+            title={title}
             expanded={sectionState[stateKey] !== false}
-            onToggle={toggleSection(stateKey)}
+            setExpanded={toggleSection(stateKey)}
             className="mainSection"
         >
             {Object.entries(section.children || {}).map(([groupKey, group]) => (
-                <Collapsible
-                    label={group.name}
+                <ExternallyControlledCollapsible
+                    key={groupKey}
+                    title={group.name}
                     expanded={sectionState[`${stateKey}:${groupKey}`] === true}
-                    onToggle={toggleSection(`${stateKey}:${groupKey}`)}
+                    setExpanded={toggleSection(`${stateKey}:${groupKey}`)}
                     className="checkboxGroup"
                 >
                     <ul>{Object.entries(group.children || {}).map(([itemKey, usage]) => (
@@ -66,9 +66,9 @@ function CheckboxSection({
                             }
                         />
                     ))}</ul>
-                </Collapsible>
+                </ExternallyControlledCollapsible>
             ))}
-        </Collapsible>
+        </ExternallyControlledCollapsible>
     )
 }
 
@@ -80,15 +80,15 @@ function DropdownSection({
     profile,
     update,
     expanded,
-    onToggle
+    setExpanded
 }) {
     const section = sectionPath.reduce((o,k)=>o[k], profile)
 
     return (
-        <Collapsible
-            label={title}
+        <ExternallyControlledCollapsible
+            title={title}
             expanded={expanded}
-            onToggle={onToggle}
+            setExpanded={setExpanded}
             className="mainSection"
         >
             <FormDropdownList
@@ -108,7 +108,7 @@ function DropdownSection({
                 titleProperty="title"
                 class="dropdown-component form-control"
             />
-        </Collapsible>
+        </ExternallyControlledCollapsible>
     )
 }
 
@@ -183,8 +183,8 @@ function AgendaOverviewWidgetJSX() {
         })()
     }, [profileId, ids])
 
-    const toggleSection = (key) => (e) => {
-        const next = { ...sectionState, [key]: e.currentTarget.open }
+    const toggleSection = (key) => (expanded) => {
+        const next = { ...sectionState, [key]: expanded }
         setSectionState(next)
         saveSectionState(ids.profileContext, profileId, next)
     }
@@ -232,7 +232,7 @@ function AgendaOverviewWidgetJSX() {
                         profile={profile}
                         update={update}
                         expanded={sectionState.groupings !== false}
-                        onToggle={toggleSection("groupings")}
+                        setExpanded={toggleSection("groupings")}
                     />
                 )}
 
@@ -264,7 +264,7 @@ function AgendaOverviewWidgetJSX() {
                     profile={profile}
                     update={update}
                     expanded={sectionState.sorts !== false}
-                    onToggle={toggleSection("sorts")}
+                    setExpanded={toggleSection("sorts")}
                 />
 
                 <DropdownSection
@@ -275,7 +275,7 @@ function AgendaOverviewWidgetJSX() {
                     profile={profile}
                     update={update}
                     expanded={sectionState.prefixes !== false}
-                    onToggle={toggleSection("prefixes")}
+                    setExpanded={toggleSection("prefixes")}
                 />
 
                 <DropdownSection
@@ -286,7 +286,7 @@ function AgendaOverviewWidgetJSX() {
                     profile={profile}
                     update={update}
                     expanded={sectionState.colors !== false}
-                    onToggle={toggleSection("colors")}
+                    setExpanded={toggleSection("colors")}
                 />
             </div>
         </RightPanelWidget>

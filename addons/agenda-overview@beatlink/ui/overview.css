@@ -15,31 +15,37 @@
         width: 100%;
         gap: 1rem;
 
-        > details, > div {
-            > summary, > label {
-                color: var(--muted-text-color) !important;
-                font-weight: bold;
-                margin-bottom: 0.5rem;
-            }
-            > div {
-                display: flex;
-                flex-direction: column;
-                flex-wrap: wrap;
-                align-content: center;
-                align-items: stretch;
-                justify-content: space-evenly;
-                width: 100%;
-                gap: 0.5rem;
-                padding: 0.5rem;
-            }
+        /* A section heading: a Collapsible's title button, or the plain label
+           above the profile and view-type dropdowns. */
+        > .collapsible > .collapsible-title,
+        > div > label {
+            color: var(--muted-text-color) !important;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
         }
 
-        details, div {
+        /* A section's contents. A Collapsible animates the height of its own
+           body wrapper, so the layout goes on the inner body instead — that is
+           the element it measures, and the measurement includes this padding. */
+        > .collapsible > .collapsible-body > .collapsible-inner-body,
+        > div > div {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            align-content: center;
+            align-items: stretch;
+            justify-content: space-evenly;
+            width: 100%;
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        div {
             width: 100% !important;
             > * {
                 width: 100% !important;
             }
-            summary, label {
+            .collapsible-title, label {
                 text-align: start;
                 min-width: 5rem;
                 font-size: 1rem;
@@ -63,7 +69,7 @@
             }
         }
 
-        button, .togglebutton {
+        button:not(.collapsible-title), .togglebutton {
             width: 100% !important;
             * {
                 text-align: center;

@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/BeatLink/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.1.0",
+    "latestVersion": "5.2.0",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
@@ -39,13 +39,6 @@
                 "type": "code",
                 "mime": "text/jsx",
                 "sourceUrl": "ui/Overview.jsx"
-            },
-            {
-                "id": "collapsible",
-                "title": "Collapsible.jsx",
-                "type": "code",
-                "mime": "text/jsx",
-                "sourceUrl": "ui/Collapsible.jsx"
             },
             {
                 "id": "overview-css",
@@ -247,10 +240,6 @@
             },
             {
                 "parent": "grp-ui",
-                "child": "collapsible"
-            },
-            {
-                "parent": "grp-ui",
                 "child": "overview-css"
             },
             {
@@ -280,10 +269,6 @@
             {
                 "parent": "grp-static",
                 "child": "ical"
-            },
-            {
-                "parent": "overview",
-                "child": "collapsible"
             },
             {
                 "parent": "overview",
@@ -467,11 +452,6 @@
             },
             {
                 "note": "overview",
-                "name": "iconClass",
-                "value": "bx bx-task"
-            },
-            {
-                "note": "collapsible",
                 "name": "iconClass",
                 "value": "bx bx-task"
             },

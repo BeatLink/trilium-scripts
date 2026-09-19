@@ -174,7 +174,7 @@ Sources are grouped by kind, and note titles match the file names:
 
 | Folder | Holds |
 | ------ | ----- |
-| `ui/` | `Overview.jsx` (the right-pane widget), `Collapsible.jsx`, `overview.css`, `Settings.jsx` (the Agenda Settings page), `settings.css` |
+| `ui/` | `Overview.jsx` (the right-pane widget), `overview.css`, `Settings.jsx` (the Agenda Settings page), `settings.css` |
 | `lib/` | `overview.js` (re-filing and the iCal write), `query.js` (search + filter + sort), `config.js` (the display elements), `settings.js` (`getAgendaSettings()`), `migrate.js` |
 
 `lib/` also carries [`libpickersources`](../../libs/libpickersources/README.md)'s `pickerSources.js`, the shared table that reads the three pickers — `agenda-organize@beatlink` generates its triage queues from the same one.
