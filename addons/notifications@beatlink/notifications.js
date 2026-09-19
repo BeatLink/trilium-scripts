@@ -7,6 +7,7 @@ async function send_notification() {
     let earliest = api.currentNote.getLabelValue("earliest")
     let dateLabel = api.currentNote.getLabelValue("dateLabel")
     let reminderTime = Number(api.currentNote.getLabelValue("reminderTime"))
+    let requireInteraction = api.currentNote.getLabelValue("requireInteraction") != "false"
 
     // Quit if not enabled
     if (enabled != "true") {return}
@@ -44,7 +45,7 @@ async function send_notification() {
 
         // Send Notification
         if (final) {
-            await sendNotification(final.title, "", final.noteId);
+            await sendNotification(final.title, "", final.noteId, requireInteraction);
         }
     }
 

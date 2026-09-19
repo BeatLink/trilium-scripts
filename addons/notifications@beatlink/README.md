@@ -12,6 +12,7 @@ Add the following labels to a note that should drive the notifications:
 | `dateLabel`    | string   | Name of the label to search for (e.g. `dueDate`)         |
 | `reminderTime` | number   | Polling interval in seconds                               |
 | `earliest`     | `true`/`false` | Whether to notify on the earliest or latest match   |
+| `requireInteraction` | `true`/`false` | Keep the notification on screen until dismissed (default `true`; set `false` to let it auto-dismiss) |
 
 ## How it works
 

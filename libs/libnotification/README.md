@@ -15,10 +15,11 @@ await sendNotification("Note Title", "Optional body text", noteId);
 
 ## API
 
-### `sendNotification(title, body, noteId)`
+### `sendNotification(title, body, noteId, requireInteraction)`
 
 | Parameter | Type   | Description                              |
 |-----------|--------|------------------------------------------|
 | `title`   | string | Notification title                       |
 | `body`    | string | Notification body text (can be empty)    |
 | `noteId`  | string | Note to activate when notification is clicked |
+| `requireInteraction` | boolean | Keep the notification on screen until dismissed (default `false`) |
