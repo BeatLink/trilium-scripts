@@ -28,7 +28,7 @@
            body wrapper, so the layout goes on the inner body instead — that is
            the element it measures, and the measurement includes this padding. */
         > .collapsible > .collapsible-body > .collapsible-inner-body,
-        > div > div {
+        > div:not(.collapsible) > div {
             display: flex;
             flex-direction: column;
             flex-wrap: wrap;
