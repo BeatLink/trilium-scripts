@@ -738,6 +738,10 @@ async function checkIconPacks({ m, byId, manifestFile, error }) {
 function checkChildrenRefs({ m, noteIds, manifestFile, error }) {
     for (const c of m.children || []) {
         const parent = c.parent, child = c.child;
+        // A note cannot be its own parent, so the link never applies and no re-sync clears it.
+        if (parent && child && parent === child) {
+            error(manifestFile, `children: note '${child}' is declared as its own parent`);
+        }
         if (parent && parent !== "root" && parent !== "persistence" && !noteIds.has(parent)) {
             error(manifestFile, `children: parent '${parent}' not found in notes`);
         }
