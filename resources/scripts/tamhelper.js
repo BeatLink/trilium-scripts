@@ -272,6 +272,7 @@ const MANIFEST_CHECKS = [
     checkAttachments,
     checkIconPacks,
     checkChildrenRefs,
+    checkChildCycles,
     checkRelationRefs,
     checkLabelRefs,
     checkRequireReachability,
@@ -749,6 +750,34 @@ function checkChildrenRefs({ m, noteIds, manifestFile, error }) {
             error(manifestFile, `children: child '${child}' not found in notes`);
         }
     }
+}
+
+
+// A parent cycle never installs: the repeated id becomes a clone of the note under itself.
+function checkChildCycles({ m, manifestFile, error }) {
+    const edges = {};
+    for (const c of m.children || []) {
+        // A one-hop loop is already reported as a self-parent above.
+        if (!c.parent || !c.child || c.parent === c.child) continue;
+        (edges[c.parent] ||= []).push(c.child);
+    }
+    const state = {}, reported = new Set();
+    const visit = (id, ancestors) => {
+        if (state[id] === "done") return;
+        if (state[id] === "open") {
+            const cycle = ancestors.slice(ancestors.indexOf(id));
+            const key = [...cycle].sort().join("\u0000");
+            if (!reported.has(key)) {
+                reported.add(key);
+                error(manifestFile, `children: parent cycle ${[...cycle, id].join(" -> ")}`);
+            }
+            return;
+        }
+        state[id] = "open";
+        for (const child of edges[id] || []) visit(child, [...ancestors, id]);
+        state[id] = "done";
+    };
+    for (const id of Object.keys(edges)) visit(id, []);
 }
 
 
