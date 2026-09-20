@@ -5,7 +5,7 @@
     "author": "BeatLink",
     "homepage": "https://github.com/Trilium-Community/trilium-scripts/tree/main/addons/agenda-overview@beatlink",
     "license": "GPL-3.0-or-later",
-    "latestVersion": "5.2.1",
+    "latestVersion": "5.2.2",
     "type": "widget",
     "readme": "README.md",
     "changelog": "CHANGELOG.md",
@@ -94,7 +94,8 @@
                 "title": "calendar.ical",
                 "type": "code",
                 "mime": "text/plain",
-                "sourceUrl": "static/calendar.ical"
+                "sourceUrl": "static/calendar.ical",
+                "skipOnUpdate": true
             },
             {
                 "id": "grp-config",
