@@ -18,6 +18,11 @@ https://trilium-community.github.io/trilium-scripts/catalog.json
 
 Or download individual `.zip` files from [Releases](https://github.com/Trilium-Community/trilium-scripts/releases/latest) and import manually via **Trilium → Import**.
 
+> **Installed addons from before the move to the Trilium Community organisation?**
+> The old `beatlink.github.io` catalog address now returns 404 and those addons have stopped
+> updating. [MIGRATION.md](MIGRATION.md) walks through repointing them — it takes a minute and
+> loses nothing.
+
 ## Addons
 
 <!-- GENERATED:START -->

@@ -9,7 +9,7 @@ Subcommands (run `tamhelper.js <cmd> -h` for each one's flags):
   zip-to-tam            Convert a Trilium export ZIP into a manifest + source files.
   generate-pages        Build the GitHub Pages site (resources/docs/).
   generate-readme       Regenerate README.md's addon table from manifests.
-  publish-release       Upload built *.zip files to GitHub Releases.
+  publish-release       Upload the built *.zip files and the catalog to GitHub Releases.
   publish               Resolve + hash every manifest into resources/docs/.
   changelog             Regenerate every addon's CHANGELOG.md from git history.
 */
@@ -1426,7 +1426,8 @@ try {
 const REPO = "https://github.com/Trilium-Community/trilium-scripts";
 const RELEASES = `${REPO}/releases/latest`;
 const PAGES_URL = "https://trilium-community.github.io/trilium-scripts/";
-const CATALOG_URL = `${PAGES_URL}catalog.json`;
+const CATALOG_NAME = "catalog.json";
+const CATALOG_URL = `${PAGES_URL}${CATALOG_NAME}`;
 
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"]);
 
@@ -1537,7 +1538,7 @@ ${cards.join("\n")}
   });
 })();
 </script>`;
-    return page(baseHtml, "Trilium Addons — BeatLink", body);
+    return page(baseHtml, "Trilium Addons — Trilium Community", body);
 }
 
 
@@ -1741,7 +1742,9 @@ function cmdPublishRelease(args) {
     const sha = process.env.GITHUB_SHA || "unknown";
     const runNumber = process.env.GITHUB_RUN_NUMBER || "0";
 
-    const files = fs.readdirSync(".").filter((f) => f.endsWith(".zip")).sort();
+    // The catalog ships beside the ZIPs so its URL survives an owner change:
+    // github.com redirects a moved release, a *.github.io Pages path does not.
+    const files = fs.readdirSync(".").filter((f) => f.endsWith(".zip") || f === CATALOG_NAME).sort();
     if (!files.length) {
         die("No *.zip files found to upload");
     }
@@ -1927,7 +1930,7 @@ function cmdPublish(args) {
         count++;
     }
 
-    writeText(path.join(outDir, "catalog.json"),
+    writeText(path.join(outDir, CATALOG_NAME),
         jsonDumps({ webUrl: PAGES_URL, "tam-addons": urls }, 2) + "\n");
     console.log(`Published ${count} manifest(s) to ${outDir}/ pinned at ${commit.slice(0, 12)}`);
 }
@@ -2378,7 +2381,7 @@ commands:
   generate-readme                           Regenerate README.md's addon table
   bump-halon [--check]                      Re-pin halon@beatlink when Halon's stylesheet changes
   changelog [--check] [--addons-dir D]      Regenerate every addon's CHANGELOG.md from git history
-  publish-release [--since REF]             Upload *.zip files to GitHub Releases
+  publish-release [--since REF]             Upload *.zip files + the catalog to Releases
 `;
 
 async function main() {

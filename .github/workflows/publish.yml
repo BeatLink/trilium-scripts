@@ -30,6 +30,13 @@ jobs:
       - name: Build addon ZIPs
         run: node resources/scripts/tamhelper.js tam-to-zip --all
 
+      # The catalog is otherwise only ever deployed to Pages, whose URL does not
+      # survive a repository move. Attaching it here gives it one that does.
+      - name: Build catalog
+        run: |
+          node resources/scripts/tamhelper.js publish
+          cp resources/docs/catalog.json .
+
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
